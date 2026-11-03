@@ -39,6 +39,8 @@
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Net.Http" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="ZwDatabaseMgd">
       <HintPath>$(ZwCadSdkDir)\ZwDatabaseMgd.dll</HintPath>
       <Private>False</Private>

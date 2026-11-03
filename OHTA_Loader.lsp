@@ -1,7 +1,7 @@
 ;; ============================================================================
 ;; OHTA TOOL - Multi-Platform Bootstrapper (ZWCAD 2026 & AutoCAD)
 ;; Encoding: 100% Pure 7-bit ASCII (No BOM, No acet-* Express Tools)
-;; Commands: OHTA, OHTARELOAD, OHTACLOSE, OHTAINFO
+;; Commands: OHTA, OHTARELOAD, OHTACLOSE, OHTAINFO, OHTAUPDATE, OHTAROLLBACK
 ;; ============================================================================
 (vl-load-com)
 
@@ -279,6 +279,67 @@
   (princ)
 )
 
+;; Tu cap nhat tu GitHub Releases (ADR 0004): OHTAUPDATE kiem tra ngay, OHTAROLLBACK quay ve ban truoc.
+(defun c:OHTAUPDATE ( / *error* old-ce )
+  (setq old-ce (getvar "CMDECHO"))
+  (defun *error* ( msg )
+    (if old-ce (setvar "CMDECHO" old-ce))
+    (princ)
+  )
+  (if (ohta--nap-net)
+    (if (vl-symbol-value 'ohta_net_update)
+      (vl-catch-all-apply 'ohta_net_update nil)
+      (progn
+        (setvar "CMDECHO" 0)
+        (vl-catch-all-apply 'vl-cmdf (list "OHTA_UPDATE"))
+        (setvar "CMDECHO" old-ce)
+      )
+    )
+  )
+  (princ)
+)
+
+(defun c:OHTAROLLBACK ( / *error* old-ce )
+  (setq old-ce (getvar "CMDECHO"))
+  (defun *error* ( msg )
+    (if old-ce (setvar "CMDECHO" old-ce))
+    (princ)
+  )
+  (if (ohta--nap-net)
+    (if (vl-symbol-value 'ohta_net_rollback)
+      (vl-catch-all-apply 'ohta_net_rollback nil)
+      (progn
+        (setvar "CMDECHO" 0)
+        (vl-catch-all-apply 'vl-cmdf (list "OHTA_ROLLBACK"))
+        (setvar "CMDECHO" old-ce)
+      )
+    )
+  )
+  (princ)
+)
+
+;; Moi ban ve: nap DLL (neu co san) roi hoi DLL co ban cap nhat chua cai khong.
+;; DLL tu goi mang toi da 1 lan/ngay, chay nen; con ban moi chua cai thi hoi "Cap nhat ngay / De sau".
+;; Chay trong S::STARTUP vi NETLOAD la lenh, khong goi duoc khi CAD dang nap lisp.
+;; Khong co DLL / khong tim thay thu muc thi bo qua im lang (khong hien hop chon file).
+(defun ohta--kiem-tra-cap-nhat ( / root )
+  (setq root (cond
+               ((and *ohta-root-dir* (ohta--thu-muc-hop-le-p *ohta-root-dir*)) *ohta-root-dir*)
+               ((ohta--thu-muc-loader))
+             )
+  )
+  (if (and root (ohta--duong-dan-dll root))
+    (progn
+      (setq *ohta-root-dir* root)
+      (if (and (not (vl-catch-all-error-p (vl-catch-all-apply 'ohta--nap-net nil)))
+               (vl-symbol-value 'ohta_net_update_check))
+        (vl-catch-all-apply 'ohta_net_update_check nil)
+      )
+    )
+  )
+  (princ)
+)
+
 ;; Moi lan nap file: lay lai duong dan OHTA_TOOL theo vi tri lisp dang nap (ghi de gia tri cu
 ;; trong bien va Registry), de doi cho OHTA_TOOL thi DLL cung nap theo cho moi.
 (if (setq *ohta-root-dir* (ohta--thu-muc-loader))
@@ -315,6 +376,17 @@
   )
 )
 (ohta--nap-autoload)
+
+;; Gan ohta--kiem-tra-cap-nhat vao S::STARTUP cua ban ve (giu nguyen S::STARTUP co san, khong gan 2 lan).
+;; S::STARTUP khai bang defun (khong phai list) thi khong noi them duoc -> bo qua, van con lenh OHTAUPDATE.
+(if (and (listp S::STARTUP)
+         (not (member '(ohta--kiem-tra-cap-nhat) S::STARTUP)))
+  (vl-catch-all-apply
+    '(lambda ()
+       (setq S::STARTUP (append (if S::STARTUP S::STARTUP '(nil)) '((ohta--kiem-tra-cap-nhat))))
+     )
+  )
+)
 
 (princ "\n[OHTA TOOL] Da nap OHTA_Loader.lsp. Go lenh OHTA de mo Tool Palettes (OHTARELOAD de lam moi Tab).\n")
 (princ)

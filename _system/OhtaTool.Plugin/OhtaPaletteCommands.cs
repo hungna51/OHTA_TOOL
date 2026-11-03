@@ -36,8 +36,9 @@ namespace OhtaTool.Plugin
         {
             try
             {
+                OhtaUpdateCommands.OnInitialize();
                 CadCompat.WriteMessage(
-                    $"\n[OHTA TOOL] Đã nạp OHTATOOL.dll cho {CadCompat.PlatformName}. Gõ lệnh OHTA để mở Tool Palettes.\n");
+                    $"\n[OHTA TOOL] Đã nạp OHTATOOL.dll v{OhtaUpdateCommands.LoadedVersion} cho {CadCompat.PlatformName}. Gõ lệnh OHTA để mở Tool Palettes.\n");
             }
             catch
             {
@@ -174,6 +175,7 @@ namespace OhtaTool.Plugin
                 : new List<ModuleManifest>();
 
             CadCompat.WriteMessage("\n================ OHTA TOOL INFO ================\n");
+            CadCompat.WriteMessage($"  Phiên bản    : v{OhtaUpdateCommands.LoadedVersion} (OHTAUPDATE: kiểm tra bản mới)\n");
             CadCompat.WriteMessage($"  Nền tảng CAD : {CadCompat.PlatformName}\n");
             CadCompat.WriteMessage($"  Thư mục gốc  : {root}\n");
             CadCompat.WriteMessage($"  Số Tab nhóm  : {modules.Count}\n");
@@ -197,7 +199,7 @@ namespace OhtaTool.Plugin
         // PaletteSet Lifecycle & Dynamic Vertical Tabs
         // ====================================================================
 
-        private const string PaletteTitle = "OHTA TOOL v1.1 (beta)";
+        private static string PaletteTitle => "OHTA TOOL v" + OhtaUpdateCommands.LoadedVersion;
 
         public static bool ShowOrBuildPalette(bool forceRebuild)
         {

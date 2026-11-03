@@ -42,7 +42,11 @@ OHTA_TOOL/
 - `OHTA` : Mở bảng Tool Palettes **OHTA TOOL**.
 - `OHTARELOAD` : Quét lại thư mục `OHTA_TOOL/` và làm mới các Tab ngay lập tức (hoặc bấm nút **`⟳`** trên đầu bảng).
 - `OHTACLOSE` : Ẩn / hiện nhanh bảng **OHTA TOOL**.
-- `OHTAINFO` : Kiểm tra trạng thái đường dẫn gốc, nền tảng CAD và danh sách các Tab đã nhận diện.
+- `OHTAINFO` : Kiểm tra phiên bản, đường dẫn gốc, nền tảng CAD và danh sách các Tab đã nhận diện.
+- `OHTAUPDATE` : Kiểm tra ngay bản mới trên GitHub. Bình thường không cần gõ: khi mở bản vẽ mà có bản mới, CAD tự hỏi **Cập nhật ngay / Để sau**. Cập nhật xong đóng và mở lại CAD.
+- `OHTAROLLBACK` : Quay về bản trước lần cập nhật gần nhất.
+
+> Muốn tự cập nhật, `OHTA_Loader.lsp` phải nằm trong **Startup Suite** của `APPLOAD`. Lisp / nút bạn tự thêm bằng nút ＋ được giữ nguyên khi cập nhật.
 
 ---
 

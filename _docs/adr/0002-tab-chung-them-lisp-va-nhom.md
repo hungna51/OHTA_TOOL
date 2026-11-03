@@ -1,6 +1,6 @@
 # Tab chung tự sửa module.json từ giao diện (nút ＋, nhóm, cài đặt tab)
 
-Từ 11/2026, giao diện tab chung (`ModuleTabControl` — mọi tab trừ Fname) cho người dùng thêm lisp bằng nút ＋, chia nút lệnh thành nhóm và đổi màu/tiêu đề tab bằng nút ⚙. Mọi thay đổi ghi thẳng vào `module.json` của tab — vẫn là nguồn dữ liệu duy nhất, nằm trên OneDrive nên mọi máy trong xưởng cùng thấy. File lisp được chép vào `lisp/` của tab, ảnh nút vào `icons/`. Bỏ hai nút MD và Rules (người dùng xưởng không cần), nút 📁 chuyển vào cửa sổ cài đặt.
+Từ 11/2026, giao diện tab chung (`ModuleTabControl` — mọi tab trừ Fname) cho người dùng thêm lisp bằng nút ＋, chia nút lệnh thành nhóm và đổi màu/tiêu đề tab bằng nút ⚙. Mọi thay đổi ghi thẳng vào `module.json` của tab — vẫn là nguồn dữ liệu duy nhất. Mỗi máy có bản OHTA_TOOL riêng, nên lệnh thêm bằng nút ＋ chỉ có trên máy đó; muốn cả xưởng dùng thì đưa vào gói rồi phát hành. Tự cập nhật giữ nguyên phần máy tự thêm ([ADR 0004](0004-tu-dong-cap-nhat-tu-github.md)). File lisp được chép vào `lisp/` của tab, ảnh nút vào `icons/`. Bỏ hai nút MD và Rules (người dùng xưởng không cần), nút 📁 chuyển vào cửa sổ cài đặt.
 
 `module.json` có thêm:
 
@@ -12,6 +12,6 @@ Ghi file an toàn: đọc lại file mới nhất ngay trước khi ghi, chỉ c
 
 ## Considered Options
 
-- **Lưu lệnh thêm vào file riêng của từng máy (kiểu `FnameLocalAdditions`)**: không đụng `module.json`, nhưng máy khác không thấy lệnh mới. Không chọn.
+- **Lưu lệnh thêm vào file riêng của từng máy (kiểu `FnameLocalAdditions`)**: không đụng `module.json`. Không chọn — lúc đó tưởng mọi máy dùng chung thư mục OneDrive; nay mỗi máy một bản nên lý do "máy khác không thấy" không còn, nhưng gộp `module.json` khi cập nhật (ADR 0004) đã giữ được phần máy tự thêm.
 - **Chỉ ghi đường dẫn tới file lisp gốc, không chép**: máy khác không có file đó. Không chọn.
 - **Khoá quyền sửa bằng mật khẩu**: xưởng nhỏ, cờ `locked` và file `.bak` đủ đỡ lỗi. Không chọn.
