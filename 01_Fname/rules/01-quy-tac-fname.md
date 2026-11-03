@@ -77,7 +77,7 @@
    - Với góc tù `> 90°`: tính theo công thức độ dãn denta chuẩn:
      $$\Delta = 2T \cdot \tan\left(\frac{180^\circ - \text{angle}}{4}\right) - \frac{(180^\circ - \text{angle}) \cdot \pi}{180^\circ} \cdot \left(R + \frac{T}{3}\right)$$
      (cắt cụt 2 chữ số thập phân).
-   - Với góc nhọn `< 90°`: tra cứu nội suy từ bảng góc nhọn riêng `traVnho90Table`.
+   - Với góc nhọn `< 90°`: tra cứu nội suy từ bảng góc nhọn riêng `traVnho90Table`. Góc nằm trên góc lớn nhất của bảng (vd. 89° khi bảng bắt đầu 88°) nội suy với Denta 90° của `trav_90` cùng dao (`HikiShiro_90`, trống thì `Denta90` — `Denta90Of`), không ngoại suy 88/86.
    - Vật liệu tôn gân / nhám (縞板 - Sima): Tự động phân tách hai hướng uốn `シマ目外` (uốn chiều vân ngoài) và `シマ目内` (uốn chiều vân trong).
 3. **Dòng thông tin phụ dưới mỗi dòng bẻ (`TraVCandidate.DetailParts`)**:
    - Không lặp lại tên dao V (đã hiện ở ô chọn V).
@@ -90,6 +90,7 @@
    - Góc không làm tròn (khớp đúng góc với sai số 1e-4).
    - Đúng góc → dùng dòng đó (nhãn theo `Dinh_danh`). Không có → nội suy tuyến tính từ 2 dòng **Bẻ thử** gần nhất kẹp 2 bên. Chỉ có 1 phía → ngoại suy từ 2 dòng Bẻ thử gần nhất phía đó nếu góc gần nhất cách ≤ `MaxExtrapolationDistance` (2°), `Dinh_danh = Ngoại suy`. Dòng `Nội suy` / `Ngoại suy` không làm gốc. Denta cắt cụt 2 chữ số (`FormatDenta`).
    - Cần xác nhận quản lý (`TraVCandidate.Warning` đỏ + `NeedsManagerConfirm`, Đặt / Cập nhật Fname hỏi Yes/No): nội suy có khoảng 2 góc > `MaxInterpolationGap` (10°), hoặc mọi ngoại suy — **trừ khi** 1 trong 2 góc gốc cách góc cần tra < `NoConfirmDistance` (1°).
+   - Góc 90° của `trav_90` (cùng vật liệu / T / dao) được thêm làm 1 gốc ngang Bẻ thử (`Table90Base`, `Ma_tam = bảng TraV`) nếu dao đó chưa có dòng 90° trong `trav_thu`.
    - Gốc tính: thử chỉ dòng Bẻ thử trước (`TryDerive`); không ra mới thử cả dòng Nội suy / Ngoại suy — gốc không phải bẻ thử thì **luôn** `NeedsManagerConfirm` (không áp miễn 1°).
    - `SourceInfo` ghi 2 góc gốc + mã tấm (`DescribeBase`); `Ma_tam` của dòng tính ra = `BaseToken(a) / BaseToken(b)` (`A1 (70°)` hoặc `nội suy 80°`).
    - `FnameTrialListWindow`: danh sách chỉ đọc của `TraVCalculator.GetTrialRecords()`, dòng trùng `trav_thu_local.csv` là "Chờ duyệt".

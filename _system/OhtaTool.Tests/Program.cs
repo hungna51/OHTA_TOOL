@@ -488,6 +488,11 @@ namespace OhtaTool.Tests
             var v40ok = TraVCalculator.GetBendOptionsForFname("SS400", "4.5", 42.0).Find(c => c.DieLabel == "V40");
             Check("Goc 42 = goc nho nhat: khong canh bao", v40ok != null && v40ok.Warning == "", v40ok?.Warning);
 
+            // 3c. Goc 88-90 nam tren goc lon nhat bang goc nhon -> noi suy voi goc 90 bang TraV (khong ngoai suy 88/86)
+            var v8 = TraVCalculator.GetBendOptionsForFname("SS400", "1.0", 89.0).Find(c => c.DieLabel == "V8");
+            Check("Goc 89 SS T=1.0 V8: noi suy 88 (0.92) va 90 (0.9) -> V=8-0.91(89°)",
+                v8 != null && v8.FormattedText == "V=8-0.91(89°)", v8?.FormattedText);
+
             // 4. Vat lieu Sima (縞板) tra ra ca Shima me ngoai va me trong
             var candsSima = TraVCalculator.GetBendOptionsForFname("ムキ 縞板", "3.2", 90.0);
             Check("TraV Sima 3.2 tra ra cac tuy chon ca シマ目外 va シマ目内",
@@ -528,8 +533,9 @@ namespace OhtaTool.Tests
                     "Bẻ thử,SS,14.0,90,V100,20.5,Z1",
                     "Bẻ thử,SS SIMA Ngoài,3.2,72,V20,3.0,E5",
                     "Bẻ thử,SS SIMA Ngoài,3.2,74,V20,3.1,F6",
-                    "Bẻ thử,SS SIMA Ngoài,3.2,70,V25,3.0,G7",
-                    "Nội suy,SS SIMA Ngoài,3.2,80,V25,3.4,H8 (78°) / I9 (82°)"
+                    "Bẻ thử,SS SIMA Ngoài,3.2,70,V18,3.0,G7",
+                    "Nội suy,SS SIMA Ngoài,3.2,80,V18,3.4,H8 (78°) / I9 (82°)",
+                    "Bẻ thử,SS SIMA Ngoài,3.2,86,V32,4.1,K1"   // V32 co so lieu 90 do trong bang TraV (4.5)
                 }) + "\n");
                 TraVCalculator.Load(FnameDir, cache);
 
@@ -584,14 +590,22 @@ namespace OhtaTool.Tests
                     !TraVCalculator.GetBendOptionsForFname("SS400 縞板", "3.2", 50.0).Exists(c => c.DieLabel == "V12"));
 
                 // Khong du goc be thu -> dung ca goc noi suy lam goc, LUON hoi quan ly (ke ca khi cach < 1 do)
-                var g75 = TraVCalculator.GetBendOptionsForFname("SS400 縞板", "3.2", 75.0).Find(c => c.DieLabel == "V25");
+                var g75 = TraVCalculator.GetBendOptionsForFname("SS400 縞板", "3.2", 75.0).Find(c => c.DieLabel == "V18");
                 Check("Goc goc co dinh danh noi suy -> van tinh, bat xac nhan, ghi ro goc noi suy",
-                    g75 != null && g75.FormattedText == "シマ目外 V25引代 3.2(75°)" && g75.NeedsManagerConfirm
+                    g75 != null && g75.FormattedText == "シマ目外 V18引代 3.2(75°)" && g75.NeedsManagerConfirm
                     && g75.Warning.Contains("80° (nội suy)") && g75.SourceInfo == "từ góc 70° (tấm G7) và 80° (nội suy: H8 (78°) / I9 (82°))"
                     && g75.NewTrialRecord.MaTam == "G7 (70°) / nội suy 80°",
                     g75?.SourceInfo + " | " + g75?.Warning + " | " + g75?.NewTrialRecord?.MaTam);
-                var g705 = TraVCalculator.GetBendOptionsForFname("SS400 縞板", "3.2", 70.5).Find(c => c.DieLabel == "V25");
+                var g705 = TraVCalculator.GetBendOptionsForFname("SS400 縞板", "3.2", 70.5).Find(c => c.DieLabel == "V18");
                 Check("Goc noi suy lam goc: cach 70 chi 0.5 do van hoi quan ly", g705 != null && g705.NeedsManagerConfirm, g705?.Warning);
+
+                // Goc 90 cua bang TraV lam goc noi suy nhu 1 goc be thu: 88 tu 86 (K1, 4.1) va 90 (4.5) -> 4.3
+                var k88 = TraVCalculator.GetBendOptionsForFname("SS400 縞板", "3.2", 88.0).Find(c => c.DieLabel == "V32");
+                Check("Noi suy 88 tu be thu 86 va goc 90 bang TraV (V32) -> 4.3, khong hoi quan ly",
+                    k88 != null && k88.FormattedText == "シマ目外 V32引代 4.3(88°)" && k88.Source == "Nội suy"
+                    && k88.SourceInfo == "từ góc 86° (tấm K1) và 90° (bảng TraV)" && !k88.NeedsManagerConfirm
+                    && k88.NewTrialRecord?.MaTam == "K1 (86°) / bảng TraV (90°)",
+                    k88?.FormattedText + " | " + k88?.SourceInfo + " | " + k88?.NewTrialRecord?.MaTam);
 
                 var ss90 = TraVCalculator.GetBendOptionsForFname("SS400", "3.2", 90.0);
                 Check("Bang TraV tinh duoc -> khong dung goc be thu", ss90.Count > 0 && ss90.TrueForAll(c => c.Source == "" && !c.FormattedText.Contains("9.9")));

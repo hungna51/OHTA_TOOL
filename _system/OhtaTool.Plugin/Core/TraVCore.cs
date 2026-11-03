@@ -176,10 +176,20 @@ namespace OhtaTool.Plugin.Core
                                 if (!d1.HasValue || !d2.HasValue)
                                     continue;
 
-                                double d = Math.Abs(a1 - a2) < 1e-6 ? d1.Value : d1.Value + (angle - a1) * (d2.Value - d1.Value) / (a2 - a1);
-                                string dentaStr = FormatDenta(d);
                                 string rawVLabel = TableNho90.VList[col];
                                 string vLabel = FormatVLabel(rawVLabel);
+                                TraV90Row r90 = FindRow90(matKey, thick, rawVLabel);
+
+                                // Góc nằm giữa góc lớn nhất của bảng góc nhọn (vd. 88°) và 90° -> nội suy với số liệu 90° của bảng TraV
+                                double? v90 = Denta90Of(r90);
+                                if (angle > a1 + 1e-6 && a1 < 90.0 && v90.HasValue)
+                                {
+                                    a2 = a1; d2 = d1;
+                                    a1 = 90.0; d1 = v90;
+                                }
+
+                                double d = Math.Abs(a1 - a2) < 1e-6 ? d1.Value : d1.Value + (angle - a1) * (d2.Value - d1.Value) / (a2 - a1);
+                                string dentaStr = FormatDenta(d);
 
                                 string fmt;
                                 if (isSimaNgoai)
@@ -191,7 +201,6 @@ namespace OhtaTool.Plugin.Core
 
                                 // Thông số dao giống trường hợp 90° nhưng bỏ các thông số R (giữ Rend)
                                 var parts = new List<string>();
-                                TraV90Row r90 = FindRow90(matKey, thick, rawVLabel);
                                 if (r90 != null)
                                     parts.AddRange(BuildDetailParts(r90, includeR: false));
 
@@ -238,8 +247,14 @@ namespace OhtaTool.Plugin.Core
                 return results;
 
             var rows = TableThu.Where(r => TraVThuData.SameLoai(r.Loai, matKey) && Math.Abs(r.TValue - thick) < 0.05 && r.DentaValue.HasValue);
-            foreach (var die in rows.GroupBy(r => r.Dao, StringComparer.OrdinalIgnoreCase))
+            foreach (var dieGroup in rows.GroupBy(r => r.Dao, StringComparer.OrdinalIgnoreCase))
             {
+                // Góc 90° của bảng TraV (cùng dao / độ dày) cũng là số liệu chuẩn -> dùng làm gốc như 1 góc bẻ thử
+                var die = dieGroup.ToList();
+                TraVThuRecord base90 = Table90Base(matKey, thick, dieGroup.Key, die[0]);
+                if (base90 != null && !die.Any(r => Math.Abs(r.Goc - 90.0) < 1e-4))
+                    die.Add(base90);
+
                 var exact = die.Where(r => Math.Abs(r.Goc - angle) < 1e-4).ToList();
                 if (exact.Count > 0)
                 {
@@ -254,18 +269,18 @@ namespace OhtaTool.Plugin.Core
                 }
 
                 if (!TryDerive(die.Where(r => r.IsBeThu).ToList(), angle, out TraVThuRecord a, out TraVThuRecord b, out double d, out bool extrap)
-                    && !TryDerive(die.ToList(), angle, out a, out b, out d, out extrap))
+                    && !TryDerive(die, angle, out a, out b, out d, out extrap))
                     continue;
 
                 string kind = extrap ? TraVThuRecord.NgoaiSuy : TraVThuRecord.NoiSuy;
                 string sourceInfo = $"từ góc {DescribeBase(a)} và {DescribeBase(b)}";
-                TraVCandidate c = BuildTrialCandidate(matKey, thick, angle, die.Key, d, kind, sourceInfo);
+                TraVCandidate c = BuildTrialCandidate(matKey, thick, angle, dieGroup.Key, d, kind, sourceInfo);
                 c.NewTrialRecord = new TraVThuRecord
                 {
                     Loai = a.Loai,
                     T = a.T,
                     Goc = angle,
-                    Dao = die.Key,
+                    Dao = dieGroup.Key,
                     Denta = FormatDenta(d),
                     MaTam = BaseToken(a) + " / " + BaseToken(b),
                     DinhDanh = kind
@@ -331,9 +346,39 @@ namespace OhtaTool.Plugin.Core
             return true;
         }
 
-        /// <summary>"70° (tấm A1)" hoặc "72° (nội suy: A1 (70°) / B2 (80°))".</summary>
+        /// <summary>Ma_tam của gốc 90° lấy từ bảng TraV (không phải tấm bẻ thử).</summary>
+        private const string Table90Ref = "bảng TraV";
+
+        /// <summary>Denta 90° của bảng TraV: giá trị hiện trên dòng V= 90° (HikiShiro_90), trống thì lấy Denta90.</summary>
+        private static double? Denta90Of(TraV90Row r)
+        {
+            if (r == null) return null;
+            if (double.TryParse(r.V2, NumberStyles.Float, CultureInfo.InvariantCulture, out double v) && v > 0) return v;
+            return r.Denta90 > 0 ? r.Denta90 : (double?)null;
+        }
+
+        /// <summary>Dòng gốc 90° ảo cho bảng bẻ thử, lấy từ bảng TraV cùng vật liệu / độ dày / dao.</summary>
+        private static TraVThuRecord Table90Base(string matKey, double thick, string dao, TraVThuRecord sample)
+        {
+            double? v90 = Denta90Of(FindRow90(matKey, thick, dao));
+            if (!v90.HasValue) return null;
+            return new TraVThuRecord
+            {
+                Loai = sample.Loai,
+                T = sample.T,
+                Goc = 90.0,
+                Dao = dao,
+                Denta = v90.Value.ToString("0.##", CultureInfo.InvariantCulture),
+                MaTam = Table90Ref,
+                DinhDanh = TraVThuRecord.BeThu
+            };
+        }
+
+        /// <summary>"70° (tấm A1)", "90° (bảng TraV)" hoặc "72° (nội suy: A1 (70°) / B2 (80°))".</summary>
         private static string DescribeBase(TraVThuRecord r) =>
-            r.IsBeThu
+            r.MaTam == Table90Ref
+                ? $"{FormatAngle(r.Goc)}° ({Table90Ref})"
+            : r.IsBeThu
                 ? $"{FormatAngle(r.Goc)}° (tấm {RefTam(r.MaTam)})"
                 : $"{FormatAngle(r.Goc)}° ({r.SourceLabel.ToLowerInvariant()}: {RefTam(r.MaTam)})";
 
