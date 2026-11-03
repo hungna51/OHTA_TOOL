@@ -12,5 +12,5 @@
    - [03-giao-thuc-module-va-palette.md](rules/03-giao-thuc-module-va-palette.md)
    - [04-encoding-va-checklist-an-toan.md](rules/04-encoding-va-checklist-an-toan.md)
 3. Khi làm việc trong một mục con (`01_...`, `03_...`): đọc `README.md` của mục con, rồi mục lục `rules/` của nó (file `rules/00-*` nếu có), và chỉ mở những file rule mà mục lục chỉ tới cho việc đang làm.
-4. Gặp thuật ngữ nghiệp vụ (tấm, hình, khung tấm, bango, F-name…) → dùng đúng nghĩa trong **[GLOSSARY.md](GLOSSARY.md)**. Định đổi cấu trúc DLL / mục con → đọc **[docs/adr/](docs/adr/)** trước.
+4. Gặp thuật ngữ nghiệp vụ (tấm, hình, khung tấm, bango, F-name…) → dùng đúng nghĩa trong **[GLOSSARY.md](GLOSSARY.md)**. Định đổi cấu trúc DLL / mục con → đọc **[_docs/adr/](_docs/adr/)** trước.
 5. Trước khi hoàn tất thay đổi, chạy `powershell -ExecutionPolicy Bypass -File OHTA_TOOL\build_ohta.ps1` để kiểm chứng cả 2 bản build (`ZwCAD` + `AutoCAD`) và các bộ Unit Test (`OhtaTool.Tests`, `GroTool.Tests`).

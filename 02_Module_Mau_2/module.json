@@ -1,7 +1,7 @@
 {
   "id": "module_02",
   "enabled": true,
-  "order": 20,
+  "order": 90,
   "tabTitle": "More",
   "title": "More",
   "description": "Bổ sung các lisp tùy chỉnh",
