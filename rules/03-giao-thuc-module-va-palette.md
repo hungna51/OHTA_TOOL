@@ -49,25 +49,32 @@ Mỗi thư mục con trong `OHTA_TOOL/` tương ứng với một **Tab sườn 
 | `accentColor` | Tùy chọn | Mã màu Hex (`#RRGGBB`, ví dụ `#1E88E5`, `#2E7D32`, `#EF6C00`, `#6A1B9A`) làm màu nhận diện Header & Icon Badge của nhóm. |
 | `startupLisp` | Tùy chọn | Danh sách đường dẫn tương đối (tính từ thư mục mục con) của các file `.lsp` muốn tự nạp sẵn khi mở bảng `OHTA`. |
 | `tools` | Tùy chọn | Danh sách các nút công cụ hiển thị trong Tab. Để mảng rỗng `[]` khi nhóm đang trong giai đoạn thiết kế ban đầu. |
+| `groups` | Tùy chọn | Thứ tự các nhóm lệnh (tên nhóm = `category` của nút). Nhóm chưa khai báo xếp sau; nút không có `category` vào nhóm "Khác" cuối tab. Do cửa sổ ⚙ ghi (ADR 0002). |
 
 ### Giải thích các trường của từng phần tử trong `tools`
 
 | Trường | Ý nghĩa |
 |---|---|
 | `id` | Mã định danh nút công cụ trong nhóm. |
-| `category` | Nhóm con phân mục bên trong Tab (tùy chọn). |
+| `category` | Tên nhóm của nút (tùy chọn). Trống = nhóm "Khác". Tab chỉ có nhóm "Khác" thì không hiện tiêu đề nhóm. |
 | `name` | Tên hiển thị của nút công cụ (hỗ trợ tiếng Việt có dấu / tiếng Nhật đầy đủ). |
 | `badge` | Tối đa 2–4 ký tự ngắn (ví dụ `"M1"`, `"CSV"`, `"KT"`) vẽ trên ô vuông màu bên trái nút giống icon Tool Palettes. |
 | `command` | Tên lệnh CAD sẽ gọi (ví dụ `"OHTAM1"`) hoặc macro CAD (nếu bắt đầu bằng `^C^C` hoặc `(` thì gửi nguyên văn). |
 | `lispFile` | Đường dẫn tương đối tới file `.lsp` trong thư mục mục con (ví dụ `"lisp/ohta_m01_demo.lsp"`). Khi bấm nút, hệ thống tự động nạp file `.lsp` này trước rồi mới chạy `command` — đảm bảo không bao giờ báo `Unknown command`! |
 | `description` | Chú thích ngắn dưới tên nút và hiện đầy đủ trong Tooltip khi rê chuột vào. |
+| `icon` | Ảnh `.png`/`.ico` (đường dẫn tương đối, thường `icons/...`) thay cho ô `badge`. Tùy chọn. |
+| `locked` | `true` = nút gốc do lập trình viên khai báo, menu chuột phải không cho xoá (ví dụ GRO/GI/DST). |
 
 ---
 
 ## 2. Hai Cấp Độ Phát Triển Chức Năng Cho Một Mục Con
 
 ### Cấp độ 1: Thêm Công Cụ Nhanh Bằng LISP + `module.json` (Không Cần Build C#)
-Phù hợp cho 90% tiện ích vẽ, kiểm tra, xử lý đối tượng CAD:
+Phù hợp cho 90% tiện ích vẽ, kiểm tra, xử lý đối tượng CAD.
+
+**Cách nhanh nhất (người dùng):** bấm nút **＋** trên thanh của tab → chọn file `.lsp` → tool tự quét các `defun c:XXX`, chép file vào `lisp/`, ghi nút vào `module.json` và nạp ngay. Chuột phải vào nút để Sửa / Chuyển nhóm / Lên / Xuống / Xoá; nút ⚙ ở góc tab để đổi màu, tiêu đề, mô tả, nhóm (ADR 0002).
+
+**Cách sửa tay:**
 1. Đặt file `.lsp` vào `<Muc_Con>/lisp/`.
 2. Thêm một mục vào mảng `"tools"` trong `<Muc_Con>/module.json`.
 3. Gõ `OHTARELOAD` (hoặc bấm nút `⟳` trên bảng `OHTA TOOL`) → Nút bấm xuất hiện ngay lập tức và sẵn sàng sử dụng!

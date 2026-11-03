@@ -88,6 +88,29 @@
                 Padding="12,10">
             <StackPanel>
                 <DockPanel LastChildFill="True">
+                    <Button DockPanel.Dock="Right"
+                            Command="{Binding OpenSettingsCommand}"
+                            Background="#33000000"
+                            BorderThickness="0"
+                            Width="24"
+                            Height="22"
+                            Margin="6,0,0,0"
+                            VerticalAlignment="Top"
+                            Cursor="Hand"
+                            ToolTip="Cài đặt tab: màu, tiêu đề, mô tả, nhóm lệnh">
+                        <Grid>
+                            <Image Source="{Binding SettingsLogo}"
+                                   Visibility="{Binding SettingsLogoVisibility}"
+                                   Width="15"
+                                   Height="15"/>
+                            <TextBlock Text="⚙"
+                                       Visibility="{Binding SettingsTextVisibility}"
+                                       Foreground="#FFFFFF"
+                                       FontSize="13"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
+                    </Button>
                     <Border DockPanel.Dock="Right"
                             Background="#33000000"
                             CornerRadius="3"
@@ -166,20 +189,15 @@
                     </Grid>
                 </Border>
 
-                <!-- Cụm nút mở nhanh MD / Rules / Thư mục & Làm mới Tab -->
+                <!-- Thêm lisp & làm mới tab (MD / Rules bỏ, thư mục chuyển vào cài đặt — ADR 0002) -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button Style="{StaticResource ToolbarActionBtnStyle}"
-                            Content="📄 MD"
-                            Command="{Binding OpenReadmeCommand}"
-                            ToolTip="Mở file tài liệu .md đặc tả của nhóm này"/>
-                    <Button Style="{StaticResource ToolbarActionBtnStyle}"
-                            Content="⚖ Rules"
-                            Command="{Binding OpenRulesFolderCommand}"
-                            ToolTip="Mở thư mục rules/ riêng của nhóm này"/>
-                    <Button Style="{StaticResource ToolbarActionBtnStyle}"
-                            Content="📁"
-                            Command="{Binding OpenModuleFolderCommand}"
-                            ToolTip="Mở thư mục của mục con này trong Windows Explorer"/>
+                            Content="＋"
+                            FontWeight="Bold"
+                            FontSize="13"
+                            Padding="9,2"
+                            Command="{Binding AddLispCommand}"
+                            ToolTip="Thêm lisp: chọn file .lsp, chọn lệnh, đặt tên, mô tả, nhóm, biểu tượng"/>
                     <Button Style="{StaticResource ToolbarActionBtnStyle}"
                             Content="⟳"
                             FontWeight="Bold"
@@ -209,77 +227,135 @@
                       HorizontalScrollBarVisibility="Disabled"
                       Padding="10,10,10,6">
             <StackPanel>
-                <!-- Danh sách nút lệnh -->
-                <ItemsControl ItemsSource="{Binding FilteredTools}">
+                <!-- Danh sách nút lệnh theo nhóm (category / groups) -->
+                <ItemsControl ItemsSource="{Binding Groups}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Button Style="{StaticResource ToolCardButtonStyle}"
-                                    Command="{Binding DataContext.ExecuteToolCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}">
-                                <Button.ToolTip>
-                                    <StackPanel MaxWidth="320">
-                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="12.5"/>
-                                        <TextBlock Text="{Binding Command, StringFormat='Lệnh CAD: {0}'}"
-                                                   FontFamily="Consolas"
-                                                   Foreground="#1565C0"
-                                                   Margin="0,2,0,3"/>
-                                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="11.5"/>
-                                    </StackPanel>
-                                </Button.ToolTip>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- Icon Badge vuông bo góc -->
-                                    <Border Grid.Column="0"
-                                            Width="36"
-                                            Height="36"
-                                            CornerRadius="6"
-                                            Background="{Binding DataContext.AccentBrush, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            VerticalAlignment="Center"
-                                            Margin="0,0,10,0">
-                                        <TextBlock Text="{Binding Badge}"
-                                                   Foreground="#FFFFFF"
-                                                   FontWeight="Bold"
-                                                   FontSize="11.5"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center"/>
-                                    </Border>
-
-                                    <!-- Tên & mô tả ngắn -->
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <StackPanel Margin="0,0,0,4">
+                                <!-- Tiêu đề nhóm: bấm để thu gọn / mở -->
+                                <Button Visibility="{Binding HeaderVisibility}"
+                                        Command="{Binding ToggleCommand}"
+                                        Cursor="Hand"
+                                        Margin="0,0,0,6"
+                                        HorizontalContentAlignment="Stretch"
+                                        ToolTip="Bấm để thu gọn / mở nhóm">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="Transparent" Padding="2,3">
+                                                <ContentPresenter HorizontalAlignment="Stretch"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                    <DockPanel LastChildFill="True">
+                                        <TextBlock DockPanel.Dock="Left"
+                                                   Text="{Binding Chevron}"
+                                                   Foreground="#52606D"
+                                                   FontSize="12"
+                                                   Width="14"/>
+                                        <Border DockPanel.Dock="Right"
+                                                Background="#E4E7EB"
+                                                CornerRadius="8"
+                                                Padding="6,0"
+                                                Margin="6,0,0,0">
+                                            <TextBlock Text="{Binding CountText}"
+                                                       Foreground="#52606D"
+                                                       FontSize="10.5"/>
+                                        </Border>
                                         <TextBlock Text="{Binding Name}"
-                                                   Foreground="#1F2933"
-                                                   FontSize="12.5"
-                                                   FontWeight="SemiBold"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding Description}"
-                                                   Foreground="#616E7C"
-                                                   FontSize="11"
-                                                   Margin="0,2,0,0"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                    </StackPanel>
-
-                                    <!-- Nhãn lệnh tắt bên phải -->
-                                    <Border Grid.Column="2"
-                                            Background="#EEF2F6"
-                                            BorderBrush="#CBD2D9"
-                                            BorderThickness="1"
-                                            CornerRadius="4"
-                                            Padding="6,2"
-                                            VerticalAlignment="Center"
-                                            Margin="8,0,0,0">
-                                        <TextBlock Text="{Binding Command}"
                                                    Foreground="#334E68"
-                                                   FontFamily="Consolas"
+                                                   FontSize="11.5"
                                                    FontWeight="SemiBold"
-                                                   FontSize="11"/>
-                                    </Border>
-                                </Grid>
-                            </Button>
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </DockPanel>
+                                </Button>
+                                <ItemsControl ItemsSource="{Binding Tools}"
+                                              Visibility="{Binding ContentVisibility}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Style="{StaticResource ToolCardButtonStyle}"
+                                                    Command="{Binding DataContext.ExecuteToolCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    ContextMenuOpening="OnCardContextMenuOpening">
+                                                <Button.ContextMenu>
+                                                    <ContextMenu/>
+                                                </Button.ContextMenu>
+                                                <Button.ToolTip>
+                                                    <StackPanel MaxWidth="320">
+                                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="12.5"/>
+                                                        <TextBlock Text="{Binding Command, StringFormat='Lệnh CAD: {0}'}"
+                                                                   FontFamily="Consolas"
+                                                                   Foreground="#1565C0"
+                                                                   Margin="0,2,0,3"/>
+                                                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="11.5"/>
+                                                    </StackPanel>
+                                                </Button.ToolTip>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <!-- Icon Badge vuông bo góc -->
+                                                    <Border Grid.Column="0"
+                                                            Width="36"
+                                                            Height="36"
+                                                            CornerRadius="6"
+                                                            Background="{Binding DataContext.AccentBrush, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            VerticalAlignment="Center"
+                                                            Margin="0,0,10,0"
+                                                            Visibility="{Binding BadgeVisibility}">
+                                                        <TextBlock Text="{Binding Badge}"
+                                                                   Foreground="#FFFFFF"
+                                                                   FontWeight="Bold"
+                                                                   FontSize="11.5"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <Image Grid.Column="0"
+                                                           Source="{Binding IconImage}"
+                                                           Visibility="{Binding IconVisibility}"
+                                                           Width="36"
+                                                           Height="36"
+                                                           Stretch="Uniform"
+                                                           VerticalAlignment="Center"
+                                                           Margin="0,0,10,0"/>
+
+                                                    <!-- Tên & mô tả ngắn -->
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   Foreground="#1F2933"
+                                                                   FontSize="12.5"
+                                                                   FontWeight="SemiBold"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding Description}"
+                                                                   Foreground="#616E7C"
+                                                                   FontSize="11"
+                                                                   Margin="0,2,0,0"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+
+                                                    <!-- Nhãn lệnh tắt bên phải -->
+                                                    <Border Grid.Column="2"
+                                                            Background="#EEF2F6"
+                                                            BorderBrush="#CBD2D9"
+                                                            BorderThickness="1"
+                                                            CornerRadius="4"
+                                                            Padding="6,2"
+                                                            VerticalAlignment="Center"
+                                                            Margin="8,0,0,0">
+                                                        <TextBlock Text="{Binding Command}"
+                                                                   Foreground="#334E68"
+                                                                   FontFamily="Consolas"
+                                                                   FontWeight="SemiBold"
+                                                                   FontSize="11"/>
+                                                    </Border>
+                                                </Grid>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -298,20 +374,21 @@
                                    FontWeight="SemiBold"
                                    Foreground="#334E68"
                                    HorizontalAlignment="Center"/>
-                        <TextBlock Text="1. Đặt file .lsp của nhóm vào thư mục lisp/&#x0a;2. Khai báo nút lệnh vào file module.json&#x0a;3. Bấm nút ⟳ ở góc trên phải để hiện công cụ ngay lập tức."
+                        <TextBlock Text="Bấm ＋ để thêm lisp"
                                    FontSize="11.5"
                                    Foreground="#616E7C"
-                                   LineHeight="18"
-                                   Margin="0,8,0,12"
-                                   TextWrapping="Wrap"/>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Button Style="{StaticResource ToolbarActionBtnStyle}"
-                                    Content="📁 Mở thư mục nhóm"
-                                    Command="{Binding OpenModuleFolderCommand}"/>
-                            <Button Style="{StaticResource ToolbarActionBtnStyle}"
-                                    Content="📄 Xem README.md"
-                                    Command="{Binding OpenReadmeCommand}"/>
-                        </StackPanel>
+                                   HorizontalAlignment="Center"
+                                   Margin="0,6,0,12"/>
+                        <Button Style="{StaticResource ToolbarActionBtnStyle}"
+                                Content="＋"
+                                FontSize="22"
+                                FontWeight="Bold"
+                                Width="64"
+                                Height="48"
+                                Margin="0"
+                                HorizontalAlignment="Center"
+                                Command="{Binding AddLispCommand}"
+                                ToolTip="Thêm lisp vào tab này"/>
                     </StackPanel>
                 </Border>
 

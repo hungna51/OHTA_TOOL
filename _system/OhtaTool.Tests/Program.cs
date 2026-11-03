@@ -7,7 +7,7 @@ using OhtaTool.Plugin.Core;
 
 namespace OhtaTool.Tests
 {
-    internal static class Program
+    internal static partial class Program
     {
         private static int _passed;
         private static int _failed;
@@ -38,6 +38,7 @@ namespace OhtaTool.Tests
             TestPressOneTimeFormatAndParsing();
             TestFnameRecordBendAndPressOrdering();
             TestFnameParserWithBendAndPress();
+            TestTabEditFeatures();
 
             Console.WriteLine($"=== KET QUA: {_passed} PASS, {_failed} FAIL ===");
             return _failed == 0 ? 0 : 1;

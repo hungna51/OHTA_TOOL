@@ -195,6 +195,9 @@ namespace OhtaTool.Plugin.Core
             if (manifest.Tools == null)
                 manifest.Tools = new List<ToolItem>();
 
+            if (manifest.Groups == null)
+                manifest.Groups = new List<string>();
+
             foreach (ToolItem tool in manifest.Tools)
             {
                 NormalizeToolItem(tool);
@@ -231,10 +234,9 @@ namespace OhtaTool.Plugin.Core
                 ? (!string.IsNullOrEmpty(tool.Command) ? tool.Command : "Công cụ chưa đặt tên")
                 : tool.Name.Trim();
 
-            if (string.IsNullOrWhiteSpace(tool.Category))
-                tool.Category = "Công cụ";
-            else
-                tool.Category = tool.Category.Trim();
+            // Trống = chưa có nhóm -> hiện ở nhóm "Khác" (ModuleGrouping)
+            tool.Category = (tool.Category ?? string.Empty).Trim();
+            tool.Icon = (tool.Icon ?? string.Empty).Trim();
 
             if (string.IsNullOrWhiteSpace(tool.Badge))
             {

@@ -273,9 +273,15 @@ namespace OhtaTool.Plugin
 
             foreach (ModuleManifest module in modules)
             {
+                // Làm mới xong quay lại đúng tab đang dùng (sau khi thêm/sửa lệnh từ tab đó)
+                string moduleId = module.Id;
                 FrameworkElement view = ModuleViewRegistry.CreateView(
                     module,
-                    () => ShowOrBuildPalette(forceRebuild: true));
+                    () =>
+                    {
+                        if (ShowOrBuildPalette(forceRebuild: true))
+                            ActivateModuleTab(moduleId);
+                    });
 
                 // Bắt buộc dùng ElementHost Dock=Fill (tránh lỗi cắt chiều cao ScrollViewer của AddVisual trên ZWCAD)
                 var host = new ElementHost

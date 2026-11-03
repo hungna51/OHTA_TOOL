@@ -9,6 +9,7 @@
   "tools": [
     {
       "id": "gro",
+      "locked": true,
       "name": "GRO — Đánh số tấm",
       "badge": "GRO",
       "command": "GRO",
@@ -17,6 +18,7 @@
     },
     {
       "id": "gi",
+      "locked": true,
       "name": "GI — In lại PDF",
       "badge": "GI",
       "command": "GI",
@@ -25,6 +27,7 @@
     },
     {
       "id": "dst",
+      "locked": true,
       "name": "DST — Danh sách tấm",
       "badge": "DST",
       "command": "DST",

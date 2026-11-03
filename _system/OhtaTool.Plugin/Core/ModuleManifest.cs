@@ -38,6 +38,10 @@ namespace OhtaTool.Plugin.Core
         [DataMember(Name = "tools", IsRequired = false)]
         public List<ToolItem> Tools { get; set; }
 
+        /// <summary>Thứ tự các nhóm (tên nhóm = ToolItem.Category). Xem ADR 0002.</summary>
+        [DataMember(Name = "groups", IsRequired = false)]
+        public List<string> Groups { get; set; }
+
         // Thuộc tính runtime do ModuleDiscovery gán khi quét thư mục
         public string FolderName { get; set; }
         public string DirectoryPath { get; set; }
@@ -76,6 +80,16 @@ namespace OhtaTool.Plugin.Core
 
         [DataMember(Name = "description", IsRequired = false)]
         public string Description { get; set; }
+
+        /// <summary>Ảnh nút (.png/.ico), đường dẫn tương đối trong thư mục tab. Trống → dùng Badge.</summary>
+        [DataMember(Name = "icon", IsRequired = false)]
+        public string Icon { get; set; }
+
+        /// <summary>Nút gốc do lập trình viên khai báo: giao diện không cho xoá.</summary>
+        [DataMember(Name = "locked", IsRequired = false)]
+        public bool? Locked { get; set; }
+
+        public bool IsLocked => Locked ?? false;
     }
 }
 
