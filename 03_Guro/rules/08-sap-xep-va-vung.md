@@ -1,6 +1,6 @@
 # 08. Sắp xếp, gom hàng và chế độ vùng
 
-> Một phần tài liệu GURO. Mục lục: [../../CLAUDE.md](../../CLAUDE.md)
+> Một phần tài liệu GURO. Mục lục: [00-muc-luc-guro.md](00-muc-luc-guro.md)
 >
 > **Số mục (1-33) giữ nguyên như bản gộp cũ** — mã nguồn `.lsp` và các file
 > rule khác tham chiếu tới chúng, đổi số là hỏng 59 chỗ.

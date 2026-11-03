@@ -1,21 +1,7 @@
 (vl-load-com)
 ;;; ===========================================================================
-;;; GURO - lenh GRO va OI cho ZWCAD 2026  (ban GON, co lenh `gro` va `oi`)
+;;; GURO - lenh GRO (danh so bango, ma khac, F-name, CSV, in PDF, chuyen layer net)
 ;;;
-;;; Sinh tu ban day du `guro ZWCAD(BG MK FN).lsp` bang cach lay BAO DONG cac
-;;; ham ma `c:gro` thuc su goi toi, kem bo lenh in nhanh PDF `c:oi`. Da bo:
-;;;   - cac lenh khac : bg, mk, FN, ocsv, GI
-;;;   - cac lenh test : bgdbg, grodbg, grosort
-;;;   - code chet     : export-string-a2b, subst-all
-;;;   - phan rieng cua bg: bg--fields, bg--charset-nhan, bg--co-t-p, bg--trim,
-;;;                        guro--csv-append-utf8bom, guro--has-utf8-bom,
-;;;                        guro--dcl-path, guro--write-dcl, guro-get-bango
-;;;   - phan rieng cua FN: fn--split, fn--tail, fn--strip-bom, fn--ent-text,
-;;;                        fn--subst-all
-;;;
-;;; LUU Y KHI SUA: file nay la BAN SINH RA, khong phai ban goc. Sua o day thi
-;;; ban day du KHONG duoc cap nhat theo - va nguoc lai. Ban day du van la noi
-;;; chua lenh chan doan `grosort` / `grodbg`, can den khi phai lan loi.
 ;;; Muc 191: tu 11/2026 file nay nam o OHTA_TOOL\03_Guro\lisp\guro_gro.lsp va la BAN DUY NHAT
 ;;; con sua (chay ca ZWCAD 2026 va AutoCAD 2027; DLL GROTOOL.dll o 03_Guro\bin\<ZwCAD|AutoCAD>).
 ;;; Nap qua 03_Guro\lisp\autoload.lsp (OHTA_Loader.lsp nap san moi ban ve).

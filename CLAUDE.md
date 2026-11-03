@@ -11,6 +11,6 @@
    - [02-da-nen-tang-zwcad-autocad.md](rules/02-da-nen-tang-zwcad-autocad.md)
    - [03-giao-thuc-module-va-palette.md](rules/03-giao-thuc-module-va-palette.md)
    - [04-encoding-va-checklist-an-toan.md](rules/04-encoding-va-checklist-an-toan.md)
-3. Khi làm việc trong một thư mục con cụ thể (`01_...`, `02_...`), **bắt buộc** đọc thêm `README.md` và thư mục `rules/` nằm bên trong chính thư mục con đó.
-4. Trước khi hoàn tất thay đổi, chạy `powershell -ExecutionPolicy Bypass -File OHTA_TOOL\build_ohta.ps1` để kiểm chứng cả 2 bản build (`ZwCAD` + `AutoCAD`) và bộ Unit Test `OhtaTool.Tests`.
-
+3. Khi làm việc trong một mục con (`01_...`, `03_...`): đọc `README.md` của mục con, rồi mục lục `rules/` của nó (file `rules/00-*` nếu có), và chỉ mở những file rule mà mục lục chỉ tới cho việc đang làm.
+4. Gặp thuật ngữ nghiệp vụ (tấm, hình, khung tấm, bango, F-name…) → dùng đúng nghĩa trong **[GLOSSARY.md](GLOSSARY.md)**. Định đổi cấu trúc DLL / mục con → đọc **[docs/adr/](docs/adr/)** trước.
+5. Trước khi hoàn tất thay đổi, chạy `powershell -ExecutionPolicy Bypass -File OHTA_TOOL\build_ohta.ps1` để kiểm chứng cả 2 bản build (`ZwCAD` + `AutoCAD`) và các bộ Unit Test (`OhtaTool.Tests`, `GroTool.Tests`).

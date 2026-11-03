@@ -1,6 +1,6 @@
 # 14. Cần kiểm tra lại
 
-> Một phần tài liệu GURO. Mục lục: [../../CLAUDE.md](../../CLAUDE.md)
+> Một phần tài liệu GURO. Mục lục: [00-muc-luc-guro.md](00-muc-luc-guro.md)
 >
 > **Số mục (1-33) giữ nguyên như bản gộp cũ** — mã nguồn `.lsp` và các file
 > rule khác tham chiếu tới chúng, đổi số là hỏng 59 chỗ.
@@ -209,3 +209,4 @@
 - **Ghi chú tách rời (mục 128) nay chỉ xét gần hơn, bỏ ưu tiên "text nằm dưới" (mục 168) — chưa chạy thật.** Soi các tấm có dòng `ｹｶﾞｷ線` đứng riêng nằm giữa hai text: ghi chú kegaki / mã khắc phải về đúng tấm. Nếu hay về nhầm tấm phía trên thì đây là chỗ cần xem lại.
 - **Ghép đường dim chính bị tách nhiều LINE (mục 169) chưa chạy trên ZWCAD.** Mô phỏng 8/8. Soi các dòng `muc 169` in ra: nếu có chuỗi ghép nhầm (vd đường dim nối thẳng hàng với một nét khác cùng trục) thì siết khe nối 1.0 mm / lệch ngang 0.5 mm trong `gro--chuoi-thang-hang`.
 - ~~Đặt mã khắc vào hình bằng C# (mục 170) chưa chạy trong ZWCAD~~ — **đã nghiệm thu 28/10: 65/65 tấm** (sau khi sửa lỗi làm tròn hộp hình). Còn để ngỏ: chưa so vị trí từng cụm với bản lisp cũ, chưa thử bản vẽ có polyline / spline làm biên dạng. Test logic 454/454, build 0 lỗi, DLL mới **đã chép** (28/10, `build.ps1`) vào `C:\ZwCadPlugin` (chạy `ZwCadPlugin/build.ps1` — PostBuild tự chép DLL; đóng ZWCAD trước). Cần biết khi chạy thật: (1) `Polyline.GetBulgeAt` / `GetPointAtParameter` của ZWCAD lấy mẫu giống `vlax-curve` (so vài tấm với bản lisp cũ trong `backup/Guro ZWCAD(gro).lsp.truoc-muc170._ls`); (2) `TransformBy` trên MTEXT mã khắc + TEXT F-name cho cùng kết quả `vla-scaleentity` / `vla-rotate` / `vla-move`; (3) ghi `ent.XData` trong `LispFunction` lúc lệnh đang chạy không bị từ chối.
+- **Escape `\U+XXXX` trong chuỗi lisp (mục 191) chưa kiểm trên AutoCAD 2027.** Khi chuyển sang 100% ASCII, 25 dòng code có ký tự Nhật / ký hiệu viết thẳng (`"°"`, `"φ"`, `"入"`…) đã đổi thành `"\U+00B0"`, `"\U+03C6"`, `"\U+5165"`. Trên ZWCAD chữ UTF-8 viết thẳng vốn bị đọc theo CP932 thành mojibake nên không đổi hành vi. Trên AutoCAD (đọc `.lsp` UTF-8 được) thì chưa biết trình đọc AutoLISP có dịch `\U+XXXX` trong chuỗi hay không. Nhận diện Dim góc / phi vẫn có lớp so theo mã số (`member 176`, `member 966`…) nên không phụ thuộc chỗ này; riêng **`gro--extract-num-after-sym`** (tách số sau ký hiệu phi, vd `φ12` → 12) chỉ dựa vào chuỗi. Nghiệm thu trên AutoCAD: `(strlen "\U+03C6")` — ra `1` là dịch được, ra `7` thì phải đổi danh sách ký hiệu trong hàm đó sang `(chr 966)`…

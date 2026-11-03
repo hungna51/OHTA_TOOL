@@ -13,7 +13,7 @@ Dự án **OHTA TOOL** được thiết kế theo kiến trúc **Module Phân T�
    - **Mọi thư mục con BẮT BUỘC phải tuân thủ Luật Cấp 1.**
 2. **Cấp 2 — Luật Riêng Từng Mục Con (`OHTA_TOOL/<Muc_Con>/README.md` + `OHTA_TOOL/<Muc_Con>/rules/`)**:
    - Mỗi thư mục con phục vụ một nhóm chức năng nghiệp vụ độc lập và có bộ `rules/` riêng (quy định layer, cấu trúc dữ liệu, công thức tính toán, trường hợp biên riêng của nhóm đó).
-   - **Quy tắc cô lập**: Khi làm việc trên mục con `A`, AI **PHẢI** đọc `OHTA_TOOL/rules/*` + `A/README.md` + `A/rules/*`, và **KHÔNG** tự ý sửa đổi mã nguồn của mục con `B` hay hạ tầng `_system/` nếu chưa được yêu cầu.
+   - **Quy tắc cô lập**: Khi làm việc trên mục con `A`, AI đọc `OHTA_TOOL/rules/*` + `A/README.md` + mục lục `A/rules/` (file `00-*` nếu có), rồi chỉ mở các file rule mà mục lục chỉ tới cho việc đang làm. AI chỉ sửa mã nguồn trong mục con `A`; mục con `B` và hạ tầng `_system/` chỉ sửa khi được yêu cầu.
 
 ---
 
@@ -25,6 +25,8 @@ Dự án **OHTA TOOL** được thiết kế theo kiến trúc **Module Phân T�
 | Viết C# (`.NET`) hoặc AutoLISP chạy chung cho cả **ZWCAD 2026** và **AutoCAD** | [02-da-nen-tang-zwcad-autocad.md](rules/02-da-nen-tang-zwcad-autocad.md) |
 | Thêm mục con mới, khai báo nút bấm trong `module.json`, hoặc nhúng giao diện WPF riêng vào Tab | [03-giao-thuc-module-va-palette.md](rules/03-giao-thuc-module-va-palette.md) |
 | Kiểm tra lỗi Encoding (CP932 / UTF-8 / ASCII), khai báo biến cục bộ, `*error*`, Unit Test | [04-encoding-va-checklist-an-toan.md](rules/04-encoding-va-checklist-an-toan.md) |
+| Gặp thuật ngữ nghiệp vụ (tấm, hình, khung tấm, bango, F-name…) | [GLOSSARY.md](GLOSSARY.md) |
+| Định đổi cấu trúc DLL / mục con, hoặc thắc mắc "sao lại làm thế này" | [docs/adr/](docs/adr/) |
 
 ---
 

@@ -1,6 +1,6 @@
 # 16. Chuyển lisp GRO sang C# — lộ trình và trạng thái
 
-> Một phần tài liệu GURO. Mục lục: [../../CLAUDE.md](../../CLAUDE.md)
+> Một phần tài liệu GURO. Mục lục: [00-muc-luc-guro.md](00-muc-luc-guro.md)
 >
 > Kế hoạch người dùng duyệt 28/10/2026. **Cập nhật bảng trạng thái mỗi khi xong / nghiệm thu một giai đoạn.**
 
