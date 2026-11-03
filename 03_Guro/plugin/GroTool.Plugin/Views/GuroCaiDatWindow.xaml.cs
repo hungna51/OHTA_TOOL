@@ -5,7 +5,7 @@ using ZwCadPlugin.ViewModels;
 
 namespace ZwCadPlugin.Views
 {
-    /// <summary>Cửa sổ ⚙ Cài đặt GURO của tab Guro (mục 194). OK mới ghi registry.</summary>
+    /// <summary>Cửa sổ ⚙ Cài đặt GURO (mục 194, 195): tab Chung + tab Ghi chú; OK mới lưu cả hai.</summary>
     public partial class GuroCaiDatWindow : Window
     {
         private readonly GuroCaiDatViewModel _vm;
@@ -19,32 +19,19 @@ namespace ZwCadPlugin.Views
             DataContext = vm;
         }
 
-        private void Ok_Click(object sender, RoutedEventArgs e)
+        private async void Ok_Click(object sender, RoutedEventArgs e)
         {
             if (!_vm.DuocLuu) return;
             try
             {
                 GroRegistry.GhiCaiDat(_vm.KetQua());
+                await PanelGhiChu.LuuAsync();   // tab Ghi chú chưa mở thì bỏ qua
                 DaLuu = true;
                 DialogResult = true;
             }
             catch (Exception ex)
             {
                 MessageBox.Show(this, "Không lưu được cài đặt:\n" + ex.Message, Title,
-                                MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        private void GhiChu_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                var dlg = new NoteDictionaryWindow { Owner = this };
-                dlg.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this, "Không thể mở hộp thoại cài đặt ghi chú:\n" + ex.Message, Title,
                                 MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
