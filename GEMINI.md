@@ -55,7 +55,14 @@ OHTAINFO    : In thông tin chẩn đoán (nền tảng CAD, đường dẫn g�
 
 ---
 
-## 5. Checklist Bắt Buộc Trước Khi Lưu Mã Nguồn
+## 5. Quản Lý Phiên Bản (git) & Đóng Gói
+
+- Thư mục `OHTA_TOOL/` là 1 repo git (nhánh `main`). Mỗi bản gửi đội được gắn tag (`v1.0`, ...); xem lại bằng `git checkout v1.0`.
+- `.gitignore` bỏ qua `bin/`, `obj/`, `*.pdb`, `OHTATOOL.old_*`, `_release/` (file zip), `graphify-out/`.
+- **Khoá ghi Google Sheet** để riêng trong `01_Fname/data/google_sheet.key` (`write_key=...`) — **không đưa lên git**, nhưng **phải có trong gói zip** gửi đội. Apps Script đọc khoá từ *Thuộc tính tập lệnh* `WRITE_KEY`, không ghi trong mã nguồn.
+- Đóng gói: `OHTA_Loader.lsp`, `README.md`, `_system/bin/*/OHTATOOL.dll`, các thư mục mục con (bỏ `google_sheet_apps_script.gs`) → `_release/OHTA_TOOL_vX.zip`.
+
+## 6. Checklist Bắt Buộc Trước Khi Lưu Mã Nguồn
 
 - [ ] **Đúng phạm vi nhóm**: Chỉ sửa trong đúng thư mục mục con được yêu cầu (trừ khi nâng cấp tính năng khung `_system/`).
 - [ ] **Cập nhật tài liệu đi kèm**: Nếu thêm/sửa lệnh hoặc luật nghiệp vụ của nhóm nào, cập nhật ngay `README.md`, `module.json` và `rules/` của chính nhóm đó.
