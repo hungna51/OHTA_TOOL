@@ -91,9 +91,13 @@ namespace OhtaTool.Tests
                 Check("Tab 1 doc duoc data/catalog.csv du 13 vat lieu chuan",
                     catalog.Materials.Count == 13, $"Count={catalog.Materials.Count}");
 
-                Check("Tab 2 la 02_Module_Mau_2", modules[1].FolderName == "02_Module_Mau_2", modules[1].FolderName);
+                Check("Tab 2 la 03_Guro", modules[1].FolderName == "03_Guro", modules[1].FolderName);
                 Check("Tab 2 co README.md va rules/ rieng",
                     File.Exists(modules[1].ReadmePath) && Directory.Exists(modules[1].RulesDirectoryPath));
+                Check("Tab cuoi la 02_Module_Mau_2 (More, order 90)",
+                    modules[modules.Count - 1].FolderName == "02_Module_Mau_2", modules[modules.Count - 1].FolderName);
+                Check("Khong co tab tu thu muc docs / graphify-out",
+                    !modules.Exists(m => m.FolderName == "docs" || m.FolderName == "graphify-out"));
             }
         }
 
