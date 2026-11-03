@@ -61,7 +61,7 @@ OHTAINFO    : In thông tin chẩn đoán (nền tảng CAD, đường dẫn g�
 ## 5. Quản Lý Phiên Bản (git) & Đóng Gói
 
 - Thư mục `OHTA_TOOL/` là 1 repo git (nhánh `main`). Mỗi bản gửi đội được gắn tag (`v1.0`, ...); xem lại bằng `git checkout v1.0`.
-- `.gitignore` bỏ qua `bin/`, `obj/`, `*.pdb`, `OHTATOOL.old_*`, `_release/` (file zip), `graphify-out/`.
+- `.gitignore` bỏ qua `bin/`, `obj/`, `*.pdb`, `OHTATOOL.old_*`, `_release/` (file zip), `graphify-out/`, `_graphify-out/` (đổi tên có `_` để bảng OHTA không hiện thành tab).
 - **Khoá ghi Google Sheet** để riêng trong `01_Fname/data/google_sheet.key` (`write_key=...`) — **không đưa lên git**, nhưng **phải có trong gói zip** gửi đội. Apps Script đọc khoá từ *Thuộc tính tập lệnh* `WRITE_KEY`, không ghi trong mã nguồn.
 - Đóng gói: `OHTA_Loader.lsp`, `README.md`, `_system/bin/*/OHTATOOL.dll`, `03_Guro/bin/*/GROTOOL.dll`, các thư mục mục con (bỏ `google_sheet_apps_script.gs`, `03_Guro/plugin/`) → `_release/OHTA_TOOL_vX.zip`.
 - AutoCAD hỏi SECURELOAD khi nạp lisp ngoài thư mục tin cậy: thêm thư mục `OHTA_TOOL` (kèm cây con `...`) vào **Trusted Locations** trên mỗi máy.
