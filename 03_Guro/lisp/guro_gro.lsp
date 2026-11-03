@@ -5195,12 +5195,21 @@
   )
 )
 
+;; Muc 191: danh sach ky tu that tu ma Unicode - CHI tren AutoCAD (chuoi la ma ky tu). AutoCAD
+;; khong dich "\U+XXXX" trong chuoi lisp ((strlen "\U+03C6") = 7). ZWCAD tra nil: may kieu byte
+;; CP932 thi (chr 966) ra byte 198 = ky tu U+FF86 (half-width NI), de khop nham chu Nhat.
+(defun gro--ky-tu-unicode (codes)
+  (if (gro--la-zwcad-p) nil (mapcar 'chr codes))
+)
+
 ;; Trich xuat so do ghi ngay sau ky hieu phi, R (vi du: '4-%%C12' -> 12, 'R15' -> 15, '%%C20' -> 20)
 (defun gro--extract-num-after-sym (txt / up sym-pos pos s-sub)
   (setq up (strcase txt)
         sym-pos nil
   )
-  (foreach sym '("%%C" "\U+03C6" "\U+03D5" "\U+03A6" "\U+00F8" "\U+00D8" "\U+2300" "\\U+2205" "\\U+2300" "\\U+00F8" "\\U+00D8" "\\U+03C6" "\\U+03A6" "DIA." "DIA" "R")
+  (foreach sym (append '("%%C")
+                       (gro--ky-tu-unicode '(966 981 934 248 216 8960 8709)) ; phi, o gach, dau duong kinh
+                       '("\U+03C6" "\U+03D5" "\U+03A6" "\U+00F8" "\U+00D8" "\U+2300" "\\U+2205" "\\U+2300" "\\U+00F8" "\\U+00D8" "\\U+03C6" "\\U+03A6" "DIA." "DIA" "R"))
     (if (null sym-pos)
       (progn
         (setq pos (vl-string-search (strcase sym) up))
@@ -5320,13 +5329,15 @@
             )
           (progn
             (setq val-clean txt)
-            (foreach sym '("\U+00B0" "\U+00B0" "\\U+00B0" "\\u+00b0"
-                           "\U+FF9F" "\U+FF9F" "\\U+FF9F" "\\u+ff9f"
-                           "\U+309C" "\U+309C" "\\U+309C" "\\u+309c"
-                           "\U+00BA" "\U+00BA" "\\U+00BA" "\\u+00ba"
-                           "\U+02DA" "\U+02DA" "\\U+02DA" "\\u+02da"
-                           "%%d" "%%D" "DEG" "deg" " "
-                          )
+            (foreach sym (append
+                           (gro--ky-tu-unicode '(176 65439 12444 186 730)) ; ky hieu do (muc 191)
+                           '("\U+00B0" "\U+00B0" "\\U+00B0" "\\u+00b0"
+                             "\U+FF9F" "\U+FF9F" "\\U+FF9F" "\\u+ff9f"
+                             "\U+309C" "\U+309C" "\\U+309C" "\\u+309c"
+                             "\U+00BA" "\U+00BA" "\\U+00BA" "\\u+00ba"
+                             "\U+02DA" "\U+02DA" "\\U+02DA" "\\u+02da"
+                             "%%d" "%%D" "DEG" "deg" " "
+                            ))
               (setq val-clean (subst-all "" sym val-clean))
             )
             (setq val-num (gro--extract-dim-num val-clean))
