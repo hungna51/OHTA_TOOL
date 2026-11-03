@@ -1,11 +1,12 @@
 using System;
 using System.Windows;
+using System.Windows.Controls;
 using ZwCadPlugin.CadServices;
 using ZwCadPlugin.ViewModels;
 
 namespace ZwCadPlugin.Views
 {
-    /// <summary>Cửa sổ ⚙ Cài đặt GURO (mục 194, 195): tab Chung + tab Ghi chú; OK mới lưu cả hai.</summary>
+    /// <summary>Cửa sổ ⚙ Cài đặt GURO (mục 194–196): tab Chung + tab Ghi chú; OK mới lưu cả hai.</summary>
     public partial class GuroCaiDatWindow : Window
     {
         private readonly GuroCaiDatViewModel _vm;
@@ -18,6 +19,19 @@ namespace ZwCadPlugin.Views
             _vm = vm;
             DataContext = vm;
         }
+
+        /// <summary>Nút Khôi phục / Thêm từ chỉ hiện ở tab Ghi chú.</summary>
+        private void Tabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!ReferenceEquals(e.OriginalSource, Tabs)) return;   // bỏ sự kiện nổi lên từ DataGrid trong tab
+            var hien = Tabs.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
+            BtnKhoiPhuc.Visibility = hien;
+            BtnThemTu.Visibility = hien;
+        }
+
+        private void ThemTu_Click(object sender, RoutedEventArgs e) => PanelGhiChu.ThemTu();
+
+        private void KhoiPhuc_Click(object sender, RoutedEventArgs e) => PanelGhiChu.KhoiPhuc();
 
         private async void Ok_Click(object sender, RoutedEventArgs e)
         {

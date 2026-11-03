@@ -2,124 +2,210 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:v="clr-namespace:ZwCadPlugin.Views"
-        Title="Cài đặt GURO"
-        Width="680" Height="620" MinWidth="520" MinHeight="460"
+        Title="Cài Đặt GURO"
+        Width="760" Height="620" MinWidth="560" MinHeight="460"
         WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
         ShowInTaskbar="False"
+        Background="#F5F7FA"
         FontFamily="Segoe UI, Meiryo UI, Yu Gothic UI" FontSize="12"
-        Background="#F5F7FA">
-    <!-- Muc 194/195: tab Chung (cai dat lenh GRO) + tab Ghi chu (tu dien Nhat-Viet); OK luu ca hai -->
+        UseLayoutRounding="True" SnapsToDevicePixels="True">
+    <!-- Muc 194-196: tab Chung (cai dat lenh GRO) + tab Ghi chu (tu dien Nhat-Viet), kieu bang
+         "Danh sach goc be thu" cua Fname; OK luu ca hai -->
     <Window.Resources>
+        <Style x:Key="DialogSecondaryBtnStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="#334E68"/>
+            <Setter Property="BorderBrush" Value="#CBD2D9"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="16,6"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#ECEFF1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="DialogPrimaryBtnStyle" TargetType="Button">
+            <Setter Property="Background" Value="#323639"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="18,6"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                CornerRadius="5" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.90"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.55"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style x:Key="The" TargetType="Border">
             <Setter Property="Background" Value="#FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#D9E2EC"/>
+            <Setter Property="BorderBrush" Value="#CBD2D9"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Padding" Value="10,8"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
         </Style>
         <Style x:Key="TieuDeThe" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#486581"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#1E293B"/>
             <Setter Property="Margin" Value="0,0,0,6"/>
         </Style>
-        <Style TargetType="CheckBox">
-            <Setter Property="Margin" Value="0,3"/>
-            <Setter Property="Foreground" Value="#1F2933"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Style x:Key="FieldHint" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10.5"/>
+            <Setter Property="Foreground" Value="#64748B"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="22,0,0,6"/>
         </Style>
-        <Style x:Key="Nut" TargetType="Button">
-            <Setter Property="Padding" Value="14,5"/>
-            <Setter Property="Margin" Value="6,0,0,0"/>
-            <Setter Property="MinWidth" Value="80"/>
+        <Style TargetType="CheckBox">
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="Foreground" Value="#1E293B"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
     </Window.Resources>
 
-    <Grid Margin="12">
+    <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <TabControl Background="#F5F7FA">
+
+        <!-- Dai tieu de -->
+        <Border Grid.Row="0" Background="#323639" Padding="16,10">
+            <StackPanel>
+                <TextBlock Text="Cài Đặt GURO" Foreground="#FFFFFF" FontSize="14.5" FontWeight="SemiBold"/>
+                <TextBlock Text="Cài đặt chung của lệnh GRO cho mọi bản vẽ và từ điển ghi chú Nhật ➔ Việt"
+                           Foreground="#CFD8DC" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <TabControl x:Name="Tabs" Grid.Row="1" Margin="14,10,14,8" SelectionChanged="Tabs_SelectionChanged">
+            <!-- ===================== CHUNG ===================== -->
             <TabItem Header="Chung">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="8">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10">
                     <StackPanel>
-                    <Border Style="{StaticResource The}">
-                        <StackPanel>
-                            <TextBlock Text="KHUNG TẤM &amp; IN" Style="{StaticResource TieuDeThe}"/>
-                            <CheckBox Content="Tự tạo khung tấm theo cụm" IsChecked="{Binding UseTaoKhung}"/>
-                            <Grid Margin="20,2,0,2" IsEnabled="{Binding BatXepCum}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Layer" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#334E68"/>
-                                <TextBox Grid.Column="1" Height="24" VerticalContentAlignment="Center"
-                                         Text="{Binding LayerKhungTam, UpdateSourceTrigger=PropertyChanged}"
-                                         ToolTip="Bản vẽ chưa có layer này thì GRO tự tạo. Để trống = Khung_IN"/>
-                            </Grid>
-                            <TextBlock Text="{Binding Loi}" Foreground="#C62828" FontSize="11" TextWrapping="Wrap" Margin="20,0,0,2">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Style.Triggers>
-                                            <Trigger Property="Text" Value="{x:Null}">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                            </Trigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                            <CheckBox Content="Tự in nhanh PDF theo khung bao" IsChecked="{Binding UseInPdf}" Margin="0,6,0,3"/>
-                        </StackPanel>
-                    </Border>
+                        <Border Style="{StaticResource The}">
+                            <StackPanel>
+                                <TextBlock Text="Khung tấm &amp; in" Style="{StaticResource TieuDeThe}"/>
+                                <CheckBox Content="Tự tạo khung tấm theo cụm" IsChecked="{Binding UseTaoKhung}"/>
+                                <TextBlock Style="{StaticResource FieldHint}"
+                                           Text="Vẽ khung chữ nhật bao mỗi tấm (hình, mã khắc, F-name, ghi chú, dim)."/>
+                                <Grid Margin="22,0,0,2" IsEnabled="{Binding BatXepCum}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="220"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Layer" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" Foreground="#1E293B"/>
+                                    <TextBox Grid.Column="1" Height="25" VerticalContentAlignment="Center"
+                                             Text="{Binding LayerKhungTam, UpdateSourceTrigger=PropertyChanged}"/>
+                                </Grid>
+                                <TextBlock Style="{StaticResource FieldHint}"
+                                           Text="Bản vẽ chưa có layer này thì GRO tự tạo. Để trống = Khung_IN."/>
+                                <TextBlock Text="{Binding Loi}" Foreground="#C62828" FontSize="11" TextWrapping="Wrap" Margin="22,0,0,6">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <Trigger Property="Text" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <CheckBox Content="Tự in nhanh PDF" IsChecked="{Binding UseInPdf}" Margin="0,4,0,2"/>
+                                <TextBlock Style="{StaticResource FieldHint}"
+                                           Text="Cuối lệnh in PDF theo khung bao (gro.ctb, 1 file, tự mở)."/>
+                            </StackPanel>
+                        </Border>
 
-                    <Border Style="{StaticResource The}">
-                        <StackPanel>
-                            <TextBlock Text="XẾP CỤM &amp; MÃ KHẮC" Style="{StaticResource TieuDeThe}"/>
-                            <CheckBox IsChecked="{Binding XepCum}" IsEnabled="{Binding BatXepCum}">
-                                <TextBlock TextWrapping="Wrap" Text="Xếp cụm mirror / gia công sang cột phải, tách cặp mirror"/>
-                            </CheckBox>
-                            <CheckBox Content="Đặt mã khắc + F-name vào trong hình" IsChecked="{Binding DatMk}"
-                                      IsEnabled="{Binding BatDatMk}" Margin="20,3,0,3"/>
-                            <TextBlock Text="Cần bật &quot;Tự tạo khung tấm&quot;." Foreground="#B45309" FontStyle="Italic" FontSize="11">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding BatXepCum}" Value="False">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </StackPanel>
-                    </Border>
+                        <Border Style="{StaticResource The}">
+                            <StackPanel>
+                                <TextBlock Text="Xếp cụm &amp; mã khắc" Style="{StaticResource TieuDeThe}"/>
+                                <CheckBox Content="Xếp cụm mirror / gia công" IsChecked="{Binding XepCum}" IsEnabled="{Binding BatXepCum}"/>
+                                <TextBlock Style="{StaticResource FieldHint}"
+                                           Text="Cụm mirror / gia công dời sang cột phải để dễ đọc; tách cặp mirror một hình thành 2 tấm."/>
+                                <CheckBox Content="Đặt mã khắc + F-name vào trong hình" IsChecked="{Binding DatMk}" IsEnabled="{Binding BatDatMk}"/>
+                                <TextBlock Style="{StaticResource FieldHint}"
+                                           Text="Tấm đơn / mirror: đưa mã khắc và F-name vào bên trong hình tấm."/>
+                                <TextBlock Text="Cần bật &quot;Tự tạo khung tấm&quot;." Foreground="#B45309" FontStyle="Italic" FontSize="11">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding BatXepCum}" Value="False">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
 
-                    <Border Style="{StaticResource The}">
-                        <StackPanel>
-                            <TextBlock Text="XỬ LÝ NÉT" Style="{StaticResource TieuDeThe}"/>
-                            <CheckBox IsChecked="{Binding UseXln}">
-                                <TextBlock TextWrapping="Wrap" Text="Chuyển layer nét (Continuous → 0-KAKOU, Center1 → 3-KEGAKI)"/>
-                            </CheckBox>
-                            <CheckBox IsChecked="{Binding AutoDim}" IsEnabled="{Binding UseXln}" Margin="20,3,0,3">
-                                <TextBlock TextWrapping="Wrap" Text="Tự nhận diện nét Dim theo hình học → 1-SUNPOU (tắt = không xử lý nét Dim)"/>
-                            </CheckBox>
-                        </StackPanel>
-                    </Border>
+                        <Border Style="{StaticResource The}">
+                            <StackPanel>
+                                <TextBlock Text="Xử lý nét" Style="{StaticResource TieuDeThe}"/>
+                                <CheckBox Content="Chuyển layer nét" IsChecked="{Binding UseXln}"/>
+                                <TextBlock Style="{StaticResource FieldHint}"
+                                           Text="Nét trên layer gốc: Continuous → 0-KAKOU, Center1 → 3-KEGAKI."/>
+                                <CheckBox Content="Tự nhận diện nét Dim" IsChecked="{Binding AutoDim}" IsEnabled="{Binding UseXln}"
+                                          Margin="22,2,0,2"/>
+                                <TextBlock Style="{StaticResource FieldHint}" Margin="44,0,0,6"
+                                           Text="Nét gióng kích thước (dài, lỗ, góc) → 1-SUNPOU. Tắt = không xử lý nét Dim."/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
+
+            <!-- ===================== GHI CHU ===================== -->
             <TabItem Header="Ghi chú">
-                <v:NoteDictionaryPanel x:Name="PanelGhiChu" Margin="8"/>
+                <v:NoteDictionaryPanel x:Name="PanelGhiChu" Margin="10"/>
             </TabItem>
         </TabControl>
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-            <Button Content="OK" IsDefault="True" Style="{StaticResource Nut}" Click="Ok_Click"
-                    IsEnabled="{Binding DuocLuu}"/>
-            <Button Content="Hủy" IsCancel="True" Style="{StaticResource Nut}"/>
-        </StackPanel>
+        <!-- Thanh day -->
+        <Border Grid.Row="2" Background="#ECEFF1" BorderBrush="#CFD8DC" BorderThickness="0,1,0,0" Padding="14,10">
+            <DockPanel>
+                <Button x:Name="BtnKhoiPhuc" DockPanel.Dock="Left" Style="{StaticResource DialogSecondaryBtnStyle}"
+                        Content="⟲ Khôi phục mặc định" Click="KhoiPhuc_Click" Visibility="Collapsed"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="BtnThemTu" Style="{StaticResource DialogSecondaryBtnStyle}" Content="➕  Thêm từ"
+                            Margin="0,0,8,0" Click="ThemTu_Click" Visibility="Collapsed"/>
+                    <Button Style="{StaticResource DialogSecondaryBtnStyle}" Content="Hủy" IsCancel="True" Margin="0,0,8,0"/>
+                    <Button Style="{StaticResource DialogPrimaryBtnStyle}" Content="OK" MinWidth="80" IsDefault="True"
+                            Click="Ok_Click" IsEnabled="{Binding DuocLuu}"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
     </Grid>
 </Window>

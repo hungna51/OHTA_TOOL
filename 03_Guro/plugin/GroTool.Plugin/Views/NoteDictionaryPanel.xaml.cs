@@ -1,9 +1,12 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
 using ZwCadPlugin.Core;
 using ZwCadPlugin.Models;
 
@@ -12,11 +15,14 @@ namespace ZwCadPlugin.Views
     /// <summary>
     /// Nội dung "Cài đặt ghi chú" (từ điển Nhật → Việt + đồng bộ Google Sheet). Mục 195:
     /// dùng chung cho tab Ghi chú của cửa sổ ⚙ Cài đặt GURO và hộp thoại NoteDictionaryWindow
-    /// (bảng DST). Nơi chứa có nút Lưu gọi LuuAsync().
+    /// (bảng DST). Mục 196: kiểu bảng "Danh sách góc bẻ thử" của Fname — ô Tìm, bảng chỉ xem,
+    /// bấm đúp để sửa / xóa trong NoteTuWindow. Nơi chứa đặt nút ➕ Thêm (ThemTu), Khôi phục
+    /// (KhoiPhuc) và Lưu (LuuAsync) ở thanh đáy.
     /// </summary>
     public partial class NoteDictionaryPanel : UserControl
     {
         private ObservableCollection<NoteDictionaryItem> _items;
+        private ICollectionView _view;
 
         private bool _daMo;
 
@@ -44,7 +50,7 @@ namespace ZwCadPlugin.Views
             TxtSheetUrl.Text = JapanNoteTranslator.GetSheetUrl();
             ChkAutoSync.IsChecked = JapanNoteTranslator.GetAutoSync();
             ChkAutoUpload.IsChecked = JapanNoteTranslator.GetAutoUpload();
-            TxtJapanese.Focus();
+            TxtTim.Focus();
 
             if (ChkAutoSync.IsChecked == true)
             {
@@ -57,12 +63,17 @@ namespace ZwCadPlugin.Views
             var rawList = JapanNoteTranslator.GetItems();
             _items = new ObservableCollection<NoteDictionaryItem>(rawList);
             DgrDictionary.ItemsSource = _items;
+            _view = CollectionViewSource.GetDefaultView(_items);
+            _view.Filter = KhopTim;
             CapNhatThongKe();
         }
 
         private void CapNhatThongKe()
         {
-            LblStatus.Text = $"Tổng cộng: {_items?.Count ?? 0} từ khóa";
+            int tong = _items?.Count ?? 0;
+            int hien = _view?.Cast<object>().Count() ?? tong;
+            LblStatus.Text = $"Tổng cộng: {tong} từ khóa" + (hien != tong ? $" (đang lọc: {hien})" : "") +
+                             " — bấm đúp một dòng để sửa hoặc xóa.";
         }
 
         private async void DongBoSheet_Click(object sender, RoutedEventArgs e)
@@ -205,55 +216,66 @@ namespace ZwCadPlugin.Views
             }
         }
 
-        private void ThemTu_Click(object sender, RoutedEventArgs e)
+        /// <summary>Lọc theo ô Tìm: mọi từ (cách nhau dấu cách) phải có trong Nhật hoặc Việt.</summary>
+        private bool KhopTim(object o)
         {
-            string jp = TxtJapanese.Text?.Trim();
-            string vn = TxtVietnamese.Text?.Trim();
+            string tim = TxtTim?.Text?.Trim();
+            if (string.IsNullOrEmpty(tim) || !(o is NoteDictionaryItem it)) return true;
+            string chu = ((it.Japanese ?? "") + " " + (it.Vietnamese ?? "")).ToLowerInvariant();
+            return tim.ToLowerInvariant().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).All(chu.Contains);
+        }
 
-            if (string.IsNullOrWhiteSpace(jp))
-            {
-                MessageBox.Show("Vui lòng nhập cụm từ tiếng Nhật!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
-                TxtJapanese.Focus();
-                return;
-            }
-
-            var existing = _items.FirstOrDefault(x => string.Equals(x.Japanese, jp, StringComparison.OrdinalIgnoreCase));
-            if (existing != null)
-            {
-                existing.Vietnamese = vn;
-                DgrDictionary.SelectedItem = existing;
-                DgrDictionary.ScrollIntoView(existing);
-            }
-            else
-            {
-                var newItem = new NoteDictionaryItem
-                {
-                    Japanese = jp,
-                    Vietnamese = vn
-                };
-                _items.Add(newItem);
-                DgrDictionary.SelectedItem = newItem;
-                DgrDictionary.ScrollIntoView(newItem);
-            }
-
-            TxtJapanese.Clear();
-            TxtVietnamese.Clear();
-            TxtJapanese.Focus();
+        private void TxtTim_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            _view?.Refresh();
             CapNhatThongKe();
         }
 
-        private void XoaDong_Click(object sender, RoutedEventArgs e)
+        /// <summary>Nút ➕ Thêm từ của nơi chứa: thêm mới, trùng cụm từ Nhật thì cập nhật nghĩa.</summary>
+        public void ThemTu()
         {
-            if (sender is Button btn && btn.DataContext is NoteDictionaryItem item)
+            var w = new NoteTuWindow(null, null, false) { Owner = Chu };
+            if (w.ShowDialog() != true || w.KetQua != NoteTuWindow.KetThuc.Luu) return;
+
+            var existing = _items.FirstOrDefault(x => string.Equals(x.Japanese, w.Japanese, StringComparison.OrdinalIgnoreCase));
+            if (existing != null)
             {
-                _items.Remove(item);
-                CapNhatThongKe();
+                existing.Vietnamese = w.Vietnamese;
             }
+            else
+            {
+                existing = new NoteDictionaryItem { Japanese = w.Japanese, Vietnamese = w.Vietnamese };
+                _items.Add(existing);
+            }
+            _view?.Refresh();
+            DgrDictionary.SelectedItem = existing;
+            DgrDictionary.ScrollIntoView(existing);
+            CapNhatThongKe();
         }
 
-        private void KhoiPhuc_Click(object sender, RoutedEventArgs e)
+        /// <summary>Bấm đúp một dòng: sửa hoặc xóa.</summary>
+        private void Dgr_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            var res = MessageBox.Show(
+            if (!(DgrDictionary.SelectedItem is NoteDictionaryItem item)) return;
+            var w = new NoteTuWindow(item.Japanese, item.Vietnamese, true) { Owner = Chu };
+            if (w.ShowDialog() != true) return;
+            if (w.KetQua == NoteTuWindow.KetThuc.Xoa)
+            {
+                _items.Remove(item);
+            }
+            else if (w.KetQua == NoteTuWindow.KetThuc.Luu)
+            {
+                item.Japanese = w.Japanese;
+                item.Vietnamese = w.Vietnamese;
+            }
+            _view?.Refresh();
+            CapNhatThongKe();
+        }
+
+        /// <summary>Nút ⟲ Khôi phục mặc định của nơi chứa.</summary>
+        public void KhoiPhuc()
+        {
+            var res = MessageBox.Show(Chu,
                 "Bạn có chắc muốn khôi phục từ điển về danh mục chuẩn ban đầu?\nCác từ khóa tự thêm sẽ bị đặt lại.",
                 "Xác nhận",
                 MessageBoxButton.YesNo,

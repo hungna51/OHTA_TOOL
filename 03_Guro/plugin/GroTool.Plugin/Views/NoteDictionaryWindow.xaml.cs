@@ -10,6 +10,10 @@ namespace ZwCadPlugin.Views
             InitializeComponent();
         }
 
+        private void ThemTu_Click(object sender, RoutedEventArgs e) => Panel.ThemTu();
+
+        private void KhoiPhuc_Click(object sender, RoutedEventArgs e) => Panel.KhoiPhuc();
+
         private async void Luu_Click(object sender, RoutedEventArgs e)
         {
             await Panel.LuuAsync();

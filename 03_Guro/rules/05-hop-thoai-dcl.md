@@ -448,3 +448,12 @@ Người dùng muốn xem lại thiết lập trước mỗi lần chạy, nên 
 - Nội dung ghi chú tách thành **`NoteDictionaryPanel`** (UserControl). `NoteDictionaryWindow` — bảng DST vẫn mở — chỉ còn là vỏ: panel + nút Lưu & Đóng / Đóng.
 - **OK** của cửa sổ ⚙ ghi registry cài đặt chung rồi `await PanelGhiChu.LuuAsync()`; Hủy bỏ cả hai.
 - **Bẫy**: ô link Sheet và các cờ của panel chỉ được nạp ở sự kiện `Loaded` — tab chưa từng mở thì `LuuAsync` phải bỏ qua (`DaMo`), không thì ghi đè link Google Sheet bằng ô trống. Trong `TabControl`, `Loaded` chạy lại mỗi lần chọn tab → khởi tạo (kể cả tự tải từ Sheet) chỉ chạy lần đầu.
+
+## Mục 196 — Giao diện kiểu bảng "Danh sách góc bẻ thử" của Fname
+
+Áp cho cửa sổ ⚙ Cài đặt GURO, tab Ghi chú và hộp thoại ghi chú của bảng DST (`NoteDictionaryWindow`):
+
+- Dải tiêu đề màu tab Guro `#323639` (tiêu đề 14.5 + dòng mô tả `#CFD8DC`); thanh đáy `#ECEFF1`, nút phụ trắng viền `#CBD2D9`, nút chính `#323639`. Kiểu nút chép trong từng file XAML (như bên Fname) — không dùng ResourceDictionary chung vì URI `pack://` có thể không đăng ký khi WPF chạy trong CAD.
+- **Tab Chung**: 3 thẻ trắng, mỗi tuỳ chọn có dòng gợi ý xám nhỏ.
+- **Ghi chú** (`NoteDictionaryPanel`): ô **Tìm** lọc theo Nhật / Việt (nhiều từ cách nhau dấu cách); thanh **Google Sheet** một dải xám (link, ⬇ Tải, ⬆ Đẩy, Tự tải khi mở, Tự đẩy khi lưu); bảng **chỉ xem** 2 cột; dòng đếm "Tổng cộng: N từ khóa (đang lọc: M)". **Bấm đúp** một dòng mở `NoteTuWindow` để sửa hoặc **Xóa**; **➕ Thêm từ** (thanh đáy) mở cùng cửa sổ, trùng cụm từ Nhật thì cập nhật nghĩa. Bỏ khung nhập trên bảng, cột Xóa và khung tiêu đề xanh cũ.
+- Cửa sổ ⚙: nút ⟲ Khôi phục mặc định và ➕ Thêm từ chỉ hiện khi đang ở tab Ghi chú (`Tabs_SelectionChanged` — lọc `OriginalSource` vì sự kiện chọn dòng DataGrid cũng nổi lên).
