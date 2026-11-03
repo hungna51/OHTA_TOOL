@@ -20,3 +20,6 @@ _graphify-out/
 
 # Khoa ghi Google Sheet (de rieng, khong dua len git)
 01_Fname/data/google_sheet.key
+
+# Ban sao luu module.json do nut + / cai dat tab tu sinh (ADR 0002)
+module.json.bak
