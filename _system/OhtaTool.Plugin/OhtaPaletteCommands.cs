@@ -180,7 +180,7 @@ namespace OhtaTool.Plugin
         // PaletteSet Lifecycle & Dynamic Vertical Tabs
         // ====================================================================
 
-        private const string PaletteTitle = "OHTA TOOL v1.0";
+        private const string PaletteTitle = "OHTA TOOL v1.1 (beta)";
 
         public static bool ShowOrBuildPalette(bool forceRebuild)
         {
