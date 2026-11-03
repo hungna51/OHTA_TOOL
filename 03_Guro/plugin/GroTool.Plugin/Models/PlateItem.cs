@@ -2,7 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+#if ZWCAD
 using ZwSoft.ZwCAD.DatabaseServices;
+#else
+using Autodesk.AutoCAD.DatabaseServices;
+#endif
 using ZwCadPlugin.Core;
 
 namespace ZwCadPlugin.Models

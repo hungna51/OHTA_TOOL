@@ -1,37 +1,82 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    GROTOOL.dll - phan .NET cua lenh GRO (OHTA_TOOL/03_Guro). Nguon cu: laptrinhlisp/ZwCadPlugin (GROZWCAD.dll).
+    Bien dich kep giong _system/OhtaTool.Plugin: net48 = ZWCAD 2026 (define ZWCAD), net10.0-windows = AutoCAD 2027 (define AUTOCAD).
+    Build bang OHTA_TOOL\build_ohta.ps1 (tu do SDK, chep DLL ra 03_Guro\bin\ZwCAD | bin\AutoCAD).
+  -->
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
+    <ZwCadSdkDir Condition="'$(ZwCadSdkDir)' == ''">C:\Program Files\ZWSOFT\ZWCAD 2026</ZwCadSdkDir>
+    <AutoCadSdkDir Condition="'$(AutoCadSdkDir)' == ''">C:\Program Files\Autodesk\AutoCAD 2027</AutoCadSdkDir>
+    <AutoCadTfm Condition="'$(AutoCadTfm)' == ''">net10.0-windows</AutoCadTfm>
+
+    <HasZwCadSdk Condition="Exists('$(ZwCadSdkDir)\ZwManaged.dll')">true</HasZwCadSdk>
+    <HasAutoCadSdk Condition="Exists('$(AutoCadSdkDir)\acmgd.dll')">true</HasAutoCadSdk>
+
+    <TargetFrameworks Condition="'$(HasZwCadSdk)' == 'true' and '$(HasAutoCadSdk)' == 'true'">net48;$(AutoCadTfm)</TargetFrameworks>
+    <TargetFrameworks Condition="'$(HasZwCadSdk)' == 'true' and '$(HasAutoCadSdk)' != 'true'">net48</TargetFrameworks>
+    <TargetFrameworks Condition="'$(HasZwCadSdk)' != 'true' and '$(HasAutoCadSdk)' == 'true'">$(AutoCadTfm)</TargetFrameworks>
+    <TargetFrameworks Condition="'$(TargetFrameworks)' == ''">net48</TargetFrameworks>
+
+    <LangVersion>latest</LangVersion>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
     <RootNamespace>ZwCadPlugin</RootNamespace>
-    <AssemblyName>GROZWCAD</AssemblyName>
+    <AssemblyName>GROTOOL</AssemblyName>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
-    <!-- Đảm bảo xuất DLL sạch vào thư mục bin -->
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <NoWarn>$(NoWarn);CA1416;MSB3277;CS8981</NoWarn>
   </PropertyGroup>
 
-  <ItemGroup>
-    <!-- Cho phép biên dịch .NET 4.8 bằng .NET SDK hiện đại mà không cần cài đặt VS Developer Pack -->
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
-  </ItemGroup>
+  <!-- Nhanh ZWCAD 2026 (.NET Framework 4.8) -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+    <DefineConstants>$(DefineConstants);ZWCAD</DefineConstants>
+  </PropertyGroup>
 
-  <ItemGroup>
-    <!-- Tham chiếu đến các thư viện cốt lõi của ZWCAD 2026 -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <!-- Cho phep bien dich .NET 4.8 bang .NET SDK hien dai ma khong can cai VS Developer Pack -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
     <Reference Include="ZwDatabaseMgd">
-      <HintPath>C:\Program Files\ZWSOFT\ZWCAD 2026\ZwDatabaseMgd.dll</HintPath>
+      <HintPath>$(ZwCadSdkDir)\ZwDatabaseMgd.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="ZwManaged">
-      <HintPath>C:\Program Files\ZWSOFT\ZWCAD 2026\ZwManaged.dll</HintPath>
+      <HintPath>$(ZwCadSdkDir)\ZwManaged.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="Build">
-    <!-- Muc 179: DLL ten GROZWCAD.dll, thu muc rieng C:\GROZWCAD (lisp GRO nap khi mo ZWCAD) -->
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="C:\GROZWCAD" ContinueOnError="true" />
-    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="C:\GROZWCAD" Condition="Exists('$(TargetDir)$(TargetName).pdb')" ContinueOnError="true" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(ProjectDir)..\GROZWCAD.dll" ContinueOnError="true" />
+  <!-- Nhanh AutoCAD (.NET 10.0 / 8.0 Windows) -->
+  <PropertyGroup Condition="'$(TargetFramework)' != 'net48'">
+    <DefineConstants>$(DefineConstants);AUTOCAD</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != 'net48'">
+    <Reference Include="accoremgd">
+      <HintPath>$(AutoCadSdkDir)\accoremgd.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="acdbmgd">
+      <HintPath>$(AutoCadSdkDir)\acdbmgd.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="acmgd">
+      <HintPath>$(AutoCadSdkDir)\acmgd.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Xuat DLL ra 03_Guro/bin/ZwCAD va 03_Guro/bin/AutoCAD (build_ohta.ps1 tat buoc nay va tu chep) -->
+  <Target Name="CopyOutputToGuroBin" AfterTargets="Build" Condition="'$(SkipPostBuildCopy)' != 'true'">
+    <PropertyGroup>
+      <CadOutSubDir Condition="'$(TargetFramework)' == 'net48'">ZwCAD</CadOutSubDir>
+      <CadOutSubDir Condition="'$(TargetFramework)' != 'net48'">AutoCAD</CadOutSubDir>
+      <CadBinDest>$(MSBuildProjectDirectory)\..\..\bin\$(CadOutSubDir)</CadBinDest>
+    </PropertyGroup>
+    <MakeDir Directories="$(CadBinDest)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CadBinDest)" Retries="0" ContinueOnError="true" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CadBinDest)" Condition="Exists('$(TargetDir)$(TargetName).pdb')" Retries="0" ContinueOnError="true" />
   </Target>
 </Project>

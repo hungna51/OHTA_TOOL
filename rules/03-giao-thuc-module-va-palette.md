@@ -72,6 +72,12 @@ Phù hợp cho 90% tiện ích vẽ, kiểm tra, xử lý đối tượng CAD:
 2. Thêm một mục vào mảng `"tools"` trong `<Muc_Con>/module.json`.
 3. Gõ `OHTARELOAD` (hoặc bấm nút `⟳` trên bảng `OHTA TOOL`) → Nút bấm xuất hiện ngay lập tức và sẵn sàng sử dụng!
 
+### Lệnh gõ được ngay ở mọi bản vẽ: `lisp/autoload.lsp`
+`OHTA_Loader.lsp` (Startup Suite) nạp `<Muc_Con>/lisp/autoload.lsp` — nếu có — ở **mỗi bản vẽ** (bỏ qua thư mục bắt đầu bằng `_`). Dùng khi lệnh của mục con phải gõ được trên dòng lệnh mà không cần mở bảng `OHTA`.
+- Chỉ khai báo **lệnh mồi** nhẹ: `(defun c:XXX () (if (nap-file-that) (c:XXX)) (princ))` — lần đầu gõ mới `load` file lisp lớn, file đó định nghĩa lại `c:XXX` thật.
+- Chỉ khai báo lệnh mồi khi file thật **chưa** nạp (cờ do file thật đặt ở cuối), vì nút bấm nạp lại `lispFile` mỗi lần bấm.
+- Ví dụ: [`03_Guro/lisp/autoload.lsp`](../03_Guro/lisp/autoload.lsp).
+
 ### Cấp độ 2: Giao Diện WPF Chuyên Sâu Cho Riêng Một Tab (`ModuleViewRegistry`)
 Khi một mục con cần giao diện tương tác phức tạp hơn danh sách nút bấm (ví dụ: bảng `DataGrid` hai chiều, form nhập thông số trực quan, biểu đồ preview):
 1. Tạo `UserControl` WPF mới trong `_system/OhtaTool.Plugin/Views/` (kèm logic thuần trong `Core/`).

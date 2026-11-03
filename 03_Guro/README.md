@@ -1,34 +1,50 @@
-# GURO — Tài liệu & cấu trúc thư mục
+# 03_Guro — Tab **Guro** (lệnh GRO)
 
-Thư mục này chứa bộ lệnh LISP **GURO** cho **ZWCAD 2026** (đánh số bango, gán mã khắc, tạo F-name, xuất CSV, in PDF, chuyển layer nét) cùng tài liệu bảo trì cho các AI assistant.
+Bộ lệnh **GURO** (đánh số bango, gán mã khắc, tạo F-name, xuất CSV, in PDF, chuyển layer nét) đã chuyển vào OHTA TOOL từ 11/2026 (mục 191). Chạy trên **ZWCAD 2026** và **AutoCAD 2027**.
 
-## Cấu trúc thư mục
+## Cấu trúc
 
 ```
-GURO/
-├── guro ZWCAD(BG MK FN).lsp   ← BẢN GỐC (đầy đủ): gro, bg, mk, FN, ocsv + lệnh chẩn đoán
-├── Guro ZWCAD(gro).lsp        ← Bản GỌN (sinh từ bản gốc): chỉ gro + oi + xln/dsn/dst…
-├── lisp_xuat_Fname(FN).lsp    ← Lệnh FN (xuất F-name)
-├── ma_khac.lsp / ma_khac2.lsp ← Lệnh mã khắc (mk / mk2)
-├── TXTEXP_nhieu_doi_tuong (xt) ZW.lsp ← Lệnh TXTEXP nhiều đối tượng
-├── *.ctb                      ← Plot style dùng khi in PDF (gro.ctb, guro.ctb, monochrome-guro.ctb)
-├── CLAUDE.md                  ← Mục lục tài liệu cho Claude  → .claude/rules/
-├── deepseek.md                ← Mục lục tài liệu cho DeepSeek → rules/
-├── plan_ghi_chu_plate_palette.md ← Bản kế hoạch ghi chú / plate palette
-├── .claude/rules/             ← 15 file rule cho Claude
-├── rules/                     ← 15 file rule cho DeepSeek
-├── backup/                    ← Bản sao lưu tự động (._ls) của các file .lsp
-└── archive/                   ← Phiên bản cũ (không còn dùng)
+03_Guro/
+├── module.json                  Tab "Guro" + các nút GRO, GI, DST, XLN, XLNDS, GROKHUNG, GROTAM, FIXFD, NETRELOAD
+├── lisp/autoload.lsp            Lệnh mồi: OHTA_Loader.lsp nạp ở MỌI bản vẽ; lần đầu gõ GRO/XLN/DST... mới nạp guro_gro.lsp
+├── lisp/guro_gro.lsp            Lisp GRO (bản DUY NHẤT còn sửa — trước là ZWLISP\GURO\Guro ZWCAD(gro).lsp)
+├── plot/gro.ctb                 Bảng kiểu in; lisp tự chép vào thư mục plot style của CAD khi thiếu
+├── plugin/GroTool.Plugin/       Nguồn C# của GROTOOL.dll (trước là laptrinhlisp\ZwCadPlugin → GROZWCAD.dll)
+├── plugin/GroTool.Tests/        560 unit test phần Core/ (chạy không cần CAD)
+├── bin/ZwCAD/GROTOOL.dll        Bản ZWCAD 2026 (net48)      — sinh bởi build_ohta.ps1, không đưa lên git
+├── bin/AutoCAD/GROTOOL.dll      Bản AutoCAD 2027 (net10)    — sinh bởi build_ohta.ps1, không đưa lên git
+└── rules/                       Luật riêng GURO (00 = mục lục cũ, 01..16)
 ```
 
-## Quy ước quan trọng
+## Cách hoạt động
 
-1. **`guro ZWCAD(BG MK FN).lsp` là bản gốc duy nhất.** Sửa `gro` thì sửa ở đây rồi **sinh lại** `Guro ZWCAD(gro).lsp` — hai file KHÔNG tự đồng bộ.
-2. **Không gõ tiếng Việt có dấu / tiếng Nhật trực tiếp vào `.lsp`** (ZWCAD đọc theo CP932 → mojibake). Dùng ASCII thuần cho `princ`/`alert`; nhãn DCL dùng `\U+XXXX`.
-3. **Mỗi lần sửa lisp phải cập nhật file rule tương ứng ngay trong cùng lần làm việc** (xem `CLAUDE.md` / `deepseek.md`).
-4. **Không viết lại logic đã có** — tra [Bản đồ hàm](rules/03-ban-do-ham.md) trước khi viết hàm mới.
+1. `OHTA_Loader.lsp` (trong Startup Suite) nạp `03_Guro\lisp\autoload.lsp` ở mỗi bản vẽ → các lệnh `GRO, GI, XLN, CLN, XLNDS, DS, DSN, DST, GRODS, GROKHUNG, GROTAM, FIXFD, NETDST, NETRELOAD` gõ được ngay.
+2. Lần đầu gọi lệnh, `autoload.lsp` nạp `guro_gro.lsp`; file này tự NETLOAD `bin\<ZwCAD|AutoCAD>\GROTOOL.dll` (`gro--tim-dll`). Trên ZWCAD còn tìm thêm `C:\GROZWCAD\GROZWCAD.dll` cũ.
+3. Nút trên tab Guro nạp `autoload.lsp` rồi gọi lệnh — không nạp lại file 650 KB mỗi lần bấm.
+4. **Không** cài thêm `Guro ZWCAD(gro).lsp` cũ vào Startup Suite song song — hai bản sẽ đè lệnh của nhau.
 
-## Ghi chú
+## Khác biệt ZWCAD / AutoCAD
 
-- Ba file `.ctb` (`gro.ctb`, `guro.ctb`, `monochrome-guro.ctb`) hiện **giống hệt nhau từng byte**. `gro.ctb` được code dùng trực tiếp (`gro--ctb-in`), `monochrome-guro.ctb` được các file OI cũ ở thư mục cha tham chiếu — nên giữ nguyên cả ba để tránh hỏng đường in.
-- `backup/` chứa bản sao lưu tự động; ZWCAD có thể tạo lại file `._ls` mới ở gốc mỗi lần lưu.
+| Việc | ZWCAD 2026 | AutoCAD 2027 |
+|---|---|---|
+| DLL | `bin\ZwCAD\GROTOOL.dll` (net48, `#if ZWCAD`) | `bin\AutoCAD\GROTOOL.dll` (net10.0-windows, `#if AUTOCAD`) |
+| Máy in PDF (`gro--may-in-pdf`) | `DWG to PDF.pc5` | `DWG To PDF.pc3` |
+| Thư mục ctb (`gro--thu-muc-ctb`) | `<ROAMABLEROOTPREFIX>\Printstyle\` | `PrinterStyleSheetDir` |
+| Nạp lisp lần đầu | — | AutoCAD hỏi SECURELOAD: thêm thư mục `OHTA_TOOL` vào **Trusted Locations** (cả cây con) để khỏi hỏi |
+
+Mã C#: mỗi file dùng `#if ZWCAD using ZwSoft.ZwCAD.X; #else using Autodesk.AutoCAD.X; #endif`; chỗ ghi đầy đủ kiểu dùng alias `CadColor`, `CadColorDialog`, `CadApplication`, `CadObjectId`. Thư mục `Core/` thuần C#, không phụ thuộc CAD.
+
+## Build & kiểm thử
+
+```
+powershell -ExecutionPolicy Bypass -File OHTA_TOOL\build_ohta.ps1
+```
+Build OHTATOOL + GROTOOL cho cả 2 nền tảng, chạy `OhtaTool.Tests` + `GroTool.Tests`, kiểm tra lisp ASCII / cân bằng ngoặc.
+
+## Quy ước (giữ từ GURO)
+
+- Lisp 100% ASCII: chữ Nhật / ký hiệu trong chuỗi dùng escape `\U+XXXX`, trong chú thích ghi `U+XXXX`.
+- Sửa lisp / C# thì cập nhật rule tương ứng trong `rules/` cùng lần làm.
+- Tra [rules/03-ban-do-ham.md](rules/03-ban-do-ham.md) trước khi viết hàm mới.
+- Bản đầy đủ cũ `guro ZWCAD(BG MK FN).lsp` (bg, mk, FN, lệnh chẩn đoán grosort/grodbg) **không** chuyển sang; lệnh FN nay do tab Fname của OHTA đảm nhận.

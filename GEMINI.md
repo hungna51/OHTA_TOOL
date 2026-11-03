@@ -50,6 +50,7 @@ OHTAINFO    : In thông tin chẩn đoán (nền tảng CAD, đường dẫn g�
 | mẫu | [`_Template_Module/`](_Template_Module/README.md) | Khuôn mẫu để nhân bản khi tạo nhóm mới (tiền tố `_` nên không hiện Tab) | [`_Template_Module/rules/`](_Template_Module/rules/) | Khuôn mẫu |
 | 01 | [`01_Fname/`](01_Fname/README.md) | Tab **Fname**: tạo, hút, sửa F-NAME (`N=, M=, T=, Q=, Z=`) & các lệnh Fname tấm | [`01_Fname/rules/`](01_Fname/rules/) | Đã tích hợp UI chọn Fname |
 | 02 | [`02_Module_Mau_2/`](02_Module_Mau_2/README.md) | Nhóm chức năng mẫu 02 | [`02_Module_Mau_2/rules/`](02_Module_Mau_2/rules/) | Khung sẵn sàng mở rộng |
+| 03 | [`03_Guro/`](03_Guro/README.md) | Tab **Guro**: lệnh `GRO` (bango + mã khắc + F-name + CSV + PDF + chuyển layer), `DST`, `XLN`, `GI`… — DLL riêng `GROTOOL.dll`, chạy ZWCAD 2026 + AutoCAD 2027 | [`03_Guro/rules/`](03_Guro/rules/) | Đã tích hợp (chuyển từ ZWLISP\GURO) |
 
 *(Khi tạo thêm thư mục mục con mới, hãy cập nhật bổ sung 1 dòng vào bảng trên để đồng bộ bản đồ dự án).*
 
@@ -60,7 +61,8 @@ OHTAINFO    : In thông tin chẩn đoán (nền tảng CAD, đường dẫn g�
 - Thư mục `OHTA_TOOL/` là 1 repo git (nhánh `main`). Mỗi bản gửi đội được gắn tag (`v1.0`, ...); xem lại bằng `git checkout v1.0`.
 - `.gitignore` bỏ qua `bin/`, `obj/`, `*.pdb`, `OHTATOOL.old_*`, `_release/` (file zip), `graphify-out/`.
 - **Khoá ghi Google Sheet** để riêng trong `01_Fname/data/google_sheet.key` (`write_key=...`) — **không đưa lên git**, nhưng **phải có trong gói zip** gửi đội. Apps Script đọc khoá từ *Thuộc tính tập lệnh* `WRITE_KEY`, không ghi trong mã nguồn.
-- Đóng gói: `OHTA_Loader.lsp`, `README.md`, `_system/bin/*/OHTATOOL.dll`, các thư mục mục con (bỏ `google_sheet_apps_script.gs`) → `_release/OHTA_TOOL_vX.zip`.
+- Đóng gói: `OHTA_Loader.lsp`, `README.md`, `_system/bin/*/OHTATOOL.dll`, `03_Guro/bin/*/GROTOOL.dll`, các thư mục mục con (bỏ `google_sheet_apps_script.gs`, `03_Guro/plugin/`) → `_release/OHTA_TOOL_vX.zip`.
+- AutoCAD hỏi SECURELOAD khi nạp lisp ngoài thư mục tin cậy: thêm thư mục `OHTA_TOOL` (kèm cây con `...`) vào **Trusted Locations** trên mỗi máy.
 
 ## 6. Checklist Bắt Buộc Trước Khi Lưu Mã Nguồn
 

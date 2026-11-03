@@ -1,0 +1,92 @@
+{
+  "id": "guro",
+  "enabled": true,
+  "order": 30,
+  "tabTitle": "Guro",
+  "title": "GURO — Đánh số bango, mã khắc, F-name",
+  "description": "Lệnh GRO: đánh số bango + mã khắc + F-name + xuất CSV + in PDF + chuyển layer nét. Chạy ZWCAD 2026 và AutoCAD 2027 (DLL riêng GROTOOL.dll trong 03_Guro/bin).",
+  "accentColor": "#C62828",
+  "tools": [
+    {
+      "id": "gro",
+      "category": "Lệnh chính",
+      "name": "GRO — Đánh số tấm trọn gói",
+      "badge": "GRO",
+      "command": "GRO",
+      "lispFile": "lisp/autoload.lsp",
+      "description": "Chọn khung bao rồi chạy hộp thoại: bango + mã khắc + F-name + CSV + in PDF + chuyển layer nét."
+    },
+    {
+      "id": "gi",
+      "category": "Lệnh chính",
+      "name": "GI — In lại PDF theo vùng",
+      "badge": "GI",
+      "command": "GI",
+      "lispFile": "lisp/autoload.lsp",
+      "description": "Quét chọn vùng rồi in lại PDF giống bản in tự động cuối GRO (gro.ctb, 1 file, tự mở)."
+    },
+    {
+      "id": "dst",
+      "category": "Lệnh chính",
+      "name": "DST — Bảng danh sách tấm",
+      "badge": "DST",
+      "command": "DST",
+      "lispFile": "lisp/autoload.lsp",
+      "description": "Mở bảng .NET 3 tab: Thông Tin, Danh Sách Tấm (sửa 2 chiều CAD + CSV), Nét Chưa Đổi."
+    },
+    {
+      "id": "xln",
+      "category": "Xử lý nét",
+      "name": "XLN — Chuyển layer nét",
+      "badge": "XLN",
+      "command": "XLN",
+      "lispFile": "lisp/autoload.lsp",
+      "description": "Continuous → 0-KAKOU, Center1 → 3-KEGAKI, Text/Dim hình học → 1-SUNPOU."
+    },
+    {
+      "id": "xlnds",
+      "category": "Xử lý nét",
+      "name": "XLNDS — Nhóm nét chưa đổi",
+      "badge": "NET",
+      "command": "XLNDS",
+      "lispFile": "lisp/autoload.lsp",
+      "description": "Xem các nhóm nét chưa đổi layer và chọn trực tiếp từng nhóm."
+    },
+    {
+      "id": "grokhung",
+      "category": "Khung in",
+      "name": "GROKHUNG — Tạo khung in",
+      "badge": "KH",
+      "command": "GROKHUNG",
+      "lispFile": "lisp/autoload.lsp",
+      "description": "Tự động tạo khung in Khung_IN theo các cụm hình."
+    },
+    {
+      "id": "grotam",
+      "category": "Khung in",
+      "name": "GROTAM — Phát hiện hình cô đơn",
+      "badge": "TAM",
+      "command": "GROTAM",
+      "lispFile": "lisp/autoload.lsp",
+      "description": "Đánh dấu hình không có ghi chú lên layer CANH_BAO_CO_DON."
+    },
+    {
+      "id": "fixfd",
+      "category": "Sửa lỗi",
+      "name": "FIXFD — Gỡ kẹt hộp thoại file",
+      "badge": "FIX",
+      "command": "FIXFD",
+      "lispFile": "lisp/autoload.lsp",
+      "description": "Đặt lại FILEDIA = 1 và CMDECHO = 1 khi hộp thoại chọn file không hiện."
+    },
+    {
+      "id": "netreload",
+      "category": "Sửa lỗi",
+      "name": "NETRELOAD — Nạp lại GROTOOL.dll",
+      "badge": "DLL",
+      "command": "NETRELOAD",
+      "lispFile": "lisp/autoload.lsp",
+      "description": "NETLOAD lại GROTOOL.dll (03_Guro/bin/ZwCAD hoặc bin/AutoCAD) khi bảng DST / hộp thoại .NET không hiện."
+    }
+  ]
+}

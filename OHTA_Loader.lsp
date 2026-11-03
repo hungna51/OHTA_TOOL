@@ -290,6 +290,32 @@
                  "\n[OHTA TOOL] Khoi dong lai CAD de nap DLL tai thu muc moi: " *ohta-root-dir*))
 )
 
+;; Moi ban ve: nap <muc con>\lisp\autoload.lsp (neu co) de lenh cua muc con go duoc ngay tren
+;; dong lenh ma khong can mo bang OHTA. autoload.lsp chi nen khai bao lenh moi nhe (vd 03_Guro).
+;; Khong dung ohta--tim-root-dir o day vi ham do co the hien hop chon file.
+(defun ohta--nap-autoload ( / root reg d f )
+  (setq root (cond
+               (*ohta-root-dir*)
+               ((and (setq reg (vl-registry-read *ohta-reg-key* "RootDir"))
+                     (ohta--thu-muc-hop-le-p reg))
+                 (ohta--bo-gach-cuoi reg)
+               )
+             )
+  )
+  (if root
+    (foreach d (vl-directory-files root nil -1)
+      (if (and (not (wcmatch d "_*,.*"))
+               (setq f (findfile (strcat root "\\" d "\\lisp\\autoload.lsp")))
+          )
+        (if (vl-catch-all-error-p (vl-catch-all-apply 'load (list f)))
+          (princ (strcat "\n[OHTA TOOL] Loi khi nap " f))
+        )
+      )
+    )
+  )
+)
+(ohta--nap-autoload)
+
 (princ "\n[OHTA TOOL] Da nap OHTA_Loader.lsp. Go lenh OHTA de mo Tool Palettes (OHTARELOAD de lam moi Tab).\n")
 (princ)
 

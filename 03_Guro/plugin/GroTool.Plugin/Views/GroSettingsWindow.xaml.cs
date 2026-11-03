@@ -3,6 +3,15 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
 using ZwCadPlugin.ViewModels;
+#if ZWCAD
+using CadColor = ZwSoft.ZwCAD.Colors.Color;
+using CadColorMethod = ZwSoft.ZwCAD.Colors.ColorMethod;
+using CadColorDialog = ZwSoft.ZwCAD.Windows.ColorDialog;
+#else
+using CadColor = Autodesk.AutoCAD.Colors.Color;
+using CadColorMethod = Autodesk.AutoCAD.Colors.ColorMethod;
+using CadColorDialog = Autodesk.AutoCAD.Windows.ColorDialog;
+#endif
 
 namespace ZwCadPlugin.Views
 {
@@ -50,7 +59,7 @@ namespace ZwCadPlugin.Views
             OMau.Visibility = Visibility.Visible;
             try
             {
-                var c = ZwSoft.ZwCAD.Colors.Color.FromColorIndex(ZwSoft.ZwCAD.Colors.ColorMethod.ByAci,
+                var c = CadColor.FromColorIndex(CadColorMethod.ByAci,
                                                                 (short)_vm.MauDim);
                 System.Drawing.Color rgb = c.ColorValue;
                 OMau.Background = new SolidColorBrush(Color.FromRgb(rgb.R, rgb.G, rgb.B));
@@ -103,10 +112,10 @@ namespace ZwCadPlugin.Views
         {
             try
             {
-                var cd = new ZwSoft.ZwCAD.Windows.ColorDialog
+                var cd = new CadColorDialog
                 {
                     IncludeByBlockByLayer = false,
-                    Color = ZwSoft.ZwCAD.Colors.Color.FromColorIndex(ZwSoft.ZwCAD.Colors.ColorMethod.ByAci,
+                    Color = CadColor.FromColorIndex(CadColorMethod.ByAci,
                                                                     (short)_vm.MauDim),
                 };
                 if (cd.ShowDialog() == System.Windows.Forms.DialogResult.OK)

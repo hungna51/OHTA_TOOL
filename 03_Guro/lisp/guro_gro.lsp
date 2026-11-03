@@ -16,7 +16,10 @@
 ;;; LUU Y KHI SUA: file nay la BAN SINH RA, khong phai ban goc. Sua o day thi
 ;;; ban day du KHONG duoc cap nhat theo - va nguoc lai. Ban day du van la noi
 ;;; chua lenh chan doan `grosort` / `grodbg`, can den khi phai lan loi.
-;;; Tai lieu day du: ZWLISP\GURO\CLAUDE.md
+;;; Muc 191: tu 11/2026 file nay nam o OHTA_TOOL\03_Guro\lisp\guro_gro.lsp va la BAN DUY NHAT
+;;; con sua (chay ca ZWCAD 2026 va AutoCAD 2027; DLL GROTOOL.dll o 03_Guro\bin\<ZwCAD|AutoCAD>).
+;;; Nap qua 03_Guro\lisp\autoload.lsp (OHTA_Loader.lsp nap san moi ban ve).
+;;; Tai lieu day du: OHTA_TOOL\03_Guro\README.md va 03_Guro\rules\
 ;;; ===========================================================================
 
 (defun subst-all (new old str / pos res len-old)
@@ -57,7 +60,7 @@
     (12540 129 91) ; U+30FC dau gach keo dai
     (13212 135 111) ; U+339C mm vuong (don vi do day - muc 50)
     (13213 135 112) ; U+339D cm vuong (cung nhom, them cho du)
-    (20837 147 252) ; U+5165 NYU / IRI (chu "入" - nhan dien ma khac)
+    (20837 147 252) ; U+5165 NYU / IRI (chu "U+5165" - nhan dien ma khac)
     (21152 137 193) ; U+52A0 KA  (cong)
     (21513 139 103) ; U+5409 YOSHI (YOSHINO -> ma Y, muc 57)
     (23713 137 170) ; U+5CA1 OKA   (OKADA -> ma 0, muc 57)
@@ -919,7 +922,7 @@
 )
 
 ;;; Hop thoai cai dat cua lenh GRO (muc 86).
-;;; Uu tien ban .NET (GROZWCAD.dll, ham GRO_NET_DIALOG) neu da NETLOAD.
+;;; Uu tien ban .NET (GROTOOL.dll, ham GRO_NET_DIALOG) neu da NETLOAD.
 ;;; Chua nap DLL, hoac ban .NET bao loi, thi dung hop thoai DCL gro--hoi-dcl.
 ;;; Hai ban tra ve GIONG HET nhau: list 9 gia tri dung thu tu (nth 0..8 dlg)
 ;;; cua c:gro, hoac nil = Cancel. Registry van do c:gro doc/ghi nhu cu.
@@ -1017,7 +1020,7 @@
   )
 )
 
-;;; Hop thoai DCL gro_dlg - ban cu, nay la DU PHONG khi chua nap GROZWCAD.dll.
+;;; Hop thoai DCL gro_dlg - ban cu, nay la DU PHONG khi chua nap GROTOOL.dll.
 (defun gro--hoi-dcl (def-lay-k def-vung def-layer def-in-pdf def-use-xln def-lay-xln 
                       def-auto-dim def-mau-dim def-tao-khung / dcl dch gro-vung 
                       gro-lay gro-layk gro-in gro-tao-khung gro-xln gro-lxln 
@@ -1489,10 +1492,10 @@
                   )
       )
       ;; Do gia cong Vat (Kaisaki / Chamfer / Bevel)
-      (setq la-vat (or (bg--chua L '(65398 65394 65403 65399))   ; ｶｲｻｷ (half-width katakana)
-                       (bg--chua L '(12459 12452 12469 12461))   ; カイサキ (full-width katakana)
-                       (bg--chua L '(12363 12356 12373 12365))   ; かいさき (hiragana)
-                       (bg--chua L '(38283 20808))               ; 開先 (kanji Kaisaki)
+      (setq la-vat (or (bg--chua L '(65398 65394 65403 65399))   ; U+FF76U+FF72U+FF7BU+FF77 (half-width katakana)
+                       (bg--chua L '(12459 12452 12469 12461))   ; U+30ABU+30A4U+30B5U+30AD (full-width katakana)
+                       (bg--chua L '(12363 12356 12373 12365))   ; U+304BU+3044U+3055U+304D (hiragana)
+                       (bg--chua L '(38283 20808))               ; U+958BU+5148 (kanji Kaisaki)
                        (bg--chua L '(182 178 187 183))           ; CP932 half-width
                        (bg--chua L '(131 74 131 67 131 84 131 76)) ; CP932 full-width
                        (bg--chua L '(75 65 73 83 65 75 73))      ; KAISAKI
@@ -1808,7 +1811,7 @@
 ;;; Ghep dong so luong phu (cands) vao ghi chu do day (notes) cho ban ve co NHIEU TAM.
 ;;; Thuat toan:
 ;;; - Su dung khoang cach bao hinh (Bounding Box Interval Gap) theo phuong ngang dx-gap.
-;;;   Neu dong so luong nam gióng hoac thut le trong pham vi hop ly (dx-gap <= max(120.0, 15*hc)),
+;;;   Neu dong so luong nam giU+00F3ng hoac thut le trong pham vi hop ly (dx-gap <= max(120.0, 15*hc)),
 ;;;   va nam phia duoi ghi chu (dy >= -0.6*hc va dy <= max(150.0, 18*hc)), thi la ung vien hop le.
 ;;; - Neu co nhieu ghi chu cung thoa man (nhieu tam tren ban ve / trong cung khung),
 ;;;   chon ghi chu co tong chi phi khoang cach Cost = (if (< dy 0) (* (abs dy) 3.0) dy) + 1.5*dx-gap nho nhat.
@@ -2103,16 +2106,16 @@
 (defun gro--it-loai-sl (it / codes)
   (setq codes (gro--it-codes it))
   (cond
-    ((or (bg--chua codes '(26412 22259)) ; 本図
-         (and (member 26412 codes)       ; 本 (khong phai ky tu dem sau chu so)
+    ((or (bg--chua codes '(26412 22259)) ; U+672CU+56F3
+         (and (member 26412 codes)       ; U+672C (khong phai ky tu dem sau chu so)
               (null (gro--tim-sl (list (car (member 26412 codes))))))
      )
      "HONZU"
     )
-    ((or (bg--chua codes '(36870 22259)) ; 逆図
-         (member 36870 codes)            ; 逆
-         (bg--chua codes '(35023 22259)) ; 裏図
-         (member 35023 codes)            ; 裏
+    ((or (bg--chua codes '(36870 22259)) ; U+9006U+56F3
+         (member 36870 codes)            ; U+9006
+         (bg--chua codes '(35023 22259)) ; U+88CFU+56F3
+         (member 35023 codes)            ; U+88CF
      )
      "GYAKUZU"
     )
@@ -2761,7 +2764,7 @@
   )
   (if (equal ds-bg (list "KHONG_NET"))
     (progn
-      (princ "\n[GRO] Bo qua doi text khac chu: GROZWCAD.dll chua co ham gro_net_khac_chu (cap nhat DLL).")
+      (princ "\n[GRO] Bo qua doi text khac chu: GROTOOL.dll chua co ham gro_net_khac_chu (cap nhat DLL).")
       (setq ds-bg nil)
     )
   )
@@ -4594,8 +4597,8 @@
 )
 
 ;; Tu khoa nhan dien dong ma khac:
-;; - "入" (U+5165 = 20837): vi du "グローバル入れで...", "刻印入...", "入れ..."
-;; - "san" (U+3055 U+3093 = 12373 12435): vi du "グローさん", "岡田さん..."
+;; - "U+5165" (U+5165 = 20837): vi du "U+30B0U+30EDU+30FCU+30D0U+30EBU+5165U+308CU+3067...", "U+523BU+5370U+5165...", "U+5165U+308C..."
+;; - "san" (U+3055 U+3093 = 12373 12435): vi du "U+30B0U+30EDU+30FCU+3055U+3093", "U+5CA1U+7530U+3055U+3093..."
 (defun gro--ma-iri () '(20837))
 (defun gro--ma-san () '(12373 12435))
 
@@ -4618,7 +4621,7 @@
 
 ;;; Mot doi tuong co phai dong "ten khach" khong, va neu co thi ma khac la gi.
 ;;;
-;;; Hai buoc, dung thu tu nguoi dung mo ta: PHAI co chu "入" (hoac "san") truoc da,
+;;; Hai buoc, dung thu tu nguoi dung mo ta: PHAI co chu "U+5165" (hoac "san") truoc da,
 ;;; roi moi doc ten trong chinh dong do. Loc giup khong nhan nham cac dong khac
 ;;; tinh co chua ten hang.
 ;;;
@@ -5211,7 +5214,7 @@
   (setq up (strcase txt)
         sym-pos nil
   )
-  (foreach sym '("%%C" "φ" "ϕ" "Φ" "ø" "Ø" "⌀" "\\U+2205" "\\U+2300" "\\U+00F8" "\\U+00D8" "\\U+03C6" "\\U+03A6" "DIA." "DIA" "R")
+  (foreach sym '("%%C" "\U+03C6" "\U+03D5" "\U+03A6" "\U+00F8" "\U+00D8" "\U+2300" "\\U+2205" "\\U+2300" "\\U+00F8" "\\U+00D8" "\\U+03C6" "\\U+03A6" "DIA." "DIA" "R")
     (if (null sym-pos)
       (progn
         (setq pos (vl-string-search (strcase sym) up))
@@ -5306,11 +5309,11 @@
         ;; Ho tro ca: ky hieu do chuan degree (176), dau tron ban giac Katakana (65439 / CP932 byte 223),
         ;; toan giac (12444), ring (730), ordinal (186), escape sequences (\U+FF9F, \U+00B0, %%d, %%D, DEG)
         (setq cd-list (bg--codes txt))
-        (if (or (vl-string-search "°" txt)
-                (vl-string-search "ﾟ" txt)
-                (vl-string-search "゜" txt)
-                (vl-string-search "º" txt)
-                (vl-string-search "˚" txt)
+        (if (or (vl-string-search "\U+00B0" txt)
+                (vl-string-search "\U+FF9F" txt)
+                (vl-string-search "\U+309C" txt)
+                (vl-string-search "\U+00BA" txt)
+                (vl-string-search "\U+02DA" txt)
                 (vl-string-search "\U+00B0" txt)
                 (vl-string-search "\U+FF9F" txt)
                 (vl-string-search "\U+309C" txt)
@@ -5319,7 +5322,7 @@
                 (vl-string-search "\\U+00B0" (strcase txt))
                 (vl-string-search "\\U+FF9F" (strcase txt))
                 (vl-string-search "\\U+309C" (strcase txt))
-                (wcmatch (strcase txt) "*%%D*,*DEG*,*°*,*ﾟ*,*゜*,*º*,*˚*")
+                (wcmatch (strcase txt) "*%%D*,*DEG*,*\U+00B0*,*\U+FF9F*,*\U+309C*,*\U+00BA*,*\U+02DA*")
                 (and cd-list (or (member 176 cd-list)
                                  (member 65439 cd-list)
                                  (member 223 cd-list)
@@ -5331,11 +5334,11 @@
             )
           (progn
             (setq val-clean txt)
-            (foreach sym '("°" "\U+00B0" "\\U+00B0" "\\u+00b0"
-                           "ﾟ" "\U+FF9F" "\\U+FF9F" "\\u+ff9f"
-                           "゜" "\U+309C" "\\U+309C" "\\u+309c"
-                           "º" "\U+00BA" "\\U+00BA" "\\u+00ba"
-                           "˚" "\U+02DA" "\\U+02DA" "\\u+02da"
+            (foreach sym '("\U+00B0" "\U+00B0" "\\U+00B0" "\\u+00b0"
+                           "\U+FF9F" "\U+FF9F" "\\U+FF9F" "\\u+ff9f"
+                           "\U+309C" "\U+309C" "\\U+309C" "\\u+309c"
+                           "\U+00BA" "\U+00BA" "\\U+00BA" "\\u+00ba"
+                           "\U+02DA" "\U+02DA" "\\U+02DA" "\\u+02da"
                            "%%d" "%%D" "DEG" "deg" " "
                           )
               (setq val-clean (subst-all "" sym val-clean))
@@ -5357,7 +5360,7 @@
         (setq is-q (wcmatch txt "*`?#*,*`? #*"))
         ;; is-phi: ky hieu DUONG KINH (phi, %%c, DIA, "?"). Text phi co the la dim
         ;; dang gach chan + duong ~V (leader) HOAC dim KICH THUOC thang co tien to
-        ;; phi (vd "φ134" giua 2 duong giong) - gro--detect-geom-dims thu dang
+        ;; phi (vd "U+03C6134" giua 2 duong giong) - gro--detect-geom-dims thu dang
         ;; leader truoc, khong khop thi thu nhu dim Linear (muc 103). R / TAP /
         ;; DRILL khong co dang kich thuoc nen khong danh dau.
         (setq is-phi
@@ -5365,18 +5368,18 @@
                    (or is-q
                        (wcmatch (strcase raw-txt) "*%%C*,*DIA*")
                        (wcmatch (strcase txt) "*%%C*,*DIA*")
-                       (vl-string-search "φ" raw-txt)
-                       (vl-string-search "ϕ" raw-txt)
-                       (vl-string-search "Φ" raw-txt)
-                       (vl-string-search "ø" raw-txt)
-                       (vl-string-search "Ø" raw-txt)
-                       (vl-string-search "⌀" raw-txt)
-                       (vl-string-search "φ" txt)
-                       (vl-string-search "ϕ" txt)
-                       (vl-string-search "Φ" txt)
-                       (vl-string-search "ø" txt)
-                       (vl-string-search "Ø" txt)
-                       (vl-string-search "⌀" txt)
+                       (vl-string-search "\U+03C6" raw-txt)
+                       (vl-string-search "\U+03D5" raw-txt)
+                       (vl-string-search "\U+03A6" raw-txt)
+                       (vl-string-search "\U+00F8" raw-txt)
+                       (vl-string-search "\U+00D8" raw-txt)
+                       (vl-string-search "\U+2300" raw-txt)
+                       (vl-string-search "\U+03C6" txt)
+                       (vl-string-search "\U+03D5" txt)
+                       (vl-string-search "\U+03A6" txt)
+                       (vl-string-search "\U+00F8" txt)
+                       (vl-string-search "\U+00D8" txt)
+                       (vl-string-search "\U+2300" txt)
                        (vl-string-search "\\U+2205" (strcase raw-txt))
                        (vl-string-search "\\U+2300" (strcase raw-txt))
                        (vl-string-search "\\U+00F8" (strcase raw-txt))
@@ -5943,7 +5946,7 @@
   ;; 3. Khop 3 nhom hinh hoc
   ;; Dim Phi/R khop TUNG text. Text ky hieu duong kinh (nth 7 = is-phi) khong
   ;; khop dang gach chan + duong ~V thi la dim KICH THUOC co tien to phi (vd
-  ;; "φ134" giua 2 duong giong) -> dua sang khop Linear de gom du duong dim,
+  ;; "U+03C6134" giua 2 duong giong) -> dua sang khop Linear de gom du duong dim,
   ;; chan dim, tick (muc 103). Thu leader TRUOC vi dang do dac trung hon: neu
   ;; chay Linear cho moi text phi, bo khop Linear co the vo nham canh chi tiet
   ;; dai ~V gan chu cua dim leader.
@@ -7724,10 +7727,10 @@
                   (bg--chua L '(66 69 78 68))       ; BEND
                   (bg--chua L '(98 101 110 100))    ; bend
                   ;; Kaisaki (vat)
-                  (bg--chua L '(65398 65394 65403 65399))   ; ｶｲｻｷ
-                  (bg--chua L '(12459 12452 12469 12461))   ; カイサキ
-                  (bg--chua L '(12363 12356 12373 12365))   ; かいさき
-                  (bg--chua L '(38283 20808))               ; 開先
+                  (bg--chua L '(65398 65394 65403 65399))   ; U+FF76U+FF72U+FF7BU+FF77
+                  (bg--chua L '(12459 12452 12469 12461))   ; U+30ABU+30A4U+30B5U+30AD
+                  (bg--chua L '(12363 12356 12373 12365))   ; U+304BU+3044U+3055U+304D
+                  (bg--chua L '(38283 20808))               ; U+958BU+5148
                   (bg--chua L '(182 178 187 183))           ; CP932 half-width
                   (bg--chua L '(131 74 131 67 131 84 131 76)) ; CP932 full-width
                   (bg--chua L '(75 65 73 83 65 75 73))      ; KAISAKI
@@ -7749,10 +7752,10 @@
                       (bg--chua cd-val '(139 200))
                       (bg--chua cd-val '(26354))
                       ;; Kaisaki (vat)
-                      (bg--chua cd-val '(12459 12452 12469 12461)) ; カイサキ
-                      (bg--chua cd-val '(65398 65394 65403 65399)) ; ｶｲｻｷ
-                      (bg--chua cd-val '(12363 12356 12373 12365)) ; かいさき
-                      (bg--chua cd-val '(38283 20808))             ; 開先
+                      (bg--chua cd-val '(12459 12452 12469 12461)) ; U+30ABU+30A4U+30B5U+30AD
+                      (bg--chua cd-val '(65398 65394 65403 65399)) ; U+FF76U+FF72U+FF7BU+FF77
+                      (bg--chua cd-val '(12363 12356 12373 12365)) ; U+304BU+3044U+3055U+304D
+                      (bg--chua cd-val '(38283 20808))             ; U+958BU+5148
                       (vl-string-search "MAGE" (strcase txt-val)) 
                       (vl-string-search "BEND" (strcase txt-val))
                       (vl-string-search "KAISAKI" (strcase txt-val))
@@ -10267,7 +10270,7 @@
       ;; khac CUNG HANG, cum dim trai ngang ca hang va Khung_IN bi keo sang tam ben
       ;; canh (muc 104). Moi text toi da 1 cum. Dim 2 net gan cho hinh bang VA CHAM.
       ;; Text phi KHONG khop dang 2 net (nth 7 = is-phi) la dim KICH THUOC co tien
-      ;; to phi (vd "φ134") -> dua sang nhom Linear ben duoi, gan bang CHIEU TIA.
+      ;; to phi (vd "U+03C6134") -> dua sang nhom Linear ben duoi, gan bang CHIEU TIA.
       (foreach item texts-hole
         (setq e-txt  (nth 0 item)
               r-hole (gro--geom-match-hole-leaders (list item) lines-cont nil nil)
@@ -11785,19 +11788,44 @@
   (princ)
 )
 
-;;; Muc 179: DLL doi ten GROZWCAD.dll (thu muc rieng C:/GROZWCAD) de phan biet chuong trinh khac.
-;;; Tim theo thu tu: C:/GROZWCAD, Support path, thu muc laptrinhlisp, bin/Debug, bin/Release.
-(defun gro--tim-dll ()
-  (cond
-    ((findfile "C:/GROZWCAD/GROZWCAD.dll"))
-    ((findfile "GROZWCAD.dll"))
-    ((findfile "C:/Users/oftby/OneDrive - OFT/laptrinhlisp/GROZWCAD.dll"))
-    ((findfile "C:/Users/oftby/OneDrive - OFT/laptrinhlisp/ZwCadPlugin/bin/Debug/net48/GROZWCAD.dll"))
-    ((findfile "C:/Users/oftby/OneDrive - OFT/laptrinhlisp/ZwCadPlugin/bin/Release/net48/GROZWCAD.dll"))
+;;; Muc 191: GRO chay ca ZWCAD 2026 va AutoCAD 2027 (OHTA_TOOL/03_Guro).
+(defun gro--la-zwcad-p ( / prod verstr )
+  (setq prod   (getvar "PRODUCT")
+        verstr (ver)
+  )
+  (or
+    (and prod (wcmatch (strcase prod) "*ZWCAD*"))
+    (and verstr (wcmatch (strcase verstr) "*ZWCAD*,*ZWSOFT*"))
   )
 )
 
-;;; Nap GROZWCAD.dll neu chua nap (muc 86, 179). Tra T neu ban .NET da san sang.
+;;; Thu muc 03_Guro (chua lisp\, plot\, bin\). autoload.lsp gan *gro-module-dir* truoc khi nap
+;;; file nay; nap thang (APPLOAD) thi tim theo *ohta-root-dir* / Support path.
+(defun gro--thu-muc-module ( / f )
+  (cond
+    ((and *gro-module-dir* (vl-file-directory-p *gro-module-dir*)) *gro-module-dir*)
+    ((and *ohta-root-dir* (vl-file-directory-p (strcat *ohta-root-dir* "\\03_Guro")))
+      (strcat *ohta-root-dir* "\\03_Guro")
+    )
+    ((setq f (findfile "guro_gro.lsp"))
+      (vl-filename-directory (vl-filename-directory f))
+    )
+  )
+)
+
+;;; Muc 179/191: DLL ten GROTOOL.dll, de rieng trong 03_Guro\bin\ZwCAD | bin\AutoCAD.
+;;; ZWCAD con tim them ban GROZWCAD.dll cu (C:/GROZWCAD ...) de may chua cap nhat van chay.
+(defun gro--tim-dll ( / d )
+  (cond
+    ((and (setq d (gro--thu-muc-module))
+          (findfile (strcat d "\\bin\\" (if (gro--la-zwcad-p) "ZwCAD" "AutoCAD") "\\GROTOOL.dll"))))
+    ((not (gro--la-zwcad-p)) nil)
+    ((findfile "C:/GROZWCAD/GROZWCAD.dll"))
+    ((findfile "GROZWCAD.dll"))
+  )
+)
+
+;;; Nap GROTOOL.dll neu chua nap (muc 86, 179). Tra T neu ban .NET da san sang.
 ;;; Dung chung cho c:gro (tu nap TRUOC hop thoai, tu mo bang DST cuoi lenh) va
 ;;; c:netdst - nguoi dung khong phai go NETDST nua.
 (defun gro--nap-net (/ dll old-ce old-fd)
@@ -11854,7 +11882,7 @@
   (princ)
 )
 
-;; Lenh tien ich: nap GROZWCAD.dll va mo ngay Palette .NET (hoac fallback DCL).
+;; Lenh tien ich: nap GROTOOL.dll va mo ngay Palette .NET (hoac fallback DCL).
 ;; Tu muc 86 khong can go lenh nay nua - `gro` tu nap DLL va tu mo bang.
 (defun c:netdst ()
   (setvar "FILEDIA" 1)
@@ -13689,7 +13717,7 @@
                 ((not (eq (type kq) 'STR)) (setq kq nil))
               )
             )
-            (setq kq (strcat "!!! Chua dat ma khac vao hinh: GROZWCAD.dll chua co ham gro_net_dat_mk"
+            (setq kq (strcat "!!! Chua dat ma khac vao hinh: GROTOOL.dll chua co ham gro_net_dat_mk"
                              " (cap nhat DLL) - move thu cong."))
           )
           (if (and kq (wcmatch kq "!!!*")) (princ (strcat "\n[GRO] " kq)))
@@ -13986,16 +14014,16 @@
 ;;; C# loi / DLL thieu ham / ket qua sai dang -> in + alert roi DUNG lenh (khong chay sai im lang).
 (defun gro--cs-dung (buoc ly-do)
   (princ (strcat "\n*** [GRO .NET] Buoc " buoc " (C#) loi: " ly-do))
-  (princ "\n*** Ban lisp du phong da go (muc 184) -> DUNG lenh. Kiem tra GROZWCAD.dll (NETRELOAD) roi chay lai.")
+  (princ "\n*** Ban lisp du phong da go (muc 184) -> DUNG lenh. Kiem tra GROTOOL.dll (NETRELOAD) roi chay lai.")
   (alert (strcat "GRO: buoc " buoc " (C#) loi:\n" ly-do
-                 "\n\nBan lisp du phong da go (muc 184).\nKiem tra GROZWCAD.dll (NETRELOAD) roi chay lai."))
+                 "\n\nBan lisp du phong da go (muc 184).\nKiem tra GROTOOL.dll (NETRELOAD) roi chay lai."))
   (exit)
 )
 
 ;;; Muc 184: goi ham C# 'ham voi ("cs" . args). n = so phan tu bat buoc cua ket qua (nil = khong kiem).
 (defun gro--cs-goi (buoc ham args n / kq)
   (if (null (vl-symbol-value ham))
-    (gro--cs-dung buoc (strcat "GROZWCAD.dll chua co ham " (vl-symbol-name ham) " (cap nhat DLL)"))
+    (gro--cs-dung buoc (strcat "GROTOOL.dll chua co ham " (vl-symbol-name ham) " (cap nhat DLL)"))
   )
   (setq kq (vl-catch-all-apply ham (cons "cs" args)))
   (cond
@@ -14637,7 +14665,7 @@
         ;; (c) khong doc duoc ma nao -> hoi nguoi dung o dong lenh
         (progn 
           (princ "\n*** Khong nhan dien duoc ma khac: khong tim thay dong nao")
-          (princ "\n    vua co chu \"入\"/\"san\" vua co ten hang da biet.")
+          (princ "\n    vua co chu \"\U+5165\"/\"san\" vua co ten hang da biet.")
           ;; Nguyen nhan hay gap nhat tren may kieu A, va rat kho doan neu khong
           ;; duoc nhac (muc 57): ky tu Nhat khong co trong bg--uni-tbl bi doi
           ;; thanh "?" NGAY TU KHAU DOC, nen khong con gi de khop.
@@ -16104,13 +16132,24 @@
 ;;; lai ep DEN (RGB 0,0,0).
 (defun gro--ctb-in () "gro.ctb")
 
-;;; Duong dan thu muc Printstyle cua ZWCAD.
-(defun gro--thu-muc-ctb () 
-  (strcat (cond ((getvar "ROAMABLEROOTPREFIX")) ("")) "Printstyle\\")
+;;; Duong dan thu muc bang kieu in: ZWCAD = <Roamable>\Printstyle\, AutoCAD = PrinterStyleSheetDir.
+(defun gro--thu-muc-ctb ( / d )
+  (if (gro--la-zwcad-p)
+    (strcat (cond ((getvar "ROAMABLEROOTPREFIX")) ("")) "Printstyle\\")
+    (if (and (setq d (getenv "PrinterStyleSheetDir")) (/= d ""))
+      (strcat (vl-string-right-trim "\\" d) "\\")
+      (strcat (cond ((getvar "ROAMABLEROOTPREFIX")) ("")) "Plotters\\Plot Styles\\")
+    )
+  )
+)
+
+;;; Muc 191: may in PDF di kem: ZWCAD "DWG to PDF.pc5", AutoCAD "DWG To PDF.pc3".
+(defun gro--may-in-pdf ()
+  (if (gro--la-zwcad-p) "DWG to PDF.pc5" "DWG To PDF.pc3")
 )
 
 ;;; Muc 185: bao dam file .ctb co trong thu muc Printstyle; TRA VE ten ctb dung duoc khi in.
-;;; Chua co -> chep tu: Support path, thu muc chua file .lsp, thu muc chua GROZWCAD.dll (C:/GROZWCAD).
+;;; Chua co -> chep tu: 03_Guro\plot, Support path, thu muc chua GROTOOL.dll, C:/GROZWCAD (ban cu).
 ;;; Van khong co -> du phong Monochrome.ctb (ban di kem ZWCAD; mau DO in ra DEN) va bao ro.
 ;;; Khong co ctb nao -> nil: ben goi KHONG in (ten ctb sai lam lenh -PLOT hoi lai va lech het
 ;;; cac cau tra loi phia sau: "<_Y.ctb> not found" ... - loi gap tren may khac 29/10/2026).
@@ -16120,9 +16159,9 @@
   (cond
     ((findfile dich) ten) ; may da co roi
     ((and (setq nguon (cond
+                        ((and (setq lsp (gro--thu-muc-module))
+                              (findfile (strcat lsp "\\plot\\" ten))))
                         ((findfile ten))
-                        ((and (setq lsp (findfile "Guro ZWCAD(gro).lsp"))
-                              (findfile (strcat (vl-filename-directory lsp) "\\" ten))))
                         ((and (setq dll (gro--tim-dll))
                               (findfile (strcat (vl-filename-directory dll) "\\" ten))))
                         ((findfile (strcat "C:/GROZWCAD/" ten)))
@@ -16136,7 +16175,7 @@
     (t
      (princ (strcat "\n*** Khong tim thay bang kieu in \"" ten "\"."
                     "\n    Chep file do vao: " (gro--thu-muc-ctb)
-                    "\n    (ban goc: C:/GROZWCAD/" ten " hoac cung thu muc voi file .lsp)"))
+                    "\n    (ban goc: OHTA_TOOL\\03_Guro\\plot\\" ten ")"))
      (setq mono (strcat (gro--thu-muc-ctb) "Monochrome.ctb"))
      (if (findfile mono)
        (progn
@@ -16386,7 +16425,7 @@
               )
             )
             (princ (strcat "\n*** In PDF THAT BAI - khong tao duoc file:\n    " outpdf
-                           "\n    Kiem tra may in \"DWG to PDF.pc5\", kho giay A3 va bang kieu in " ctb-name "."))
+                           "\n    Kiem tra may in \"" (gro--may-in-pdf) "\", kho giay A3 va bang kieu in " ctb-name "."))
           )
           (princ)
         )
@@ -16429,7 +16468,7 @@
       (gro--pdf-mo outpdf)
       (princ (strcat "\n[GI] Da in vung chon ra 1 file PDF (kieu GI):\n" outpdf))
     )
-    (princ "\n[GI] Khong tao duoc file PDF - kiem tra may in DWG to PDF.pc5 / ctb.")
+    (princ (strcat "\n[GI] Khong tao duoc file PDF - kiem tra may in " (gro--may-in-pdf) " / ctb."))
   )
   outpdf
 )
@@ -16474,7 +16513,7 @@
   (if (findfile pdfpath) (vl-file-delete pdfpath))
   (command "_.-plot" "_Y" ; Detailed plot configuration?
            "" ; Layout name (hien hanh)
-           "DWG to PDF.pc5" ; Output device
+           (gro--may-in-pdf) ; Output device (muc 191)
            "ISO full bleed A3 (420.00 x 297.00 MM)" ; Paper size
            "_M" ; Millimeters
            b ; Huong in ngang hay doc (theo goc khung)
@@ -16504,7 +16543,11 @@
 
 (princ)
 
-;;; Muc 179: nap GROZWCAD.dll NGAY khi file lisp duoc nap (moi lan mo ZWCAD / ban ve) - lisp la noi
+;;; Muc 179: nap GROTOOL.dll NGAY khi file lisp duoc nap (lan dau go lenh GRO... trong ban ve) - lisp la noi
 ;;; DUY NHAT nap DLL (da go khoa tu nap Applications\ZwCadPlugin cua ZWCAD). DLL da nap thi bo qua.
 (vl-catch-all-apply 'gro--nap-net nil)
+(princ)
+
+;;; Muc 191: danh dau da nap (autoload.lsp cua OHTA_TOOL\03_Guro khong khai bao lai lenh moi).
+(setq *ohta-guro-da-nap* T)
 (princ)

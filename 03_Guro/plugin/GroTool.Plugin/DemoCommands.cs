@@ -1,10 +1,18 @@
 using System;
 using System.Collections.Generic;
+#if ZWCAD
 using ZwSoft.ZwCAD.Runtime;
 using ZwSoft.ZwCAD.ApplicationServices;
 using ZwSoft.ZwCAD.DatabaseServices;
 using ZwSoft.ZwCAD.EditorInput;
 using ZwSoft.ZwCAD.Colors;
+#else
+using Autodesk.AutoCAD.Runtime;
+using Autodesk.AutoCAD.ApplicationServices;
+using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.EditorInput;
+using Autodesk.AutoCAD.Colors;
+#endif
 
 namespace ZwCadPlugin
 {

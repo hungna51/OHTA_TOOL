@@ -1,7 +1,13 @@
 using System.Collections.Generic;
+#if ZWCAD
 using ZwSoft.ZwCAD.ApplicationServices;
 using ZwSoft.ZwCAD.DatabaseServices;
 using ZwSoft.ZwCAD.Runtime;
+#else
+using Autodesk.AutoCAD.ApplicationServices;
+using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.Runtime;
+#endif
 using ZwCadPlugin.CadServices;
 
 [assembly: CommandClass(typeof(ZwCadPlugin.DatMaKhacCommands))]

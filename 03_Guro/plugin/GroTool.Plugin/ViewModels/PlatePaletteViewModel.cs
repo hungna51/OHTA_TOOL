@@ -11,6 +11,13 @@ using System.Windows.Input;
 using ZwCadPlugin.CadServices;
 using ZwCadPlugin.Core;
 using ZwCadPlugin.Models;
+#if ZWCAD
+using CadApplication = ZwSoft.ZwCAD.ApplicationServices.Application;
+using CadObjectId = ZwSoft.ZwCAD.DatabaseServices.ObjectId;
+#else
+using CadApplication = Autodesk.AutoCAD.ApplicationServices.Application;
+using CadObjectId = Autodesk.AutoCAD.DatabaseServices.ObjectId;
+#endif
 
 namespace ZwCadPlugin.ViewModels
 {
@@ -375,7 +382,7 @@ namespace ZwCadPlugin.ViewModels
             try
             {
                 var dlg = new Views.NoteDictionaryWindow();
-                ZwSoft.ZwCAD.ApplicationServices.Application.ShowModalWindow(dlg);
+                CadApplication.ShowModalWindow(dlg);
             }
             catch (Exception ex)
             {
@@ -899,7 +906,7 @@ namespace ZwCadPlugin.ViewModels
                 CadViewService.ZoomToExtents(plate.BoundingBox, plate.IsOrphan ? 0.3 : 2.0);
             }
 
-            var ids = new List<ZwSoft.ZwCAD.DatabaseServices.ObjectId>();
+            var ids = new List<CadObjectId>();
             // Khung Khung_IN KHONG bat grips: no co the la ca to ban ve, che mat tam dang chon.
             if (plate.IsOrphan && !plate.FrameId.IsNull) ids.Add(plate.FrameId);
             if (!plate.BangoTextId.IsNull) ids.Add(plate.BangoTextId);

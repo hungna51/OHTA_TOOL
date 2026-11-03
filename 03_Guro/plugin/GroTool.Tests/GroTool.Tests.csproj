@@ -1,20 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
-    Test cho phan LOGIC THUAN cua ZwCadPlugin (thu muc Core/), chay KHONG can ZWCAD.
-    Bien dich THANG cac file Core/*.cs chu khong tham chieu ZwCadPlugin.dll: DLL do
-    phu thuoc ZwManaged.dll, chi nap duoc ben trong ZWCAD.
-    Chay tu thu muc laptrinhlisp: dotnet run (tham so project) ZwCadPlugin.Tests
+    Test cho phan LOGIC THUAN cua GroTool.Plugin (thu muc Core/), chay KHONG can CAD.
+    Bien dich THANG cac file Core/*.cs chu khong tham chieu GROTOOL.dll: DLL do
+    phu thuoc SDK ZWCAD / AutoCAD, chi nap duoc ben trong CAD.
+    Chay tu thu muc OHTA_TOOL: dotnet run (tham so project) 03_Guro/plugin/GroTool.Tests
+    (build_ohta.ps1 tu chay).
   -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
+    <!-- CadStubs.cs gia lap kieu ZWCAD (ZwSoft.ZwCAD.*) nen chon nhanh #if ZWCAD cua cac file Models -->
+    <DefineConstants>$(DefineConstants);ZWCAD</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\ZwCadPlugin\Core\*.cs" Link="Core\%(Filename)%(Extension)" />
-    <Compile Include="..\ZwCadPlugin\Models\GroSettings.cs" Link="Models\GroSettings.cs" />
-    <Compile Include="..\ZwCadPlugin\Models\PlateItem.cs" Link="Models\PlateItem.cs" />
-    <Compile Include="..\ZwCadPlugin\Models\NoteDictionaryItem.cs" Link="Models\NoteDictionaryItem.cs" />
+    <Compile Include="..\GroTool.Plugin\Core\*.cs" Link="Core\%(Filename)%(Extension)" />
+    <Compile Include="..\GroTool.Plugin\Models\GroSettings.cs" Link="Models\GroSettings.cs" />
+    <Compile Include="..\GroTool.Plugin\Models\PlateItem.cs" Link="Models\PlateItem.cs" />
+    <Compile Include="..\GroTool.Plugin\Models\NoteDictionaryItem.cs" Link="Models\NoteDictionaryItem.cs" />
   </ItemGroup>
 </Project>

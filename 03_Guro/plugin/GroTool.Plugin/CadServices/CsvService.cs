@@ -1,6 +1,10 @@
 using System;
 using System.IO;
+#if ZWCAD
 using ZwSoft.ZwCAD.ApplicationServices;
+#else
+using Autodesk.AutoCAD.ApplicationServices;
+#endif
 using ZwCadPlugin.Core;
 
 namespace ZwCadPlugin.CadServices

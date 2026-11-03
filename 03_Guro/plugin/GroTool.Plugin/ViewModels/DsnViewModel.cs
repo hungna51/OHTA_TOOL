@@ -5,8 +5,13 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using WinReg = Microsoft.Win32;
+#if ZWCAD
 using ZwSoft.ZwCAD.ApplicationServices;
 using ZwSoft.ZwCAD.DatabaseServices;
+#else
+using Autodesk.AutoCAD.ApplicationServices;
+using Autodesk.AutoCAD.DatabaseServices;
+#endif
 using ZwCadPlugin.CadServices;
 using ZwCadPlugin.Core;
 using ZwCadPlugin.Models;

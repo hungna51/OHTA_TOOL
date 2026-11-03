@@ -1,7 +1,13 @@
 using System.Collections.Generic;
+#if ZWCAD
 using ZwSoft.ZwCAD.DatabaseServices;
 using ZwSoft.ZwCAD.Geometry;
 using ZwSoft.ZwCAD.Runtime;
+#else
+using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.Geometry;
+using Autodesk.AutoCAD.Runtime;
+#endif
 
 namespace ZwCadPlugin.CadServices
 {

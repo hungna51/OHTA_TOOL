@@ -1,10 +1,17 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+#if ZWCAD
 using ZwSoft.ZwCAD.ApplicationServices;
 using ZwSoft.ZwCAD.DatabaseServices;
 using ZwSoft.ZwCAD.Geometry;
 using ZwSoft.ZwCAD.Runtime;
+#else
+using Autodesk.AutoCAD.ApplicationServices;
+using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.Geometry;
+using Autodesk.AutoCAD.Runtime;
+#endif
 using ZwCadPlugin.Core;
 
 namespace ZwCadPlugin.CadServices
