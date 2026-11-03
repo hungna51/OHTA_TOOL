@@ -147,14 +147,17 @@
             (vl-catch-all-apply 'vl-cmdf (list "NETLOAD" (vl-string-translate "/" "\\" dll)))
             (setvar "FILEDIA" old-fd)
             (setvar "CMDECHO" old-ce)
+            ;; Chi ghi co "da nap" khi NETLOAD that su thanh cong, de lan sau con thu lai
             (if (vl-symbol-value 'ohta_net_open)
               (progn
                 (vl-bb-set 'ohta--net-da-nap T)
+                (princ (strcat "\n[OHTA] Da nap ban .NET: " dll))
                 T
               )
               (progn
-                (vl-bb-set 'ohta--net-da-nap T)
-                T
+                (princ (strcat "\n[OHTA] Khong nap duoc " dll))
+                (princ "\n[OHTA] Go NETLOAD va chon file tren de xem thong bao loi chi tiet cua ZWCAD/AutoCAD.")
+                nil
               )
             )
           )
