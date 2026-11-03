@@ -11801,10 +11801,13 @@
 
 ;;; Muc 179/191: DLL ten GROTOOL.dll, de rieng trong 03_Guro\bin\ZwCAD | bin\AutoCAD.
 ;;; ZWCAD con tim them ban GROZWCAD.dll cu (C:/GROZWCAD ...) de may chua cap nhat van chay.
-(defun gro--tim-dll ( / d )
+;;; Nhanh cond chi co dieu kien tra ve gia tri dieu kien: (and ...) cho T, nen phai tra f rieng.
+(defun gro--tim-dll ( / d f )
   (cond
     ((and (setq d (gro--thu-muc-module))
-          (findfile (strcat d "\\bin\\" (if (gro--la-zwcad-p) "ZwCAD" "AutoCAD") "\\GROTOOL.dll"))))
+          (setq f (findfile (strcat d "\\bin\\" (if (gro--la-zwcad-p) "ZwCAD" "AutoCAD") "\\GROTOOL.dll"))))
+     f
+    )
     ((not (gro--la-zwcad-p)) nil)
     ((findfile "C:/GROZWCAD/GROZWCAD.dll"))
     ((findfile "GROZWCAD.dll"))
@@ -16139,17 +16142,21 @@
 ;;; Van khong co -> du phong Monochrome.ctb (ban di kem ZWCAD; mau DO in ra DEN) va bao ro.
 ;;; Khong co ctb nao -> nil: ben goi KHONG in (ten ctb sai lam lenh -PLOT hoi lai va lech het
 ;;; cac cau tra loi phia sau: "<_Y.ctb> not found" ... - loi gap tren may khac 29/10/2026).
-(defun gro--bao-dam-ctb (ten / dich nguon lsp dll mono)
+(defun gro--bao-dam-ctb (ten / dich nguon lsp dll mono f)
   (if (or (null ten) (= ten "")) (setq ten (gro--ctb-in)))
   (setq dich (strcat (gro--thu-muc-ctb) ten))
   (cond
     ((findfile dich) ten) ; may da co roi
     ((and (setq nguon (cond
                         ((and (setq lsp (gro--thu-muc-module))
-                              (findfile (strcat lsp "\\plot\\" ten))))
+                              (setq f (findfile (strcat lsp "\\plot\\" ten))))
+                         f
+                        )
                         ((findfile ten))
                         ((and (setq dll (gro--tim-dll))
-                              (findfile (strcat (vl-filename-directory dll) "\\" ten))))
+                              (setq f (findfile (strcat (vl-filename-directory dll) "\\" ten))))
+                         f
+                        )
                         ((findfile (strcat "C:/GROZWCAD/" ten)))
                       ))
           (not (eq (strcase nguon) (strcase dich)))
