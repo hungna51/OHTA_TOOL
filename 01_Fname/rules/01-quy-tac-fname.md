@@ -8,7 +8,7 @@
 
 1. **Thứ tự chuẩn các dòng khi xuất mới**:
    ```text
-   N=<Tên chi tiết>
+   N=<Tên tấm — tự do, GRO mặc định <đơn>-<bango>>
    M=<Mác vật liệu>
    T=<Chiều dày mm, luôn ≥ 1 số lẻ: 6 -> 6.0 (FnameCatalogData.FormatThickness)>
    Q=<Số lượng nguyên dương>
