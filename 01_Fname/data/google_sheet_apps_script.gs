@@ -268,7 +268,7 @@ function applyTravThu_(p, ctx) {
 // Viết hoa + bỏ dấu tiếng Việt để so khớp ("SS SIMA Ngoài" = "ss sima ngoai")
 function fold_(s) {
   return String(s === undefined || s === null ? '' : s).trim().replace(/đ/g, 'd').replace(/Đ/g, 'D')
-    .normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
 }
 
 function isNum_(s) { return String(s || '').trim() !== '' && !isNaN(Number(String(s).trim())); }
