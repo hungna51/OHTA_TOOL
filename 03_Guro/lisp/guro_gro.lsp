@@ -1067,7 +1067,27 @@
 ;;; hoac tab Guro loi). Lua chon trong hop thoai duoc luu lai registry.
 (defun c:grocd ()
   (setq gro--hoi-hop-thoai T)
-  (c:gro)
+  (c:grochay)
+)
+
+;;; Muc 193: go GRO chi MO tab Guro tren bang OHTA de xem / doi thiet lap; nut
+;;; "Chay GRO" tren tab moi danh so (lenh GROCHAY - than lenh GRO cu). Khong mo
+;;; duoc bang OHTA (chua nap OHTATOOL.dll, khong co tab "guro") -> chay GROCD
+;;; (hop thoai) de van danh so duoc.
+(defun c:gro (/ kq)
+  (if (and (vl-symbol-value 'ohta_net_tab)
+           (not (vl-catch-all-error-p (setq kq (vl-catch-all-apply 'ohta_net_tab '("guro")))))
+           kq
+      )
+    (princ "
+GRO: doi thiet lap tren tab Guro, bam \"Chay GRO\" de danh so (go GROCHAY cung duoc).")
+    (progn
+      (princ "
+Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
+      (c:grocd)
+    )
+  )
+  (princ)
 )
 
 (defun gro--hoi-dcl (def-lay-k def-vung def-layer def-in-pdf def-use-xln def-lay-xln 
@@ -14097,7 +14117,7 @@
   kq
 )
 
-(defun c:gro (/ *error* ss ss-xln nss e codes fld dlg mk-code element pt h T= Q= M= 
+(defun c:grochay (/ *error* ss ss-xln nss e codes fld dlg mk-code element pt h T= Q= M= 
               V= vT Tt Mf Zf p-bango ename-mk fn-dong fn-ok dg j n-sel n-text n-mtxt 
               n-bo bo-vd don default-don filecsv csv-line csv-loi csv-cu old-cmdecho 
               undo-started style style-bg style-loi dst err-t err-q made-bg made-mk 

@@ -95,6 +95,23 @@ namespace OhtaTool.Plugin
             ActivateModuleTab("fname");
         }
 
+        /// <summary>
+        /// (ohta_net_tab "guro"): mở palette và chuyển sang tab có module.Id đó; T nếu được,
+        /// nil nếu không. Lisp của mục con dùng để mở tab của mình (lệnh GRO — mục 193 GURO).
+        /// </summary>
+        [LispFunction("OHTA_NET_TAB")]
+        public static object LispActivateModuleTab(ResultBuffer rb)
+        {
+            string id = null;
+            if (rb != null)
+                foreach (var tv in rb.AsArray())
+                {
+                    id = tv.Value as string;
+                    break;
+                }
+            return !string.IsNullOrWhiteSpace(id) && ActivateModuleTab(id.Trim()) ? (object)true : null;
+        }
+
         /// <summary>Mở palette (giữ nguyên tab đã nạp) rồi kích hoạt tab có module.Id tương ứng.</summary>
         public static bool ActivateModuleTab(string moduleId)
         {

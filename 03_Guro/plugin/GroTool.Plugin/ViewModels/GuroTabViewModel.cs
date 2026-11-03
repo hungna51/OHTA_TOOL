@@ -54,7 +54,7 @@ namespace ZwCadPlugin.ViewModels
             AccentBrush = TaoBrush(mauNhan, "#323639");
             _thuMucModule = thuMucModule;
 
-            ChayGroCommand = new RelayCommand(() => GuiLenh("GRO"));
+            ChayGroCommand = new RelayCommand(() => GuiLenh("GROCHAY"));   // GRO chỉ mở tab (mục 193)
             ChayGiCommand = new RelayCommand(() => GuiLenh("GI"));
             MoDstCommand = new RelayCommand(() => GuiLenh("DST"));
             LamMoiCommand = new RelayCommand(LamMoi);

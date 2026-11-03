@@ -409,7 +409,7 @@ Ba luật DCL bắt buộc:
 
 ## Mục 192 — Tab Guro thay hộp thoại của `gro` (11/2026)
 
-Gõ `GRO` hoặc bấm **▶ Chạy GRO** trên tab Guro: lệnh chạy ngay theo thiết lập đã lưu, **không hiện hộp thoại**, chỉ in 2–3 dòng tóm tắt (`GRO: khung=..., vung=...`). Hộp thoại cũ (.NET, thiếu DLL thì DCL) còn ở lệnh **`GROCD`** — dùng khi bảng OHTA đang đóng.
+Bấm **▶ Chạy GRO** trên tab Guro (lệnh `GROCHAY` — từ mục 193 gõ `GRO` chỉ mở tab): lệnh chạy ngay theo thiết lập đã lưu, **không hiện hộp thoại**, chỉ in 2–3 dòng tóm tắt (`GRO: khung=..., vung=...`). Hộp thoại cũ (.NET, thiếu DLL thì DCL) còn ở lệnh **`GROCD`** — dùng khi bảng OHTA đang đóng.
 
 - **Nơi giữ thiết lập**: registry `HKCU\Software\OFT_Lisp\GRO`, khóa như cũ, thêm **`xln_tu_dong`** ("1" = layer gốc tự động). Tab ghi **ngay khi đổi** (`GroRegistry`), không có nút OK.
 - **`c:gro` đọc lại registry mỗi lần chạy.** Trước đây chỉ đọc khi biến `gro--*` chưa có (một lần mỗi bản vẽ) — tab đổi xong GRO vẫn dùng giá trị cũ.
@@ -420,3 +420,10 @@ Gõ `GRO` hoặc bấm **▶ Chạy GRO** trên tab Guro: lệnh chạy ngay the
 - **GRO chạy thẳng không ghi registry** — nếu ghi, layer dự phòng của bản vẽ này sẽ đè lên layer người dùng đã chọn trên tab. Chỉ `GROCD` lưu lại lựa chọn trong hộp thoại (trừ `xln_tu_dong`).
 - **Pick nét mẫu** trên tab gửi lệnh `GROPICKMAU` (palette không giữ chuột được): chọn nét, ghi `mau_dim` + `auto_dim`=0, rồi báo tab đọc lại.
 - Danh sách layer của tab tự làm mới khi chuyển bản vẽ (`DocumentActivated`) và khi bấm ↻; đếm bằng `LayerQuery.Dem` như hộp thoại.
+
+## Mục 193 — Gõ `GRO` chỉ mở tab Guro
+
+Người dùng muốn xem lại thiết lập trước mỗi lần chạy, nên **`GRO` chỉ mở bảng OHTA ở tab Guro** (hàm lisp `ohta_net_tab` của OHTATOOL.dll), **không đánh số**. Thân lệnh cũ đổi tên **`c:grochay`**; nút ▶ Chạy GRO của tab và nút GRO trong danh sách nút dự phòng (`module.json`) đều gửi `GROCHAY`. Gõ `GROCHAY` để chạy thẳng không qua tab.
+
+- Không có `ohta_net_tab` (chưa nạp OHTATOOL.dll) hoặc không có tab `guro` → `GRO` chạy **`GROCD`** (hộp thoại), để vẫn đánh số được.
+- Trong lisp, mọi chỗ "chạy GRO thật" gọi `(c:grochay)`, không gọi `(c:gro)` — gọi `c:gro` chỉ mở tab.

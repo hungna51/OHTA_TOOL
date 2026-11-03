@@ -11,7 +11,8 @@ Tất cả nằm trong **một file** `guro ZWCAD(BG MK FN).lsp` (gộp từ 4 f
 
 | Lệnh | Dòng | Chọn gì | Nhập gì | Tạo ra |
 |---|---|---|---|---|
-| **`gro`** | ~4670 | **polyline khung bao** (ENTER = quét chọn text thủ công) thiết lập trên **tab Guro** của bảng OHTA, không hiện hộp thoại (mục 192): layer khung bao, **đánh số theo vùng**, layer vùng, **tự động in PDF**, **xử lý nét & chuyển layer**. **Mã khắc tự nhận diện** (mục 54, 56, 68) | **tất cả**: bango + mã khắc + F-name + dòng CSV + in PDF + chuyển đổi layer (mục 67, 69, 70) |
+| **`gro`** | `c:gro` | — | — | **chỉ mở tab Guro** trên bảng OHTA (mục 193); không mở được tab thì chạy `grocd`. Đánh số thật: `grochay` |
+| **`grochay`** (thân `gro` cũ, nút ▶ Chạy GRO) | ~4670 | **polyline khung bao** (ENTER = quét chọn text thủ công) | thiết lập trên **tab Guro** của bảng OHTA, không hiện hộp thoại (mục 192): layer khung bao, **đánh số theo vùng**, layer vùng, **tự động in PDF**, **xử lý nét & chuyển layer**. **Mã khắc tự nhận diện** (mục 54, 56, 68) | **tất cả**: bango + mã khắc + F-name + dòng CSV + in PDF + chuyển đổi layer (mục 67, 69, 70) |
 | `xln` | ~3464 | 1 đối tượng layer gốc (hoặc Enter nhập tên layer), quét vùng (Enter = cả layer) | — | Chuyển Continuous→`0-KAKOU`, Center1→`3-KEGAKI`, Text→`1-SUNPOU`, các nét khác giữ nguyên layer gốc (mục 69) |
 | `cln` | ~3502 | (Tương tự `xln`) | — | Lệnh viết tắt của `xln` |
 | `xlnds` | ~3504 | — | — | Mở hộp thoại `xln_dlg` xem nhóm nét chưa đổi và bấm "Chọn nhóm nét (Select)" để chọn trực tiếp (mục 69, 70) |

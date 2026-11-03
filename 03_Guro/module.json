@@ -12,7 +12,7 @@
       "locked": true,
       "name": "GRO — Đánh số tấm",
       "badge": "GRO",
-      "command": "GRO",
+      "command": "GROCHAY",
       "lispFile": "lisp/autoload.lsp",
       "description": "Bango, mã khắc, F-name, CSV, in PDF."
     },

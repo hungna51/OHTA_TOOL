@@ -44,6 +44,7 @@
   (progn
     (defun c:gro       () (if (ohta-guro--nap) (c:gro)) (princ))
     (defun c:grocd     () (if (ohta-guro--nap) (c:grocd)) (princ))
+    (defun c:grochay   () (if (ohta-guro--nap) (c:grochay)) (princ))
     (defun c:gi        () (if (ohta-guro--nap) (c:gi)) (princ))
     (defun c:xln       () (if (ohta-guro--nap) (c:xln)) (princ))
     (defun c:cln       () (if (ohta-guro--nap) (c:cln)) (princ))
