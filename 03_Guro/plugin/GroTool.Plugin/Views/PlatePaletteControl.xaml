@@ -1,0 +1,1086 @@
+<UserControl x:Class="ZwCadPlugin.Views.PlatePaletteControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:core="clr-namespace:ZwCadPlugin.Core"
+             mc:Ignorable="d" 
+             d:DesignHeight="650" d:DesignWidth="480"
+             FontFamily="Segoe UI, Arial, sans-serif" FontSize="12"
+             Background="#F3F4F6">
+
+    <UserControl.Resources>
+        <!-- Modern Button Style -->
+        <Style x:Key="ModernBtn" TargetType="Button">
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Background" Value="#E5E7EB"/>
+            <Setter Property="Foreground" Value="#1F2937"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#D1D5DB"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Save Button Highlight Style -->
+        <Style x:Key="SaveBtnStyle" TargetType="Button" BasedOn="{StaticResource ModernBtn}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasUnsavedChanges}" Value="True">
+                    <Setter Property="Background" Value="#2E7D32"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="BorderBrush" Value="#1B5E20"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- ============================================== -->
+        <!-- GOOGLE CHROME STYLE TAB ITEM                   -->
+        <!-- ============================================== -->
+        <Style x:Key="ChromeTabItem" TargetType="TabItem">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Margin" Value="0,2,2,0"/>
+            <Setter Property="Padding" Value="10,0,10,0"/>
+            <Setter Property="Foreground" Value="#BDC1C6"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Grid>
+                            <!-- Tab Container with rounded top corners (Chrome style) -->
+                            <Border x:Name="TabBorder"
+                                    Background="Transparent"
+                                    CornerRadius="8,8,0,0"
+                                    Padding="{TemplateBinding Padding}"
+                                    Margin="0">
+                                <ContentPresenter x:Name="TabContent"
+                                                  ContentSource="Header"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                            </Border>
+
+                            <!-- Subtle vertical divider separator between inactive tabs -->
+                            <Border x:Name="Separator"
+                                    Width="1"
+                                    Height="16"
+                                    Background="#3C4043"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    Margin="-1,0,0,0"
+                                    Visibility="Visible"/>
+                        </Grid>
+
+                        <ControlTemplate.Triggers>
+                            <!-- Active (Selected) Tab: Chrome Dark Mode Style -->
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="#323639"/>
+                                <Setter TargetName="Separator" Property="Visibility" Value="Collapsed"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                                <Setter Property="Panel.ZIndex" Value="10"/>
+                            </Trigger>
+                            <!-- Hover (MouseOver) on inactive tab -->
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsSelected" Value="False"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="TabBorder" Property="Background" Value="#282A2D"/>
+                                <Setter Property="Foreground" Value="#E8EAED"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ============================================== -->
+        <!-- TAB THÔNG TIN — BẢNG ĐIỀU KHIỂN TỐI (mục 108)  -->
+        <!-- ============================================== -->
+        <BooleanToVisibilityConverter x:Key="B2V"/>
+
+        <!-- Nút viền tối: Mở / Thư mục / Mở PDF / Zoom -->
+        <Style x:Key="NutToi" TargetType="Button">
+            <Setter Property="Background" Value="#262626"/>
+            <Setter Property="Foreground" Value="#E8EAED"/>
+            <Setter Property="BorderBrush" Value="#4A4A4A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Vien" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Vien" Property="Background" Value="#333333"/>
+                                <Setter TargetName="Vien" Property="BorderBrush" Value="#6B6B6B"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Vien" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Biểu tượng trong nút (Segoe MDL2 Assets có sẵn trên Windows 10/11) -->
+        <Style x:Key="BieuTuong" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="TieuDeNhom" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#A8A8A8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="4,16,0,4"/>
+        </Style>
+
+        <Style x:Key="SoLieu" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#D4D4D4"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Dòng tóm tắt: ✓ xanh khi đạt, ⚠ cam khi cần xem -->
+        <DataTemplate x:Key="MauDongTomTat">
+            <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="6,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="28"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Border x:Name="VongDat" Width="17" Height="17" CornerRadius="9" BorderThickness="1.5" BorderBrush="#22C55E"
+                            HorizontalAlignment="Left" VerticalAlignment="Center">
+                        <TextBlock Text="✓" Foreground="#22C55E" FontSize="10" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock x:Name="CanhBao" Text="⚠" Foreground="#F59E0B" FontSize="14" Visibility="Collapsed"
+                               HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="Nhan" Grid.Column="1" Text="{Binding Nhan}" Foreground="#ECECEC" FontSize="13"
+                               FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="GiaTri" Grid.Column="2" Text="{Binding GiaTri}" Style="{StaticResource SoLieu}" Margin="8,0,0,0"/>
+                </Grid>
+            </Border>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Dat}" Value="False">
+                    <Setter TargetName="VongDat" Property="Visibility" Value="Collapsed"/>
+                    <Setter TargetName="CanhBao" Property="Visibility" Value="Visible"/>
+                    <Setter TargetName="Nhan" Property="Foreground" Value="#F59E0B"/>
+                    <Setter TargetName="GiaTri" Property="Foreground" Value="#F59E0B"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- GOOGLE CHROME STYLE TAB CONTROL -->
+        <Style x:Key="ChromeTabControl" TargetType="TabControl">
+            <Setter Property="Background" Value="#323639"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Chrome Tab Strip Header (Dark Background #1E1F22) -->
+                            <Border Grid.Row="0" Background="#1E1F22" Padding="6,6,6,0">
+                                <StackPanel Orientation="Horizontal" IsItemsHost="True" VerticalAlignment="Bottom"/>
+                            </Border>
+
+                            <!-- Main Body below the Tab Strip (#323639) -->
+                            <Border Grid.Row="1" Background="#323639">
+                                <ContentPresenter ContentSource="SelectedContent"/>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <!-- MAIN TAB CONTROL: TAB 0 (THÔNG TIN) - TAB 1 (DST) - TAB 2 (DSN) - CHROME STYLE -->
+    <!-- Đổi thứ tự tab thì PHẢI sửa hằng TabThongTin / TabDanhSach / TabNet trong ViewModel. -->
+    <TabControl Style="{StaticResource ChromeTabControl}" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
+
+        <!-- ========================================== -->
+        <!-- TAB 0: THÔNG TIN (báo cáo cuối lệnh GRO)   -->
+        <!-- Thay hộp thoại alert cuối lệnh (mục 105).  -->
+        <!-- ========================================== -->
+        <TabItem Style="{StaticResource ChromeTabItem}">
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="18" Height="18" CornerRadius="9" Background="#0891B2" Margin="0,0,6,0" VerticalAlignment="Center">
+                        <TextBlock Text="ℹ" FontSize="11" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="Thông Tin" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center"/>
+                    <Border Background="#451A03" CornerRadius="8" Padding="5,1" Margin="6,0,0,0" VerticalAlignment="Center"
+                            ToolTip="Số dòng cảnh báo / lỗi trong báo cáo">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ThongTinCanhBao}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="{Binding ThongTinCanhBao, StringFormat=⚠ {0}}" Foreground="#FCD34D" FontSize="11" FontWeight="Bold"/>
+                    </Border>
+                </StackPanel>
+            </TabItem.Header>
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- HEADER: nguồn báo cáo + nút (tối, cùng nền bảng điều khiển) -->
+                <Border Grid.Row="0" Background="#1A1A1A" BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="10,7">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Báo cáo GRO" FontWeight="Bold" FontSize="12" Foreground="#E5E7EB"/>
+                            <TextBlock Text="{Binding ThongTinNguon}" FontSize="11" Foreground="#8A8A8A" Margin="8,1,0,0"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Command="{Binding CopyThongTinCommand}" Style="{StaticResource NutToi}" Padding="9,4"
+                                ToolTip="Chép toàn bộ báo cáo (tiếng Việt) vào clipboard">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE8C8;" Style="{StaticResource BieuTuong}"/>
+                                <TextBlock Text="Sao chép"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="2" Command="{Binding XemDanhSachCommand}" Style="{StaticResource NutToi}" Padding="9,4"
+                                ToolTip="Sang tab Danh Sách Tấm">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Danh sách tấm"/>
+                                <TextBlock Text="&#xE72A;" Style="{StaticResource BieuTuong}" Margin="6,0,0,0"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- NỘI DUNG -->
+                <ScrollViewer Grid.Row="1" x:Name="ThongTinScroll" Background="#1F1F1F"
+                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid>
+                        <!-- (A) Chưa chạy GRO lần nào trong phiên này -->
+                        <TextBlock Text="Chưa có thông báo. Chạy lệnh GRO — báo cáo cuối lệnh sẽ hiện tại đây."
+                                   Foreground="#8A8A8A" FontStyle="Italic" TextWrapping="Wrap" Margin="14,14">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CoThongTin}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <!-- (B) BẢNG ĐIỀU KHIỂN (mục 108) -->
+                        <StackPanel Margin="10,10,10,14" Visibility="{Binding CoBangDieuKhien, Converter={StaticResource B2V}}">
+
+                            <!-- 5 thẻ số liệu. "Chưa đổi" và "Cô đơn" là số SỐNG theo tab Nét Chưa Đổi / Danh Sách Tấm (mục 113) -->
+                            <UniformGrid Columns="5">
+                                <Border Background="#2A2A2A" CornerRadius="8" Padding="10,8" Margin="0,0,6,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Ghi chú" Foreground="#BDBDBD" FontSize="12"/>
+                                        <TextBlock Text="{Binding TheGhiChu}" Foreground="#F1F1F1" FontSize="22" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="#2A2A2A" CornerRadius="8" Padding="10,8" Margin="0,0,6,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Tấm" Foreground="#BDBDBD" FontSize="12"/>
+                                        <TextBlock Text="{Binding TheTam}" Foreground="#F1F1F1" FontSize="22" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="#2A2A2A" CornerRadius="8" Padding="10,8" Margin="0,0,6,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Nét đã đổi" Foreground="#BDBDBD" FontSize="12"/>
+                                        <TextBlock Text="{Binding TheNetDaDoi}" Foreground="#F1F1F1" FontSize="22" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border CornerRadius="8" Padding="10,8" Margin="0,0,6,0"
+                                        ToolTip="Theo tab Nét Chưa Đổi — cập nhật khi quét lại / chuyển layer">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#2A2A2A"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ChuaDoiCanXem}" Value="True">
+                                                    <Setter Property="Background" Value="#3D2A12"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel>
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Setter Property="TextElement.Foreground" Value="#F1F1F1"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ChuaDoiCanXem}" Value="True">
+                                                        <Setter Property="TextElement.Foreground" Value="#F59E0B"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
+                                        <TextBlock Text="Chưa đổi" FontSize="12"/>
+                                        <TextBlock Text="{Binding TheChuaDoi}" FontSize="22" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border CornerRadius="8" Padding="10,8"
+                                        ToolTip="Hình cô đơn + text không tìm thấy hình cắt — theo tab Danh Sách Tấm, cập nhật khi Làm Mới">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#2A2A2A"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CoDonCanXem}" Value="True">
+                                                    <Setter Property="Background" Value="#3F1717"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel>
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Setter Property="TextElement.Foreground" Value="#F1F1F1"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding CoDonCanXem}" Value="True">
+                                                        <Setter Property="TextElement.Foreground" Value="#F87171"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
+                                        <TextBlock Text="Cô đơn" FontSize="12"/>
+                                        <TextBlock Text="{Binding TheCoDon}" FontSize="22" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+
+                            <!-- Cảnh báo / lỗi (chỉ hiện khi có) -->
+                            <StackPanel Visibility="{Binding CoCanhBao, Converter={StaticResource B2V}}">
+                                <TextBlock Text="Cảnh báo" Style="{StaticResource TieuDeNhom}"/>
+                                <ItemsControl ItemsSource="{Binding KhoiCanhBao}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border x:Name="The" Background="#3B2611" CornerRadius="8" Padding="12,9" Margin="0,0,0,6">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="24"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock x:Name="Icon" Text="⚠" Foreground="#F59E0B" FontSize="14" VerticalAlignment="Top"/>
+                                                    <StackPanel Grid.Column="1">
+                                                        <TextBlock x:Name="TieuDe" Text="{Binding TieuDe}" Foreground="#F59E0B" FontWeight="SemiBold"
+                                                                   FontSize="13" TextWrapping="Wrap"/>
+                                                        <TextBlock Text="{Binding ChiTietGop}" Foreground="#D9C4A8" FontSize="12" TextWrapping="Wrap"
+                                                                   Margin="0,3,0,0" Visibility="{Binding CoChiTiet, Converter={StaticResource B2V}}"/>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2" VerticalAlignment="Top">
+                                                        <Button Style="{StaticResource NutToi}"
+                                                                Command="{Binding DataContext.XemTamLoiCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Visibility="{Binding CoNutDanhSach, Converter={StaticResource B2V}}"
+                                                                ToolTip="Mở tab Danh Sách Tấm, lọc danh sách">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="&#xE8FD;" Style="{StaticResource BieuTuong}"/>
+                                                                <TextBlock Text="Danh sách"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <!-- Mục 134: chọn (grip) + zoom tới các đối tượng của khối, vd còn sót tại cụm cũ -->
+                                                        <Button Style="{StaticResource NutToi}"
+                                                                Command="{Binding DataContext.ChonZoomDoiTuongCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Visibility="{Binding CoNutChonZoom, Converter={StaticResource B2V}}"
+                                                                ToolTip="Chọn và zoom tới các đối tượng này trên bản vẽ">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="&#xE71E;" Style="{StaticResource BieuTuong}"/>
+                                                                <TextBlock Text="Chọn &amp; Zoom"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <!-- Mục 160: ghi chú tiếng Nhật mới -> mở Từ điển ghi chú để thêm nghĩa -->
+                                                        <Button Style="{StaticResource NutToi}"
+                                                                Command="{Binding DataContext.MoTuDienCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                Visibility="{Binding CoNutTuDien, Converter={StaticResource B2V}}"
+                                                                ToolTip="Mở Từ điển ghi chú để thêm nghĩa tiếng Việt, rồi quét lại danh sách tấm">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="&#xE82D;" Style="{StaticResource BieuTuong}"/>
+                                                                <TextBlock Text="Từ điển"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding LaLoi}" Value="True">
+                                                    <Setter TargetName="The" Property="Background" Value="#3F1717"/>
+                                                    <Setter TargetName="Icon" Property="Foreground" Value="#F87171"/>
+                                                    <Setter TargetName="TieuDe" Property="Foreground" Value="#F87171"/>
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <!-- Ghi chú trên tấm -->
+                            <TextBlock Text="Ghi chú trên tấm" Style="{StaticResource TieuDeNhom}"/>
+                            <ItemsControl ItemsSource="{Binding DongGhiChu}" ItemTemplate="{StaticResource MauDongTomTat}"/>
+
+                            <!-- Xuất file -->
+                            <TextBlock Text="Xuất file" Style="{StaticResource TieuDeNhom}"/>
+                            <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="6,8"
+                                    Visibility="{Binding CoCsv, Converter={StaticResource B2V}}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="28"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid VerticalAlignment="Center">
+                                        <Border Width="17" Height="17" CornerRadius="9" BorderThickness="1.5" BorderBrush="#22C55E"
+                                                HorizontalAlignment="Left">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding CsvLoi}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="✓" Foreground="#22C55E" FontSize="10" FontWeight="Bold"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <TextBlock Text="✕" Foreground="#F87171" FontSize="14" FontWeight="Bold"
+                                                   Visibility="{Binding CsvLoi, Converter={StaticResource B2V}}"/>
+                                    </Grid>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding NhanCsv}" FontSize="13" FontWeight="SemiBold">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="#ECECEC"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding CsvLoi}" Value="True">
+                                                            <Setter Property="Foreground" Value="#F87171"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding DuongCsvNgan}" Style="{StaticResource SoLieu}" FontSize="11"
+                                                   Foreground="#8A8A8A" TextTrimming="CharacterEllipsis"
+                                                   ToolTip="{Binding BaoCao.DuongCsv}"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="2" Command="{Binding MoCsvCommand}" Style="{StaticResource NutToi}" ToolTip="Mở file CSV">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE8E5;" Style="{StaticResource BieuTuong}"/>
+                                            <TextBlock Text="Mở"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Column="3" Command="{Binding MoThuMucCsvCommand}" Style="{StaticResource NutToi}"
+                                            ToolTip="Mở thư mục chứa file CSV">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE8B7;" Style="{StaticResource BieuTuong}"/>
+                                            <TextBlock Text="Thư mục"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </Border>
+                            <Border BorderBrush="#2E2E2E" BorderThickness="0,0,0,1" Padding="6,8"
+                                    Visibility="{Binding CoPdf, Converter={StaticResource B2V}}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="28"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="17" Height="17" CornerRadius="9" BorderThickness="1.5" BorderBrush="#22C55E"
+                                            HorizontalAlignment="Left" VerticalAlignment="Center">
+                                        <TextBlock Text="✓" Foreground="#22C55E" FontSize="10" FontWeight="Bold"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Grid.Column="1" Text="{Binding NhanPdf}" Foreground="#ECECEC" FontSize="13"
+                                               FontWeight="SemiBold" VerticalAlignment="Center" ToolTip="{Binding BaoCao.DuongPdf}"/>
+                                    <Button Grid.Column="2" Command="{Binding MoPdfCommand}" Style="{StaticResource NutToi}"
+                                            ToolTip="Mở file PDF vừa in">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE8A5;" Style="{StaticResource BieuTuong}"/>
+                                            <TextBlock Text="Mở PDF"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </Border>
+
+                            <!-- Hình cô đơn / text thiếu hình: LỖI phải xử lý, số SỐNG theo Danh Sách Tấm (mục 113) -->
+                            <StackPanel Visibility="{Binding CoTamCanXuLy, Converter={StaticResource B2V}}">
+                                <TextBlock Text="Hình cô đơn · text thông tin" Style="{StaticResource TieuDeNhom}"/>
+                                <Border Background="#3F1717" CornerRadius="8" Padding="12,7" Margin="0,0,0,6"
+                                        Visibility="{Binding CoHinhCoDon, Converter={StaticResource B2V}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="✕" Foreground="#F87171" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="Hình cô đơn · thiếu text thông tin" Foreground="#F87171" FontSize="13"
+                                                   FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding OrphanCount}" Style="{StaticResource SoLieu}"
+                                                   Foreground="#F87171" Margin="8,0,4,0"/>
+                                        <Button Grid.Column="3" Style="{StaticResource NutToi}" Command="{Binding XemTamLoiCommand}"
+                                                ToolTip="Mở tab Danh Sách Tấm, lọc các dòng lỗi / cô đơn">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE8FD;" Style="{StaticResource BieuTuong}"/>
+                                                <TextBlock Text="Danh sách"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                                <Border Background="#3F1717" CornerRadius="8" Padding="12,7" Margin="0,0,0,6"
+                                        Visibility="{Binding CoTextThieuHinh, Converter={StaticResource B2V}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="✕" Foreground="#F87171" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="Text thông tin không tìm thấy hình cắt" Foreground="#F87171" FontSize="13"
+                                                   FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding SoKhongHinh}" Style="{StaticResource SoLieu}"
+                                                   Foreground="#F87171" Margin="8,0,4,0"/>
+                                        <Button Grid.Column="3" Style="{StaticResource NutToi}" Command="{Binding XemTamLoiCommand}"
+                                                ToolTip="Mở tab Danh Sách Tấm, lọc các dòng lỗi / cô đơn">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE8FD;" Style="{StaticResource BieuTuong}"/>
+                                                <TextBlock Text="Danh sách"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                                <Border Padding="6,8" Visibility="{Binding TamDatHet, Converter={StaticResource B2V}}">
+                                    <TextBlock Text="✓  Không có hình cô đơn, mọi text thông tin đều có hình." Foreground="#22C55E"
+                                               FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Xử lý nét (nhóm chưa đổi: số SỐNG theo tab Nét Chưa Đổi, mục 113) -->
+                            <StackPanel Visibility="{Binding CoXuLyNet, Converter={StaticResource B2V}}">
+                                <TextBlock Text="{Binding TieuDeXuLyNet}" Style="{StaticResource TieuDeNhom}"/>
+                                <ItemsControl ItemsSource="{Binding DongNetDaDoi}" ItemTemplate="{StaticResource MauDongTomTat}"/>
+                                <ItemsControl ItemsSource="{Binding NhomNetChuaDoi}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#3B2611" CornerRadius="8" Padding="12,7" Margin="0,6,0,0">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="24"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="⚠" Foreground="#F59E0B" FontSize="14" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Nhan}" Foreground="#F59E0B" FontSize="13"
+                                                               FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding SoLuong}" Style="{StaticResource SoLieu}"
+                                                               Foreground="#F59E0B" Margin="8,0,4,0"/>
+                                                    <Button Grid.Column="3" Style="{StaticResource NutToi}" CommandParameter="{Binding Linetype}"
+                                                            Command="{Binding DataContext.ZoomNhomNetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            ToolTip="Zoom và chọn các nét này trên bản vẽ">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="&#xE71E;" Style="{StaticResource BieuTuong}"/>
+                                                            <TextBlock Text="Zoom"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Border Padding="6,8" Visibility="{Binding NetDaDoiHet, Converter={StaticResource B2V}}">
+                                    <TextBlock Text="✓  Đã đổi hết — không còn nét nào trên layer gốc." Foreground="#22C55E"
+                                               FontSize="13" FontWeight="SemiBold"/>
+                                </Border>
+                                <Border Background="#3B2611" CornerRadius="8" Padding="12,9" Margin="0,4,0,0"
+                                        Visibility="{Binding NetKhongTimThay, Converter={StaticResource B2V}}">
+                                    <TextBlock Text="⚠  Không tìm thấy đối tượng nào trên layer gốc bên trong các khung bao đã chọn."
+                                               Foreground="#F59E0B" FontSize="13" TextWrapping="Wrap"/>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- (C) DỰ PHÒNG: báo cáo không đọc được thành số liệu -> hiện từng dòng (đã dịch) -->
+                        <ItemsControl ItemsSource="{Binding ThongTinDong}" Margin="10,8,10,10">
+                            <ItemsControl.Style>
+                                <Style TargetType="ItemsControl">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding CoThongTin}" Value="True"/>
+                                                <Condition Binding="{Binding CoBangDieuKhien}" Value="False"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ItemsControl.Style>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border x:Name="Dong" Padding="8,2" Margin="0,0,0,1" BorderThickness="3,0,0,0"
+                                            BorderBrush="Transparent" Background="Transparent" CornerRadius="2">
+                                        <TextBlock x:Name="Chu" Text="{Binding Text}" TextWrapping="Wrap"
+                                                   FontFamily="Cascadia Mono, Consolas, Courier New" FontSize="12"
+                                                   Foreground="#D4D4D4"/>
+                                    </Border>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding Loai}" Value="{x:Static core:LoaiDongThongTin.TieuDe}">
+                                            <Setter TargetName="Chu" Property="FontWeight" Value="Bold"/>
+                                            <Setter TargetName="Chu" Property="Foreground" Value="#F1F1F1"/>
+                                            <Setter TargetName="Dong" Property="Margin" Value="0,4,0,2"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Loai}" Value="{x:Static core:LoaiDongThongTin.CanhBao}">
+                                            <Setter TargetName="Dong" Property="Background" Value="#3B2611"/>
+                                            <Setter TargetName="Dong" Property="BorderBrush" Value="#F59E0B"/>
+                                            <Setter TargetName="Chu" Property="Foreground" Value="#F59E0B"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Loai}" Value="{x:Static core:LoaiDongThongTin.Loi}">
+                                            <Setter TargetName="Dong" Property="Background" Value="#3F1717"/>
+                                            <Setter TargetName="Dong" Property="BorderBrush" Value="#DC2626"/>
+                                            <Setter TargetName="Chu" Property="Foreground" Value="#F87171"/>
+                                            <Setter TargetName="Chu" Property="FontWeight" Value="Bold"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Loai}" Value="{x:Static core:LoaiDongThongTin.ThanhCong}">
+                                            <Setter TargetName="Chu" Property="Foreground" Value="#22C55E"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Loai}" Value="{x:Static core:LoaiDongThongTin.Trong}">
+                                            <Setter TargetName="Dong" Property="Height" Value="8"/>
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
+        </TabItem>
+
+        <!-- ========================================== -->
+        <!-- TAB 1: DANH SÁCH TẤM GIA CÔNG (DST)       -->
+        <!-- ========================================== -->
+        <TabItem Style="{StaticResource ChromeTabItem}">
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="18" Height="18" CornerRadius="9" Background="#2563EB" Margin="0,0,6,0" VerticalAlignment="Center">
+                        <TextBlock Text="📋" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="Danh Sách Tấm" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center"/>
+                    <Border Background="#1E293B" CornerRadius="8" Padding="5,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding TotalCount}" Foreground="#93C5FD" FontSize="11" FontWeight="Bold"/>
+                    </Border>
+                </StackPanel>
+            </TabItem.Header>
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <!-- Header Toolbar -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- DataGrid -->
+                    <RowDefinition Height="*"/>
+                    <!-- Footer Status Bar -->
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- HEADER TOOLBAR DST -->
+                <Border Grid.Row="0" Background="#323639" BorderBrush="#26282B" BorderThickness="0,0,0,1" Padding="8">
+                    <StackPanel Orientation="Vertical">
+                        <Grid Margin="0,0,0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Button Grid.Column="0" Content="⟳ Làm Mới" Command="{Binding RefreshCommand}" Style="{StaticResource ModernBtn}"/>
+                            <Button Grid.Column="1" Content="💾 Lưu Vào Bản Vẽ" Command="{Binding SaveCommand}" Style="{StaticResource SaveBtnStyle}" Margin="4,2,2,2"/>
+
+                            <!-- Search Input -->
+                            <TextBox Grid.Column="2" Margin="6,2,2,2" VerticalContentAlignment="Center" Padding="8,4"
+                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Background="#1F2023" Foreground="#FFFFFF" BorderBrush="#4B5563"
+                                     ToolTip="Gõ để lọc theo Bango, độ dày, vật liệu...">
+                            </TextBox>
+
+                            <!-- Nhóm ô lọc lỗi/cô đơn & ô tích Bản chính/nghịch xếp dọc -->
+                            <StackPanel Grid.Column="3" Orientation="Vertical" VerticalAlignment="Center" Margin="8,0,0,0">
+                                <CheckBox Content="Chỉ lỗi / cô đơn" IsChecked="{Binding FilterOrphansOnly}"
+                                          VerticalAlignment="Center" Margin="0,0,0,3" FontWeight="SemiBold" Foreground="#FCA5A5"/>
+                                <!-- Mục 159: hiện / ẩn "Bản chính / Bản nghịch - N" trong cột Ghi chú -->
+                                <CheckBox Content="Bản chính/nghịch" IsChecked="{Binding HienBanChinhNghich}"
+                                          VerticalAlignment="Center" Margin="0,3,0,0" FontWeight="SemiBold" Foreground="#86EFAC"
+                                          ToolTip="Hiện dòng Bản chính / Bản nghịch trong cột Ghi chú"/>
+                                <CheckBox Content="Chỉ tấm SHT" IsChecked="{Binding LocChiTamSht}"
+                                          VerticalAlignment="Center" Margin="0,3,0,0" FontWeight="SemiBold" Foreground="#38BDF8"
+                                          ToolTip="Chỉ hiển thị các tấm có ghi chú cần xử lý đổi nét sang 4-SHT"/>
+                            </StackPanel>
+                        </Grid>
+                        <!-- Đổi bản vẽ khi còn sửa chưa lưu: bảng vẫn là dữ liệu bản vẽ cũ (mục 114) -->
+                        <Border Background="#451A03" BorderBrush="#F59E0B" BorderThickness="1" CornerRadius="4"
+                                Padding="8,5" Margin="0,6,0,0" Visibility="{Binding LechBanVe, Converter={StaticResource B2V}}">
+                            <TextBlock Text="{Binding ThongBaoLechBanVe}" Foreground="#FCD34D" FontSize="12" TextWrapping="Wrap"/>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- MAIN DATAGRID DST -->
+                <DataGrid Grid.Row="1" x:Name="PlatesDataGrid"
+                          ItemsSource="{Binding FilteredPlates}"
+                          SelectedItem="{Binding SelectedPlate, Mode=TwoWay}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          SelectionMode="Single"
+                          GridLinesVisibility="Horizontal"
+                          HorizontalGridLinesBrush="#E5E7EB"
+                          BorderThickness="0"
+                          Background="#FFFFFF"
+                          MinRowHeight="28"
+                          AlternatingRowBackground="#F9FAFB"
+                          HeadersVisibility="Column"
+                          ScrollViewer.VerticalScrollBarVisibility="Visible"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                          BeginningEdit="PlatesDataGrid_BeginningEdit"
+                          SelectionChanged="PlatesDataGrid_SelectionChanged">
+
+                    <!-- Tô màu nổi bật dòng theo MucDo -->
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="ToolTip" Value="{Binding Note}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding MucDo}" Value="2">
+                                    <Setter Property="Background" Value="#FECACA"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="BorderBrush" Value="#DC2626"/>
+                                    <Setter Property="BorderThickness" Value="3,0,0,0"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding MucDo}" Value="1">
+                                    <Setter Property="Background" Value="#FEF3C7"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
+
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="#F3F4F6"/>
+                            <Setter Property="Foreground" Value="#374151"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="Padding" Value="8,6"/>
+                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+
+                    <DataGrid.Columns>
+                        <!-- Bango -->
+                        <DataGridTextColumn Header="Bango" Binding="{Binding Bango, UpdateSourceTrigger=LostFocus}" Width="58">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                    <Setter Property="Foreground" Value="#DC2626"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                            <DataGridTextColumn.EditingElementStyle>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                </Style>
+                            </DataGridTextColumn.EditingElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- Q -->
+                        <DataGridTextColumn Header="Q" Binding="{Binding Quantity, UpdateSourceTrigger=LostFocus}" Width="40">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                            <DataGridTextColumn.EditingElementStyle>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.EditingElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- M -->
+                        <DataGridTextColumn Header="M" Binding="{Binding Material, UpdateSourceTrigger=LostFocus}" Width="64">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                            <DataGridTextColumn.EditingElementStyle>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.EditingElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- T -->
+                        <DataGridTextColumn Header="T" Binding="{Binding Thickness, UpdateSourceTrigger=LostFocus}" Width="46">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                            <DataGridTextColumn.EditingElementStyle>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.EditingElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- GC -->
+                        <DataGridTextColumn Header="GC" Binding="{Binding GC, UpdateSourceTrigger=LostFocus}" Width="36">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                    <Setter Property="Foreground" Value="#2563EB"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                            <DataGridTextColumn.EditingElementStyle>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                    <Setter Property="ToolTip" Value="Để trống = tấm đơn; m = bẻ, k = vát, * = từ 2 loại gia công khác nhau trở lên, s = gia công sara, t = gia công M-タップ, r = gia công cuộn"/>
+                                </Style>
+                            </DataGridTextColumn.EditingElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- Ghi chú Badge & Text -->
+                        <DataGridTemplateColumn Header="Ghi chú" Width="*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="6,2">
+                                        <Ellipse Width="8" Height="8" Fill="{Binding StatusColor}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <Border Background="#0891B2" CornerRadius="3" Padding="4,1" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                Visibility="{Binding LaXuLySht, Converter={StaticResource B2V}}"
+                                                ToolTip="Tấm có ghi chú yêu cầu xử lý đổi nét sang 4-SHT">
+                                            <TextBlock Text="4-SHT" Foreground="#FFFFFF" FontSize="10" FontWeight="Bold"/>
+                                        </Border>
+                                        <TextBlock Text="{Binding Note}" Foreground="{Binding StatusColor}" FontWeight="SemiBold" 
+                                                   TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- FOOTER STATUS BAR DST -->
+                <Border Grid.Row="2" Background="#1E1F22" Padding="10,6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="{Binding ThongKe}"
+                                   ToolTip="{Binding ThongKeChiTiet}" Foreground="#F9FAFB" FontWeight="SemiBold"
+                                   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="0,0,8,0"/>
+
+                        <Button Grid.Column="1" Content="→ Tấm lỗi tiếp" Command="{Binding NextOrphanCommand}" ToolTip="Nhảy lần lượt qua các dòng đỏ (tấm lỗi và hình cô đơn)" 
+                                Style="{StaticResource ModernBtn}" Background="#374151" Foreground="#FCA5A5" BorderBrush="#4B5563"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </TabItem>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: NÉT CHƯA ĐỔI                        -->
+        <!-- ========================================== -->
+        <TabItem Style="{StaticResource ChromeTabItem}">
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="18" Height="18" CornerRadius="9" Background="#D97706" Margin="0,0,6,0" VerticalAlignment="Center">
+                        <TextBlock Text="🔍" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="Nét Chưa Đổi" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center"/>
+                    <Border Background="#1E293B" CornerRadius="8" Padding="5,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Dsn.TotalUnconvertedCount}" Foreground="#FCD34D" FontSize="11" FontWeight="Bold"/>
+                    </Border>
+                </StackPanel>
+            </TabItem.Header>
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <!-- Toolbar Layer gốc bản vẽ (khóa cứng) -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- DataGrid nhóm nét -->
+                    <RowDefinition Height="*"/>
+                    <!-- Action Buttons -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- Footer Status Bar -->
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- TOOLBAR LAYER GỐC BẢN VẼ (KHÓA CỨNG THEO LAYER GỐC) -->
+                <Border Grid.Row="0" Background="#323639" BorderBrush="#26282B" BorderThickness="0,0,0,1" Padding="8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Layer bản vẽ gốc:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,8,0" Foreground="#E5E7EB"/>
+                        <Border Grid.Column="1" Background="#1F2023" BorderBrush="#4B5563" BorderThickness="1" CornerRadius="4" Padding="10,5">
+                            <TextBlock Text="{Binding Dsn.CurrentLayerName}" FontWeight="Bold" Foreground="#93C5FD" FontSize="12" VerticalAlignment="Center"/>
+                        </Border>
+                        <Button Grid.Column="2" Content="⟳ Quét lại" Command="{Binding Dsn.RefreshCommand}" Style="{StaticResource ModernBtn}" Margin="6,0,0,0"
+                                ToolTip="Quét lại các nét chưa đổi trên layer gốc"/>
+                    </Grid>
+                </Border>
+
+                <!-- DATAGRID NHÓM NÉT DSN (DANH SÁCH KHÔNG THỂ SỬA ĐỔI, CHỈ CHỌN HÀNG VÀ TỰ ĐỘNG ZOOM) -->
+                <DataGrid Grid.Row="1" x:Name="DsnDataGrid"
+                          ItemsSource="{Binding Dsn.Groups}"
+                          SelectedItem="{Binding Dsn.SelectedGroup, Mode=TwoWay}"
+                          IsReadOnly="True"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          SelectionMode="Single"
+                          SelectionUnit="FullRow"
+                          GridLinesVisibility="Horizontal"
+                          HorizontalGridLinesBrush="#E5E7EB"
+                          BorderThickness="0"
+                          Background="#FFFFFF"
+                          RowHeight="32"
+                          AlternatingRowBackground="#F9FAFB"
+                          HeadersVisibility="Column"
+                          ScrollViewer.VerticalScrollBarVisibility="Visible"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                          SelectionChanged="DsnDataGrid_SelectionChanged">
+
+                    <!-- Tự động zoom CAD khi click vào hàng (kể cả khi hàng đã được chọn) -->
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <EventSetter Event="PreviewMouseLeftButtonUp" Handler="DsnDataGridRow_PreviewMouseLeftButtonUp"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="ToolTip" Value="Kích chọn để tự động zoom màn hình CAD tới nhóm nét này"/>
+                        </Style>
+                    </DataGrid.RowStyle>
+
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="#F3F4F6"/>
+                            <Setter Property="Foreground" Value="#374151"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="Padding" Value="8,6"/>
+                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Kiểu Nét (Linetype)" Binding="{Binding Linetype}" Width="*" FontWeight="SemiBold">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="Padding" Value="8,0,0,0"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Số Lượng" Binding="{Binding Count}" Width="100">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                    <Setter Property="Foreground" Value="#1D4ED8"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- ACTION BUTTONS DSN (5 NÚT CHUYỂN NÉT NHANH VỀ BYLAYER) -->
+                <Border Grid.Row="2" Background="#323639" BorderBrush="#26282B" BorderThickness="0,1,0,0" Padding="8,6">
+                    <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Button Content="✂ → 0-KAKOU" Command="{Binding Dsn.ConvertToKakouCommand}" Style="{StaticResource ModernBtn}" 
+                                Background="#10B981" Foreground="White" BorderBrush="#059669" 
+                                ToolTip="Chuyển toàn bộ nét nhóm đang chọn sang layer 0-KAKOU (các thông số về ByLayer)"/>
+                        <Button Content="✎ → 3-KEGAKI" Command="{Binding Dsn.ConvertToKegakiCommand}" Style="{StaticResource ModernBtn}" 
+                                Background="#F59E0B" Foreground="White" BorderBrush="#D97706" 
+                                ToolTip="Chuyển sang layer 3-KEGAKI (các thông số về ByLayer)"/>
+                        <Button Content="📏 → 1-SUNPOU" Command="{Binding Dsn.ConvertToSunpouCommand}" Style="{StaticResource ModernBtn}" 
+                                Background="#3B82F6" Foreground="White" BorderBrush="#2563EB" 
+                                ToolTip="Chuyển sang layer 1-SUNPOU (các thông số về ByLayer)"/>
+                        <Button Content="📄 → 4-SHT" Command="{Binding Dsn.ConvertToShtCommand}" Style="{StaticResource ModernBtn}" 
+                                Background="#06B6D4" Foreground="White" BorderBrush="#0891B2" 
+                                ToolTip="Chuyển sang layer 4-SHT (các thông số về ByLayer)"/>
+                        <Button Content="⭕ → 0" Command="{Binding Dsn.ConvertToZeroCommand}" Style="{StaticResource ModernBtn}" 
+                                Background="#6B7280" Foreground="White" BorderBrush="#4B5563" 
+                                ToolTip="Chuyển sang layer 0 (các thông số về ByLayer)"/>
+                    </WrapPanel>
+                </Border>
+
+                <!-- FOOTER STATUS BAR DSN -->
+                <Border Grid.Row="3" Background="#1E1F22" Padding="10,6">
+                    <TextBlock Text="{Binding Dsn.ThongKe}" Foreground="#F9FAFB" FontWeight="SemiBold"/>
+                </Border>
+            </Grid>
+        </TabItem>
+    </TabControl>
+</UserControl>

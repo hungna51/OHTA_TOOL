@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Test cho phan LOGIC THUAN cua ZwCadPlugin (thu muc Core/), chay KHONG can ZWCAD.
+    Bien dich THANG cac file Core/*.cs chu khong tham chieu ZwCadPlugin.dll: DLL do
+    phu thuoc ZwManaged.dll, chi nap duoc ben trong ZWCAD.
+    Chay tu thu muc laptrinhlisp: dotnet run (tham so project) ZwCadPlugin.Tests
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\ZwCadPlugin\Core\*.cs" Link="Core\%(Filename)%(Extension)" />
+    <Compile Include="..\ZwCadPlugin\Models\GroSettings.cs" Link="Models\GroSettings.cs" />
+    <Compile Include="..\ZwCadPlugin\Models\PlateItem.cs" Link="Models\PlateItem.cs" />
+    <Compile Include="..\ZwCadPlugin\Models\NoteDictionaryItem.cs" Link="Models\NoteDictionaryItem.cs" />
+  </ItemGroup>
+</Project>
