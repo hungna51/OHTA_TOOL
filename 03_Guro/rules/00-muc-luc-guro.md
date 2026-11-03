@@ -43,7 +43,8 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 | 189 | Khắc chữ: chữ **thò ra ngoài mép hình** không được đổi. Nay nhận khi tâm chữ trong hình; chữ thò ra ngoài hoặc chạm nét cắt 0-KAKOU → vẫn đổi + **cảnh báo** `!!! Khac chu ...` | [09-vi-tri-dau-ra.md](09-vi-tri-dau-ra.md) |
 | 190 | Khắc chữ: cảnh báo hiện **tiếng Việt có dấu** ở tab Thông Tin (`ThongTinGro.Dich`) + cờ `KC_NGOAI_HINH` / `KC_CHAM_NET` trong XData bango → **cột Ghi chú** bảng DST (`gro--gan-co-xdata`); bước khắc chữ 9 s → hộp bao mỗi chữ tính 1 lần | [09-vi-tri-dau-ra.md](09-vi-tri-dau-ra.md) |
 | 191 | **Chuyển vào OHTA_TOOL/03_Guro + chạy AutoCAD 2027**: lisp → `lisp/guro_gro.lsp` (100% ASCII, chuỗi Nhật dùng `\U+XXXX`), nạp qua lệnh mồi `lisp/autoload.lsp`; DLL đổi tên **`GROTOOL.dll`** ở `03_Guro\bin\<ZwCAD\|AutoCAD>` (`gro--tim-dll`, ZWCAD còn tìm `C:\GROZWCAD` cũ); C# build kép net48/net10 bằng `#if ZWCAD`; in PDF `gro--may-in-pdf` / `gro--thu-muc-ctb` theo nền tảng | [../README.md](../README.md) |
-| [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) | Hộp thoại DCL + **bản .NET** (dialog `gro`, bảng DST) | 18, 19, 20, 52, 55, 56, 64, 86 |
+| 192 | **GRO không hiện hộp thoại nữa** — thiết lập nằm trên **tab Guro** của bảng OHTA (giao diện trong GROTOOL.dll, ADR 0002), đổi là ghi registry ngay; `c:gro` đọc lại registry mỗi lần chạy, chọn layer bằng `gro--tham-so-chay` (layer đã lưu mà bản vẽ không có → layer đứng đầu; layer gốc có mục **Tự động**, khóa `xln_tu_dong`). Hộp thoại cũ: lệnh **`GROCD`** | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) |
+| [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) | Hộp thoại DCL + **bản .NET** (dialog `gro`, bảng DST), **tab Guro** | 18, 19, 20, 52, 55, 56, 64, 86, 192 |
 | [06-encoding-chuoi.md](06-encoding-chuoi.md) | Encoding và xử lý chuỗi (CP932 / Unicode) | 2, 9, 15, 16, 50, 57 |
 | [07-tach-du-lieu.md](07-tach-du-lieu.md) | Tách độ dày, số lượng, mã khắc, **ghép dòng số lượng** | 10, 11, 17, 23, 24, 32, 43, 54, 168 |
 | [08-sap-xep-va-vung.md](08-sap-xep-va-vung.md) | Sắp xếp, gom hàng, chế độ vùng polyline | 22, 25, 28, 49, 51, 53, 58, 61, 62, 63, 65, 182, 186 |
@@ -58,14 +59,14 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 
 ## Mục lục mục lỗi
 
-1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–191 tại đây.
+1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–192 tại đây.
 
 > ### ⚠ SỐ MỤC LÀ CỐ ĐỊNH, KHÔNG ĐƯỢC ĐÁNH SỐ LẠI
 > Mã nguồn `.lsp` tham chiếu tới chúng ở **17 chỗ** (`CLAUDE.md muc 13`, `muc 29`, `muc 85`, `muc 86`, …) và các file rule tham chiếu chéo nhau ở **59 chỗ**. Đổi số là hỏng cả 59 chỗ đó cùng lúc.
 >
 > Thêm mục mới thì **nối tiếp số lớn nhất hiện có + 1**, bỏ vào file theo chủ đề, rồi cập nhật bảng dưới.
 >
-> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **191**.
+> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **192**.
 
 > ### Lệnh chẩn đoán cũ
 > `grosort` / `grodbg` / `growp` / `grostyle` / `bgdbg` thuộc bản đầy đủ cũ `guro ZWCAD(BG MK FN).lsp`, không có trong `guro_gro.lsp`. Các mục bên dưới nhắc tới chúng là ghi chép lịch sử. Lịch sử thay đổi lisp nay nằm trong git của OHTA_TOOL.

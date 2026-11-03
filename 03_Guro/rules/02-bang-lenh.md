@@ -11,7 +11,7 @@ Tất cả nằm trong **một file** `guro ZWCAD(BG MK FN).lsp` (gộp từ 4 f
 
 | Lệnh | Dòng | Chọn gì | Nhập gì | Tạo ra |
 |---|---|---|---|---|
-| **`gro`** | ~4670 | **polyline khung bao** (ENTER = quét chọn text thủ công) | hộp thoại: layer khung bao, **đánh số theo vùng**, layer vùng, **tự động in PDF**, **xử lý nét & chuyển layer**. **Mã khắc tự nhận diện** (mục 54, 56, 68) | **tất cả**: bango + mã khắc + F-name + dòng CSV + in PDF + chuyển đổi layer (mục 67, 69, 70) |
+| **`gro`** | ~4670 | **polyline khung bao** (ENTER = quét chọn text thủ công) thiết lập trên **tab Guro** của bảng OHTA, không hiện hộp thoại (mục 192): layer khung bao, **đánh số theo vùng**, layer vùng, **tự động in PDF**, **xử lý nét & chuyển layer**. **Mã khắc tự nhận diện** (mục 54, 56, 68) | **tất cả**: bango + mã khắc + F-name + dòng CSV + in PDF + chuyển đổi layer (mục 67, 69, 70) |
 | `xln` | ~3464 | 1 đối tượng layer gốc (hoặc Enter nhập tên layer), quét vùng (Enter = cả layer) | — | Chuyển Continuous→`0-KAKOU`, Center1→`3-KEGAKI`, Text→`1-SUNPOU`, các nét khác giữ nguyên layer gốc (mục 69) |
 | `cln` | ~3502 | (Tương tự `xln`) | — | Lệnh viết tắt của `xln` |
 | `xlnds` | ~3504 | — | — | Mở hộp thoại `xln_dlg` xem nhóm nét chưa đổi và bấm "Chọn nhóm nét (Select)" để chọn trực tiếp (mục 69, 70) |
@@ -30,6 +30,8 @@ Tất cả nằm trong **một file** `guro ZWCAD(BG MK FN).lsp` (gộp từ 4 f
 | `ocsv` | 1048 | — | — | mở file CSV bằng ứng dụng mặc định |
 | `dst` / `grods` / `ds` | ~8503 | — | sửa bango / T / Q / M ngay trong bảng | bảng danh sách tấm: palette .NET nếu đã nạp DLL, không thì DCL. Bản .NET ghi ngược vào bản vẽ (mục 81, 86) — **không** sửa CSV |
 | `netdst` | ~8532 | — | — | NETLOAD **`GROZWCAD.dll`** (ưu tiên `C:/GROZWCAD/`, mục 179 — tên cũ `ZwCadPlugin.dll`) rồi mở bảng .NET. Từ mục 179 lisp tự nạp DLL ngay khi file `.lsp` được nạp. **Không cần gõ nữa**: `gro` tự nạp DLL và tự mở + làm mới bảng cuối lệnh (mục 86) |
+| **`grocd`** | `c:grocd` | như `gro` | hộp thoại cài đặt như trước mục 192 (lưu lại registry) | như `gro` |
+| `GROPICKMAU` (.NET) | `GuroOhtaTab.cs` | 1 nét Dim mẫu | — | nút "Pick nét" của tab Guro: lưu màu nét Dim vào registry (mục 192) |
 | `GRODLGNET` (.NET) | `GroDialogCommands.cs` | — | hộp thoại `gro` bản .NET | **không sửa gì** — thử riêng hộp thoại .NET với mặc định đọc từ registry, in kết quả (mục 86) |
 
 > **`bgdbg` KHÔNG còn chẩn đoán đúng cho `gro`.** `bgdbg` chạy `bg--fields`, còn `gro` nay

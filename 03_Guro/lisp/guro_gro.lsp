@@ -1007,6 +1007,69 @@
 )
 
 ;;; Hop thoai DCL gro_dlg - ban cu, nay la DU PHONG khi chua nap GROTOOL.dll.
+;;; Muc 192: GRO khong hien hop thoai nua - thiet lap nam tren tab Guro cua bang
+;;; OHTA (ghi registry). Ham nay chon layer GIONG cach hop thoai chon mac dinh:
+;;;   layer khung / vung : layer da luu neu ban ve co, khong thi layer dung dau
+;;;   layer goc          : xln_tu_dong = 1 -> layer nhieu doi tuong nhat (muc 75);
+;;;                        chon tay -> dung dung layer do neu ban ve co,
+;;;                        khong thi layer dung dau
+;;; Tra ve 11 gia tri theo thu tu (nth 0..10 dlg) cua c:gro, va in tom tat.
+(defun gro--tham-so-chay (/ dem lays-k lays-v lays-x lk lv lx)
+  (setq dem    (gro--dem-khung-layer)
+        lays-k (car (gro--layer-khung-ds dem T))
+        lays-v (car (gro--layer-khung-ds dem nil))
+        lays-x (car (gro--layer-xln-ds))
+  )
+  (if (null lays-x) (setq lays-x (list "0")))
+  (setq lk (if (and gro--layer-khung (member gro--layer-khung lays-k)) gro--layer-khung (car lays-k))
+        lv (if (and gro--layer-vung (member gro--layer-vung lays-v)) gro--layer-vung (car lays-v))
+        lx (if (and (not gro--xln-tu-dong) gro--layer-xln (member gro--layer-xln lays-x))
+             gro--layer-xln
+             (car lays-x)
+           )
+  )
+  (gro--bao-layer-thay "khung bao" gro--layer-khung lk)
+  (if gro--use-vung (gro--bao-layer-thay "vung" gro--layer-vung lv))
+  (if (and gro--use-xln (not gro--xln-tu-dong))
+    (gro--bao-layer-thay "goc" gro--layer-xln lx)
+  )
+  (princ
+    (strcat "\nGRO: khung=" (if lk lk "?")
+            ", vung=" (if gro--use-vung (if lv lv "?") "khong")
+            ", tao khung=" (if gro--use-tao-khung "co" "khong")
+            ", in PDF=" (if gro--use-in-pdf "co" "khong")
+            "\n     xu ly net="
+            (if gro--use-xln
+              (strcat "co (layer goc: " (if lx lx "?") (if gro--xln-tu-dong " - tu dong" "") ")")
+              "khong"
+            )
+            ", xep cum=" (if gro--use-xep-cum "co" "khong")
+            ", dat ma khac=" (if gro--use-dat-mk "co" "khong")
+            "\n     (doi thiet lap: tab Guro tren bang OHTA, hoac lenh GROCD)"
+    )
+  )
+  (list gro--use-vung lv lk gro--use-in-pdf gro--use-xln lx gro--xln-auto-dim
+        gro--mau-dim-xln gro--use-tao-khung gro--use-xep-cum gro--use-dat-mk
+  )
+)
+
+;;; Layer da chon khong co tren ban ve nay -> bao layer thay the.
+(defun gro--bao-layer-thay (ten da-chon dung)
+  (if (and da-chon (not (equal da-chon dung)))
+    (princ (strcat "\nLuu y: layer " ten " \"" da-chon "\" khong co tren ban ve -> dung \""
+                   (if dung dung "?") "\"."
+           )
+    )
+  )
+)
+
+;;; GROCD: chay GRO voi hop thoai nhu truoc muc 192 (khi bang OHTA dang dong
+;;; hoac tab Guro loi). Lua chon trong hop thoai duoc luu lai registry.
+(defun c:grocd ()
+  (setq gro--hoi-hop-thoai T)
+  (c:gro)
+)
+
 (defun gro--hoi-dcl (def-lay-k def-vung def-layer def-in-pdf def-use-xln def-lay-xln 
                       def-auto-dim def-mau-dim def-tao-khung / dcl dch gro-vung 
                       gro-lay gro-layk gro-in gro-tao-khung gro-xln gro-lxln 
@@ -14051,7 +14114,8 @@
               ss-goc-info gro--danh-sach-bango-ents gro--danh-sach-ten-bv-ents bb-tong-bv dx-chup dy-chup ssv-left kq-chup
               xep-cum all-codes-cum fld-all-cum v-cum nhom-cum bb-goc-xep kq-xep msg-xep-cum
               tids-da-xep kq-tg msg-tach-gian kq-mir msg-mir msg-mk msg-kc ds-sht msg-sht gro--ds-text-khac n-khung0 gro--ds-cat vung-truoc gro--dich-tach gro--bango-dich gro--ds-khung-bo gro--hop-khung-bo
-             ) 
+              hoi-dlg
+             )
   ;; LUU Y ve danh sach local o tren: sl p c v u la BIEN VONG foreach, khai bao
   ;; de chung KHONG ro ra pham vi toan cuc. Trong AutoLISP, (foreach x ...) dat
   ;; x nhu mot bien thuong - khong khai bao thi sau khi lenh chay xong x van con
@@ -14093,6 +14157,11 @@
     (princ)
   )
 
+  ;; Muc 192: chi lenh GROCD moi hien hop thoai. Doc co roi xoa ngay, de lan
+  ;; GRO sau (ke ca khi GROCD bi Esc giua chung) khong hien hop thoai nua.
+  (setq hoi-dlg             gro--hoi-hop-thoai
+        gro--hoi-hop-thoai  nil
+  )
   (gro--moc-bat-dau)
   (setq old-cmdecho (getvar "CMDECHO")
         gro--buoc   "khoi dong"
@@ -14152,43 +14221,31 @@
   (close filecsv)
   (setq filecsv nil)
 
-  (if (null (boundp 'gro--use-in-pdf)) 
-    (setq gro--use-in-pdf (gro--reg-read-bool "use_in_pdf" nil))
+  ;; --- 2. THIET LAP: doc lai registry MOI LAN chay (muc 192) ---------------
+  ;; Tab Guro tren bang OHTA ghi registry ngay khi nguoi dung doi thiet lap, nen
+  ;; khong duoc giu gia tri cu trong bien toan cuc nhu truoc.
+  (setq gro--use-in-pdf    (gro--reg-read-bool "use_in_pdf" nil)
+        gro--use-tao-khung (gro--reg-read-bool "use_tao_khung" T)
+        gro--use-vung      (gro--reg-read-bool "use_vung" nil)
+        gro--layer-vung    (gro--reg-read-str "layer_vung" nil)
+        gro--layer-khung   (gro--reg-read-str "layer_khung" nil)
+        gro--use-xln       (gro--reg-read-bool "use_xln" T)
+        gro--layer-xln     (gro--reg-read-str "layer_xln" nil)
+        gro--xln-tu-dong   (gro--reg-read-bool "xln_tu_dong" T)
+        gro--xln-auto-dim  (gro--reg-read-bool "auto_dim" T)
+        gro--mau-dim-xln   (gro--reg-read-int "mau_dim" 4)
+        gro--use-xep-cum   (gro--reg-read-bool "use_xep_cum" T)
+        gro--use-dat-mk    (gro--reg-read-bool "use_dat_mk" T)
   )
-  (if (null (boundp 'gro--use-tao-khung)) 
-    (setq gro--use-tao-khung (gro--reg-read-bool "use_tao_khung" T))
-  )
-  (if (null (boundp 'gro--use-vung)) 
-    (setq gro--use-vung (gro--reg-read-bool "use_vung" nil))
-  )
-  (if (null (boundp 'gro--layer-vung)) 
-    (setq gro--layer-vung (gro--reg-read-str "layer_vung" nil))
-  )
-  (if (null (boundp 'gro--layer-khung)) 
-    (setq gro--layer-khung (gro--reg-read-str "layer_khung" nil))
-  )
-  (if (null (boundp 'gro--use-xln)) 
-    (setq gro--use-xln (gro--reg-read-bool "use_xln" T))
-  )
-  (if (null (boundp 'gro--layer-xln)) 
-    (setq gro--layer-xln (gro--reg-read-str "layer_xln" nil))
-  )
-  ;; --- 2. HOP THOAI TRUOC, bam OK moi bat dau chon -------------------------
-  (if (null (boundp 'gro--xln-auto-dim)) 
-    (setq gro--xln-auto-dim (gro--reg-read-bool "auto_dim" T))
-  )
-  (if (null (boundp 'gro--mau-dim-xln)) 
-    (setq gro--mau-dim-xln (gro--reg-read-int "mau_dim" 4))
-  )
-
-  ;; Muc 122: 2 tuy chon moi (doc registry neu chua co). Muc 170: bo "che do ma khac".
-  (if (null (boundp 'gro--use-xep-cum)) (setq gro--use-xep-cum (gro--reg-read-bool "use_xep_cum" T)))
-  (if (null (boundp 'gro--use-dat-mk)) (setq gro--use-dat-mk (gro--reg-read-bool "use_dat_mk" T)))
-  ;; Tu nap ban .NET (muc 86) TRUOC hop thoai: co thi dung hop thoai .NET.
+  ;; Tu nap ban .NET (muc 86): hop thoai .NET cua GROCD va cac buoc C# ve sau.
   (gro--nap-net)
-  (setq dlg (gro-get-input gro--layer-khung gro--use-vung gro--layer-vung
-                           gro--use-in-pdf gro--use-xln gro--layer-xln gro--xln-auto-dim
-                           gro--mau-dim-xln gro--use-tao-khung gro--use-xep-cum gro--use-dat-mk
+  ;; GRO: chay thang theo thiet lap da luu. GROCD: hop thoai nhu truoc muc 192.
+  (setq dlg (if hoi-dlg
+              (gro-get-input gro--layer-khung gro--use-vung gro--layer-vung
+                             gro--use-in-pdf gro--use-xln gro--layer-xln gro--xln-auto-dim
+                             gro--mau-dim-xln gro--use-tao-khung gro--use-xep-cum gro--use-dat-mk
+              )
+              (gro--tham-so-chay)
             )
   )
   ;; dlg = nil co the la Cancel, MA CUNG co the la khong mo duoc hop thoai.
@@ -14228,18 +14285,24 @@
               gro--use-dat-mk  (nth 10 dlg)
         )
       )
-      ;; Luu toan bo cau hinh vao Registry de ghi nho qua cac ban ve va lan lam moi lisp
-      (gro--reg-write-bool "use_vung" gro--use-vung)
-      (gro--reg-write-str "layer_vung" gro--layer-vung)
-      (gro--reg-write-str "layer_khung" gro--layer-khung)
-      (gro--reg-write-bool "use_in_pdf" gro--use-in-pdf)
-      (gro--reg-write-bool "use_xln" gro--use-xln)
-      (gro--reg-write-str "layer_xln" gro--layer-xln)
-      (gro--reg-write-bool "auto_dim" gro--xln-auto-dim)
-      (gro--reg-write-int "mau_dim" gro--mau-dim-xln)
-      (gro--reg-write-bool "use_tao_khung" gro--use-tao-khung)
-      (gro--reg-write-bool "use_xep_cum" gro--use-xep-cum)
-      (gro--reg-write-bool "use_dat_mk" gro--use-dat-mk)
+      ;; Chi GROCD moi luu lai registry (lua chon trong hop thoai). GRO chay thang
+      ;; KHONG ghi: layer du phong cua ban ve nay (muc 192) khong duoc de len layer
+      ;; nguoi dung da chon tren tab Guro.
+      (if hoi-dlg
+        (progn
+          (gro--reg-write-bool "use_vung" gro--use-vung)
+          (gro--reg-write-str "layer_vung" gro--layer-vung)
+          (gro--reg-write-str "layer_khung" gro--layer-khung)
+          (gro--reg-write-bool "use_in_pdf" gro--use-in-pdf)
+          (gro--reg-write-bool "use_xln" gro--use-xln)
+          (gro--reg-write-str "layer_xln" gro--layer-xln)
+          (gro--reg-write-bool "auto_dim" gro--xln-auto-dim)
+          (gro--reg-write-int "mau_dim" gro--mau-dim-xln)
+          (gro--reg-write-bool "use_tao_khung" gro--use-tao-khung)
+          (gro--reg-write-bool "use_xep_cum" gro--use-xep-cum)
+          (gro--reg-write-bool "use_dat_mk" gro--use-dat-mk)
+        )
+      )
 
       ;; --- 3. chon doi tuong -----------------------------------------------
       (gro--moc "chon doi tuong")

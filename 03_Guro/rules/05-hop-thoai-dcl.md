@@ -406,3 +406,17 @@ Ba luật DCL bắt buộc:
    ZWCAD vì chỉ biên dịch thư mục `Core/` + `Models/GroSettings.cs`. Nay **153/153** (thêm phần CSV, luật lỗi, sửa GC, mã s/t/r). Phần gọi API ZWCAD (cửa sổ
    modal từ `LispFunction`, `GetEntity`, `ColorDialog`, ghi entity) **chưa chạy thật** — xem
    [14-can-kiem-tra-lai.md](14-can-kiem-tra-lai.md).
+
+## Mục 192 — Tab Guro thay hộp thoại của `gro` (11/2026)
+
+Gõ `GRO` hoặc bấm **▶ Chạy GRO** trên tab Guro: lệnh chạy ngay theo thiết lập đã lưu, **không hiện hộp thoại**, chỉ in 2–3 dòng tóm tắt (`GRO: khung=..., vung=...`). Hộp thoại cũ (.NET, thiếu DLL thì DCL) còn ở lệnh **`GROCD`** — dùng khi bảng OHTA đang đóng.
+
+- **Nơi giữ thiết lập**: registry `HKCU\Software\OFT_Lisp\GRO`, khóa như cũ, thêm **`xln_tu_dong`** ("1" = layer gốc tự động). Tab ghi **ngay khi đổi** (`GroRegistry`), không có nút OK.
+- **`c:gro` đọc lại registry mỗi lần chạy.** Trước đây chỉ đọc khi biến `gro--*` chưa có (một lần mỗi bản vẽ) — tab đổi xong GRO vẫn dùng giá trị cũ.
+- **Chọn layer khi chạy** (`gro--tham-so-chay`, cùng luật với `Core/GuroTabLayer.cs` của tab):
+  - khung bao / vùng: layer đã lưu nếu bản vẽ có, không thì layer đứng đầu danh sách (như hộp thoại);
+  - layer gốc: **Tự động** = layer nhiều đối tượng nhất (mục 75); chọn tay thì dùng **đúng** layer đó kể cả khi ít đối tượng hơn (khác mục 75), bản vẽ không có thì layer đứng đầu.
+  - Layer đã lưu mà bản vẽ không có: tab vẫn giữ tên kèm "(không có trong bản vẽ)" + chữ đỏ; GRO in `Luu y: layer ... khong co tren ban ve -> dung ...`.
+- **GRO chạy thẳng không ghi registry** — nếu ghi, layer dự phòng của bản vẽ này sẽ đè lên layer người dùng đã chọn trên tab. Chỉ `GROCD` lưu lại lựa chọn trong hộp thoại (trừ `xln_tu_dong`).
+- **Pick nét mẫu** trên tab gửi lệnh `GROPICKMAU` (palette không giữ chuột được): chọn nét, ghi `mau_dim` + `auto_dim`=0, rồi báo tab đọc lại.
+- Danh sách layer của tab tự làm mới khi chuyển bản vẽ (`DocumentActivated`) và khi bấm ↻; đếm bằng `LayerQuery.Dem` như hộp thoại.

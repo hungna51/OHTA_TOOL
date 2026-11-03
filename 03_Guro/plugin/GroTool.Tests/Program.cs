@@ -989,6 +989,7 @@ namespace ZwCadPlugin.Tests
             TestTachVaCham();
             TestChiaNetCat();
             TestDongKhung();
+            TestGuroTabLayer();
 
             Console.WriteLine();
             Console.WriteLine("=== Test khong dung tu dien that (muc 158) ===");
@@ -1696,6 +1697,43 @@ namespace ZwCadPlugin.Tests
             Kiem("them co noi bang ;", DatMaKhac.ThemCo("A", "MK_THU_NHO"), "A;MK_THU_NHO");
             Kiem("co da co -> giu nguyen", DatMaKhac.ThemCo("MK_THU_NHO", "MK_THU_NHO"), "MK_THU_NHO");
             Kiem("noi ds toi da 2 + ...", DatMaKhac.NoiDs(new List<string> { "1", "2", "3" }, 2), "1, 2, ...");
+        }
+
+        private static void TestGuroTabLayer()
+        {
+            Console.WriteLine();
+            Console.WriteLine("=== Tab Guro: o chon layer (muc 192) ===");
+            var ds = new List<LayerMuc>
+            {
+                new LayerMuc("Khung_IN", "Khung_IN  (5 khung)", 5),
+                new LayerMuc("0", "0  (1 khung)", 1),
+            };
+
+            var k1 = GuroTabLayer.ChoKhung(ds, null);
+            Kiem("chua luu -> chon layer dung dau", k1.Chon.Ten + "/" + k1.GroDung + "/" + (k1.CanhBao == null), "Khung_IN/Khung_IN/True");
+            var k2 = GuroTabLayer.ChoKhung(ds, "0");
+            Kiem("da luu va ban ve co -> giu layer do", k2.Chon.Ten + "/" + k2.GroDung + "/" + k2.Ds.Count, "0/0/2");
+            var k3 = GuroTabLayer.ChoKhung(ds, "KHUNG_CU");
+            Kiem("da luu ma ban ve khong co -> giu ten, them muc dau", k3.Chon.Ten + "/" + k3.Ds.Count + "/" + k3.Ds[0].Ten, "KHUNG_CU/3/KHUNG_CU");
+            Kiem("  GRO dung layer dung dau + co canh bao", k3.GroDung + "/" + (k3.CanhBao != null), "Khung_IN/True");
+            var k4 = GuroTabLayer.ChoKhung(new List<LayerMuc>(), null);
+            Kiem("ban ve trong, chua luu -> khong chon gi", k4.Chon == null && k4.GroDung == null, true);
+
+            var xds = new List<LayerMuc>
+            {
+                new LayerMuc("GOC", "GOC  (90 doi tuong)", 90),
+                new LayerMuc("PHU", "PHU  (3 doi tuong)", 3),
+            };
+            var x1 = GuroTabLayer.ChoXln(xds, true, "PHU");
+            Kiem("tu dong -> muc Tu dong, GRO dung layer nhieu nhat", x1.Chon.Ten + "|" + x1.GroDung + "|" + x1.Ds.Count, "|GOC|3");
+            Kiem("  nhan muc Tu dong ghi ten layer", x1.Ds[0].HienThi, "Tự động (GOC)");
+            var x2 = GuroTabLayer.ChoXln(xds, false, "PHU");
+            Kiem("chon tay layer it doi tuong -> van dung layer do (khac muc 75)", x2.Chon.Ten + "/" + x2.GroDung, "PHU/PHU");
+            var x3 = GuroTabLayer.ChoXln(xds, false, "MAT");
+            Kiem("chon tay ma ban ve khong co -> Tu dong + muc thieu + ds", x3.Ds[0].Ten + "|" + x3.Ds[1].Ten + "|" + x3.Ds.Count, "|MAT|4");
+            Kiem("  GRO dung layer dung dau + canh bao", x3.Chon.Ten + "/" + x3.GroDung + "/" + (x3.CanhBao != null), "MAT/GOC/True");
+            var x4 = GuroTabLayer.ChoXln(xds, false, null);
+            Kiem("tat tu dong ma chua luu layer -> coi nhu Tu dong", x4.Chon.Ten + "|" + x4.GroDung, "|GOC");
         }
     }
 }

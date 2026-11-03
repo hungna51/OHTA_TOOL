@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using WinReg = Microsoft.Win32;
 #if ZWCAD
 using ZwSoft.ZwCAD.ApplicationServices;
 using ZwSoft.ZwCAD.DatabaseServices;
@@ -79,7 +78,7 @@ namespace ZwCadPlugin
             Editor ed = doc.Editor;
             try
             {
-                GroSettings mac = DocRegistry();
+                GroSettings mac = GroRegistry.Doc(out _);
                 KetThucDialog kt = HienDialog(doc, mac, false, out GroSettings kq);
                 if (kt == KetThucDialog.Huy)
                 {
@@ -152,7 +151,7 @@ namespace ZwCadPlugin
         /// Màu hiển thị của một đối tượng, như gro--entity-color: ByLayer/ByBlock lấy màu
         /// layer (trị tuyệt đối — layer tắt có màu âm), không đọc được thì 7.
         /// </summary>
-        private static int MauCuaDoiTuong(Database db, ObjectId id)
+        internal static int MauCuaDoiTuong(Database db, ObjectId id)
         {
             using (Transaction tr = db.TransactionManager.StartTransaction())
             {
@@ -218,38 +217,6 @@ namespace ZwCadPlugin
                 }
             }
             return rb;
-        }
-
-        // ------------------------------------------------------------------
-        // Mặc định cho lệnh thử — đọc đúng khóa và mặc định như c:gro
-        // ------------------------------------------------------------------
-
-        private static GroSettings DocRegistry()
-        {
-            using (WinReg.RegistryKey k = WinReg.Registry.CurrentUser.OpenSubKey(@"Software\OFT_Lisp\GRO"))
-            {
-                string Doc(string ten) => k?.GetValue(ten) as string;
-                bool Co(string ten, bool macDinh)
-                {
-                    string v = Doc(ten);
-                    return v == "1" ? true : v == "0" ? false : macDinh;
-                }
-                int.TryParse(Doc("mau_dim"), out int mau);
-                return new GroSettings
-                {
-                    UseInPdf = Co("use_in_pdf", false),
-                    UseTaoKhung = Co("use_tao_khung", true),
-                    UseVung = Co("use_vung", false),
-                    LayerVung = Doc("layer_vung"),
-                    LayerKhung = Doc("layer_khung"),
-                    UseXln = Co("use_xln", true),
-                    LayerXln = Doc("layer_xln"),
-                    AutoDim = Co("auto_dim", true),
-                    MauDim = GroThamSo.LaMauHopLe(mau) ? mau : GroThamSo.MauMacDinh,
-                    XepCum = Co("use_xep_cum", true),
-                    DatMk = Co("use_dat_mk", true),
-                };
-            }
         }
     }
 }
