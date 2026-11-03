@@ -1,4 +1,4 @@
-# 02. Nhóm Chức Năng Mẫu 02 (`02_Module_Mau_2`)
+# 02. Nhóm Chức Năng Mẫu 02 (`More`)
 
 > Tài liệu đặc tả riêng của **Mục con 02** (tương ứng **Tab dọc số 2** trên bảng Tool Palettes `OHTA`).
 > Luật nền chung của dự án: [../GEMINI.md](../GEMINI.md) | Luật riêng của nhóm: [rules/01-quy-tac-nhom-02.md](rules/01-quy-tac-nhom-02.md)

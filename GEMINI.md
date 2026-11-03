@@ -51,7 +51,7 @@ OHTAINFO    : In thông tin chẩn đoán (nền tảng CAD, đường dẫn g�
 |---|---|---|---|---|
 | mẫu | [`_Template_Module/`](_Template_Module/README.md) | Khuôn mẫu để nhân bản khi tạo nhóm mới (tiền tố `_` nên không hiện Tab) | [`_Template_Module/rules/`](_Template_Module/rules/) | Khuôn mẫu |
 | 01 | [`01_Fname/`](01_Fname/README.md) | Tab **Fname**: tạo, hút, sửa F-NAME (`N=, M=, T=, Q=, Z=`) & các lệnh Fname tấm | [`01_Fname/rules/`](01_Fname/rules/) | Đã tích hợp UI chọn Fname |
-| 02 | [`02_Module_Mau_2/`](02_Module_Mau_2/README.md) | Nhóm chức năng mẫu 02 | [`02_Module_Mau_2/rules/`](02_Module_Mau_2/rules/) | Khung sẵn sàng mở rộng |
+| 02 | [`More/`](More/README.md) | Nhóm chức năng mẫu 02 | [`More/rules/`](More/rules/) | Khung sẵn sàng mở rộng |
 | 03 | [`03_Guro/`](03_Guro/README.md) | Tab **Guro**: lệnh `GRO` (bango + mã khắc + F-name + CSV + PDF + chuyển layer), `DST`, `XLN`, `GI`… — DLL riêng `GROTOOL.dll`, chạy ZWCAD 2026 + AutoCAD 2027 | [`03_Guro/rules/`](03_Guro/rules/) | Đã tích hợp (chuyển từ ZWLISP\GURO) |
 
 *(Khi tạo thêm thư mục mục con mới, hãy cập nhật bổ sung 1 dòng vào bảng trên để đồng bộ bản đồ dự án).*

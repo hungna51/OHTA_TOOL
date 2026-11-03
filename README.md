@@ -21,7 +21,7 @@ OHTA_TOOL/
 │   ├── data/                   # CSV vật liệu + bảng TraV (đồng bộ từ Google Sheet) & google_sheet.ini
 │   ├── module.json             # Khai báo Tab "Fname" và các lệnh Fname bổ sung
 │   └── lisp/                   # Các file .lsp riêng của nhóm Fname
-├── 02_Module_Mau_2/            # Mục con 02 -> Ứng với Tab 2 trên OHTA Tool Palettes
+├── More/            # Mục con 02 -> Ứng với Tab 2 trên OHTA Tool Palettes
 │   └── ...
 └── _system/                    # Hạ tầng mã nguồn C# WPF PaletteSet, bin DLL & Unit Tests
     ├── bin/ZwCAD/OHTATOOL.dll  # DLL cho ZWCAD 2026 (.NET Framework 4.8)
@@ -36,7 +36,7 @@ OHTA_TOOL/
 2. Kéo-thả file **`OHTA_Loader.lsp`** vào vùng vẽ CAD (hoặc nạp qua lệnh `APPLOAD`).
 3. Gõ lệnh **`OHTA`** rồi nhấn `Enter`:
    - Hệ thống tự nhận diện CAD đang chạy, tự động `NETLOAD` đúng bản `OHTATOOL.dll` và mở bảng Tool Palettes **`OHTA TOOL`** neo cạnh màn hình.
-   - Mỗi mục con (`01_Module_Mau_1`, `02_Module_Mau_2`, ...) hiển thị thành một **Tab dọc** bên sườn bảng giống hệt Tool Palettes chuẩn của CAD.
+   - Mỗi mục con (`01_Module_Mau_1`, `More`, ...) hiển thị thành một **Tab dọc** bên sườn bảng giống hệt Tool Palettes chuẩn của CAD.
 
 ### Các lệnh điều khiển nhanh
 - `OHTA` : Mở bảng Tool Palettes **OHTA TOOL**.

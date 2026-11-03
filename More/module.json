@@ -5,14 +5,18 @@
   "tabTitle": "More",
   "title": "More",
   "description": "Bổ sung các lisp tùy chỉnh",
-  "accentColor": "#2E7D32",
+  "accentColor": "#EF6C00",
   "startupLisp": [
-    "lisp/Catdim_CD_BD.lsp"
+    "lisp/Catdim_CD_BD.lsp",
+    "lisp/FnameMoveTextKe.LSP"
+  ],
+  "groups": [
+    "Dim"
   ],
   "tools": [
     {
       "id": "m02_cat_chan_dim",
-      "category": "Khởi tạo & Kiểm tra",
+      "category": "Dim",
       "name": "Cắt chân dim",
       "badge": "CD",
       "command": "CD",
@@ -21,12 +25,20 @@
     },
     {
       "id": "m02_can_thang_dim",
-      "category": "Khởi tạo & Kiểm tra",
+      "category": "Dim",
       "name": "Căn thẳng hàng dim",
       "badge": "BD",
       "command": "BD",
       "lispFile": "lisp/Catdim_CD_BD.lsp",
       "description": "Căn thẳng hàng các dim được chọn."
+    },
+    {
+      "id": "u_fmk",
+      "name": "Fname move vào mã khắc",
+      "badge": "FMK",
+      "command": "FMK",
+      "lispFile": "lisp/FnameMoveTextKe.LSP",
+      "description": "Move fname vào mã khắc"
     }
   ]
 }
