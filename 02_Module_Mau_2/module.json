@@ -1,0 +1,32 @@
+{
+  "id": "module_02",
+  "enabled": true,
+  "order": 20,
+  "tabTitle": "More",
+  "title": "More",
+  "description": "Bổ sung các lisp tùy chỉnh",
+  "accentColor": "#2E7D32",
+  "startupLisp": [
+    "lisp/Catdim_CD_BD.lsp"
+  ],
+  "tools": [
+    {
+      "id": "m02_cat_chan_dim",
+      "category": "Khởi tạo & Kiểm tra",
+      "name": "Cắt chân dim",
+      "badge": "CD",
+      "command": "CD",
+      "lispFile": "lisp/Catdim_CD_BD.lsp",
+      "description": "Lisp có nhiệm vụ cắt chân dim cho thẳng hàng."
+    },
+    {
+      "id": "m02_can_thang_dim",
+      "category": "Khởi tạo & Kiểm tra",
+      "name": "Căn thẳng hàng dim",
+      "badge": "BD",
+      "command": "BD",
+      "lispFile": "lisp/Catdim_CD_BD.lsp",
+      "description": "Căn thẳng hàng các dim được chọn."
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ZwCadSdkDir Condition="'$(ZwCadSdkDir)' == ''">C:\Program Files\ZWSOFT\ZWCAD 2026</ZwCadSdkDir>
+    <AutoCadSdkDir Condition="'$(AutoCadSdkDir)' == ''">C:\Program Files\Autodesk\AutoCAD 2027</AutoCadSdkDir>
+    <AutoCadTfm Condition="'$(AutoCadTfm)' == ''">net10.0-windows</AutoCadTfm>
+
+    <HasZwCadSdk Condition="Exists('$(ZwCadSdkDir)\ZwManaged.dll')">true</HasZwCadSdk>
+    <HasAutoCadSdk Condition="Exists('$(AutoCadSdkDir)\acmgd.dll')">true</HasAutoCadSdk>
+
+    <TargetFrameworks Condition="'$(HasZwCadSdk)' == 'true' and '$(HasAutoCadSdk)' == 'true'">net48;$(AutoCadTfm)</TargetFrameworks>
+    <TargetFrameworks Condition="'$(HasZwCadSdk)' == 'true' and '$(HasAutoCadSdk)' != 'true'">net48</TargetFrameworks>
+    <TargetFrameworks Condition="'$(HasZwCadSdk)' != 'true' and '$(HasAutoCadSdk)' == 'true'">$(AutoCadTfm)</TargetFrameworks>
+    <TargetFrameworks Condition="'$(TargetFrameworks)' == ''">net48</TargetFrameworks>
+
+    <LangVersion>latest</LangVersion>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <AssemblyName>OHTATOOL</AssemblyName>
+    <RootNamespace>OhtaTool.Plugin</RootNamespace>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <NoWarn>$(NoWarn);CA1416;MSB3277;CS8981</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\settings_logo.png" LogicalName="OhtaTool.Plugin.Assets.settings_logo.png" />
+  </ItemGroup>
+
+  <!-- Nhanh ZWCAD 2026 (.NET Framework 4.8) -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+    <DefineConstants>$(DefineConstants);ZWCAD</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="ZwDatabaseMgd">
+      <HintPath>$(ZwCadSdkDir)\ZwDatabaseMgd.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="ZwManaged">
+      <HintPath>$(ZwCadSdkDir)\ZwManaged.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Nhanh AutoCAD (.NET 10.0 / 8.0 Windows) -->
+  <PropertyGroup Condition="'$(TargetFramework)' != 'net48'">
+    <DefineConstants>$(DefineConstants);AUTOCAD</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != 'net48'">
+    <Reference Include="accoremgd">
+      <HintPath>$(AutoCadSdkDir)\accoremgd.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="acdbmgd">
+      <HintPath>$(AutoCadSdkDir)\acdbmgd.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="acmgd">
+      <HintPath>$(AutoCadSdkDir)\acmgd.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Xuat DLL rieng biet ra _system/bin/ZwCAD va _system/bin/AutoCAD -->
+  <Target Name="CopyOutputToSystemBin" AfterTargets="Build" Condition="'$(SkipPostBuildCopy)' != 'true'">
+    <PropertyGroup>
+      <CadOutSubDir Condition="'$(TargetFramework)' == 'net48'">ZwCAD</CadOutSubDir>
+      <CadOutSubDir Condition="'$(TargetFramework)' != 'net48'">AutoCAD</CadOutSubDir>
+      <CadBinDest>$(MSBuildProjectDirectory)\..\bin\$(CadOutSubDir)</CadBinDest>
+    </PropertyGroup>
+    <MakeDir Directories="$(CadBinDest)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CadBinDest)" Retries="0" ContinueOnError="true" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CadBinDest)" Condition="Exists('$(TargetDir)$(TargetName).pdb')" Retries="0" ContinueOnError="true" />
+  </Target>
+</Project>
+

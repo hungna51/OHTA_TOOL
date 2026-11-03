@@ -1,0 +1,357 @@
+<Window x:Class="OhtaTool.Plugin.Views.FnameSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Cài Đặt — Fname"
+        Width="480"
+        Height="470"
+        MinWidth="420"
+        MinHeight="400"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        ShowInTaskbar="False"
+        Background="#F5F7FA"
+        FontFamily="Segoe UI, Meiryo UI, Yu Gothic UI"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+    <Window.Resources>
+        <Style x:Key="DialogSecondaryBtnStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="#334E68"/>
+            <Setter Property="BorderBrush" Value="#CBD2D9"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="16,6"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#ECEFF1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DialogPrimaryBtnStyle" TargetType="Button">
+            <Setter Property="Background" Value="#0277BD"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="18,6"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.90"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="CardTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#0277BD"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style x:Key="CardHint" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#64748B"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="LineHeight" Value="16"/>
+        </Style>
+        <Style x:Key="InfoLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#334155"/>
+            <Setter Property="Margin" Value="0,4,0,2"/>
+        </Style>
+        <Style x:Key="InfoValue" TargetType="TextBox">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="Foreground" Value="#475569"/>
+            <Setter Property="Background" Value="#F8FAFC"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+
+        <!-- Tab kiểu nút bo góc, tab đang chọn tô xanh -->
+        <Style x:Key="SettingsTabItemStyle" TargetType="TabItem">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="Bd" Background="#FFFFFF" BorderBrush="#DCE3EA" BorderThickness="1"
+                                CornerRadius="6" Padding="12,5" Margin="0,0,6,0">
+                            <ContentPresenter x:Name="Hdr" ContentSource="Header" TextElement.Foreground="#334E68"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#0277BD"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#0277BD"/>
+                                <Setter TargetName="Hdr" Property="TextElement.Foreground" Value="#FFFFFF"/>
+                                <Setter TargetName="Hdr" Property="TextElement.FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                    <Condition Property="IsSelected" Value="False"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Bd" Property="Background" Value="#ECEFF1"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0"
+                Background="#0277BD"
+                Padding="16,12">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Background="#FFFFFF"
+                        CornerRadius="5"
+                        Padding="3"
+                        Margin="0,0,10,0"
+                        VerticalAlignment="Center">
+                    <Image x:Name="HeaderLogoImage"
+                           Width="20"
+                           Height="20"
+                           Stretch="Uniform"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Cài Đặt Fname"
+                               Foreground="#FFFFFF"
+                               FontSize="14.5"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Text="Quy tắc nhập liệu, dữ liệu vật liệu &amp; Google Sheet (OHTA TOOL)"
+                               Foreground="#E1F5FE"
+                               FontSize="11.5"
+                               Margin="0,2,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Vùng nội dung: chia tab theo nhóm cài đặt -->
+        <TabControl Grid.Row="1" Margin="10,10,10,6" Padding="0" Background="Transparent" BorderThickness="0"
+                    ItemContainerStyle="{StaticResource SettingsTabItemStyle}">
+
+            <!-- TAB 1: Quy tắc nhập liệu -->
+            <TabItem Header="✎  Nhập liệu">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="2,8,2,0">
+                    <StackPanel>
+                        <Border Background="#FFFFFF" BorderBrush="#DCE3EA" BorderThickness="1" CornerRadius="7" Padding="14,12" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="QUY TẮC NHẬP LIỆU F-NAME" Style="{StaticResource CardTitle}"/>
+
+                                <CheckBox x:Name="ChkLockZ" FontSize="12.5" FontWeight="SemiBold" Foreground="#1E293B" Cursor="Hand">
+                                    <TextBlock Text="Khóa nhập Z= (luôn tự động cố định theo vật liệu M=)"/>
+                                </CheckBox>
+                                <TextBlock Style="{StaticResource CardHint}" Margin="20,4,0,10"
+                                           Text="Khi bật, ô Z= trên bảng sẽ bị khóa sửa tay. Mã phôi Z= được tự động điền và cố định chuẩn xác theo mác vật liệu M= đã chọn (ví dụ: SS400 -> Z=SS400, SPHC -> Z=SPC, SUS304 -> Z=SUS-N2...)."/>
+
+                                <Separator Background="#F1F5F9" Margin="0,0,0,10"/>
+
+                                <CheckBox x:Name="ChkAutoIncN" FontSize="12.5" FontWeight="SemiBold" Foreground="#1E293B" Cursor="Hand">
+                                    <TextBlock Text="Tự động tăng số thứ tự N= (+1) sau khi đặt mới"/>
+                                </CheckBox>
+                                <TextBlock Style="{StaticResource CardHint}" Margin="20,4,0,0"
+                                           Text="Tự động tăng hậu tố số cuối của N= sau mỗi lần đặt Fname thành công lên bản vẽ (ví dụ: 47079-1 -> 47079-2)."/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- TAB 2: Dữ liệu (Google Sheet) -->
+            <TabItem Header="🗄  Dữ liệu">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="2,8,2,0">
+                    <StackPanel>
+                        <Border Background="#FFFFFF" BorderBrush="#DCE3EA" BorderThickness="1" CornerRadius="7" Padding="14,12" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="TẢI DỮ LIỆU TỪ GOOGLE SHEET" Style="{StaticResource CardTitle}"/>
+                                <TextBlock Style="{StaticResource CardHint}" Margin="0,0,8,8"
+                                           Text="Danh mục M= / Loại / Z= / T=, 3 bảng TraV và bảng góc bẻ thử được tải từ Google Sheet: tự động ở lần mở tool đầu tiên trong ngày, hoặc bấm Cập nhật ngay."/>
+                                <WrapPanel>
+                                    <Button x:Name="BtnUpdateData" Style="{StaticResource DialogPrimaryBtnStyle}"
+                                            Content="🔄  Cập nhật từ Google Sheet" Click="OnUpdateDataClick" Margin="0,0,8,4"/>
+                                    <Button Style="{StaticResource DialogSecondaryBtnStyle}" Content="📂  Mở thư mục dữ liệu"
+                                            Click="OnOpenDataFolderClick" Margin="0,0,0,4"
+                                            ToolTip="Thư mục chứa CSV mẫu, google_sheet.ini và google_sheet_apps_script.gs"/>
+                                </WrapPanel>
+                                <TextBlock x:Name="TxtUpdateStatus" FontSize="11" Foreground="#334155" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="#FFFFFF" BorderBrush="#DCE3EA" BorderThickness="1" CornerRadius="7" Padding="14,12" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="BỔ SUNG DỮ LIỆU" Style="{StaticResource CardTitle}"/>
+                                <WrapPanel>
+                                    <Button x:Name="BtnAddMaterial" Style="{StaticResource DialogPrimaryBtnStyle}"
+                                            Content="➕  Bổ sung vật liệu" Click="OnAddMaterialClick" Margin="0,0,8,4"/>
+                                    <Button x:Name="BtnAddTrialBend" Style="{StaticResource DialogPrimaryBtnStyle}"
+                                            Content="➕  Bổ sung góc bẻ thử" Click="OnAddTrialBendClick" Margin="0,0,8,4"
+                                            ToolTip="Số liệu bẻ thử thực tế (Loại, T, Góc, Dao, Denta, Mã tấm) — dùng khi bảng TraV không tính được góc"/>
+                                    <Button Style="{StaticResource DialogSecondaryBtnStyle}"
+                                            Content="📋  Danh sách góc bẻ thử" Click="OnTrialListClick" Margin="0,0,0,4"
+                                            ToolTip="Xem các góc bẻ thử / nội suy / ngoại suy đã có (lọc theo loại, T, dao, mã tấm)"/>
+                                </WrapPanel>
+                                <TextBlock x:Name="TxtWriteConfig" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- TAB: Chờ phê duyệt (chỉ hiện trên máy admin) -->
+            <TabItem x:Name="TabApprovals" Visibility="{Binding ApprovalTabVisibility}">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="✅  Chờ phê duyệt" VerticalAlignment="Center"/>
+                        <Border Background="#E53935" CornerRadius="8" MinWidth="16" Height="16" Padding="4,0" Margin="6,0,0,0"
+                                VerticalAlignment="Center" Visibility="{Binding PendingBadgeVisibility}">
+                            <TextBlock Text="{Binding PendingBadgeText}" Foreground="#FFFFFF" FontSize="10" FontWeight="Bold"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </StackPanel>
+                </TabItem.Header>
+                <Grid Margin="2,8,2,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="TxtApprovalStatus" Style="{StaticResource CardHint}" VerticalAlignment="Center"
+                                   Text="Yêu cầu cập nhật dữ liệu từ các máy, đang nằm trong tab update trên Google Sheet."/>
+                        <Button x:Name="BtnReloadApprovals" Grid.Column="1" Style="{StaticResource DialogSecondaryBtnStyle}"
+                                Content="🔄  Tải lại" Click="OnReloadApprovalsClick" Margin="8,0,0,0"/>
+                    </Grid>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel>
+                            <TextBlock x:Name="TxtNoRequests" Text="Không có yêu cầu nào đang chờ duyệt."
+                                       Style="{StaticResource CardHint}" Margin="4,6,0,0" Visibility="Collapsed"/>
+                            <ItemsControl ItemsSource="{Binding PendingRequests}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#FFFFFF" BorderBrush="#DCE3EA" BorderThickness="1" CornerRadius="7"
+                                                Padding="12,9" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding LoaiLabel}" FontSize="10.5" FontWeight="Bold" Foreground="#0277BD"/>
+                                                    <TextBlock Text="{Binding Description, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" Foreground="#1E293B"
+                                                               TextWrapping="Wrap" Margin="0,2,0,2"/>
+                                                    <TextBlock FontSize="10.5" Foreground="#64748B" TextWrapping="Wrap">
+                                                        <Run Text="Máy gửi:"/> <Run Text="{Binding MayGui, Mode=OneWay}" FontWeight="SemiBold"/>
+                                                        <Run Text="  ·  "/> <Run Text="{Binding ThoiGian, Mode=OneWay}"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                                                    <Button Style="{StaticResource DialogPrimaryBtnStyle}" Content="✔  Duyệt" Padding="12,5"
+                                                            Background="#16A34A" Tag="{Binding}" Click="OnApproveClick" Margin="0,0,0,5"/>
+                                                    <Button Style="{StaticResource DialogSecondaryBtnStyle}" Content="✕  Từ chối" Padding="12,5"
+                                                            Foreground="#B91C1C" Tag="{Binding}" Click="OnRejectClick"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </TabItem>
+
+            <!-- TAB 3: Thông tin -->
+            <TabItem Header="ℹ  Thông tin">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="2,8,2,0">
+                    <StackPanel>
+                        <Border Background="#FFFFFF" BorderBrush="#DCE3EA" BorderThickness="1" CornerRadius="7" Padding="14,12" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="NGUỒN DỮ LIỆU ĐANG DÙNG" Style="{StaticResource CardTitle}"/>
+                                <TextBlock Text="Cập nhật Google Sheet lần cuối" Style="{StaticResource InfoLabel}"/>
+                                <TextBox x:Name="TxtInfoLastSync" Style="{StaticResource InfoValue}"/>
+                                <TextBlock Text="Bộ nhớ đệm trên máy (bản tải từ Sheet)" Style="{StaticResource InfoLabel}"/>
+                                <TextBox x:Name="TxtInfoCache" Style="{StaticResource InfoValue}"/>
+                                <TextBlock Text="Thư mục dữ liệu mẫu &amp; cấu hình" Style="{StaticResource InfoLabel}"/>
+                                <TextBox x:Name="TxtInfoDataFolder" Style="{StaticResource InfoValue}"/>
+                                <TextBlock Text="Kiểm tra quyền admin" Style="{StaticResource InfoLabel}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="TxtInfoApproval" Style="{StaticResource InfoValue}" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Style="{StaticResource DialogSecondaryBtnStyle}" Padding="10,4" Margin="6,0,0,4"
+                                            Content="🔄  Kiểm tra" Click="OnReloadApprovalsClick"
+                                            ToolTip="Hỏi Google Sheet xem máy này có phải máy admin và có yêu cầu chờ duyệt không"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <!-- Footer -->
+        <Border Grid.Row="2"
+                Background="#ECEFF1"
+                BorderBrush="#CFD8DC"
+                BorderThickness="0,1,0,0"
+                Padding="14,10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Style="{StaticResource DialogSecondaryBtnStyle}"
+                        Content="Đóng"
+                        IsCancel="True"
+                        Margin="0,0,8,0"
+                        Click="OnCancelClick"/>
+                <Button Style="{StaticResource DialogPrimaryBtnStyle}"
+                        Content="Lưu"
+                        IsDefault="True"
+                        Click="OnSaveClick"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

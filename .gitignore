@@ -1,0 +1,21 @@
+# Ket qua build .NET (tao lai bang build_ohta.ps1)
+bin/
+obj/
+*.pdb
+OHTATOOL.old_*
+
+# Goi zip gui cho doi (_release/OHTA_TOOL_vX.zip)
+_release/
+
+# File sinh tu dong / tam
+graphify-out/
+*.tmp
+*.csv.tmp
+.vs/
+*.user
+
+# Cai dat Claude Code rieng tung may (giu .claude/skills)
+.claude/settings.local.json
+
+# Khoa ghi Google Sheet (de rieng, khong dua len git)
+01_Fname/data/google_sheet.key

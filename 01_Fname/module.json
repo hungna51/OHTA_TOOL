@@ -1,0 +1,33 @@
+{
+  "id": "fname",
+  "enabled": true,
+  "order": 10,
+  "tabTitle": "Fname",
+  "title": "Fname v1.0",
+  "description": "Tạo mới, hút dữ liệu và cập nhật F-NAME (N=, M=, T=, Q=, Z=) cùng các lệnh kiểm tra Fname của tấm.",
+  "accentColor": "#0277BD",
+  "startupLisp": [
+    "lisp/ohta_fname_tools.lsp"
+  ],
+  "tools": [
+    {
+      "id": "fn_select_all",
+      "category": "Tiện ích Fname",
+      "name": "Chọn Tất Cả Fname (2-F-NAME)",
+      "badge": "SEL",
+      "command": "OHTAFNSEL",
+      "lispFile": "lisp/ohta_fname_tools.lsp",
+      "description": "Quét và đánh dấu chọn (Grips) toàn bộ TEXT/MTEXT trên layer 2-F-NAME trong bản vẽ."
+    },
+    {
+      "id": "fn_check_missing",
+      "category": "Tiện ích Fname",
+      "name": "Kiểm Tra Đếm Cụm Fname",
+      "badge": "CHK",
+      "command": "OHTAFNCHK",
+      "lispFile": "lisp/ohta_fname_tools.lsp",
+      "description": "Thống kê nhanh số lượng dòng N=, M=, T=, Q=, Z= trên layer 2-F-NAME để phát hiện tấm thiếu thông tin."
+    }
+  ]
+}
+

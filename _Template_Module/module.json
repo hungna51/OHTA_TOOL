@@ -1,0 +1,12 @@
+{
+  "id": "template_module",
+  "enabled": true,
+  "order": 100,
+  "tabTitle": "XX. Ten Nhom Moi",
+  "title": "Tên Đầy Đủ Của Nhóm Chức Năng Mới",
+  "description": "Nhân bản thư mục _Template_Module, đổi tên thành 03_Ten_Nhom và bổ sung các công cụ vào mảng tools bên dưới.",
+  "accentColor": "#455A64",
+  "startupLisp": [],
+  "tools": []
+}
+

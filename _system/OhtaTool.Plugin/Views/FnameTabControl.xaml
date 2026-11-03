@@ -1,0 +1,942 @@
+<UserControl x:Class="OhtaTool.Plugin.Views.FnameTabControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#F5F7FA"
+             FontFamily="Segoe UI, Meiryo UI, Yu Gothic UI"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True"
+             PreviewKeyDown="OnPreviewKeyDown">
+    <UserControl.Resources>
+        <!-- Nút nhỏ trên thanh header / phụ trợ -->
+        <Style x:Key="SmallActionBtnStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="#334E68"/>
+            <Setter Property="BorderBrush" Value="#CBD2D9"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="7,3"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#E3F2FD"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#42A5F5"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#BBDEFB"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Nút + Thêm viền xanh chuẩn như ảnh mẫu -->
+        <Style x:Key="AddChipBtnStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="#1976D2"/>
+            <Setter Property="BorderBrush" Value="#42A5F5"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="9,3"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#E3F2FD"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#1E88E5"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#BBDEFB"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Nút hành động chính (Đặt / Hút / Cập nhật) -->
+        <Style x:Key="PrimaryBtnStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="8,7"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="5"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.90"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.78"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Nhãn khóa N=, M=, T=, Q=, Z= -->
+        <Style x:Key="FnameKeyLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="13.5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#0277BD"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Width" Value="34"/>
+        </Style>
+
+        <!-- Thẻ công cụ mở rộng bên dưới -->
+        <Style x:Key="ToolCardBtnStyle" TargetType="Button">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Margin" Value="0,0,4,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="CardBd"
+                                Background="#FFFFFF"
+                                BorderBrush="#DCE3EA"
+                                BorderThickness="1"
+                                CornerRadius="5"
+                                Padding="5,4">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CardBd" Property="Background" Value="#F0F7FF"/>
+                                <Setter TargetName="CardBd" Property="BorderBrush" Value="#64B5F6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Nhãn khóa nằm giữa dòng (T=, Z=) -->
+        <Style x:Key="FnameKeyInlineStyle" TargetType="TextBlock" BasedOn="{StaticResource FnameKeyLabelStyle}">
+            <Setter Property="Width" Value="Auto"/>
+            <Setter Property="Margin" Value="8,0,4,0"/>
+        </Style>
+
+        <!-- Mũi tên thu/mở cho Expander phẳng -->
+        <Style x:Key="FlatExpanderToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="Transparent" Padding="2,3">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="14"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Path x:Name="Arrow"
+                                      Data="M 0 0 L 4 4 L 8 0"
+                                      Stroke="#52606D"
+                                      StrokeThickness="1.5"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      RenderTransformOrigin="0.5,0.5">
+                                    <Path.RenderTransform>
+                                        <RotateTransform Angle="-90"/>
+                                    </Path.RenderTransform>
+                                </Path>
+                                <ContentPresenter Grid.Column="1" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Arrow" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <RotateTransform Angle="0"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Expander phẳng: tiêu đề kéo giãn hết chiều ngang -->
+        <Style x:Key="FlatExpanderStyle" TargetType="Expander">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Expander">
+                        <StackPanel>
+                            <ToggleButton Style="{StaticResource FlatExpanderToggleStyle}"
+                                          IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                          Content="{TemplateBinding Header}"/>
+                            <ContentPresenter x:Name="Body" Visibility="Collapsed"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsExpanded" Value="True">
+                                <Setter TargetName="Body" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Chip đếm số dòng trên tiêu đề thẻ -->
+        <Style x:Key="CountBadgeStyle" TargetType="Border">
+            <Setter Property="Background" Value="#E2E8F0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="6,0"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- 0. Header -->
+            <RowDefinition Height="*"/>      <!-- 1. Vùng nhập + gia công (cuộn khi cần) -->
+            <RowDefinition Height="Auto"/>   <!-- 2. Nút hành động cố định (luôn thấy) -->
+            <RowDefinition Height="Auto"/>   <!-- 3. Thanh phản hồi -->
+        </Grid.RowDefinitions>
+
+        <!-- 0. Header của Tab Fname -->
+        <Border Grid.Row="0"
+                Background="{Binding AccentBrush}"
+                Padding="10,7">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+                    <TextBlock Text="{Binding Title}"
+                               Foreground="#FFFFFF"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="Layer chuẩn: 2-F-NAME • Hỗ trợ TEXT &amp; MTEXT"
+                               Foreground="#E1F5FE"
+                               FontSize="10.5"
+                               Margin="0,1,0,0"
+                               TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+
+                <Grid Grid.Column="1" VerticalAlignment="Center">
+                    <Button Style="{StaticResource SmallActionBtnStyle}"
+                            Width="30"
+                            Height="30"
+                            Padding="4"
+                            Command="{Binding OpenSettingsCommand}"
+                            ToolTip="Mở hộp thoại Cài đặt Fname">
+                        <Image Source="{Binding SettingsLogo}"
+                               Width="18"
+                               Height="18"
+                               Stretch="Uniform"
+                               RenderOptions.BitmapScalingMode="HighQuality"/>
+                    </Button>
+                    <!-- Số đỏ: yêu cầu chờ phê duyệt (chỉ máy admin) -->
+                    <Border Background="#E53935"
+                            BorderBrush="#FFFFFF"
+                            BorderThickness="1.5"
+                            CornerRadius="8"
+                            MinWidth="16"
+                            Height="16"
+                            Padding="3,0"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Margin="0,-6,-7,0"
+                            IsHitTestVisible="False"
+                            Visibility="{Binding PendingBadgeVisibility}"
+                            ToolTip="Yêu cầu cập nhật dữ liệu đang chờ duyệt">
+                        <TextBlock Text="{Binding PendingBadgeText}"
+                                   Foreground="#FFFFFF"
+                                   FontSize="9.5"
+                                   FontWeight="Bold"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- 1. Thân chính: nhập 5 trường + gia công + tùy chọn + xem trước + lệnh bổ sung -->
+        <ScrollViewer x:Name="MainScroller"
+                      Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Padding="8,8,8,4">
+            <StackPanel>
+
+                <!-- Khối trên cùng: THÔNG TIN TẤM (Cột trái) song song bên cạnh XEM TRƯỚC (Cột phải) -->
+                <Grid Margin="0,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.3*"/>  <!-- Cột trái: Thông tin F-NAME 5 hàng -->
+                        <ColumnDefinition Width="*"/>     <!-- Cột phải: Xem trước kết quả thời gian thực -->
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Cột trái: Thẻ nhập THÔNG TIN F-NAME (5 hàng riêng biệt: N, M, T, Q, Z) -->
+                    <Border Grid.Column="0"
+                            Background="#FFFFFF"
+                            BorderBrush="#CFD8DC"
+                            BorderThickness="1"
+                            CornerRadius="7"
+                            Padding="8,8"
+                            Margin="0,0,3,0">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,6">
+                                <Button DockPanel.Dock="Right"
+                                        Style="{StaticResource SmallActionBtnStyle}"
+                                        Content="Xóa T/Q"
+                                        Padding="7,2"
+                                        FontSize="11"
+                                        Focusable="False"
+                                        Command="{Binding ClearFieldsCommand}"
+                                        ToolTip="Xóa nhanh T=, Q= và hủy liên kết đối tượng đang chọn"/>
+                                <TextBlock Text="FNAME"
+                                           FontSize="11.5"
+                                           FontWeight="Bold"
+                                           Foreground="#334E68"
+                                           VerticalAlignment="Center"/>
+                            </DockPanel>
+
+                            <!-- Hàng 1: N= (+1) -->
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>   <!-- N= -->
+                                    <ColumnDefinition Width="*"/>      <!-- TextBox N -->
+                                    <ColumnDefinition Width="Auto"/>   <!-- +1 -->
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Style="{StaticResource FnameKeyLabelStyle}" Text="N="/>
+                                <TextBox Grid.Column="1"
+                                         x:Name="TxtValN"
+                                         TabIndex="1"
+                                         Text="{Binding ValN, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="25"
+                                         VerticalContentAlignment="Center"
+                                         Padding="6,0"
+                                         FontSize="12"
+                                         FontFamily="Consolas"
+                                         BorderBrush="#B0BEC5"
+                                         ToolTip="Tên chi tiết / Mã bản vẽ (Ví dụ: 47079-1)"/>
+                                <Button Grid.Column="2"
+                                        Style="{StaticResource SmallActionBtnStyle}"
+                                        Content="+1"
+                                        FontWeight="Bold"
+                                        Margin="4,0,0,0"
+                                        Width="30"
+                                        Height="25"
+                                        Padding="0"
+                                        Focusable="False"
+                                        Command="{Binding IncrementNCommand}"
+                                        ToolTip="Tăng số thứ tự cuối của N= thêm 1 (VD: A-1 -> A-2)"/>
+                            </Grid>
+
+                            <!-- Hàng 2: M= -->
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>   <!-- M= -->
+                                    <ColumnDefinition Width="*"/>      <!-- ComboBox M -->
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Style="{StaticResource FnameKeyLabelStyle}" Text="M="/>
+                                <ComboBox Grid.Column="1"
+                                          x:Name="CmbValM"
+                                          TabIndex="2"
+                                          ItemsSource="{Binding MaterialOptions}"
+                                          Text="{Binding ValM, UpdateSourceTrigger=PropertyChanged}"
+                                          IsEditable="True"
+                                          IsTextSearchEnabled="False"
+                                          StaysOpenOnEdit="True"
+                                          Height="25"
+                                          VerticalContentAlignment="Center"
+                                          FontSize="11.5"
+                                          BorderBrush="#B0BEC5"
+                                          ToolTip="Chọn mác vật liệu chuẩn hoặc gõ từ khóa để xổ xuống danh sách ứng viên phù hợp"/>
+                            </Grid>
+
+                            <!-- Hàng 3: T= và T thực: -->
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>   <!-- T= -->
+                                    <ColumnDefinition Width="*"/>      <!-- ComboBox T -->
+                                    <ColumnDefinition Width="Auto"/>   <!-- T thực: -->
+                                    <ColumnDefinition Width="Auto"/>   <!-- Giá trị T thực -->
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Style="{StaticResource FnameKeyLabelStyle}" Text="T="/>
+                                <ComboBox Grid.Column="1"
+                                          x:Name="CmbValT"
+                                          TabIndex="3"
+                                          ItemsSource="{Binding ThicknessOptions}"
+                                          Text="{Binding ValT, UpdateSourceTrigger=PropertyChanged}"
+                                          IsEditable="True"
+                                          IsTextSearchEnabled="False"
+                                          StaysOpenOnEdit="True"
+                                          Height="25"
+                                          VerticalContentAlignment="Center"
+                                          FontSize="11.5"
+                                          FontFamily="Consolas"
+                                          BorderBrush="#B0BEC5"
+                                          ToolTip="Chọn hoặc gõ chiều dày tấm (mm) để xổ xuống danh sách ứng viên phù hợp"/>
+                                <TextBlock Grid.Column="2"
+                                           Text="T thực:"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="#0277BD"
+                                           VerticalAlignment="Center"
+                                           Margin="6,0,3,0"/>
+                                <Border Grid.Column="3"
+                                        Background="#F1F5F9"
+                                        BorderBrush="#CBD5E1"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Height="25"
+                                        MinWidth="34"
+                                        Padding="5,0"
+                                        VerticalAlignment="Center"
+                                        ToolTip="Chiều dày thực tế khi chấn bẻ (tra từ bảng TraV chuẩn OFT)">
+                                    <TextBlock Text="{Binding RealThicknessText}"
+                                               FontFamily="Consolas"
+                                               FontSize="12"
+                                               FontWeight="Bold"
+                                               Foreground="#0F172A"
+                                               VerticalAlignment="Center"
+                                               HorizontalAlignment="Center"/>
+                                </Border>
+                            </Grid>
+
+                            <!-- Hàng 4: Q= (− +) -->
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>   <!-- Q= -->
+                                    <ColumnDefinition Width="*"/>      <!-- TextBox Q -->
+                                    <ColumnDefinition Width="Auto"/>   <!-- − -->
+                                    <ColumnDefinition Width="Auto"/>   <!-- + -->
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Style="{StaticResource FnameKeyLabelStyle}" Text="Q="/>
+                                <TextBox Grid.Column="1"
+                                         x:Name="TxtValQ"
+                                         TabIndex="4"
+                                         Text="{Binding ValQ, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="25"
+                                         VerticalContentAlignment="Center"
+                                         Padding="6,0"
+                                         FontSize="12"
+                                         FontFamily="Consolas"
+                                         BorderBrush="#B0BEC5"
+                                         ToolTip="Số lượng sản xuất của tấm (số nguyên dương)"/>
+                                <Button Grid.Column="2"
+                                        Style="{StaticResource SmallActionBtnStyle}"
+                                        Content="−"
+                                        Width="26"
+                                        Height="25"
+                                        Padding="0"
+                                        Margin="4,0,0,0"
+                                        Focusable="False"
+                                        Command="{Binding DecrementQCommand}"
+                                        ToolTip="Giảm số lượng Q đi 1"/>
+                                <Button Grid.Column="3"
+                                        Style="{StaticResource SmallActionBtnStyle}"
+                                        Content="+"
+                                        Width="26"
+                                        Height="25"
+                                        Padding="0"
+                                        Margin="3,0,0,0"
+                                        Focusable="False"
+                                        Command="{Binding IncrementQCommand}"
+                                        ToolTip="Tăng số lượng Q thêm 1"/>
+                            </Grid>
+
+                            <!-- Hàng 5: Z= -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>   <!-- Z= -->
+                                    <ColumnDefinition Width="*"/>      <!-- ComboBox Z -->
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Style="{StaticResource FnameKeyLabelStyle}" Text="Z="/>
+                                <ComboBox Grid.Column="1"
+                                          x:Name="CmbValZ"
+                                          TabIndex="5"
+                                          ItemsSource="{Binding ZOptions}"
+                                          Text="{Binding ValZ, UpdateSourceTrigger=PropertyChanged}"
+                                          IsEnabled="{Binding IsZInputEnabled}"
+                                          IsEditable="{Binding IsZInputEnabled}"
+                                          Height="25"
+                                          VerticalContentAlignment="Center"
+                                          FontSize="11.5"
+                                          FontFamily="Consolas"
+                                          BorderBrush="#B0BEC5"
+                                          ToolTip="Mã quản lý phôi nguyên liệu (cố định tự động theo M= khi bật khóa Z= trong Cài đặt)"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Cột phải: Thẻ XEM TRƯỚC (2-F-NAME) nằm bên cạnh -->
+                    <Border Grid.Column="1"
+                            Background="#1E293B"
+                            BorderBrush="#0F172A"
+                            BorderThickness="1"
+                            CornerRadius="7"
+                            Padding="8,8"
+                            Margin="3,0,0,0">
+                        <DockPanel LastChildFill="True">
+                            <TextBlock DockPanel.Dock="Top"
+                                       Margin="0,0,0,6"
+                                       Text="XEM TRƯỚC"
+                                       Foreground="#94A3B8"
+                                       FontSize="10.5"
+                                       FontWeight="Bold"/>
+
+                            <Border DockPanel.Dock="Bottom"
+                                    HorizontalAlignment="Left"
+                                    Visibility="{Binding BoundTargetBadgeVisibility}"
+                                    Background="#2E7D32"
+                                    CornerRadius="3"
+                                    Padding="4,1"
+                                    Margin="0,6,0,0">
+                                <TextBlock Text="Đang liên kết"
+                                           Foreground="#FFFFFF"
+                                           FontSize="9.5"/>
+                            </Border>
+
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <TextBlock Text="{Binding PreviewText}"
+                                           Foreground="#38BDF8"
+                                           FontFamily="Consolas, Meiryo UI"
+                                           FontSize="11.5"
+                                           LineHeight="16"
+                                           TextWrapping="Wrap"/>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Thẻ gia công: BẺ / UỐN (V=) và NHẤN 1 LẦN. Chưa có dòng nào thì chỉ chiếm 1 hàng tiêu đề. -->
+                <Border Background="#FFFFFF"
+                        BorderBrush="#CFD8DC"
+                        BorderThickness="1"
+                        CornerRadius="7"
+                        Padding="10,6"
+                        Margin="0,6,0,0">
+                    <StackPanel>
+
+                        <!-- BẺ / UỐN (V=) -->
+                        <Grid Margin="0,0,0,2">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Ellipse Width="6" Height="6" Fill="#1976D2" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="BẺ / UỐN (V=)"
+                                           FontWeight="Bold"
+                                           FontSize="11.5"
+                                           Foreground="#1976D2"
+                                           VerticalAlignment="Center"/>
+                                <Border Style="{StaticResource CountBadgeStyle}">
+                                    <TextBlock Text="{Binding BendRows.Count}"
+                                               FontSize="10.5"
+                                               FontWeight="SemiBold"
+                                               Foreground="#475569"/>
+                                </Border>
+                            </StackPanel>
+                            <Button HorizontalAlignment="Right"
+                                    Style="{StaticResource AddChipBtnStyle}"
+                                    Content="+ Thêm"
+                                    Padding="8,2"
+                                    Command="{Binding AddBendRowCommand}"
+                                    ToolTip="Thêm một đường bẻ / uốn mới vào F-name (V=...)"/>
+                        </Grid>
+
+                        <ItemsControl ItemsSource="{Binding BendRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#F8FAFC"
+                                            BorderBrush="#E2E8F0"
+                                            BorderThickness="1"
+                                            CornerRadius="4"
+                                            Padding="5,4"
+                                            Margin="0,3,0,0">
+                                        <StackPanel>
+                                            <!-- 1 hàng: Góc + 📐 | Tra V | ✕ -->
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="44"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0" Text="Góc" FontSize="11" Foreground="#486581" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                <TextBox Grid.Column="1"
+                                                         Text="{Binding AngleText, UpdateSourceTrigger=PropertyChanged}"
+                                                         Height="23"
+                                                         VerticalContentAlignment="Center"
+                                                         FontSize="11.5"
+                                                         FontFamily="Consolas"
+                                                         ToolTip="Góc bẻ (độ, vd: 90, 88, 135, 75)"/>
+                                                <Button Grid.Column="2"
+                                                        Style="{StaticResource SmallActionBtnStyle}"
+                                                        Content="📐"
+                                                        Width="24"
+                                                        Height="23"
+                                                        Padding="0"
+                                                        Margin="3,0,0,0"
+                                                        Focusable="False"
+                                                        Command="{Binding PickAngleCommand}"
+                                                        ToolTip="Chọn Dimension góc hoặc 2 đường trên CAD để lấy góc bẻ"/>
+                                                <TextBlock Grid.Column="3" Text="V" FontSize="11" Foreground="#486581" VerticalAlignment="Center" Margin="8,0,3,0"/>
+                                                <ComboBox Grid.Column="4"
+                                                          ItemsSource="{Binding AvailableVOptions}"
+                                                          SelectedValue="{Binding SelectedVText, Mode=TwoWay}"
+                                                          SelectedValuePath="FormattedText"
+                                                          DisplayMemberPath="FormattedText"
+                                                          Height="23"
+                                                          VerticalContentAlignment="Center"
+                                                          FontSize="11.5"
+                                                          FontFamily="Consolas"
+                                                          ToolTip="Chọn V và độ dãn từ bảng TraV chuẩn OFT"/>
+                                                <Button Grid.Column="5"
+                                                        Style="{StaticResource SmallActionBtnStyle}"
+                                                        Content="✕"
+                                                        Foreground="#E53935"
+                                                        Width="22"
+                                                        Height="23"
+                                                        Padding="0"
+                                                        Margin="3,0,0,0"
+                                                        Focusable="False"
+                                                        Command="{Binding RemoveCommand}"
+                                                        ToolTip="Xóa dòng bẻ này"/>
+                                            </Grid>
+
+                                            <!-- Nguồn số liệu khi bảng TraV không tính được: [Bẻ thử] / [Nội suy] + mã tấm tham khảo -->
+                                            <TextBlock Text="{Binding SourceText}"
+                                                       Visibility="{Binding SourceVisibility}"
+                                                       FontSize="10"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#7C3AED"
+                                                       TextWrapping="Wrap"
+                                                       Margin="2,2,0,0"/>
+
+                                            <!-- Thông số dao: xuống dòng theo từng cụm "tên giá trị" -->
+                                            <ItemsControl ItemsSource="{Binding DetailChunks}"
+                                                          Margin="2,2,0,0"
+                                                          Focusable="False"
+                                                          ToolTip="{Binding DetailInfo}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel Orientation="Horizontal"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding}"
+                                                                   FontSize="10"
+                                                                   Foreground="#64748B"
+                                                                   TextWrapping="NoWrap"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
+                                            <!-- Cảnh báo đỏ: góc nhọn nhỏ hơn góc tối thiểu trong bảng -->
+                                            <TextBlock Text="{Binding WarningText}"
+                                                       Visibility="{Binding WarningVisibility}"
+                                                       FontSize="10"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#DC2626"
+                                                       TextWrapping="Wrap"
+                                                       Margin="2,1,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Separator Margin="0,7,0,5" Background="#E2E8F0"/>
+
+                        <!-- NHẤN 1 LẦN (内R-発押し) -->
+                        <Grid Margin="0,0,0,2">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Ellipse Width="6" Height="6" Fill="#00897B" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="NHẤN 1 LẦN (内R-発押し)"
+                                           FontWeight="Bold"
+                                           FontSize="11.5"
+                                           Foreground="#00897B"
+                                           VerticalAlignment="Center"/>
+                                <Border Style="{StaticResource CountBadgeStyle}">
+                                    <TextBlock Text="{Binding PressRows.Count}"
+                                               FontSize="10.5"
+                                               FontWeight="SemiBold"
+                                               Foreground="#475569"/>
+                                </Border>
+                            </StackPanel>
+                            <Button HorizontalAlignment="Right"
+                                    Style="{StaticResource AddChipBtnStyle}"
+                                    Content="+ Thêm"
+                                    Padding="8,2"
+                                    Command="{Binding AddPressRowCommand}"
+                                    ToolTip="Thêm gia công nhấn 1 lần (内R...-発押し...°)"/>
+                        </Grid>
+
+                        <ItemsControl ItemsSource="{Binding PressRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#F0FDF4"
+                                            BorderBrush="#BBF7D0"
+                                            BorderThickness="1"
+                                            CornerRadius="4"
+                                            Padding="5,4"
+                                            Margin="0,3,0,0">
+                                        <StackPanel>
+                                            <!-- 1 hàng: 内R + Góc + 📐 + ✕ -->
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0" Text="内R" FontSize="11" Foreground="#486581" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                <TextBox Grid.Column="1"
+                                                         Text="{Binding InnerRText, UpdateSourceTrigger=PropertyChanged}"
+                                                         Height="23"
+                                                         VerticalContentAlignment="Center"
+                                                         FontSize="11.5"
+                                                         FontFamily="Consolas"
+                                                         ToolTip="Bán kính R trong (vd: 5, 8, 10...)"/>
+                                                <TextBlock Grid.Column="2" Text="Góc" FontSize="11" Foreground="#486581" VerticalAlignment="Center" Margin="8,0,3,0"/>
+                                                <TextBox Grid.Column="3"
+                                                         Text="{Binding AngleText, UpdateSourceTrigger=PropertyChanged}"
+                                                         Height="23"
+                                                         VerticalContentAlignment="Center"
+                                                         FontSize="11.5"
+                                                         FontFamily="Consolas"
+                                                         ToolTip="Góc nhấn (độ, vd: 110, 90...)"/>
+                                                <Button Grid.Column="4"
+                                                        Style="{StaticResource SmallActionBtnStyle}"
+                                                        Content="📐"
+                                                        Width="24"
+                                                        Height="23"
+                                                        Padding="0"
+                                                        Margin="3,0,0,0"
+                                                        Focusable="False"
+                                                        Command="{Binding PickAngleCommand}"
+                                                        ToolTip="Chọn Dimension góc trên CAD"/>
+                                                <Button Grid.Column="5"
+                                                        Style="{StaticResource SmallActionBtnStyle}"
+                                                        Content="✕"
+                                                        Foreground="#E53935"
+                                                        Width="22"
+                                                        Height="23"
+                                                        Padding="0"
+                                                        Margin="3,0,0,0"
+                                                        Focusable="False"
+                                                        Command="{Binding RemoveCommand}"
+                                                        ToolTip="Xóa dòng nhấn này"/>
+                                            </Grid>
+
+                                            <!-- Chuỗi xuất -->
+                                            <TextBlock Text="{Binding FormattedLine}"
+                                                       FontFamily="Consolas"
+                                                       FontSize="10.5"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#0D9488"
+                                                       Margin="2,2,0,0"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       ToolTip="{Binding FormattedLine}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Tùy chọn xuất: 1 hàng gọn (Chiều cao chữ chỉnh bằng kéo thả trực tiếp trên CAD) -->
+                <Border Background="#F8FAFC"
+                        BorderBrush="#E2E8F0"
+                        BorderThickness="1"
+                        CornerRadius="5"
+                        Padding="8,5"
+                        Margin="0,6,0,0">
+                    <WrapPanel VerticalAlignment="Center">
+                        <TextBlock Text="Xuất:"
+                                   FontSize="11.5"
+                                   Foreground="#486581"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,6,0"/>
+                        <RadioButton Content="TEXT"
+                                     IsChecked="{Binding IsTextMode}"
+                                     VerticalAlignment="Center"
+                                     FontSize="11.5"
+                                     Margin="0,0,10,0"/>
+                        <RadioButton Content="MTEXT"
+                                     IsChecked="{Binding IsMTextMode}"
+                                     VerticalAlignment="Center"
+                                     FontSize="11.5"
+                                     Margin="0,0,14,0"/>
+                        <CheckBox Content="Tự tăng N= (+1)"
+                                  IsChecked="{Binding AutoIncrementN}"
+                                  VerticalAlignment="Center"
+                                  FontSize="11.5"
+                                  Foreground="#334E68"
+                                  ToolTip="Tự động tăng số đuôi N= (+1) sau khi đặt mới"/>
+                    </WrapPanel>
+                </Border>
+
+
+                <!-- Lệnh Fname bổ sung (từ 01_Fname/module.json): 2 cột, thu/mở được. Thêm lệnh mới không làm panel dài ra. -->
+                <Border Visibility="{Binding ExtraToolsVisibility}"
+                        Background="#FFFFFF"
+                        BorderBrush="#CFD8DC"
+                        BorderThickness="1"
+                        CornerRadius="7"
+                        Padding="8,4,8,2"
+                        Margin="0,6,0,4">
+                    <Expander IsExpanded="False" Style="{StaticResource FlatExpanderStyle}">
+                        <Expander.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="LỆNH FNAME BỔ SUNG"
+                                           FontSize="11"
+                                           FontWeight="Bold"
+                                           Foreground="#52606D"
+                                           VerticalAlignment="Center"/>
+                                <Border Style="{StaticResource CountBadgeStyle}">
+                                    <TextBlock Text="{Binding ExtraTools.Count}"
+                                               FontSize="10.5"
+                                               FontWeight="SemiBold"
+                                               Foreground="#475569"/>
+                                </Border>
+                            </StackPanel>
+                        </Expander.Header>
+                        <ItemsControl ItemsSource="{Binding ExtraTools}" Margin="0,4,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="2"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource ToolCardBtnStyle}"
+                                            Command="{Binding DataContext.ExecuteExtraToolCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}">
+                                        <Button.ToolTip>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Description}" TextWrapping="Wrap" MaxWidth="260"/>
+                                                <TextBlock Text="{Binding Command}" FontFamily="Consolas" Foreground="#334E68" Margin="0,3,0,0"/>
+                                            </StackPanel>
+                                        </Button.ToolTip>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0"
+                                                    Width="28"
+                                                    Height="24"
+                                                    CornerRadius="4"
+                                                    Background="#0277BD"
+                                                    Margin="0,0,6,0">
+                                                <TextBlock Text="{Binding Badge}"
+                                                           Foreground="#FFFFFF"
+                                                           FontWeight="Bold"
+                                                           FontSize="9.5"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Name}"
+                                                       FontSize="11"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#1F2933"
+                                                       VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Expander>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 2. Nút hành động chính: cố định dưới vùng cuộn, luôn thấy dù thêm bao nhiêu dòng gia công -->
+        <Border Grid.Row="2"
+                Background="#FFFFFF"
+                BorderBrush="#CFD8DC"
+                BorderThickness="0,1,0,0"
+                Padding="8,7">
+            <StackPanel>
+                <Button Style="{StaticResource PrimaryBtnStyle}"
+                        Background="#0277BD"
+                        Content="📍  Đặt Fname Mới Lên Bản Vẽ"
+                        Command="{Binding PlaceFnameCommand}"
+                        Margin="0,0,0,5"
+                        ToolTip="Chọn điểm trên CAD để ghi khối N=, M=, T=, Q=, Z= lên layer 2-F-NAME (OHTA_FN_PLACE)"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="6"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0"
+                            Style="{StaticResource PrimaryBtnStyle}"
+                            Background="#00838F"
+                            Content="💧 Hút Fname"
+                            Command="{Binding PickFnameCommand}"
+                            ToolTip="Chọn Fname có sẵn trên bản vẽ để đọc toàn bộ N, M, T, Q, Z lên bảng (OHTA_FN_PICK)"/>
+                    <Button Grid.Column="2"
+                            Style="{StaticResource PrimaryBtnStyle}"
+                            Background="#2E7D32"
+                            Content="💾 Cập Nhật Fname"
+                            Command="{Binding UpdateFnameCommand}"
+                            ToolTip="Ghi đè dữ liệu 5 ô xuống Fname vừa hút (hoặc chọn Fname trên CAD để ghi đè)"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- 3. Thanh phản hồi trạng thái dưới chân Tab -->
+        <Border Grid.Row="3"
+                Background="{Binding FeedbackBgBrush}"
+                BorderBrush="#CFD8DC"
+                BorderThickness="0,1,0,0"
+                Padding="10,5">
+            <TextBlock Text="{Binding FeedbackMessage}"
+                       Foreground="{Binding FeedbackBrush}"
+                       FontSize="11"
+                       FontWeight="Medium"
+                       TextWrapping="Wrap"/>
+        </Border>
+    </Grid>
+</UserControl>
