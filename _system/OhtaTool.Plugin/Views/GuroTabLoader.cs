@@ -14,7 +14,7 @@ using CadExtensionLoader = Autodesk.AutoCAD.Runtime.ExtensionLoader;
 namespace OhtaTool.Plugin.Views
 {
     /// <summary>
-    /// Tab Guro (ADR 0002): giao diện nằm trong GROTOOL.dll của mục con 03_Guro, không
+    /// Tab Guro (ADR 0003): giao diện nằm trong GROTOOL.dll của mục con 03_Guro, không
     /// nằm trong OHTATOOL.dll. Ở đây chỉ nạp DLL đó và gọi
     /// ZwCadPlugin.GuroOhtaTab.TaoGiaoDien(tieuDe, moTa, mauNhan, thuMucModule) bằng
     /// phản chiếu — hai DLL không tham chiếu nhau khi build. Không nạp được thì trả null

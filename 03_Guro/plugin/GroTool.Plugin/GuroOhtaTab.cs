@@ -20,7 +20,7 @@ using ZwCadPlugin.Views;
 namespace ZwCadPlugin
 {
     /// <summary>
-    /// Cửa vào của tab Guro trên bảng OHTA (mục 192, ADR 0002). OHTATOOL.dll KHÔNG tham
+    /// Cửa vào của tab Guro trên bảng OHTA (mục 192, ADR 0003). OHTATOOL.dll KHÔNG tham
     /// chiếu GROTOOL.dll: nó nạp DLL này rồi gọi TaoGiaoDien bằng phản chiếu, nên chữ
     /// ký (tên lớp, tên hàm, 4 tham số chuỗi) là hợp đồng giữa hai DLL — đổi thì sửa cả
     /// ModuleViewRegistry bên OHTA.
