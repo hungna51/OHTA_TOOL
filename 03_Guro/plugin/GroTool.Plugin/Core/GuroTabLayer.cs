@@ -1,93 +1,64 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ZwCadPlugin.Core
 {
     /// <summary>
-    /// Mục 192: danh sách layer cho các ô chọn trên tab Guro của bảng OHTA. Tab luôn mở
-    /// nên phải giữ ĐÚNG layer người dùng đã lưu, kể cả khi bản vẽ đang mở không có nó;
-    /// còn layer GRO thật sự dùng thì lisp chọn lại mỗi lần chạy (gro--tham-so-chay),
-    /// cùng luật với hàm này.
+    /// Mục 194: ô chọn layer trên tab Guro. Layer chọn RIÊNG từng bản vẽ (nhớ khi bản vẽ
+    /// đang mở); chưa chọn thì lấy mặc định. Lisp gro--tham-so-chay chọn mặc định theo
+    /// đúng luật này khi chạy:
+    ///   khung bao : layer có ÍT khung nhất (khung kín, đúng 4 đỉnh)
+    ///   vùng      : layer có NHIỀU khung nhất (kín, từ 3 đỉnh)
+    ///   layer gốc : layer nhiều đối tượng nhất (mục 75)
+    /// Bằng số lượng thì theo tên.
     /// </summary>
     public static class GuroTabLayer
     {
-        /// <summary>Tên giả của mục "Tự động" trong ô layer gốc — không phải layer thật.</summary>
-        public const string TenTuDong = "";
-
-        public sealed class KetQua
-        {
-            public List<LayerMuc> Ds { get; set; }
-            /// <summary>Mục đang chọn (luôn là một phần tử của Ds).</summary>
-            public LayerMuc Chon { get; set; }
-            /// <summary>Layer GRO sẽ dùng trên bản vẽ này.</summary>
-            public string GroDung { get; set; }
-            /// <summary>Khác null khi layer đã lưu không có trên bản vẽ.</summary>
-            public string CanhBao { get; set; }
-        }
-
         /// <summary>
-        /// Ô layer khung bao / vùng. Đã lưu và bản vẽ có -> chọn nó. Chưa lưu -> layer
-        /// đứng đầu (như hộp thoại). Đã lưu mà bản vẽ không có -> thêm một mục đứng đầu
-        /// "(không có trong bản vẽ)" để không mất lựa chọn; GRO dùng layer đứng đầu.
+        /// Danh sách ô khung bao: layer ít khung đứng đầu. Không lọc được khung nào
+        /// (coLoc = false, danh sách là mọi layer theo tên) thì giữ nguyên.
         /// </summary>
-        public static KetQua ChoKhung(List<LayerMuc> ds, string daLuu)
+        public static List<LayerMuc> KhungItTruoc(List<LayerMuc> ds, bool coLoc)
         {
-            ds = ds ?? new List<LayerMuc>();
-            string dau = ds.Count > 0 ? ds[0].Ten : null;
-            LayerMuc co = Tim(ds, daLuu);
-            if (string.IsNullOrEmpty(daLuu) || co != null)
-            {
-                LayerMuc chon = co ?? (ds.Count > 0 ? ds[0] : null);
-                return new KetQua { Ds = ds, Chon = chon, GroDung = chon?.Ten };
-            }
-            return ThieuLayer(ds, daLuu, dau);
+            if (ds == null) return new List<LayerMuc>();
+            if (!coLoc) return ds;
+            return ds.OrderBy(m => m.SoLuong).ThenBy(m => m.Ten, StringComparer.Ordinal).ToList();
         }
 
-        /// <summary>
-        /// Ô layer gốc (xử lý nét). Mục đầu là "Tự động" = layer nhiều đối tượng nhất
-        /// (mục 75). Chọn tay thì GRO dùng đúng layer đó, kể cả khi ít đối tượng hơn.
-        /// </summary>
-        public static KetQua ChoXln(List<LayerMuc> ds, bool tuDong, string daLuu)
+        /// <summary>Layer đã chọn cho bản vẽ nếu còn trong danh sách, không thì mục đầu.</summary>
+        public static LayerMuc Chon(List<LayerMuc> ds, string daChon)
         {
-            ds = ds ?? new List<LayerMuc>();
-            string dau = ds.Count > 0 ? ds[0].Ten : null;
-            var tuDongMuc = new LayerMuc(TenTuDong,
-                                         "Tự động" + (dau != null ? " (" + dau + ")" : ""),
-                                         ds.Count > 0 ? ds[0].SoLuong : 0);
-            var dsDu = new List<LayerMuc> { tuDongMuc };
-            dsDu.AddRange(ds);
+            if (ds == null || ds.Count == 0) return null;
+            if (!string.IsNullOrEmpty(daChon))
+                foreach (LayerMuc m in ds)
+                    if (string.Equals(m.Ten, daChon, StringComparison.Ordinal)) return m;
+            return ds[0];
+        }
+    }
 
-            if (tuDong || string.IsNullOrEmpty(daLuu))
-                return new KetQua { Ds = dsDu, Chon = tuDongMuc, GroDung = dau };
+    /// <summary>Tên layer khung tấm người dùng đặt trong ⚙ Cài đặt GURO (mục 194).</summary>
+    public static class TenKhungTam
+    {
+        public const string MacDinh = "Khung_IN";
 
-            LayerMuc co = Tim(ds, daLuu);
-            if (co != null)
-                return new KetQua { Ds = dsDu, Chon = co, GroDung = co.Ten };
+        /// <summary>Ký tự CAD không cho trong tên layer.</summary>
+        private const string KyTuCam = "<>/\\\":;?*|=,`";
 
-            KetQua thieu = ThieuLayer(ds, daLuu, dau);
-            thieu.Ds.Insert(0, tuDongMuc);
-            return thieu;
+        /// <summary>Bỏ khoảng trắng hai đầu; rỗng thì Khung_IN.</summary>
+        public static string ChuanHoa(string ten)
+        {
+            string t = (ten ?? "").Trim();
+            return t.Length == 0 ? MacDinh : t;
         }
 
-        private static KetQua ThieuLayer(List<LayerMuc> ds, string daLuu, string dau)
+        /// <summary>Câu báo lỗi nếu tên có ký tự CAD không cho, null nếu được.</summary>
+        public static string Loi(string ten)
         {
-            var thieu = new LayerMuc(daLuu, daLuu + "  (không có trong bản vẽ)", -1);
-            var dsDu = new List<LayerMuc> { thieu };
-            dsDu.AddRange(ds);
-            return new KetQua
-            {
-                Ds = dsDu,
-                Chon = thieu,
-                GroDung = dau,
-                CanhBao = "Bản vẽ này không có layer \"" + daLuu + "\" — GRO sẽ dùng \"" + (dau ?? "?") + "\".",
-            };
-        }
-
-        private static LayerMuc Tim(List<LayerMuc> ds, string ten)
-        {
-            if (string.IsNullOrEmpty(ten)) return null;
-            foreach (LayerMuc m in ds)
-                if (string.Equals(m.Ten, ten, StringComparison.Ordinal)) return m;
+            string t = ChuanHoa(ten);
+            foreach (char c in t)
+                if (KyTuCam.IndexOf(c) >= 0)
+                    return "Tên layer không được có ký tự  " + c + "  (cấm: < > / \\ \" : ; ? * | = , `).";
             return null;
         }
     }

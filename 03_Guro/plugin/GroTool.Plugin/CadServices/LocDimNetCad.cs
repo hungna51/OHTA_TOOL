@@ -66,6 +66,7 @@ namespace ZwCadPlugin.CadServices
                 }
                 tr.Commit();
             }
+            LocDimNet.LayerKhungTam = GroRegistry.LayerKhungTam();
             LocDimNet.KetQua kq = LocDimNet.Chay(ds, nbs);
             sw.Stop();
 

@@ -103,7 +103,8 @@ namespace ZwCadPlugin.CadServices
                 using (doc.LockDocument())
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
-                    BaoDamLayer(tr, db, "Khung_IN");
+                    string layerKhungTam = GroRegistry.LayerKhungTam();   // mục 194
+                    BaoDamLayer(tr, db, layerKhungTam);
                     var bt = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
                     var ms = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
                     for (int i = 0; i < kq.Count; i++)
@@ -116,7 +117,7 @@ namespace ZwCadPlugin.CadServices
                         pl.AddVertexAt(3, new Point2d(b.X1, b.Y2), 0, 0, 0);
                         pl.Closed = true;
                         pl.SetDatabaseDefaults();
-                        pl.Layer = "Khung_IN";
+                        pl.Layer = layerKhungTam;
                         pl.ColorIndex = 4;
                         khung[i] = ms.AppendEntity(pl);
                         tr.AddNewlyCreatedDBObject(pl, true);
@@ -159,7 +160,7 @@ namespace ZwCadPlugin.CadServices
             }
             rb.Add(new TypedValue((int)LispDataType.ListEnd));
             doc.Editor?.WriteMessage(string.Format(Inv, "\n[GRO] Dong khung (.NET): {0} tam, {1} ms{2}.", kq.Count, sw.ElapsedMilliseconds,
-                cheDo == "cs" ? " (da ve Khung_IN)" : " (chi tinh de so A/B)"));
+                cheDo == "cs" ? " (da ve khung tam)" : " (chi tinh de so A/B)"));
             return rb;
         }
     }

@@ -409,6 +409,8 @@ Ba luật DCL bắt buộc:
 
 ## Mục 192 — Tab Guro thay hộp thoại của `gro` (11/2026)
 
+> Nhiều chi tiết dưới đây (GROCD, `xln_tu_dong`, Pick nét, layer lưu registry) đã **thay bởi mục 194** ở cuối file.
+
 Bấm **▶ Chạy GRO** trên tab Guro (lệnh `GROCHAY` — từ mục 193 gõ `GRO` chỉ mở tab): lệnh chạy ngay theo thiết lập đã lưu, **không hiện hộp thoại**, chỉ in 2–3 dòng tóm tắt (`GRO: khung=..., vung=...`). Hộp thoại cũ (.NET, thiếu DLL thì DCL) còn ở lệnh **`GROCD`** — dùng khi bảng OHTA đang đóng.
 
 - **Nơi giữ thiết lập**: registry `HKCU\Software\OFT_Lisp\GRO`, khóa như cũ, thêm **`xln_tu_dong`** ("1" = layer gốc tự động). Tab ghi **ngay khi đổi** (`GroRegistry`), không có nút OK.
@@ -427,3 +429,15 @@ Người dùng muốn xem lại thiết lập trước mỗi lần chạy, nên 
 
 - Không có `ohta_net_tab` (chưa nạp OHTATOOL.dll) hoặc không có tab `guro` → `GRO` chạy **`GROCD`** (hộp thoại), để vẫn đánh số được.
 - Trong lisp, mọi chỗ "chạy GRO thật" gọi `(c:grochay)`, không gọi `(c:gro)` — gọi `c:gro` chỉ mở tab.
+
+## Mục 194 — Tab Guro gọn lại: ⚙ cài đặt, layer theo từng bản vẽ, bỏ hộp thoại cũ
+
+- **Nút ⚙** (thay ↻, cùng kiểu nút cài đặt các tab khác) mở cửa sổ **Cài đặt GURO** (`GuroCaiDatWindow`, OK / Hủy, lưu registry khi OK):
+  - Tự tạo khung tấm theo cụm + **Layer** khung tấm (`layer_khung_tam`, trống = `Khung_IN`; ký tự `< > / \ " : ; ? * | = , `` ` `` bị chặn). Bản vẽ chưa có layer thì GRO tạo (màu 4). Không chặn trùng tên với layer khung bao / vùng — hai việc chạy tách nhau.
+  - Tự in nhanh PDF; Xếp cụm; Đặt mã khắc; Xử lý nét + **Tự nhận diện nét Dim**; nút Cài đặt ghi chú.
+- **Tên layer khung tấm dùng ở mọi chỗ**: lisp `gro--layer-khung-tam` (vẽ khung, quét lại danh sách tấm, bỏ qua làm vật cản, layer đầu ra, in nhanh PDF dự phòng); C# `GroRegistry.LayerKhungTam()` (`DongKhungCad`, `CadDrawingScanner` của DST, `LineScanner`, `LocDimNet.LayerKhungTam`). Khung cũ trên tên trước đó giữ nguyên; `KHUNG_IN` vẫn nằm trong danh sách layer đầu ra để bản vẽ cũ không bị đọc nhầm.
+- **Mặt tab**: Layer khung bao, Đánh số theo vùng + Layer vùng, Layer gốc (chỉ hiện khi bật xử lý nét) — mỗi ô một dòng giải thích — một dòng tóm tắt cài đặt, nút ▶ Chạy GRO / GI / DST.
+- **Layer chọn riêng từng bản vẽ**, giữ trong `Document.UserData` (`LayerTheoBanVe`) — chỉ sống khi bản vẽ mở, không ghi vào .dwg. Lisp lấy qua `(gro_net_layer_ban_ve)` → `(khung vung goc)`, nil = chưa chọn. Mặc định (cả tab `Core/GuroTabLayer.cs` lẫn lisp `gro--tham-so-chay`): khung bao = layer **ít** khung nhất (`gro--khung-it-truoc`), vùng = layer **nhiều** khung nhất, layer gốc = nhiều đối tượng nhất; bằng nhau theo tên. Khoá registry `layer_khung` / `layer_vung` / `layer_xln` / `xln_tu_dong` / `mau_dim` không còn đọc.
+- **Nét Dim**: tắt tự nhận diện = **không xử lý nét Dim** (`gro--xu-ly-net` chỉ dùng màu Dim khi lệnh `XLN` truyền vào). Bỏ chọn màu / Pick nét / `GROPICKMAU`.
+- **Đã xoá**: `GROCD`, hộp thoại .NET (`GroSettingsWindow`, `GroSettingsViewModel`, `GroThamSo`, `gro_net_dialog`, `GRODLGNET`), hộp thoại DCL `gro_dlg` (`gro-get-input`, `gro--hoi-dcl`, phần `gro_dlg` trong `gro--write-dcl` — `xln_dlg` / `gro_ds_dlg` giữ nguyên).
+- `GRO` không mở được tab Guro → **báo lỗi**, không đánh số.

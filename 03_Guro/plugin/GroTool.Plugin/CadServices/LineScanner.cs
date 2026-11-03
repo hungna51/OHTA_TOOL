@@ -48,7 +48,7 @@ namespace ZwCadPlugin.CadServices
             var dem = LayerQuery.Dem(db);
             foreach (var kv in dem.DoiTuong)
             {
-                if (StandardLayers.Contains(kv.Key) || kv.Key.EndsWith("_CHUP", StringComparison.OrdinalIgnoreCase)) continue;
+                if (StandardLayers.Contains(kv.Key) || string.Equals(kv.Key, GroRegistry.LayerKhungTam(), StringComparison.OrdinalIgnoreCase) || kv.Key.EndsWith("_CHUP", StringComparison.OrdinalIgnoreCase)) continue;
                 if (kv.Value <= 0) continue;
                 res.Add(new LayerItemInfo
                 {

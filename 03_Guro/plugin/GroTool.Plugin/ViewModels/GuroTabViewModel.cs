@@ -13,39 +13,32 @@ using Autodesk.AutoCAD.ApplicationServices;
 using ZwCadPlugin.CadServices;
 using ZwCadPlugin.Core;
 using ZwCadPlugin.Models;
+using ZwCadPlugin.Views;
 
 namespace ZwCadPlugin.ViewModels
 {
     /// <summary>
-    /// Tab Guro trên bảng OHTA (mục 192): cùng các thiết lập của hộp thoại GRO, nhưng mỗi
-    /// lần đổi là ghi ngay registry (GroRegistry), không có nút OK. Luật BẬT/TẮT ô giữ
-    /// đúng như GroSettingsViewModel. Danh sách layer lấy từ bản vẽ đang mở và tự làm
-    /// mới khi chuyển bản vẽ.
+    /// Tab Guro trên bảng OHTA (mục 192, 194). Mặt tab chỉ chọn layer cho BẢN VẼ ĐANG MỞ
+    /// (LayerTheoBanVe) + ô đánh số theo vùng; cài đặt chung nằm ở cửa sổ ⚙ (GroRegistry).
+    /// Danh sách layer làm mới khi chuyển bản vẽ, khi tab hiện lại và khi bấm vào ô chọn.
     /// </summary>
     public sealed class GuroTabViewModel : INotifyPropertyChanged
     {
-        /// <summary>Lệnh GROPICKMAU (pick nét mẫu) ghi registry xong thì báo tab đọc lại.</summary>
-        public static void BaoDaDoiThietLap() => _hienTai?.LamMoiSau();
-
         /// <summary>
         /// Chỉ tab đang hiện mới nghe sự kiện: OHTARELOAD dựng lại palette tạo ViewModel
         /// mới, ViewModel cũ thôi đọc bản vẽ.
         /// </summary>
         private static GuroTabViewModel _hienTai;
         private static bool _daMoc;
-        private readonly System.Windows.Threading.Dispatcher _dispatcher;
 
+        private readonly System.Windows.Threading.Dispatcher _dispatcher;
         private readonly string _thuMucModule;
         private bool _dangNap;
 
-        private bool _useVung, _useInPdf, _useTaoKhung, _useXln, _autoDim, _xepCum, _datMk;
-        private int _mauDim = GroThamSo.MauMacDinh;
-        private string _layerKhung, _layerVung, _layerXln;
-        private bool _xlnTuDong;
-
+        private GroSettings _caiDat = new GroSettings();
         private List<LayerMuc> _dsKhung = new List<LayerMuc>(), _dsVung = new List<LayerMuc>(), _dsXln = new List<LayerMuc>();
         private LayerMuc _chonKhung, _chonVung, _chonXln;
-        private string _canhBaoKhung, _canhBaoVung, _canhBaoXln, _trangThai;
+        private string _trangThai;
 
         public GuroTabViewModel(string tieuDe, string moTa, string mauNhan, string thuMucModule)
         {
@@ -57,8 +50,7 @@ namespace ZwCadPlugin.ViewModels
             ChayGroCommand = new RelayCommand(() => GuiLenh("GROCHAY"));   // GRO chỉ mở tab (mục 193)
             ChayGiCommand = new RelayCommand(() => GuiLenh("GI"));
             MoDstCommand = new RelayCommand(() => GuiLenh("DST"));
-            LamMoiCommand = new RelayCommand(LamMoi);
-            PickNetCommand = new RelayCommand(() => GuiLenh("GROPICKMAU"), () => BatChonMau);
+            CaiDatCommand = new RelayCommand(MoCaiDat);
 
             _dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
             _hienTai = this;
@@ -81,165 +73,88 @@ namespace ZwCadPlugin.ViewModels
         public ICommand ChayGroCommand { get; }
         public ICommand ChayGiCommand { get; }
         public ICommand MoDstCommand { get; }
-        public ICommand LamMoiCommand { get; }
-        public ICommand PickNetCommand { get; }
+        public ICommand CaiDatCommand { get; }
 
         public string TrangThai { get => _trangThai; private set { _trangThai = value; Bao(); } }
 
-        // ---------------------------- Layer ----------------------------
+        /// <summary>Một dòng các cài đặt chung đang bật (chi tiết ở cửa sổ ⚙).</summary>
+        public string TomTat
+        {
+            get
+            {
+                var bat = new List<string>();
+                if (_caiDat.UseTaoKhung) bat.Add("Khung tấm: " + _caiDat.LayerKhungTam);
+                if (_caiDat.UseInPdf) bat.Add("In PDF");
+                if (_caiDat.UseTaoKhung && _caiDat.XepCum) bat.Add("Xếp cụm");
+                if (_caiDat.UseTaoKhung && _caiDat.XepCum && _caiDat.DatMk) bat.Add("Mã khắc");
+                if (_caiDat.UseXln) bat.Add(_caiDat.AutoDim ? "Xử lý nét + Dim" : "Xử lý nét");
+                return bat.Count == 0 ? "Không bật cài đặt nào" : string.Join(" · ", bat);
+            }
+        }
+
+        public bool UseVung
+        {
+            get => _caiDat.UseVung;
+            set
+            {
+                if (_caiDat.UseVung == value) return;
+                _caiDat.UseVung = value;
+                Bao();
+                try { GroRegistry.Ghi("use_vung", value); }
+                catch (Exception ex) { TrangThai = "Không lưu được: " + ex.Message; }
+            }
+        }
+
+        /// <summary>Ô layer gốc chỉ hiện khi bật xử lý nét trong ⚙.</summary>
+        public bool UseXln => _caiDat.UseXln;
+
+        // ---------------------------- Layer theo bản vẽ ----------------------------
 
         public List<LayerMuc> DsKhung { get => _dsKhung; private set { _dsKhung = value; Bao(); } }
         public List<LayerMuc> DsVung { get => _dsVung; private set { _dsVung = value; Bao(); } }
         public List<LayerMuc> DsXln { get => _dsXln; private set { _dsXln = value; Bao(); } }
 
-        public string CanhBaoKhung { get => _canhBaoKhung; private set { _canhBaoKhung = value; Bao(); } }
-        public string CanhBaoVung { get => _canhBaoVung; private set { _canhBaoVung = value; Bao(); } }
-        public string CanhBaoXln { get => _canhBaoXln; private set { _canhBaoXln = value; Bao(); } }
+        public LayerMuc ChonKhung { get => _chonKhung; set => DatChon(ref _chonKhung, value, LayerTheoBanVe.Khung); }
+        public LayerMuc ChonVung { get => _chonVung; set => DatChon(ref _chonVung, value, LayerTheoBanVe.Vung); }
+        public LayerMuc ChonXln { get => _chonXln; set => DatChon(ref _chonXln, value, LayerTheoBanVe.Goc); }
 
-        public LayerMuc ChonKhung
+        private void DatChon(ref LayerMuc truong, LayerMuc giaTri, int viTri, [CallerMemberName] string ten = null)
         {
-            get => _chonKhung;
-            set
-            {
-                if (value == null || ReferenceEquals(value, _chonKhung)) return;
-                _chonKhung = value; Bao();
-                if (_dangNap) return;
-                _layerKhung = value.Ten;
-                Ghi("layer_khung", value.Ten);
-                if (value.SoLuong >= 0) CanhBaoKhung = null;
-            }
-        }
-
-        public LayerMuc ChonVung
-        {
-            get => _chonVung;
-            set
-            {
-                if (value == null || ReferenceEquals(value, _chonVung)) return;
-                _chonVung = value; Bao();
-                if (_dangNap) return;
-                _layerVung = value.Ten;
-                Ghi("layer_vung", value.Ten);
-                if (value.SoLuong >= 0) CanhBaoVung = null;
-            }
-        }
-
-        public LayerMuc ChonXln
-        {
-            get => _chonXln;
-            set
-            {
-                if (value == null || ReferenceEquals(value, _chonXln)) return;
-                _chonXln = value; Bao();
-                if (_dangNap) return;
-                _xlnTuDong = value.Ten == GuroTabLayer.TenTuDong;
-                Ghi("xln_tu_dong", _xlnTuDong);
-                if (!_xlnTuDong)
-                {
-                    _layerXln = value.Ten;
-                    Ghi("layer_xln", value.Ten);
-                }
-                if (value.SoLuong >= 0) CanhBaoXln = null;
-            }
-        }
-
-        // ---------------------------- Cờ ----------------------------
-
-        public bool UseInPdf { get => _useInPdf; set => DatCo(ref _useInPdf, value, "use_in_pdf"); }
-
-        public bool UseTaoKhung
-        {
-            get => _useTaoKhung;
-            set { DatCo(ref _useTaoKhung, value, "use_tao_khung"); Bao(nameof(BatSapXep)); Bao(nameof(BatDatMk)); }
-        }
-
-        public bool UseVung
-        {
-            get => _useVung;
-            set { DatCo(ref _useVung, value, "use_vung"); Bao(nameof(BatLayerVung)); }
-        }
-
-        public bool XepCum
-        {
-            get => _xepCum;
-            set { DatCo(ref _xepCum, value, "use_xep_cum"); Bao(nameof(BatDatMk)); }
-        }
-
-        public bool DatMk { get => _datMk; set => DatCo(ref _datMk, value, "use_dat_mk"); }
-
-        public bool UseXln
-        {
-            get => _useXln;
-            set { DatCo(ref _useXln, value, "use_xln"); Bao(nameof(BatXln)); Bao(nameof(BatChonMau)); }
-        }
-
-        public bool AutoDim
-        {
-            get => _autoDim;
-            set { DatCo(ref _autoDim, value, "auto_dim"); Bao(nameof(BatChonMau)); Bao(nameof(NhanMau)); }
-        }
-
-        public int MauDim => _mauDim;
-
-        public string NhanMau => _autoDim ? "Tự động: Hình học (3 loại)" : ("Thủ công: " + GroText.TenMau(_mauDim));
-
-        /// <summary>Hai bước sau đều cần khung Khung_IN -> chỉ bật khi "Tự động tạo khung bao".</summary>
-        public bool BatSapXep => _useTaoKhung;
-        public bool BatDatMk => _useTaoKhung && _xepCum;
-        public bool BatLayerVung => _useVung;
-        public bool BatXln => _useXln;
-        public bool BatChonMau => _useXln && !_autoDim;
-
-        /// <summary>Chọn màu bằng tay thì TẮT tự nhận diện — giống hộp thoại.</summary>
-        public void DatMauTay(int aci)
-        {
-            if (!GroThamSo.LaMauHopLe(aci)) return;
-            _mauDim = aci;
-            Ghi("mau_dim", aci);
-            AutoDim = false;
-            Bao(nameof(MauDim));
-            Bao(nameof(NhanMau));
+            if (giaTri == null || ReferenceEquals(giaTri, truong)) return;
+            truong = giaTri;
+            Bao(ten);
+            if (_dangNap) return;
+            try { LayerTheoBanVe.Dat(Application.DocumentManager.MdiActiveDocument, viTri, giaTri.Ten); }
+            catch { }
         }
 
         // ---------------------------- Nạp ----------------------------
 
-        /// <summary>Đọc lại registry và layer của bản vẽ đang mở.</summary>
+        /// <summary>Đọc lại cài đặt chung và layer của bản vẽ đang mở.</summary>
         public void LamMoi()
         {
-            _dangNap = true;
-            try
-            {
-                GroSettings s = GroRegistry.Doc(out _xlnTuDong);
-                _useVung = s.UseVung; _useInPdf = s.UseInPdf; _useTaoKhung = s.UseTaoKhung;
-                _useXln = s.UseXln; _autoDim = s.AutoDim; _xepCum = s.XepCum; _datMk = s.DatMk;
-                _mauDim = s.MauDim;
-                _layerKhung = s.LayerKhung; _layerVung = s.LayerVung; _layerXln = s.LayerXln;
-            }
-            catch (Exception ex)
-            {
-                TrangThai = "Không đọc được thiết lập: " + ex.Message;
-            }
-            finally
-            {
-                _dangNap = false;
-            }
-            Bao(string.Empty);
+            try { _caiDat = GroRegistry.Doc(); }
+            catch (Exception ex) { TrangThai = "Không đọc được cài đặt: " + ex.Message; }
+            Bao(nameof(UseVung));
+            Bao(nameof(UseXln));
+            Bao(nameof(TomTat));
             NapLayer();
         }
 
-        /// <summary>Làm mới sau khi CAD xong việc đang làm (đổi bản vẽ, lệnh vừa ghi registry).</summary>
+        /// <summary>Làm mới sau khi CAD xong việc đang làm (đổi bản vẽ).</summary>
         private void LamMoiSau()
         {
             try { _dispatcher.BeginInvoke(new Action(LamMoi)); }
             catch { }
         }
 
-        private void NapLayer()
+        public void NapLayer()
         {
             Document doc = null;
             try { doc = Application.DocumentManager.MdiActiveDocument; } catch { }
 
             List<LayerMuc> khung = new List<LayerMuc>(), vung = new List<LayerMuc>(), xln = new List<LayerMuc>();
+            string[] daChon = new string[3];
             if (doc != null)
             {
                 try
@@ -247,9 +162,10 @@ namespace ZwCadPlugin.ViewModels
                     LayerQuery.KetQuaDem dem;
                     using (doc.LockDocument())
                         dem = LayerQuery.Dem(doc.Database);
-                    khung = LayerRanking.DanhSachKhung(dem.Khung4, dem.TatCaLayer, out _);
+                    khung = GuroTabLayer.KhungItTruoc(LayerRanking.DanhSachKhung(dem.Khung4, dem.TatCaLayer, out bool locKhung), locKhung);
                     vung = LayerRanking.DanhSachKhung(dem.Khung3, dem.TatCaLayer, out _);
                     xln = LayerRanking.DanhSachXln(dem.DoiTuong, dem.TatCaLayer);
+                    daChon = LayerTheoBanVe.Lay(doc);
                     TrangThai = "Bản vẽ: " + Path.GetFileName(doc.Name);
                 }
                 catch (Exception ex)
@@ -262,16 +178,12 @@ namespace ZwCadPlugin.ViewModels
                 TrangThai = "Chưa mở bản vẽ nào.";
             }
 
-            GuroTabLayer.KetQua k = GuroTabLayer.ChoKhung(khung, _layerKhung);
-            GuroTabLayer.KetQua v = GuroTabLayer.ChoKhung(vung, _layerVung);
-            GuroTabLayer.KetQua x = GuroTabLayer.ChoXln(xln, _xlnTuDong, _layerXln);
-
             _dangNap = true;
             try
             {
-                DsKhung = k.Ds; _chonKhung = null; ChonKhung = k.Chon; CanhBaoKhung = k.CanhBao;
-                DsVung = v.Ds; _chonVung = null; ChonVung = v.Chon; CanhBaoVung = v.CanhBao;
-                DsXln = x.Ds; _chonXln = null; ChonXln = x.Chon; CanhBaoXln = x.CanhBao;
+                DsKhung = khung; _chonKhung = null; ChonKhung = GuroTabLayer.Chon(khung, daChon[LayerTheoBanVe.Khung]);
+                DsVung = vung; _chonVung = null; ChonVung = GuroTabLayer.Chon(vung, daChon[LayerTheoBanVe.Vung]);
+                DsXln = xln; _chonXln = null; ChonXln = GuroTabLayer.Chon(xln, daChon[LayerTheoBanVe.Goc]);
             }
             finally
             {
@@ -279,25 +191,23 @@ namespace ZwCadPlugin.ViewModels
             }
         }
 
+        // ---------------------------- Cài đặt ⚙ ----------------------------
+
+        private void MoCaiDat()
+        {
+            try
+            {
+                var w = new GuroCaiDatWindow(new GuroCaiDatViewModel(GroRegistry.Doc()));
+                Application.ShowModalWindow(w);
+                if (w.DaLuu) LamMoi();
+            }
+            catch (Exception ex)
+            {
+                TrangThai = "Không mở được cài đặt: " + ex.Message;
+            }
+        }
+
         // ---------------------------- Tiện ích ----------------------------
-
-        private void DatCo(ref bool truong, bool giaTri, string khoa, [CallerMemberName] string ten = null)
-        {
-            if (truong == giaTri) return;
-            truong = giaTri;
-            Bao(ten);
-            if (!_dangNap) Ghi(khoa, giaTri);
-        }
-
-        private void Ghi(string khoa, string v) => GhiAnToan(() => GroRegistry.Ghi(khoa, v));
-        private void Ghi(string khoa, bool v) => GhiAnToan(() => GroRegistry.Ghi(khoa, v));
-        private void Ghi(string khoa, int v) => GhiAnToan(() => GroRegistry.Ghi(khoa, v));
-
-        private void GhiAnToan(Action ghi)
-        {
-            try { ghi(); }
-            catch (Exception ex) { TrangThai = "Không lưu được thiết lập: " + ex.Message; }
-        }
 
         /// <summary>
         /// Gửi lệnh xuống dòng lệnh như nút của OHTA: hủy lệnh đang treo, nạp

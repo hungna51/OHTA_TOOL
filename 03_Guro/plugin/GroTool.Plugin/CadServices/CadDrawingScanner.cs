@@ -27,7 +27,8 @@ namespace ZwCadPlugin.CadServices
     /// </summary>
     public static class CadDrawingScanner
     {
-        private const string LayerKhung = "Khung_IN";
+        /// <summary>Layer khung tấm — người dùng đặt trong ⚙ Cài đặt GURO (mục 194).</summary>
+        private static string LayerKhung => GroRegistry.LayerKhungTam();
         private const string LayerCoDon = "CANH_BAO_CO_DON";
         private const string LayerBango = "0";
         private const string LayerMaKhac = "3-KEGAKI";

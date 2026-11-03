@@ -39,6 +39,12 @@ namespace ZwCadPlugin.Core
 
         private static readonly string[] LayerBo = { "KHUNG_IN", "CANH_BAO", "0-KAKOU", "2-F-NAME", "3-KEGAKI" };
 
+        /// <summary>
+        /// Mục 194: tên layer khung tấm người dùng đặt (mặc định Khung_IN). Bên CAD gán từ
+        /// registry trước khi chạy; nét trên layer này cũng bị loại như KHUNG_IN.
+        /// </summary>
+        public static string LayerKhungTam { get; set; } = "Khung_IN";
+
         /// <summary>gro--bb-trong-ghi-chu-p: tâm hộp nằm trong (nới 1.0) một hộp ghi chú.</summary>
         public static bool TrongGhiChu(Hop bb, IList<Hop> noteBbs)
         {
@@ -55,6 +61,7 @@ namespace ZwCadPlugin.Core
             if (n.Giay || n.LaKhoi || n.Bb == null) return false;
             string lay = PhanLoaiNet.HoaAscii(n.Layer ?? "");
             if (Array.IndexOf(LayerDauRa, lay) >= 0) return false;
+            if (!string.IsNullOrEmpty(LayerKhungTam) && lay == PhanLoaiNet.HoaAscii(LayerKhungTam)) return false;
             foreach (string s in LayerBo) if (lay.Contains(s)) return false;
             if (TrongGhiChu(n.Bb, noteBbs)) return false;
             return n.Bb.W < 2000.0 && n.Bb.H < 2000.0;

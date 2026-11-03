@@ -192,8 +192,6 @@ chính là **bước đọc lại rồi ghép vào trước** — bỏ bước �
 | `gro--dcl-path` / `guro--dcl-path` | 1634 / 375 | đường dẫn file DCL tạm (Support, fallback tempprefix) |
 | `gro--mk-list` | 1651 | **danh sách mã khắc — nguồn duy nhất**: `("I" "0" "G" "Y")` |
 | `gro--write-dcl` / `guro--write-dcl` | 1664 / 387 | ghi nội dung DCL ra file lúc chạy (không cần đi kèm file `.dcl` riêng) |
-| `gro-get-input` | ~2194 | **lớp chọn đường** (mục 86): DLL đã nạp → hộp thoại .NET `gro_net_dialog`, không thì `gro--hoi-dcl`. Trả list 9 giá trị `(nth 0..8 dlg)` hoặc `nil` |
-| `gro--hoi-dcl` | ~2271 | hộp thoại DCL `gro_dlg` (ruột cũ của `gro-get-input`, chỉ đổi tên) — **dự phòng** khi chưa NETLOAD |
 | `guro-get-bango` | 418 | hiện hộp thoại của `bg` → số bắt đầu hoặc `nil` |
 
 ### Lớp tiện ích F-name / đối chiếu

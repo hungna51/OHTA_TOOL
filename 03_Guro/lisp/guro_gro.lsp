@@ -716,40 +716,7 @@
   (if des 
     (progn 
       (foreach x 
-        '("gro_dlg : dialog {" 
-          "  label = \"\U+0110\U+00E1nh s\U+1ED1 t\U+1EA5m + m\U+00E3 kh\U+1EAFc\";" 
-          "  : boxed_column {" "    label = \"Khung in & V\U+00F9ng\";" 
-          "    : popup_list {" "      label = \"Layer khung bao:\";" 
-          "      key = \"layer_khung\";" "      edit_width = 30;" "    }" 
-          "    : toggle {" 
-          "      label = \"T\\U+1EF1 \\U+0111\\U+1ED9ng in nhanh PDF (theo khung bao)\";" 
-          "      key = \"use_in_pdf\";" "    }" "    : toggle {" 
-          "      label = \"T\\U+1EF1 \\U+0111\\U+1ED9ng t\\U+1EA1o khung bao (Khung_IN) theo c\\U+1EE5m chi ti\\U+1EBFt\";" 
-          "      key = \"use_tao_khung\";" "    }" "    spacer;" "    : toggle {" 
-          "      label = \"\U+0110\U+00E1nh s\U+1ED1 theo v\U+00F9ng (polyline)\";" 
-          "      key = \"use_vung\";" "    }" "    : popup_list {" 
-          "      label = \"Layer v\U+00F9ng:\";" "      key = \"layer_vung\";" 
-          "      edit_width = 30;" "    }" "  }" "  spacer;" "  : boxed_column {" 
-          "    label = \"X\U+1EED l\U+00FD n\U+00E9t\";" "    : toggle {" 
-          "      label = \"B\U+1EADt chuy\U+1EC3n layer n\U+00E9t (Continuous -> 0-KAKOU, Center1 -> 3-KEGAKI)\";" 
-          "      key = \"use_xln\";" "    }" "    : popup_list {" 
-          "      label = \"Layer g\U+1ED1c b\U+1EA3n v\U+1EBD:\";" 
-          "      key = \"layer_xln\";" "      edit_width = 30;" "    }" 
-          "    : boxed_column {" 
-          "      label = \"L\U+1ECDc n\U+00E9t gi\U+00F3ng k\U+00EDch th\U+01B0\U+1EDBc (Dim -> 1-SUNPOU)\";" 
-          "      : toggle {" 
-          "        label = \"T\U+1EF1 \U+0111\U+1ED9ng nh\U+1EADn di\U+1EC7n m\U+00E0u n\U+00E9t Dim\";" 
-          "        key = \"auto_dim\";" "      }" "      : row {" "        : text {" 
-          "          key = \"lbl_mau_dim\";" 
-          "          label = \"M\U+00E0u: 4 - Cyan\";" "          width = 20;" 
-          "        }" "        : button {" "          key = \"btn_chon_mau\";" 
-          "          label = \"Ch\U+1ECDn m\U+00E0u CAD...\";" "          width = 16;" 
-          "        }" "        : button {" "          key = \"btn_pick_dim\";" 
-          "          label = \"Pick n\U+00E9t m\U+1EABu\";" "          width = 15;" 
-          "        }" "      }" "    }" "  }" "  spacer;" "  : row {" 
-          "    : button { label = \"OK\"; key = \"accept\"; is_default = true; }" 
-          "    : button { label = \"Cancel\"; key = \"cancel\"; is_cancel = true; }" 
-          "  }" "}" "" "xln_dlg : dialog {" 
+        '("xln_dlg : dialog {" 
           "  label = \"Danh s\U+00E1ch nh\U+00F3m n\U+00E9t gi\U+1EEF nguy\U+00EAn (kh\U+00F4ng \U+0111\U+1ED5i)\";" 
           "  : text {" 
           "    label = \"C\U+00E1c nh\U+00F3m n\U+00E9t gi\U+1EEF nguy\U+00EAn theo Linetype:\";" 
@@ -891,15 +858,11 @@
 (setq gro--use-in-pdf    (gro--reg-read-bool "use_in_pdf" nil)
       gro--use-tao-khung (gro--reg-read-bool "use_tao_khung" T)
       gro--use-vung      (gro--reg-read-bool "use_vung" nil)
-      gro--layer-vung    (gro--reg-read-str "layer_vung" nil)
-      gro--layer-khung   (gro--reg-read-str "layer_khung" nil)
       gro--use-xln       (gro--reg-read-bool "use_xln" T)
-      gro--layer-xln     (gro--reg-read-str "layer_xln" nil)
       gro--xln-auto-dim  (gro--reg-read-bool "auto_dim" T)
-      gro--mau-dim-xln   (gro--reg-read-int "mau_dim" 4)
 )
 
-;; Muc 122: tuy chon moi cua hop thoai GRO (chi ban .NET co o chon; DCL dung gia tri da luu)
+;; Muc 122: tuy chon xep cum / ma khac (muc 194: dat trong cai dat GURO tren tab Guro)
 ;;   use_xep_cum : xep cum mirror / gia cong sang cot phai + tach cap mirror (buoc 6e, 6e2)
 ;;   use_dat_mk  : dat ma khac + F-name vao trong hinh (buoc 6g) - muc 170: chay bang C#,
 ;;                 chi con cach truot tu goc tren-trai (bo khoa registry mk_che_do)
@@ -907,495 +870,94 @@
       gro--use-dat-mk  (gro--reg-read-bool "use_dat_mk" T)
 )
 
-;;; Hop thoai cai dat cua lenh GRO (muc 86).
-;;; Uu tien ban .NET (GROTOOL.dll, ham GRO_NET_DIALOG) neu da NETLOAD.
-;;; Chua nap DLL, hoac ban .NET bao loi, thi dung hop thoai DCL gro--hoi-dcl.
-;;; Hai ban tra ve GIONG HET nhau: list 9 gia tri dung thu tu (nth 0..8 dlg)
-;;; cua c:gro, hoac nil = Cancel. Registry van do c:gro doc/ghi nhu cu.
-;;;
-;;; Ban .NET tra ve mot trong bon dang:
-;;;   (9 gia tri)              -> OK
-;;;   nil                      -> Cancel
-;;;   ("XLN_DS" + 9 gia tri)   -> bam "Xem DSN". Danh sach net nam ben lisp nen
-;;;                               lisp mo no, roi goi lai dialog voi 9 gia tri do
-;;;                               (tham so cuoi T = giu dung layer goc vua chon,
-;;;                               khong ap lai luat muc 75).
-;;;   "LOI"                    -> dialog .NET hong -> chuyen sang DCL
-(defun gro-get-input (def-lay-k def-vung def-layer def-in-pdf def-use-xln def-lay-xln def-auto-dim def-mau-dim def-tao-khung
-                      def-xep-cum def-dat-mk
-                      / kq lap giu-xln
-                     )
-  (if (vl-symbol-value 'gro_net_dialog)
-    (progn
-      ;; Gia tri mac dinh GIONG HET gro--hoi-dcl (ham DCL lam lai lan nua cung khong sao)
-      (if (null def-auto-dim)
-        (setq def-auto-dim (if (and (boundp 'gro--xln-auto-dim) (null gro--xln-auto-dim)) nil T))
-      )
-      (if (null def-mau-dim)
-        (setq def-mau-dim (if (and (boundp 'gro--mau-dim-xln) gro--mau-dim-xln) gro--mau-dim-xln 4))
-      )
-      (if (null def-tao-khung)
-        (setq def-tao-khung (if (and (boundp 'gro--use-tao-khung) (null gro--use-tao-khung)) nil T))
-      )
-      (setq lap T)
-      (while lap
-        (setq kq (vl-catch-all-apply 'gro_net_dialog
-                   (list def-lay-k def-vung def-layer def-in-pdf def-use-xln def-lay-xln
-                         def-auto-dim def-mau-dim def-tao-khung giu-xln def-xep-cum def-dat-mk
-                   )
-                 )
-        )
-        (cond
-          ;; Ban .NET hong (loi lisp, hoac chuoi "LOI") -> hop thoai DCL
-          ((or (vl-catch-all-error-p kq) (eq (type kq) 'STR))
-           (if (vl-catch-all-error-p kq)
-             (princ (strcat "\n[GRO .NET] " (vl-catch-all-error-message kq)
-                            " -> dung hop thoai DCL."
-                    )
-             )
-           )
-           (setq lap nil
-                 kq  (gro--hoi-dcl def-lay-k def-vung def-layer def-in-pdf def-use-xln
-                                   def-lay-xln def-auto-dim def-mau-dim def-tao-khung
-                     )
-           )
-          )
-          ;; Bam "Xem DSN": ("XLN_DS" + 9 gia tri theo thu tu KET QUA) -> doi ve
-          ;; thu tu THAM SO de lan goi sau mo lai dung nhu nguoi dung vua de.
-          ((and (listp kq) (equal (car kq) "XLN_DS"))
-           (setq kq            (cdr kq)
-                 def-vung      (nth 0 kq)
-                 def-layer     (nth 1 kq)
-                 def-lay-k     (nth 2 kq)
-                 def-in-pdf    (nth 3 kq)
-                 def-use-xln   (nth 4 kq)
-                 def-lay-xln   (nth 5 kq)
-                 def-auto-dim  (nth 6 kq)
-                 def-mau-dim   (nth 7 kq)
-                 def-tao-khung (nth 8 kq)
-                 def-xep-cum   (if (> (length kq) 9) (nth 9 kq) def-xep-cum)
-                 def-dat-mk    (if (> (length kq) 10) (nth 10 kq) def-dat-mk)
-                 giu-xln       T
-           )
-           (if (and (boundp 'gro--xln-danh-sach-chua-doi) gro--xln-danh-sach-chua-doi)
-             (if (or (vl-symbol-value 'gro_net_dst) (gro--nap-net))
-               (progn
-                 (c:dst)
-                 (setq lap nil
-                       kq  nil
-                 )
-               )
-               (if (gro--hien-dialog-xln gro--xln-danh-sach-chua-doi)
-                 (setq lap nil
-                       kq  nil
-                 )
-               )
-             )
-             (alert "Chua co danh sach net chua doi nao duoc luu.")
-           )
-          )
-          ;; OK (list 9 gia tri) hoac Cancel (nil)
-          (t (setq lap nil))
-        )
-      )
-      kq
-    )
-    (gro--hoi-dcl def-lay-k def-vung def-layer def-in-pdf def-use-xln def-lay-xln
-                  def-auto-dim def-mau-dim def-tao-khung
-    )
-  )
+;;; Muc 194: ten layer khung tam (nguoi dung dat trong cai dat GURO), mac dinh Khung_IN.
+;;; Doc registry moi lan goi - cai dat co the doi giua hai lan chay.
+(defun gro--layer-khung-tam ()
+  (gro--reg-read-str "layer_khung_tam" "Khung_IN")
 )
 
-;;; Hop thoai DCL gro_dlg - ban cu, nay la DU PHONG khi chua nap GROTOOL.dll.
-;;; Muc 192: GRO khong hien hop thoai nua - thiet lap nam tren tab Guro cua bang
-;;; OHTA (ghi registry). Ham nay chon layer GIONG cach hop thoai chon mac dinh:
-;;;   layer khung / vung : layer da luu neu ban ve co, khong thi layer dung dau
-;;;   layer goc          : xln_tu_dong = 1 -> layer nhieu doi tuong nhat (muc 75);
-;;;                        chon tay -> dung dung layer do neu ban ve co,
-;;;                        khong thi layer dung dau
-;;; Tra ve 11 gia tri theo thu tu (nth 0..10 dlg) cua c:gro, va in tom tat.
-(defun gro--tham-so-chay (/ dem lays-k lays-v lays-x lk lv lx)
+;;; Muc 192/194: GRO khong co hop thoai. Layer chon RIENG tung ban ve tren tab Guro
+;;; (gro_net_layer_ban_ve -> (khung vung goc), nil = chua chon). Chua chon, hoac
+;;; layer da chon khong con tren ban ve -> mac dinh, cung luat Core/GuroTabLayer.cs:
+;;;   khung bao : layer co IT khung nhat (kin, dung 4 dinh)
+;;;   vung      : layer co NHIEU khung nhat (kin, tu 3 dinh)
+;;;   layer goc : layer nhieu doi tuong nhat (muc 75)
+;;; Bang so luong thi theo ten. Tra ve 11 gia tri theo thu tu (nth 0..10 dlg) cua
+;;; c:grochay - (nth 7) mau Dim luon nil: muc 194 bo nhan Dim theo mau thu cong.
+(defun gro--tham-so-chay (/ dem kq-k lays-k lays-v lays-x chon lk lv lx)
   (setq dem    (gro--dem-khung-layer)
-        lays-k (car (gro--layer-khung-ds dem T))
+        kq-k   (gro--layer-khung-ds dem T)
+        lays-k (if (nth 2 kq-k) (gro--khung-it-truoc dem) (car kq-k))
         lays-v (car (gro--layer-khung-ds dem nil))
         lays-x (car (gro--layer-xln-ds))
+        chon   (if (vl-symbol-value 'gro_net_layer_ban_ve)
+                 (vl-catch-all-apply 'gro_net_layer_ban_ve nil)
+               )
   )
+  (if (vl-catch-all-error-p chon) (setq chon nil))
   (if (null lays-x) (setq lays-x (list "0")))
-  (setq lk (if (and gro--layer-khung (member gro--layer-khung lays-k)) gro--layer-khung (car lays-k))
-        lv (if (and gro--layer-vung (member gro--layer-vung lays-v)) gro--layer-vung (car lays-v))
-        lx (if (and (not gro--xln-tu-dong) gro--layer-xln (member gro--layer-xln lays-x))
-             gro--layer-xln
-             (car lays-x)
-           )
-  )
-  (gro--bao-layer-thay "khung bao" gro--layer-khung lk)
-  (if gro--use-vung (gro--bao-layer-thay "vung" gro--layer-vung lv))
-  (if (and gro--use-xln (not gro--xln-tu-dong))
-    (gro--bao-layer-thay "goc" gro--layer-xln lx)
+  (setq lk (gro--layer-chon (nth 0 chon) lays-k)
+        lv (gro--layer-chon (nth 1 chon) lays-v)
+        lx (gro--layer-chon (nth 2 chon) lays-x)
   )
   (princ
-    (strcat "\nGRO: khung=" (if lk lk "?")
+    (strcat "\nGRO: khung bao=" (if lk lk "?")
             ", vung=" (if gro--use-vung (if lv lv "?") "khong")
-            ", tao khung=" (if gro--use-tao-khung "co" "khong")
+            ", khung tam=" (if gro--use-tao-khung (gro--layer-khung-tam) "khong")
             ", in PDF=" (if gro--use-in-pdf "co" "khong")
             "\n     xu ly net="
             (if gro--use-xln
-              (strcat "co (layer goc: " (if lx lx "?") (if gro--xln-tu-dong " - tu dong" "") ")")
+              (strcat "co (layer goc: " (if lx lx "?")
+                      (if gro--xln-auto-dim ", Dim tu dong" ", khong xu ly Dim") ")"
+              )
               "khong"
             )
             ", xep cum=" (if gro--use-xep-cum "co" "khong")
             ", dat ma khac=" (if gro--use-dat-mk "co" "khong")
-            "\n     (doi thiet lap: tab Guro tren bang OHTA, hoac lenh GROCD)"
+            "\n     (layer: tab Guro tren bang OHTA; cai dat: nut cai dat cua tab)"
     )
   )
   (list gro--use-vung lv lk gro--use-in-pdf gro--use-xln lx gro--xln-auto-dim
-        gro--mau-dim-xln gro--use-tao-khung gro--use-xep-cum gro--use-dat-mk
+        nil gro--use-tao-khung gro--use-xep-cum gro--use-dat-mk
   )
 )
 
-;;; Layer da chon khong co tren ban ve nay -> bao layer thay the.
-(defun gro--bao-layer-thay (ten da-chon dung)
-  (if (and da-chon (not (equal da-chon dung)))
-    (princ (strcat "\nLuu y: layer " ten " \"" da-chon "\" khong co tren ban ve -> dung \""
-                   (if dung dung "?") "\"."
-           )
-    )
+;;; Layer da chon neu con trong danh sach, khong thi layer dung dau.
+(defun gro--layer-chon (ten ds)
+  (if (and ten (member ten ds)) ten (car ds))
+)
+
+;;; Layer khung bao (kin, dung 4 dinh), IT khung nhat truoc, bang nhau theo ten.
+;;; dem = ket qua gro--dem-khung-layer: ((layer n4 n3) ...).
+(defun gro--khung-it-truoc (dem / loc c)
+  (foreach c dem
+    (if (> (nth 1 c) 0) (setq loc (cons (cons (car c) (nth 1 c)) loc)))
+  )
+  (mapcar 'car
+          (vl-sort loc
+                   '(lambda (a b)
+                      (if (= (cdr a) (cdr b)) (< (car a) (car b)) (< (cdr a) (cdr b)))
+                    )
+          )
   )
 )
 
-;;; GROCD: chay GRO voi hop thoai nhu truoc muc 192 (khi bang OHTA dang dong
-;;; hoac tab Guro loi). Lua chon trong hop thoai duoc luu lai registry.
-(defun c:grocd ()
-  (setq gro--hoi-hop-thoai T)
-  (c:grochay)
-)
-
-;;; Muc 193: go GRO chi MO tab Guro tren bang OHTA de xem / doi thiet lap; nut
-;;; "Chay GRO" tren tab moi danh so (lenh GROCHAY - than lenh GRO cu). Khong mo
-;;; duoc bang OHTA (chua nap OHTATOOL.dll, khong co tab "guro") -> chay GROCD
-;;; (hop thoai) de van danh so duoc.
+;;; Muc 193: go GRO chi MO tab Guro tren bang OHTA de xem / doi layer va cai dat;
+;;; nut "Chay GRO" tren tab moi danh so (lenh GROCHAY). Muc 194: khong mo duoc
+;;; tab (chua nap OHTATOOL.dll, khong co tab "guro") -> bao loi, khong danh so.
 (defun c:gro (/ kq)
   (if (and (vl-symbol-value 'ohta_net_tab)
            (not (vl-catch-all-error-p (setq kq (vl-catch-all-apply 'ohta_net_tab '("guro")))))
            kq
       )
-    (princ "
-GRO: doi thiet lap tren tab Guro, bam \"Chay GRO\" de danh so (go GROCHAY cung duoc).")
-    (progn
-      (princ "
-Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
-      (c:grocd)
+    (princ "\nGRO: chon layer va cai dat tren tab Guro, bam \"Chay GRO\" de danh so.")
+    (princ
+      (strcat "\nLoi: khong mo duoc tab Guro tren bang OHTA (chua nap OHTATOOL.dll hoac"
+              "\n     thieu tab Guro). Go OHTA de mo bang roi bam \"Chay GRO\"."
+      )
     )
   )
   (princ)
-)
-
-(defun gro--hoi-dcl (def-lay-k def-vung def-layer def-in-pdf def-use-xln def-lay-xln 
-                      def-auto-dim def-mau-dim def-tao-khung / dcl dch gro-vung 
-                      gro-lay gro-layk gro-in gro-tao-khung gro-xln gro-lxln 
-                      gro-auto-dim n dem kq-k kq-v lays-k hien-k lays-v hien-v li lk 
-                      lx s all-lays loop-dlg cur-mau-dim cur-auto-dim ent-dim new-c 
-                      _on act-save kq-xln hien-xln loc-xln top-cnt def-cnt
-                     ) 
-  (setq dcl      (gro--dcl-path)
-        dem      (gro--dem-khung-layer)
-        kq-k     (gro--layer-khung-ds dem T)
-        kq-v     (gro--layer-khung-ds dem nil)
-        lays-k   (nth 0 kq-k)
-        hien-k   (nth 1 kq-k)
-        lays-v   (nth 0 kq-v)
-        hien-v   (nth 1 kq-v)
-        kq-xln   (gro--layer-xln-ds)
-        all-lays (nth 0 kq-xln)
-        hien-xln (nth 1 kq-xln)
-        loc-xln  (nth 2 kq-xln)
-  )
-  (if (null all-lays) 
-    (setq all-lays (list "0")
-          hien-xln (list "0  (0 doi tuong)")
-          loc-xln  (list (cons "0" 0))
-    )
-  )
-  (if (null (nth 2 kq-k)) 
-    (princ 
-      (strcat "\nLuu y: khong co polyline KIN 4 dinh nao tren ban ve, nen popup" 
-              "\n  LAYER KHUNG BAO dang liet ke TAT CA layer. Xem muc 51/52."
-      )
-    )
-  )
-  (if (null (nth 2 kq-v)) 
-    (princ 
-      (strcat "\nLuu y: khong co polyline KIN tu 3 dinh nao tren ban ve, nen popup" 
-              "\n  LAYER VUNG dang liet ke TAT CA layer. Xem muc 61/64."
-      )
-    )
-  )
-  (setq li (if def-layer (vl-position def-layer lays-v)))
-  (if (null li) (setq li 0))
-  (setq lk (if def-lay-k (vl-position def-lay-k lays-k)))
-  (if (null lk) (setq lk 0))
-  (setq top-cnt (if loc-xln (cdr (car loc-xln)) 0))
-  (setq def-cnt (if (and def-lay-xln loc-xln (assoc def-lay-xln loc-xln)) 
-                  (cdr (assoc def-lay-xln loc-xln))
-                  -1
-                )
-  )
-  ;; Uu tien layer co nhieu doi tuong nhat tren ban ve (muc 75):
-  ;; Neu layer luu lan truoc (def-lay-xln) co it doi tuong hon layer dung dau (top-cnt > def-cnt),
-  ;; hoac def-lay-xln khong ton tai tren ban ve -> tu dong chon index 0 (layer nhieu doi tuong nhat).
-  ;; Neu def-lay-xln co so doi tuong bang top-cnt (hoac chinh la top layer) thi giu nguyen def-lay-xln.
-  (if (and def-lay-xln (>= def-cnt top-cnt) (> def-cnt 0)) 
-    (setq lx (vl-position def-lay-xln all-lays))
-    (setq lx 0)
-  )
-  (if (null lx) (setq lx 0))
-  (if (null def-auto-dim) 
-    (setq def-auto-dim (if 
-                         (and (boundp 'gro--xln-auto-dim) (null gro--xln-auto-dim))
-                         nil
-                         T
-                       )
-    )
-  )
-  (if (null def-mau-dim) 
-    (setq def-mau-dim (if (and (boundp 'gro--mau-dim-xln) gro--mau-dim-xln) 
-                        gro--mau-dim-xln
-                        4
-                      )
-    )
-  )
-  (if (null def-tao-khung) 
-    (setq def-tao-khung (if 
-                          (and (boundp 'gro--use-tao-khung) 
-                               (null gro--use-tao-khung)
-                          )
-                          nil
-                          T
-                        )
-    )
-  )
-  (setq cur-mau-dim  def-mau-dim
-        cur-auto-dim def-auto-dim
-  )
-
-  (setq loop-dlg T)
-  (while loop-dlg 
-    (cond 
-      ((not (gro--write-dcl dcl))
-       (princ (strcat "\nKhong the ghi file DCL tai: " dcl))
-       (setq loop-dlg nil)
-       nil
-      )
-      ((<= (setq dch (load_dialog dcl)) 0)
-       (princ "\nKhong the load dialog.")
-       (setq loop-dlg nil)
-       nil
-      )
-      ((not (new_dialog "gro_dlg" dch))
-       (princ 
-         (strcat "\nKhong mo duoc hop thoai \"gro_dlg\" (new_dialog tra nil)." 
-                 "\nThuong la file DCL sai cu phap. Chay lenh GRODBG de xem"
-                 " noi dung file DCL that: "
-                 dcl
-         )
-       )
-       (unload_dialog dch)
-       (setq loop-dlg nil)
-       nil
-      )
-      (t
-       (start_list "layer_khung" 3)
-       (foreach s hien-k (add_list s))
-       (end_list)
-       (set_tile "layer_khung" (itoa lk))
-       (set_tile "use_in_pdf" (if def-in-pdf "1" "0"))
-       (set_tile "use_tao_khung" (if def-tao-khung "1" "0"))
-
-       (start_list "layer_vung" 3)
-       (foreach s hien-v (add_list s))
-       (end_list)
-       (set_tile "layer_vung" (itoa li))
-       (set_tile "use_vung" (if def-vung "1" "0"))
-       (mode_tile "layer_vung" (if def-vung 0 1))
-
-       ;; Box xu ly net
-       (start_list "layer_xln" 3)
-       (foreach s hien-xln (add_list s))
-       (end_list)
-       (set_tile "layer_xln" (itoa lx))
-       (set_tile "use_xln" (if def-use-xln "1" "0"))
-       (mode_tile "layer_xln" (if def-use-xln 0 1))
-
-       ;; Box loc net Dim
-       (set_tile "auto_dim" (if cur-auto-dim "1" "0"))
-       (set_tile "lbl_mau_dim" (if cur-auto-dim "T\U+1EF1 \U+0111\U+1ED9ng: H\U+00ECnh h\U+1ECDc" (strcat "M\U+00E0u: " (gro--ten-mau cur-mau-dim))))
-       (mode_tile "auto_dim" (if def-use-xln 0 1))
-       (if (and def-use-xln (null cur-auto-dim)) 
-         (progn (mode_tile "btn_chon_mau" 0) (mode_tile "btn_pick_dim" 0))
-         (progn (mode_tile "btn_chon_mau" 1) (mode_tile "btn_pick_dim" 1))
-       )
-
-       (mode_tile "layer_khung" 2)
-
-       (setq gro-vung      nil
-             gro-lay       nil
-             gro-layk      nil
-             gro-in        nil
-             gro-tao-khung nil
-             gro-xln       nil
-             gro-lxln      nil
-             gro-auto-dim  nil
-       )
-       (action_tile "use_vung" 
-                    "(mode_tile \"layer_vung\" (if (= \"1\" (get_tile \"use_vung\")) 0 1))"
-       )
-       (action_tile "use_tao_khung" 
-                    "(setq def-tao-khung (= \"1\" (get_tile \"use_tao_khung\")))"
-       )
-       (action_tile "use_xln" 
-                    (strcat "(setq _on (= \"1\" (get_tile \"use_xln\")))" 
-                            "(mode_tile \"layer_xln\" (if _on 0 1))" 
-                            "(mode_tile \"auto_dim\" (if _on 0 1))" "(if _on" 
-                            "  (if (= \"1\" (get_tile \"auto_dim\"))" 
-                            "    (progn (mode_tile \"btn_chon_mau\" 1) (mode_tile \"btn_pick_dim\" 1))" 
-                            "    (progn (mode_tile \"btn_chon_mau\" 0) (mode_tile \"btn_pick_dim\" 0))" 
-                            "  )" 
-                            "  (progn (mode_tile \"btn_chon_mau\" 1) (mode_tile \"btn_pick_dim\" 1))" 
-                            ")"
-                    )
-       )
-       (action_tile "auto_dim" 
-                    (strcat "(setq cur-auto-dim (= \"1\" (get_tile \"auto_dim\")))" 
-                            "(if cur-auto-dim" 
-                            "  (progn (mode_tile \"btn_chon_mau\" 1) (mode_tile \"btn_pick_dim\" 1))" 
-                            "  (progn (mode_tile \"btn_chon_mau\" 0) (mode_tile \"btn_pick_dim\" 0))" 
-                            ")"
-                    )
-       )
-       (setq act-save (strcat "(setq gro-layk (get_tile \"layer_khung\")" 
-                              " gro-vung (get_tile \"use_vung\")" 
-                              " gro-lay (get_tile \"layer_vung\")" 
-                              " gro-in (get_tile \"use_in_pdf\")" 
-                              " gro-tao-khung (get_tile \"use_tao_khung\")" 
-                              " gro-xln (get_tile \"use_xln\")" 
-                              " gro-lxln (get_tile \"layer_xln\")" 
-                              " gro-auto-dim (get_tile \"auto_dim\")) "
-                      )
-       )
-       (action_tile "btn_chon_mau" (strcat act-save "(done_dialog 5)"))
-       (action_tile "btn_pick_dim" (strcat act-save "(done_dialog 4)"))
-       (action_tile "accept" (strcat act-save "(done_dialog 1)"))
-       (action_tile "cancel" "(done_dialog 0)")
-       (setq n (start_dialog))
-       (unload_dialog dch)
-
-       (if (> n 0) 
-         (progn 
-           (if gro-layk 
-             (setq lk (atoi gro-layk))
-           )
-           (if (or (< lk 0) (>= lk (length lays-k))) 
-             (setq lk 0)
-           )
-           (if gro-lay 
-             (setq li (atoi gro-lay))
-           )
-           (if (or (< li 0) (>= li (length lays-v))) 
-             (setq li 0)
-           )
-           (if gro-lxln 
-             (setq lx (atoi gro-lxln))
-           )
-           (if (or (< lx 0) (>= lx (length all-lays))) 
-             (setq lx 0)
-           )
-           (if gro-in 
-             (setq def-in-pdf (= gro-in "1"))
-           )
-           (if gro-tao-khung 
-             (setq def-tao-khung (= gro-tao-khung "1"))
-           )
-           (if gro-vung 
-             (setq def-vung (= gro-vung "1"))
-           )
-           (if gro-xln 
-             (setq def-use-xln (= gro-xln "1"))
-           )
-           (if gro-auto-dim 
-             (setq cur-auto-dim (= gro-auto-dim "1"))
-           )
-         )
-       )
-
-       (cond 
-         ((= n 4)
-          ;; Pick net mau tren ban ve de doc mau
-          (setq ent-dim (entsel "\nChon 1 net Dim mau (LINE / PLINE / ARC) tren ban ve: "))
-          (if ent-dim 
-            (progn 
-              (setq cur-mau-dim       (gro--entity-color (car ent-dim))
-                    cur-auto-dim      nil
-                    def-auto-dim      nil
-                    gro--mau-dim-xln  cur-mau-dim
-                    gro--xln-auto-dim nil
-              )
-              (princ 
-                (strcat "\nDa nhan dien mau net Dim: " (gro--ten-mau cur-mau-dim))
-              )
-            )
-          )
-         )
-         ((= n 5)
-          ;; Mo hop thoai acad_colordlg chon mau truc tiep tu CAD
-          (setq new-c (gro--chon-mau-cad cur-mau-dim))
-          (if new-c 
-            (progn 
-              (setq cur-mau-dim       new-c
-                    cur-auto-dim      nil
-                    def-auto-dim      nil
-                    gro--mau-dim-xln  cur-mau-dim
-                    gro--xln-auto-dim nil
-              )
-              (princ (strcat "\nDa chon mau net Dim: " (gro--ten-mau cur-mau-dim)))
-            )
-          )
-         )
-         ((= n 3)
-          ;; Xem danh sach net chua doi
-          (if (and (boundp 'gro--xln-danh-sach-chua-doi) gro--xln-danh-sach-chua-doi)
-            (if (or (vl-symbol-value 'gro_net_dst) (gro--nap-net))
-              (progn
-                (c:dst)
-                (setq loop-dlg nil)
-              )
-              (if (gro--hien-dialog-xln gro--xln-danh-sach-chua-doi)
-                (setq loop-dlg nil)
-              )
-            )
-            (alert "Chua co danh sach net chua doi nao duoc luu.")
-          )
-         )
-         ((= n 1)
-          (setq loop-dlg nil)
-          (list def-vung 
-                (nth li lays-v)
-                (nth lk lays-k)
-                def-in-pdf
-                def-use-xln
-                (nth lx all-lays)
-                cur-auto-dim
-                cur-mau-dim
-                def-tao-khung
-          )
-         )
-         (t
-          (setq loop-dlg nil)
-          nil
-         )
-       )
-      )
-    )
-  )
 )
 
 (defun gro--ma-chu-t () '(116 84 65364 65332))  ; t  T  FW-t  FW-T
@@ -1699,7 +1261,10 @@ Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
 ;;; khong co "t=" lan ky tu dem, tu roi vao nhom bo qua. Va loc layer "0" thi
 ;;; rat nguy hiem - ghi chu that cua nguoi dung co the nam tren do.
 (defun gro--layer-dau-ra ()
-  '("2-F-NAME" "3-KEGAKI" "CANH_BAO_CO_DON" "CANH_BAO_LECH" "CANH_BAO_SO_LUONG" "CANH_BAO_KHUNG_CAT" "KHUNG_IN")
+  ;; Muc 194: them layer khung tam nguoi dung dat (giu KHUNG_IN cho ban ve cu)
+  (list "2-F-NAME" "3-KEGAKI" "CANH_BAO_CO_DON" "CANH_BAO_LECH" "CANH_BAO_SO_LUONG" "CANH_BAO_KHUNG_CAT" "KHUNG_IN"
+        (strcase (gro--layer-khung-tam))
+  )
 )
 
 (defun gro--layer-dau-ra-p (e / lay) 
@@ -6776,22 +6341,16 @@ Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
                 )
               )
             )
-            (progn 
-              (setq dim-geom-set nil)
-              (setq mau-dim-chot (if mau-dim 
-                                   mau-dim
-                                   (if 
-                                     (and (boundp 'gro--mau-dim-xln) 
-                                          gro--mau-dim-xln
-                                     )
-                                     gro--mau-dim-xln
-                                     4
-                                   )
-                                 )
+            ;; Muc 194: tat tu nhan dien -> mau Dim chi con khi lenh XLN truyen vao
+            ;; (pick net mau); GRO truyen nil = KHONG xu ly net Dim.
+            (progn
+              (setq dim-geom-set nil
+                    mau-dim-chot mau-dim
               )
-              (princ 
-                (strcat "\n[Xu ly net] Dung mau net Dim thu cong: " 
-                        (gro--ten-mau mau-dim-chot)
+              (princ
+                (if mau-dim-chot
+                  (strcat "\n[Xu ly net] Dung mau net Dim thu cong: " (gro--ten-mau mau-dim-chot))
+                  "\n[Xu ly net] Khong xu ly net Dim (tat tu nhan dien)."
                 )
               )
             )
@@ -11154,7 +10713,7 @@ Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
       (princ 
         (strcat "\nDa tao thanh cong " 
                 (itoa (length new-khungs))
-                " khung chu nhat tren layer \"Khung_IN\"."
+                " khung chu nhat tren layer \"" (gro--layer-khung-tam) "\"."
         )
       )
       (princ "\n=======================================================")
@@ -11633,7 +11192,7 @@ Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
 (defun gro--quet-lai-ds-tam (/ ss-kin ss-cbd i j e bb txts ent str bg-val t-val 
                               q-val m-val ds o-id pl-bb) 
   (setq ds nil)
-  (setq ss-kin (ssget "X" '((0 . "LWPOLYLINE") (8 . "Khung_IN"))))
+  (setq ss-kin (ssget "X" (list '(0 . "LWPOLYLINE") (cons 8 (gro--layer-khung-tam)))))
   (if ss-kin 
     (progn 
       (setq i 0)
@@ -11689,8 +11248,8 @@ Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
                                    t-val 
                                    q-val 
                                    m-val 
-                                   "Khung_IN" 
-                                   bb 
+                                   (gro--layer-khung-tam)
+                                   bb  
                                    e 
                                    nil 
                                    nil
@@ -12069,7 +11628,7 @@ Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
           (setq en (vl-catch-all-apply 'vlax-vla-object->ename (list c)))
           (if (and en (not (vl-catch-all-error-p en)))
             (progn
-              (vl-catch-all-apply 'vla-put-layer (list c "Khung_IN"))
+              (vl-catch-all-apply 'vla-put-layer (list c (gro--layer-khung-tam)))
               (regapp "GRO_CHUP_COPY")
               (vl-catch-all-apply
                 'entmod
@@ -12228,7 +11787,7 @@ Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
                  (not (and xd (assoc "GRO_CHUP_COPY" (cdr xd))))
                  (not (equal (strcase lay) "2-F-NAME"))
                  (not (wcmatch (strcase lay) "CANH_BAO_*"))
-                 (not (equal (strcase lay) "KHUNG_IN"))
+                 (not (member (strcase lay) (list "KHUNG_IN" (strcase (gro--layer-khung-tam)))))
                  (not (and (equal (strcase lay) "3-KEGAKI")
                            (equal etype "MTEXT")
                            (setq txt (cdr (assoc 1 ed)))
@@ -12841,7 +12400,7 @@ Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
     )
     (progn
       (if ed (entdel e))
-      (gro--ve-khung-rect bb "Khung_IN" 4)
+      (gro--ve-khung-rect bb (gro--layer-khung-tam) 4)
     )
   )
 )
@@ -13071,7 +12630,7 @@ Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
                                     (+ (- (* 2.0 xa) (nth 0 bb-c)) le) (+ (nth 3 bb-c) le)
                               )
                      pl-chinh (gro--sua-dinh-khung pl-kin bb-kh-m)
-                     pl-moi   (gro--ve-khung-rect bb-kh-g "Khung_IN" 4)
+                     pl-moi   (gro--ve-khung-rect bb-kh-g (gro--layer-khung-tam) 4)
                )
                ;; kq-tk: sua khung chinh; khung moi noi vao CUOI (tra theo tid van ra khung chinh)
                (setq kh-cu (vl-some '(lambda (k) (if (= (nth 2 k) tid) k nil)) khungs))
@@ -14134,7 +13693,6 @@ Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
               ss-goc-info gro--danh-sach-bango-ents gro--danh-sach-ten-bv-ents bb-tong-bv dx-chup dy-chup ssv-left kq-chup
               xep-cum all-codes-cum fld-all-cum v-cum nhom-cum bb-goc-xep kq-xep msg-xep-cum
               tids-da-xep kq-tg msg-tach-gian kq-mir msg-mir msg-mk msg-kc ds-sht msg-sht gro--ds-text-khac n-khung0 gro--ds-cat vung-truoc gro--dich-tach gro--bango-dich gro--ds-khung-bo gro--hop-khung-bo
-              hoi-dlg
              )
   ;; LUU Y ve danh sach local o tren: sl p c v u la BIEN VONG foreach, khai bao
   ;; de chung KHONG ro ra pham vi toan cuc. Trong AutoLISP, (foreach x ...) dat
@@ -14177,11 +13735,6 @@ Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
     (princ)
   )
 
-  ;; Muc 192: chi lenh GROCD moi hien hop thoai. Doc co roi xoa ngay, de lan
-  ;; GRO sau (ke ca khi GROCD bi Esc giua chung) khong hien hop thoai nua.
-  (setq hoi-dlg             gro--hoi-hop-thoai
-        gro--hoi-hop-thoai  nil
-  )
   (gro--moc-bat-dau)
   (setq old-cmdecho (getvar "CMDECHO")
         gro--buoc   "khoi dong"
@@ -14247,29 +13800,16 @@ Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
   (setq gro--use-in-pdf    (gro--reg-read-bool "use_in_pdf" nil)
         gro--use-tao-khung (gro--reg-read-bool "use_tao_khung" T)
         gro--use-vung      (gro--reg-read-bool "use_vung" nil)
-        gro--layer-vung    (gro--reg-read-str "layer_vung" nil)
-        gro--layer-khung   (gro--reg-read-str "layer_khung" nil)
         gro--use-xln       (gro--reg-read-bool "use_xln" T)
-        gro--layer-xln     (gro--reg-read-str "layer_xln" nil)
-        gro--xln-tu-dong   (gro--reg-read-bool "xln_tu_dong" T)
         gro--xln-auto-dim  (gro--reg-read-bool "auto_dim" T)
-        gro--mau-dim-xln   (gro--reg-read-int "mau_dim" 4)
         gro--use-xep-cum   (gro--reg-read-bool "use_xep_cum" T)
         gro--use-dat-mk    (gro--reg-read-bool "use_dat_mk" T)
   )
-  ;; Tu nap ban .NET (muc 86): hop thoai .NET cua GROCD va cac buoc C# ve sau.
+  ;; Tu nap ban .NET (muc 86): layer chon tren tab (gro_net_layer_ban_ve) va cac buoc C#.
   (gro--nap-net)
-  ;; GRO: chay thang theo thiet lap da luu. GROCD: hop thoai nhu truoc muc 192.
-  (setq dlg (if hoi-dlg
-              (gro-get-input gro--layer-khung gro--use-vung gro--layer-vung
-                             gro--use-in-pdf gro--use-xln gro--layer-xln gro--xln-auto-dim
-                             gro--mau-dim-xln gro--use-tao-khung gro--use-xep-cum gro--use-dat-mk
-              )
-              (gro--tham-so-chay)
-            )
-  )
-  ;; dlg = nil co the la Cancel, MA CUNG co the la khong mo duoc hop thoai.
-  ;; gro-get-input da in ly do cu the o tren trong truong hop thu hai.
+  ;; Muc 192/194: khong hop thoai - layer theo ban ve tren tab Guro, cai dat chung o registry.
+  (setq dlg (gro--tham-so-chay))
+  ;; Muc 194: gro--tham-so-chay khong tra nil - giu nhanh nay cho an toan.
   (if (null dlg) 
     (progn 
       (if (and (ssgetfirst) (cadr (ssgetfirst))) 
@@ -14305,24 +13845,8 @@ Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
               gro--use-dat-mk  (nth 10 dlg)
         )
       )
-      ;; Chi GROCD moi luu lai registry (lua chon trong hop thoai). GRO chay thang
-      ;; KHONG ghi: layer du phong cua ban ve nay (muc 192) khong duoc de len layer
-      ;; nguoi dung da chon tren tab Guro.
-      (if hoi-dlg
-        (progn
-          (gro--reg-write-bool "use_vung" gro--use-vung)
-          (gro--reg-write-str "layer_vung" gro--layer-vung)
-          (gro--reg-write-str "layer_khung" gro--layer-khung)
-          (gro--reg-write-bool "use_in_pdf" gro--use-in-pdf)
-          (gro--reg-write-bool "use_xln" gro--use-xln)
-          (gro--reg-write-str "layer_xln" gro--layer-xln)
-          (gro--reg-write-bool "auto_dim" gro--xln-auto-dim)
-          (gro--reg-write-int "mau_dim" gro--mau-dim-xln)
-          (gro--reg-write-bool "use_tao_khung" gro--use-tao-khung)
-          (gro--reg-write-bool "use_xep_cum" gro--use-xep-cum)
-          (gro--reg-write-bool "use_dat_mk" gro--use-dat-mk)
-        )
-      )
+      ;; Muc 194: KHONG ghi registry - layer chon theo tung ban ve tren tab Guro,
+      ;; cai dat chung chi doi trong cua so cai dat cua tab.
 
       ;; --- 3. chon doi tuong -----------------------------------------------
       (gro--moc "chon doi tuong")
@@ -14360,7 +13884,7 @@ Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
       (sssetfirst nil nil) ; Xoa sach bat ky selection nao truoc khi goi ssget
       (if gro--use-tao-khung 
         (princ 
-          (strcat "\n[TU DONG TAO KHUNG_IN DANG BAT] Chon cac KHUNG BAO pham vi (neu co)" 
+          (strcat "\n[TU DONG TAO KHUNG TAM DANG BAT] Chon cac KHUNG BAO pham vi (neu co)" 
                   "\n  hoac bam ENTER de quet chon truc tiep tren ban ve:"
           )
         )
@@ -15418,10 +14942,10 @@ Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
             (princ 
               (strcat "\n>>> [GRO] DA TAO THANH CONG " 
                       (itoa (length (car kq-tk))) 
-                      " KHUNG BAO (Khung_IN) THEO CUM CHI TIET! <<<"
+                      " KHUNG TAM (" (gro--layer-khung-tam) ") THEO CUM CHI TIET! <<<"
               )
             )
-            (princ "\n[GRO] Khong tao duoc khung Khung_IN (khong tim thay cum hinh hoc phu hop).")
+            (princ "\n[GRO] Khong tao duoc khung tam (khong tim thay cum hinh hoc phu hop).")
           )
         )
       )
@@ -16360,7 +15884,7 @@ Khong mo duoc tab Guro tren bang OHTA -> chay GRO voi hop thoai (GROCD).")
     (princ)
   )
   (if (or (null layer-khung) (= layer-khung "")) 
-    (setq layer-khung "Khung_IN")
+    (setq layer-khung (gro--layer-khung-tam))
   )
   (if (or (null ctb-name) (= ctb-name "")) 
     (setq ctb-name (gro--ctb-in))

@@ -130,78 +130,6 @@ namespace ZwCadPlugin.Tests
                  "GOC  (900 doi tuong)|DIM  (40 doi tuong)|0  (0 doi tuong)|TRONG  (0 doi tuong)");
 
             Console.WriteLine();
-            Console.WriteLine("=== Chon mac dinh layer goc (luat muc 75) ===");
-            Kiem("layer da luu dung dau -> giu", LayerRanking.ViTriXln(dx, "GOC"), 0);
-            Kiem("layer da luu IT hon layer dau -> chon layer dau", LayerRanking.ViTriXln(dx, "DIM"), 0);
-            Kiem("layer da luu khong con -> chon layer dau", LayerRanking.ViTriXln(dx, "MAT"), 0);
-            var bang = LayerRanking.DanhSachXln(new Dictionary<string, int> { { "A", 50 }, { "B", 50 } }, new[] { "A", "B" });
-            Kiem("layer da luu BANG layer dau -> giu", LayerRanking.ViTriXln(bang, "B"), 1);
-            Kiem("layer da luu = 0 doi tuong -> chon layer dau",
-                 LayerRanking.ViTriXln(LayerRanking.DanhSachXln(new Dictionary<string, int>(), new[] { "A", "B" }), "B"), 0);
-
-            Console.WriteLine();
-            Console.WriteLine("=== Vi tri layer khung / vung da luu ===");
-            Kiem("co trong danh sach", LayerRanking.ViTri(ds2, "Z"), 2);
-            Kiem("khong co -> 0", LayerRanking.ViTri(ds2, "MAT"), 0);
-
-            Console.WriteLine();
-            Console.WriteLine("=== Tham so (gro_net_dialog ...) tu lisp ===");
-            // Thu tu THAM SO: lay-k vung layer-vung in-pdf use-xln lay-xln auto-dim mau-dim tao-khung [giu-xln]
-            var ts = GroThamSo.DocThamSo(new object[] { "KHUNG", true, "VUNG", null, true, "GOC", null, 3, true },
-                                         out bool giu);
-            Kiem("tham so 0 = layer KHUNG", ts.LayerKhung, "KHUNG");
-            Kiem("tham so 1 = dung vung", ts.UseVung, true);
-            Kiem("tham so 2 = layer VUNG", ts.LayerVung, "VUNG");
-            Kiem("tham so 3 nil = khong in PDF", ts.UseInPdf, false);
-            Kiem("tham so 5 = layer goc", ts.LayerXln, "GOC");
-            Kiem("tham so 6 nil = tat auto Dim", ts.AutoDim, false);
-            Kiem("tham so 7 = mau 3", ts.MauDim, 3);
-            Kiem("tham so 8 = tao khung", ts.UseTaoKhung, true);
-            Kiem("thieu tham so 9 -> khong giu layer goc", giu, false);
-            var ts2 = GroThamSo.DocThamSo(new object[] { null, null, null, null, null, null, null, 4.0, null, true }, out bool giu2);
-            Kiem("tham so 9 = T -> giu layer goc", giu2, true);
-            Kiem("mau la so thuc 4.0 -> 4", ts2.MauDim, 4);
-            Kiem("mau 0 (ByBlock) -> mac dinh 4",
-                 GroThamSo.DocThamSo(new object[] { null, null, null, null, null, null, null, 0 }, out _).MauDim, 4);
-            Kiem("mau 256 (ByLayer) -> mac dinh 4",
-                 GroThamSo.DocThamSo(new object[] { null, null, null, null, null, null, null, 256 }, out _).MauDim, 4);
-            Kiem("goi khong tham so -> khong no", GroThamSo.DocThamSo(null, out _).LayerKhung, null);
-            Kiem("chuoi rong '' -> null (lisp ghi registry rong)",
-                 GroThamSo.DocThamSo(new object[] { "" }, out _).LayerKhung, null);
-            Kiem("co dang chuoi '0' -> sai", GroThamSo.LaDung("0"), false);
-            Kiem("co dang chuoi '1' -> dung", GroThamSo.LaDung("1"), true);
-
-            Console.WriteLine();
-            Console.WriteLine("=== Ket qua tra ve lisp (nth 0..8 dlg) ===");
-            var kq = GroThamSo.KetQua(new GroSettings
-            {
-                UseVung = true, LayerVung = "VUNG", LayerKhung = "KHUNG", UseInPdf = false,
-                UseXln = true, LayerXln = "GOC", AutoDim = false, MauDim = 3, UseTaoKhung = true,
-            });
-            Kiem("dung 11 phan tu (muc 170 bo che do ma khac)", kq.Length, 11);
-            Kiem("(nth 9) = xep cum (mac dinh T)", kq[9], true);
-            Kiem("(nth 10) = dat ma khac (mac dinh T)", kq[10], true);
-            var ts122 = GroThamSo.DocThamSo(new object[] { "K", null, null, null, null, null, null, 4, true, null, null, true }, out _);
-            Kiem("tham so 10..11: xep cum nil -> tat", ts122.XepCum, false);
-            Kiem("tham so 10..11: dat mk T", ts122.DatMk, true);
-            var tsThua = GroThamSo.DocThamSo(new object[] { "K", null, null, null, null, null, null, 4, true, null, true, null, 1 }, out _);
-            Kiem("lisp cu con gui che do (tham so 12) -> bo qua, khong loi", tsThua.DatMk, false);
-            var tsCu = GroThamSo.DocThamSo(new object[] { "K", null, null, null, null, null, null, 4, true }, out _);
-            Kiem("lisp cu (thieu 10..11) -> mac dinh bat", tsCu.XepCum + "/" + tsCu.DatMk, "True/True");
-            Kiem("(nth 0) = use-vung", kq[0], true);
-            Kiem("(nth 1) = layer VUNG (khong phai khung!)", kq[1], "VUNG");
-            Kiem("(nth 2) = layer KHUNG", kq[2], "KHUNG");
-            Kiem("(nth 3) = in PDF", kq[3], false);
-            Kiem("(nth 5) = layer goc", kq[5], "GOC");
-            Kiem("(nth 7) = mau Dim", kq[7], 3);
-            Kiem("(nth 8) = tao khung", kq[8], true);
-            Kiem("layer rong -> nil", GroThamSo.KetQua(new GroSettings { LayerKhung = "" })[2], null);
-            Kiem("mau ngoai 1..255 -> 4", GroThamSo.KetQua(new GroSettings { MauDim = 300 })[7], 4);
-            var vong = GroThamSo.DocThamSo(new object[] { kq[2], kq[0], kq[1], kq[3], kq[4], kq[5], kq[6], kq[7], kq[8] }, out _);
-            Kiem("di mot vong ket qua -> tham so giu nguyen layer vung", vong.LayerVung, "VUNG");
-            Kiem("   ... va layer khung", vong.LayerKhung, "KHUNG");
-
-            Console.WriteLine();
             Console.WriteLine("=== Bang so lieu: dong F-name ===");
             Kiem("'N=26015-1-3' la dong N", BangSoLieu.PhanLoai("N=26015-1-3"), LoaiDongFname.N);
             Kiem("'t=6.0' (chu thuong) la dong T", BangSoLieu.PhanLoai("t=6.0"), LoaiDongFname.T);
@@ -1702,38 +1630,29 @@ namespace ZwCadPlugin.Tests
         private static void TestGuroTabLayer()
         {
             Console.WriteLine();
-            Console.WriteLine("=== Tab Guro: o chon layer (muc 192) ===");
-            var ds = new List<LayerMuc>
-            {
-                new LayerMuc("Khung_IN", "Khung_IN  (5 khung)", 5),
-                new LayerMuc("0", "0  (1 khung)", 1),
-            };
+            Console.WriteLine("=== Tab Guro: o chon layer theo ban ve (muc 194) ===");
+            var ds = LayerRanking.DanhSachKhung(new Dictionary<string, int> { { "NHIEU", 9 }, { "IT", 1 }, { "B", 3 }, { "A", 3 } },
+                                                new[] { "0", "A", "B", "IT", "NHIEU" }, out bool coLoc);
+            var khung = GuroTabLayer.KhungItTruoc(ds, coLoc);
+            Kiem("khung bao: layer IT khung dung dau, bang nhau theo ten",
+                 string.Join(",", khung.Select(m => m.Ten)), "IT,A,B,NHIEU");
+            Kiem("vung: layer NHIEU khung dung dau (giu thu tu LayerRanking)",
+                 string.Join(",", ds.Select(m => m.Ten)), "NHIEU,A,B,IT");
+            var tatCa = LayerRanking.DanhSachKhung(new Dictionary<string, int>(), new[] { "Z", "0" }, out bool coLoc2);
+            Kiem("khong co khung nao -> giu thu tu ten", string.Join(",", GuroTabLayer.KhungItTruoc(tatCa, coLoc2).Select(m => m.Ten)), "0,Z");
+            Kiem("chua chon -> muc dau", GuroTabLayer.Chon(khung, null).Ten, "IT");
+            Kiem("da chon va con -> giu", GuroTabLayer.Chon(khung, "B").Ten, "B");
+            Kiem("da chon ma layer da xoa -> muc dau", GuroTabLayer.Chon(khung, "MAT").Ten, "IT");
+            Kiem("danh sach rong -> null", GuroTabLayer.Chon(new List<LayerMuc>(), "A") == null, true);
 
-            var k1 = GuroTabLayer.ChoKhung(ds, null);
-            Kiem("chua luu -> chon layer dung dau", k1.Chon.Ten + "/" + k1.GroDung + "/" + (k1.CanhBao == null), "Khung_IN/Khung_IN/True");
-            var k2 = GuroTabLayer.ChoKhung(ds, "0");
-            Kiem("da luu va ban ve co -> giu layer do", k2.Chon.Ten + "/" + k2.GroDung + "/" + k2.Ds.Count, "0/0/2");
-            var k3 = GuroTabLayer.ChoKhung(ds, "KHUNG_CU");
-            Kiem("da luu ma ban ve khong co -> giu ten, them muc dau", k3.Chon.Ten + "/" + k3.Ds.Count + "/" + k3.Ds[0].Ten, "KHUNG_CU/3/KHUNG_CU");
-            Kiem("  GRO dung layer dung dau + co canh bao", k3.GroDung + "/" + (k3.CanhBao != null), "Khung_IN/True");
-            var k4 = GuroTabLayer.ChoKhung(new List<LayerMuc>(), null);
-            Kiem("ban ve trong, chua luu -> khong chon gi", k4.Chon == null && k4.GroDung == null, true);
-
-            var xds = new List<LayerMuc>
-            {
-                new LayerMuc("GOC", "GOC  (90 doi tuong)", 90),
-                new LayerMuc("PHU", "PHU  (3 doi tuong)", 3),
-            };
-            var x1 = GuroTabLayer.ChoXln(xds, true, "PHU");
-            Kiem("tu dong -> muc Tu dong, GRO dung layer nhieu nhat", x1.Chon.Ten + "|" + x1.GroDung + "|" + x1.Ds.Count, "|GOC|3");
-            Kiem("  nhan muc Tu dong ghi ten layer", x1.Ds[0].HienThi, "Tự động (GOC)");
-            var x2 = GuroTabLayer.ChoXln(xds, false, "PHU");
-            Kiem("chon tay layer it doi tuong -> van dung layer do (khac muc 75)", x2.Chon.Ten + "/" + x2.GroDung, "PHU/PHU");
-            var x3 = GuroTabLayer.ChoXln(xds, false, "MAT");
-            Kiem("chon tay ma ban ve khong co -> Tu dong + muc thieu + ds", x3.Ds[0].Ten + "|" + x3.Ds[1].Ten + "|" + x3.Ds.Count, "|MAT|4");
-            Kiem("  GRO dung layer dung dau + canh bao", x3.Chon.Ten + "/" + x3.GroDung + "/" + (x3.CanhBao != null), "MAT/GOC/True");
-            var x4 = GuroTabLayer.ChoXln(xds, false, null);
-            Kiem("tat tu dong ma chua luu layer -> coi nhu Tu dong", x4.Chon.Ten + "|" + x4.GroDung, "|GOC");
+            Console.WriteLine();
+            Console.WriteLine("=== Ten layer khung tam (muc 194) ===");
+            Kiem("rong -> Khung_IN", TenKhungTam.ChuanHoa("  "), "Khung_IN");
+            Kiem("null -> Khung_IN", TenKhungTam.ChuanHoa(null), "Khung_IN");
+            Kiem("bo khoang trang 2 dau", TenKhungTam.ChuanHoa(" KT "), "KT");
+            Kiem("ten hop le -> khong loi", TenKhungTam.Loi("KHUNG-TAM_1") == null, true);
+            Kiem("co dau * -> loi", TenKhungTam.Loi("A*B") != null, true);
+            Kiem("co dau , -> loi", TenKhungTam.Loi("A,B") != null, true);
         }
     }
 }

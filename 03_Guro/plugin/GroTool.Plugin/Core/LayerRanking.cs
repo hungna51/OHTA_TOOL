@@ -102,32 +102,5 @@ namespace ZwCadPlugin.Core
             return SapXep(dem).Select(kv => new LayerMuc(kv.Key, kv.Key + "  (" + kv.Value + " doi tuong)", kv.Value))
                               .ToList();
         }
-
-        /// <summary>Vị trí của layer đã lưu; không có thì 0 — giống lk / li của lisp.</summary>
-        public static int ViTri(IList<LayerMuc> ds, string ten)
-        {
-            if (ds == null || ten == null) return 0;
-            for (int i = 0; i < ds.Count; i++)
-                if (string.Equals(ds[i].Ten, ten, StringComparison.Ordinal)) return i;
-            return 0;
-        }
-
-        /// <summary>
-        /// Chọn mặc định cho "Layer gốc bản vẽ" — luật mục 75: GIỮ layer đã lưu chỉ khi
-        /// nó có số đối tượng &gt;= layer đứng đầu và &gt; 0; ngược lại chọn layer đứng đầu
-        /// (nhiều đối tượng nhất).
-        /// </summary>
-        public static int ViTriXln(IList<LayerMuc> ds, string tenDaLuu)
-        {
-            if (ds == null || ds.Count == 0) return 0;
-            int dau = ds[0].SoLuong;
-            int i = -1;
-            if (tenDaLuu != null)
-                for (int k = 0; k < ds.Count; k++)
-                    if (string.Equals(ds[k].Ten, tenDaLuu, StringComparison.Ordinal)) { i = k; break; }
-            if (i < 0) return 0;
-            int cua = ds[i].SoLuong;
-            return (cua >= dau && cua > 0) ? i : 0;
-        }
     }
 }

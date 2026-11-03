@@ -17,14 +17,6 @@
       "description": "Bango, mã khắc, F-name, CSV, in PDF."
     },
     {
-      "id": "grocd",
-      "name": "GROCD — GRO có hộp thoại",
-      "badge": "CD",
-      "command": "GROCD",
-      "lispFile": "lisp/autoload.lsp",
-      "description": "Chạy GRO, chọn thiết lập trong hộp thoại."
-    },
-    {
       "id": "gi",
       "locked": true,
       "name": "GI — In lại PDF",
