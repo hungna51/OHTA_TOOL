@@ -29,6 +29,9 @@ namespace ZwCadPlugin.Views
             BtnThemTu.Visibility = hien;
         }
 
+        /// <summary>IsCancel chỉ tự đóng khi mở bằng ShowDialog — CAD thì không (mục 197).</summary>
+        private void Huy_Click(object sender, RoutedEventArgs e) => Close();
+
         private void ThemTu_Click(object sender, RoutedEventArgs e) => PanelGhiChu.ThemTu();
 
         private void KhoiPhuc_Click(object sender, RoutedEventArgs e) => PanelGhiChu.KhoiPhuc();
@@ -41,7 +44,9 @@ namespace ZwCadPlugin.Views
                 GroRegistry.GhiCaiDat(_vm.KetQua());
                 await PanelGhiChu.LuuAsync();   // tab Ghi chú chưa mở thì bỏ qua
                 DaLuu = true;
-                DialogResult = true;
+                // Mở bằng Application.ShowModalWindow: AutoCAD không mở kiểu ShowDialog nên gán
+                // DialogResult sẽ ném lỗi (mục 197) -> đóng thẳng, kết quả đọc ở DaLuu.
+                Close();
             }
             catch (Exception ex)
             {

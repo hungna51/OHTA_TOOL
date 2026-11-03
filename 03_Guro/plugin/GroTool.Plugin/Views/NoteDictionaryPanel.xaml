@@ -84,9 +84,8 @@
                             Margin="4,0,0,0" Click="DayLenSheet_Click" ToolTip="Đẩy từ điển hiện tại lên Google Sheet"/>
                 </Grid>
                 <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                    <CheckBox x:Name="ChkAutoSync" Content="Tự tải khi mở" Margin="0,0,16,0" Foreground="#334E68"
-                              Checked="AutoSync_Changed" Unchecked="AutoSync_Changed"
-                              ToolTip="Tự tải từ điển mới nhất từ Google Sheet khi mở"/>
+                    <TextBlock x:Name="LblCapNhat" Margin="0,0,16,0" Foreground="#64748B" FontSize="11" VerticalAlignment="Center"
+                               ToolTip="Lần mở tab Guro đầu tiên trong ngày tự tải từ điển từ Google Sheet; bấm ⬇ Tải để tải ngay"/>
                     <CheckBox x:Name="ChkAutoUpload" Content="Tự đẩy khi lưu" Foreground="#334E68"
                               Checked="AutoUpload_Changed" Unchecked="AutoUpload_Changed"
                               ToolTip="Tự đẩy từ điển lên Google Sheet mỗi khi lưu"/>

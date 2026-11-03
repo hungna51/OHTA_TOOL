@@ -87,7 +87,7 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Style="{StaticResource DialogSecondaryBtnStyle}" Content="➕  Thêm từ" Margin="0,0,8,0"
                             Click="ThemTu_Click"/>
-                    <Button Style="{StaticResource DialogSecondaryBtnStyle}" Content="Đóng" IsCancel="True" Margin="0,0,8,0"/>
+                    <Button Style="{StaticResource DialogSecondaryBtnStyle}" Content="Đóng" IsCancel="True" Margin="0,0,8,0" Click="Huy_Click"/>
                     <Button Style="{StaticResource DialogPrimaryBtnStyle}" Content="💾  Lưu &amp; Đóng" IsDefault="True"
                             Click="Luu_Click"/>
                 </StackPanel>

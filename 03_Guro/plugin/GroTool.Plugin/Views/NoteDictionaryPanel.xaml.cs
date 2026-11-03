@@ -42,20 +42,22 @@ namespace ZwCadPlugin.Views
         /// <summary>Cửa sổ chứa panel — làm chủ cho MessageBox.</summary>
         private Window Chu => Window.GetWindow(this);
 
-        private async void Panel_Loaded(object sender, RoutedEventArgs e)
+        private void Panel_Loaded(object sender, RoutedEventArgs e)
         {
             // Nằm trong TabControl thì Loaded chạy mỗi lần chọn tab -> chỉ khởi tạo lần đầu
             if (_daMo) return;
             _daMo = true;
             TxtSheetUrl.Text = JapanNoteTranslator.GetSheetUrl();
-            ChkAutoSync.IsChecked = JapanNoteTranslator.GetAutoSync();
             ChkAutoUpload.IsChecked = JapanNoteTranslator.GetAutoUpload();
+            HienNgayCapNhat();
             TxtTim.Focus();
+            // Mục 197: không tự tải mỗi lần mở nữa — tab Guro tự tải 1 lần mỗi ngày (như Fname)
+        }
 
-            if (ChkAutoSync.IsChecked == true)
-            {
-                await ThucHienDongBoAsync(hienThongBao: false);
-            }
+        private void HienNgayCapNhat()
+        {
+            string ngay = JapanNoteTranslator.NgayCapNhat();
+            LblCapNhat.Text = "Tự cập nhật mỗi ngày · lần cuối: " + (string.IsNullOrEmpty(ngay) ? "chưa tải lần nào" : ngay);
         }
 
         private void LoadData()
@@ -169,6 +171,7 @@ namespace ZwCadPlugin.Views
                 if (kq.Success)
                 {
                     LoadData();
+                    HienNgayCapNhat();
                     LblStatus.Text = kq.Message;
                     if (hienThongBao)
                     {
@@ -197,14 +200,6 @@ namespace ZwCadPlugin.Views
             {
                 BtnSync.Content = oldText ?? "⬇ Tải từ Sheet";
                 BtnSync.IsEnabled = true;
-            }
-        }
-
-        private void AutoSync_Changed(object sender, RoutedEventArgs e)
-        {
-            if (ChkAutoSync != null)
-            {
-                JapanNoteTranslator.SetAutoSync(ChkAutoSync.IsChecked == true);
             }
         }
 
@@ -295,7 +290,6 @@ namespace ZwCadPlugin.Views
 
             // Lưu URL Google Sheet và các cờ cấu hình
             JapanNoteTranslator.SetSheetUrl(TxtSheetUrl.Text?.Trim());
-            JapanNoteTranslator.SetAutoSync(ChkAutoSync.IsChecked == true);
             JapanNoteTranslator.SetAutoUpload(ChkAutoUpload.IsChecked == true);
 
             // Lọc các dòng hợp lệ và lưu vào từ điển & Registry

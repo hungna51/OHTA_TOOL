@@ -64,6 +64,26 @@ namespace ZwCadPlugin.ViewModels
                 catch { }
             }
             LamMoi();
+
+            if (JapanNoteTranslator.NenTuCapNhat(DateTime.Today))
+                _ = TuCapNhatGhiChuAsync();
+        }
+
+        /// <summary>
+        /// Mục 197 (như Fname): lần mở tab đầu tiên trong ngày, tải từ điển ghi chú từ Google
+        /// Sheet ở luồng nền rồi báo ở thanh trạng thái.
+        /// </summary>
+        private async System.Threading.Tasks.Task TuCapNhatGhiChuAsync()
+        {
+            var kq = await System.Threading.Tasks.Task.Run(() => JapanNoteTranslator.SyncFromGoogleSheet()).ConfigureAwait(false);
+            try
+            {
+                _dispatcher.BeginInvoke(new Action(() =>
+                    TrangThai = kq.Success
+                        ? "Đã cập nhật từ điển ghi chú: " + kq.Count + " cụm từ (" + DateTime.Now.ToString("HH:mm dd/MM") + ")."
+                        : "Chưa cập nhật được từ điển ghi chú: " + kq.Message));
+            }
+            catch { }
         }
 
         public string TieuDe { get; }

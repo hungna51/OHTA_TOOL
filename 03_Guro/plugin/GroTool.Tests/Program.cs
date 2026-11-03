@@ -920,6 +920,12 @@ namespace ZwCadPlugin.Tests
             TestGuroTabLayer();
 
             Console.WriteLine();
+            Console.WriteLine("=== Tu cap nhat tu dien ghi chu moi ngay (muc 197) ===");
+            JapanNoteTranslator.GhiNgayCapNhat(new DateTime(2026, 11, 2));
+            Kiem("doc lai ngay cap nhat", JapanNoteTranslator.NgayCapNhat(), "2026-11-02");
+            Kiem("hom sau, lan dau trong phien -> tu cap nhat", JapanNoteTranslator.NenTuCapNhat(new DateTime(2026, 11, 3)), true);
+            Kiem("lan thu 2 trong phien -> khong (moi phien thu 1 lan)", JapanNoteTranslator.NenTuCapNhat(new DateTime(2026, 11, 3)), false);
+            Console.WriteLine();
             Console.WriteLine("=== Test khong dung tu dien that (muc 158) ===");
             Kiem("dang dung khoa registry rieng cho test", JapanNoteTranslator.RegSubKey, KhoaTest);
             try { Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(KhoaTest, false); } catch { }

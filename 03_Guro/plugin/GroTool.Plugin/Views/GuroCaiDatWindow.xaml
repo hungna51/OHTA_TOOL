@@ -201,7 +201,7 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button x:Name="BtnThemTu" Style="{StaticResource DialogSecondaryBtnStyle}" Content="➕  Thêm từ"
                             Margin="0,0,8,0" Click="ThemTu_Click" Visibility="Collapsed"/>
-                    <Button Style="{StaticResource DialogSecondaryBtnStyle}" Content="Hủy" IsCancel="True" Margin="0,0,8,0"/>
+                    <Button Style="{StaticResource DialogSecondaryBtnStyle}" Content="Hủy" IsCancel="True" Margin="0,0,8,0" Click="Huy_Click"/>
                     <Button Style="{StaticResource DialogPrimaryBtnStyle}" Content="OK" MinWidth="80" IsDefault="True"
                             Click="Ok_Click" IsEnabled="{Binding DuocLuu}"/>
                 </StackPanel>

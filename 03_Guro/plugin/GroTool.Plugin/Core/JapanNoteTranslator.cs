@@ -32,6 +32,10 @@ namespace ZwCadPlugin.Core
         public const string RegKeyScriptUrl = "__ScriptUrl";
         public const string RegKeyAutoSync = "__AutoSync";
         public const string RegKeyAutoUpload = "__AutoUpload";
+        /// <summary>Mục 197: ngày tải Google Sheet thành công gần nhất (yyyy-MM-dd).</summary>
+        public const string RegKeyLastSync = "__LastSync";
+
+        private static bool _daThuTuCapNhat;
 
         public const string DefaultGoogleScriptUrl = "https://script.google.com/macros/s/AKfycbxVfUlv-7QwxIrstU-PGCXNyp2qHxosniorVeLEBw-khSGKkQqLIE6E3BIVi7H0kp_UXg/exec";
         public const string DefaultGoogleSheetUrl = "https://script.google.com/macros/s/AKfycbxVfUlv-7QwxIrstU-PGCXNyp2qHxosniorVeLEBw-khSGKkQqLIE6E3BIVi7H0kp_UXg/exec";
@@ -475,6 +479,7 @@ function doPost(e) {
                 // Lưu vào từ điển và Registry
                 SaveItems(items);
                 SetSheetUrl(urlToUse);
+                GhiNgayCapNhat(DateTime.Today);
 
                 return (true, $"Đã đồng bộ thành công {items.Count} cụm từ từ Google Sheet!", items.Count);
             }
@@ -482,6 +487,38 @@ function doPost(e) {
             {
                 return (false, $"Lỗi khi tải từ Google Sheet: {ex.Message}", 0);
             }
+        }
+
+        /// <summary>Ngày tải Google Sheet thành công gần nhất (yyyy-MM-dd), rỗng nếu chưa từng tải.</summary>
+        public static string NgayCapNhat()
+        {
+            try
+            {
+                using (RegistryKey root = Registry.CurrentUser.OpenSubKey(RegSubKey))
+                    return root?.GetValue(RegKeyLastSync) as string ?? "";
+            }
+            catch { return ""; }
+        }
+
+        public static void GhiNgayCapNhat(DateTime ngay)
+        {
+            try
+            {
+                using (RegistryKey root = Registry.CurrentUser.CreateSubKey(RegSubKey))
+                    root?.SetValue(RegKeyLastSync, ngay.ToString("yyyy-MM-dd"));
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// Mục 197 (giống Fname): lần mở tab Guro đầu tiên trong ngày thì tự tải từ điển từ
+        /// Google Sheet. Mỗi phiên CAD chỉ thử 1 lần — lỗi mạng thì để hôm sau / bấm ⬇ Tải.
+        /// </summary>
+        public static bool NenTuCapNhat(DateTime homNay)
+        {
+            if (_daThuTuCapNhat) return false;
+            _daThuTuCapNhat = true;
+            return NgayCapNhat() != homNay.ToString("yyyy-MM-dd");
         }
 
         /// <summary>

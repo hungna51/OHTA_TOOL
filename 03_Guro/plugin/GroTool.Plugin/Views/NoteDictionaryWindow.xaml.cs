@@ -10,6 +10,9 @@ namespace ZwCadPlugin.Views
             InitializeComponent();
         }
 
+        /// <summary>IsCancel chỉ tự đóng khi mở bằng ShowDialog — CAD thì không (mục 197).</summary>
+        private void Huy_Click(object sender, RoutedEventArgs e) => Close();
+
         private void ThemTu_Click(object sender, RoutedEventArgs e) => Panel.ThemTu();
 
         private void KhoiPhuc_Click(object sender, RoutedEventArgs e) => Panel.KhoiPhuc();
@@ -17,7 +20,7 @@ namespace ZwCadPlugin.Views
         private async void Luu_Click(object sender, RoutedEventArgs e)
         {
             await Panel.LuuAsync();
-            DialogResult = true;
+            // Mở bằng Application.ShowModalWindow -> không gán DialogResult (mục 197)
             Close();
         }
     }

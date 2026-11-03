@@ -48,7 +48,8 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 | 194 | **Tab Guro gọn lại**: nút ⚙ (thay ↻) mở cửa sổ **Cài đặt GURO** (OK/Hủy): tự tạo khung tấm + **tên layer khung tấm** (`layer_khung_tam`, mặc định `Khung_IN`, dùng ở mọi chỗ lisp/C#), in PDF, xếp cụm, mã khắc, xử lý nét + tự nhận diện Dim (tắt = không xử lý Dim; bỏ chọn màu Dim thủ công). Mặt tab chỉ chọn **layer cho từng bản vẽ đang mở** (`gro_net_layer_ban_ve`; mặc định khung bao = layer **ít** khung nhất, vùng = **nhiều** khung nhất). Xoá hộp thoại cũ (.NET + DCL), `GROCD`, `GRODLGNET`, `GROPICKMAU`; không mở được tab thì `GRO` báo lỗi | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) |
 | 195 | Cửa sổ ⚙ Cài đặt GURO chia **2 tab: Chung + Ghi chú**; nội dung "Cài đặt ghi chú" tách thành `NoteDictionaryPanel` dùng chung với hộp thoại `NoteDictionaryWindow` (bảng DST). OK lưu cả hai; tab Ghi chú chưa mở thì không lưu phần ghi chú | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) |
 | 196 | Cài đặt GURO + Cài đặt ghi chú **theo kiểu bảng "Danh sách góc bẻ thử" của Fname**: dải tiêu đề `#323639`, thanh đáy xám (nút phụ trắng, nút chính xám đen), tab Chung có dòng gợi ý dưới mỗi tuỳ chọn; tab Ghi chú: ô Tìm, thanh Google Sheet thu gọn, bảng **chỉ xem**, bấm đúp để sửa/xóa (`NoteTuWindow`), ➕ Thêm từ + ⟲ Khôi phục ở thanh đáy | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) |
-| [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) | Hộp thoại DCL + **bản .NET** (dialog `gro`, bảng DST), **tab Guro** | 18, 19, 20, 52, 55, 56, 64, 86, 192, 193, 194, 195, 196 |
+| 197 | **Lỗi OK của Cài đặt GURO**: "DialogResult can be set only after Window is created and shown as dialog" — cửa sổ mở bằng `Application.ShowModalWindow` (AutoCAD không mở kiểu `ShowDialog`) → đóng bằng `Close()` + cờ `DaLuu`, nút Hủy/Đóng có `Click` riêng (`IsCancel` không tự đóng). **Tự cập nhật từ điển ghi chú mỗi ngày** như Fname: lần mở tab Guro đầu tiên trong ngày tải Google Sheet ở luồng nền (`JapanNoteTranslator.NenTuCapNhat`, khoá `__LastSync`); bỏ ô "Tự tải khi mở" | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) |
+| [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) | Hộp thoại DCL + **bản .NET** (dialog `gro`, bảng DST), **tab Guro** | 18, 19, 20, 52, 55, 56, 64, 86, 192, 193, 194, 195, 196, 197 |
 | [06-encoding-chuoi.md](06-encoding-chuoi.md) | Encoding và xử lý chuỗi (CP932 / Unicode) | 2, 9, 15, 16, 50, 57 |
 | [07-tach-du-lieu.md](07-tach-du-lieu.md) | Tách độ dày, số lượng, mã khắc, **ghép dòng số lượng** | 10, 11, 17, 23, 24, 32, 43, 54, 168 |
 | [08-sap-xep-va-vung.md](08-sap-xep-va-vung.md) | Sắp xếp, gom hàng, chế độ vùng polyline | 22, 25, 28, 49, 51, 53, 58, 61, 62, 63, 65, 182, 186 |
@@ -63,14 +64,14 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 
 ## Mục lục mục lỗi
 
-1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–196 tại đây.
+1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–197 tại đây.
 
 > ### ⚠ SỐ MỤC LÀ CỐ ĐỊNH, KHÔNG ĐƯỢC ĐÁNH SỐ LẠI
 > Mã nguồn `.lsp` tham chiếu tới chúng ở **17 chỗ** (`CLAUDE.md muc 13`, `muc 29`, `muc 85`, `muc 86`, …) và các file rule tham chiếu chéo nhau ở **59 chỗ**. Đổi số là hỏng cả 59 chỗ đó cùng lúc.
 >
 > Thêm mục mới thì **nối tiếp số lớn nhất hiện có + 1**, bỏ vào file theo chủ đề, rồi cập nhật bảng dưới.
 >
-> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **196**.
+> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **197**.
 
 > ### Lệnh chẩn đoán cũ
 > `grosort` / `grodbg` / `growp` / `grostyle` / `bgdbg` thuộc bản đầy đủ cũ `guro ZWCAD(BG MK FN).lsp`, không có trong `guro_gro.lsp`. Các mục bên dưới nhắc tới chúng là ghi chép lịch sử. Lịch sử thay đổi lisp nay nằm trong git của OHTA_TOOL.
