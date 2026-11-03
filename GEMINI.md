@@ -40,7 +40,10 @@ FN          : Lệnh tắt — mở bảng OHTA TOOL và chuyển thẳng sang t
 OHTARELOAD  : Quét lại thư mục OHTA_TOOL/ và cập nhật nóng toàn bộ danh sách Tab + nút công cụ
               ngay trong phiên làm việc CAD (không cần tắt mở lại CAD).
 OHTACLOSE   : Ẩn / Bật nhanh bảng Tool Palettes OHTA TOOL.
-OHTAINFO    : In thông tin chẩn đoán (nền tảng CAD, đường dẫn gốc OHTA_TOOL, danh sách Tab đã nạp).
+OHTAINFO    : In thông tin chẩn đoán (phiên bản, nền tảng CAD, đường dẫn gốc OHTA_TOOL, danh sách Tab đã nạp).
+OHTAUPDATE  : Kiểm tra ngay bản mới trên GitHub Releases, có thì hỏi cài (ADR 0004).
+              Không cần gõ: mỗi lần mở bản vẽ, OHTA_Loader.lsp (S::STARTUP) tự hỏi khi còn bản mới chưa cài.
+OHTAROLLBACK: Quay về bản trước lần tự cập nhật gần nhất (giữ 1 bản sao lưu ở %LOCALAPPDATA%\OHTA_TOOL\update\backup).
 ```
 
 ---
@@ -60,10 +63,13 @@ OHTAINFO    : In thông tin chẩn đoán (nền tảng CAD, đường dẫn g�
 
 ## 5. Quản Lý Phiên Bản (git) & Đóng Gói
 
-- Thư mục `OHTA_TOOL/` là 1 repo git (nhánh `main`). Mỗi bản gửi đội được gắn tag (`v1.0`, ...); xem lại bằng `git checkout v1.0`.
+- Thư mục `OHTA_TOOL/` là 1 repo git (nhánh `main`), remote `origin` = https://github.com/hungna51/OHTA_TOOL (public). Mỗi bản gửi đội được gắn tag (`v1.0`, `v1.1.0`, ...); xem lại bằng `git checkout v1.1.0`.
+- **Phát hành = tự cập nhật cho cả đội** ([ADR 0004](_docs/adr/0004-tu-dong-cap-nhat-tu-github.md)): sửa `VERSION`, thêm mục `## vX.Y.Z` vào đầu `CHANGELOG.md` (ghi chú hiện cho người dùng xưởng), commit lên `main`, rồi chạy `powershell -ExecutionPolicy Bypass -File OHTA_TOOL\release_ohta.ps1` (`-DryRun` để chỉ đóng gói thử). Script từ chối nếu không ở `main` sạch, tag đã có, thiếu SDK 1 trong 2 CAD hoặc test FAIL; xong thì tạo tag, push và tạo GitHub Release kèm zip. Cần GitHub CLI (`winget install GitHub.cli`, `gh auth login`).
+- Zip phát hành có `VERSION` + `_system/manifest.txt` (sha256 từng file). Trình cập nhật chỉ xoá file bản cũ có mà bản mới bỏ; giữ lisp / nút / tab máy tự thêm, gộp `module.json`. File chưa từng phát hành không bao giờ bị đụng.
 - `.gitignore` bỏ qua `bin/`, `obj/`, `*.pdb`, `OHTATOOL.old_*`, `_release/` (file zip), `graphify-out/`, `_graphify-out/` (đổi tên có `_` để bảng OHTA không hiện thành tab).
-- **Khoá ghi Google Sheet** để riêng trong `01_Fname/data/google_sheet.key` (`write_key=...`) — **không đưa lên git**, nhưng **phải có trong gói zip** gửi đội. Apps Script đọc khoá từ *Thuộc tính tập lệnh* `WRITE_KEY`, không ghi trong mã nguồn.
-- Đóng gói: `OHTA_Loader.lsp`, `README.md`, `_system/bin/*/OHTATOOL.dll`, `03_Guro/bin/*/GROTOOL.dll`, các thư mục mục con (bỏ `google_sheet_apps_script.gs`, `03_Guro/plugin/`) → `_release/OHTA_TOOL_vX.zip`.
+- **Khoá ghi Google Sheet** để riêng trong `01_Fname/data/google_sheet.key` (`write_key=...`) — **không đưa lên git và không có trong zip phát hành** (repo public). Gửi tay khoá một lần khi cài máy mới; tự cập nhật không đụng tới file này. Apps Script đọc khoá từ *Thuộc tính tập lệnh* `WRITE_KEY`, không ghi trong mã nguồn.
+- Đóng gói (`release_ohta.ps1` làm tự động): `OHTA_Loader.lsp`, `README.md`, `GEMINI.md`, `GLOSSARY.md`, `VERSION`, `CHANGELOG.md`, `_system/bin/*/OHTATOOL.dll`, `03_Guro/bin/*/GROTOOL.dll`, `_Template_Module/` và các thư mục mục con mà git theo dõi (bỏ `*.gs`, `<tab>/plugin/`, `google_sheet.key`) → `_release/OHTA_TOOL_vX.Y.Z.zip` (trong zip có thư mục `OHTA_TOOL/`).
+- Máy mới / máy còn v1.0: giải nén zip một lần, thêm `OHTA_Loader.lsp` vào Startup Suite (APPLOAD), chép `google_sheet.key`. Từ đó máy tự cập nhật.
 - AutoCAD hỏi SECURELOAD khi nạp lisp ngoài thư mục tin cậy: thêm thư mục `OHTA_TOOL` (kèm cây con `...`) vào **Trusted Locations** trên mỗi máy.
 
 ## 6. Checklist Bắt Buộc Trước Khi Lưu Mã Nguồn

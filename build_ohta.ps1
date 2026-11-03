@@ -1,3 +1,6 @@
+# -RequireBoth: bat buoc build du ca ZWCAD lan AutoCAD (release_ohta.ps1 dung, tranh phat hanh DLL cu)
+param([switch]$RequireBoth)
+
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
@@ -36,6 +39,10 @@ if ($AutoCadSdkDir) {
 
 if (-not $HasZwCad -and -not $AutoCadSdkDir) {
     throw "Khong tim thay SDK ZWCAD 2026 ($ZwCadSdkDir) hay AutoCAD 2025+ (C:\Program Files\Autodesk\AutoCAD 20xx) tren may nay!"
+}
+
+if ($RequireBoth -and (-not $HasZwCad -or -not $AutoCadSdkDir)) {
+    throw "Phat hanh can build du ca 2 ban: may nay thieu SDK $(if (-not $HasZwCad) { 'ZWCAD 2026' } else { 'AutoCAD 2025+' })!"
 }
 
 $Targets = @()
