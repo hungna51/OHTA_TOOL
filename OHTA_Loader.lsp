@@ -46,15 +46,47 @@
   )
 )
 
+;; Thu muc chua OHTA_Loader.lsp dang duoc nap: doc Startup Suite (APPLOAD) cua profile hien tai
+;; (ZWCAD va AutoCAD deu luu duong dan day du o ...\Profiles\<profile>\Dialogs\Appload\Startup),
+;; khong co thi tim theo Support File Search Path.
+(defun ohta--thu-muc-loader ( / key names n v found )
+  (setq key (vl-catch-all-apply 'vlax-product-key nil))
+  (if (and key (not (vl-catch-all-error-p key)))
+    (progn
+      (setq key   (strcat "HKEY_CURRENT_USER\\" key "\\Profiles\\" (getvar "CPROFILE") "\\Dialogs\\Appload\\Startup")
+            names (vl-catch-all-apply 'vl-registry-descendents (list key T))
+      )
+      (if (and names (not (vl-catch-all-error-p names)))
+        (foreach n names
+          (if (and (not found)
+                   (wcmatch (strcase n) "*STARTUP")
+                   (= (type (setq v (vl-registry-read key n))) 'STR)
+                   (wcmatch (strcase v) "*\\OHTA_LOADER.LSP")
+                   (findfile v)
+                   (ohta--thu-muc-hop-le-p (vl-filename-directory v))
+              )
+            (setq found (ohta--bo-gach-cuoi (vl-filename-directory v)))
+          )
+        )
+      )
+    )
+  )
+  (if (and (not found)
+           (setq v (findfile "OHTA_Loader.lsp"))
+           (ohta--thu-muc-hop-le-p (vl-filename-directory v))
+      )
+    (setq found (ohta--bo-gach-cuoi (vl-filename-directory v)))
+  )
+  found
+)
+
 (defun ohta--tim-root-dir ( / ff reg dwg candidates c found picked )
   (cond
     ((and *ohta-root-dir* (ohta--thu-muc-hop-le-p *ohta-root-dir*))
       (ohta--bo-gach-cuoi *ohta-root-dir*)
     )
-    ((and (setq ff (findfile "OHTA_Loader.lsp"))
-          (ohta--thu-muc-hop-le-p (vl-filename-directory ff))
-     )
-      (ohta--bo-gach-cuoi (vl-filename-directory ff))
+    ((setq ff (ohta--thu-muc-loader))
+      ff
     )
     ((and (setq reg (vl-registry-read *ohta-reg-key* "RootDir"))
           (ohta--thu-muc-hop-le-p reg)
@@ -151,6 +183,7 @@
             (if (vl-symbol-value 'ohta_net_open)
               (progn
                 (vl-bb-set 'ohta--net-da-nap T)
+                (vl-bb-set 'ohta--net-dll dll)
                 (princ (strcat "\n[OHTA] Da nap ban .NET: " dll))
                 T
               )
@@ -246,12 +279,15 @@
   (princ)
 )
 
-;; Ghi nho ngay duong dan OHTA_TOOL khi nap file neu tim thay qua Support Path
-(if (and (not *ohta-root-dir*) (findfile "OHTA_Loader.lsp"))
-  (progn
-    (setq *ohta-root-dir* (ohta--bo-gach-cuoi (vl-filename-directory (findfile "OHTA_Loader.lsp"))))
-    (vl-catch-all-apply 'vl-registry-write (list *ohta-reg-key* "RootDir" *ohta-root-dir*))
-  )
+;; Moi lan nap file: lay lai duong dan OHTA_TOOL theo vi tri lisp dang nap (ghi de gia tri cu
+;; trong bien va Registry), de doi cho OHTA_TOOL thi DLL cung nap theo cho moi.
+(if (setq *ohta-root-dir* (ohta--thu-muc-loader))
+  (vl-catch-all-apply 'vl-registry-write (list *ohta-reg-key* "RootDir" *ohta-root-dir*))
+)
+(if (and *ohta-root-dir* (vl-bb-ref 'ohta--net-dll) (ohta--duong-dan-dll *ohta-root-dir*)
+         (/= (strcase (vl-bb-ref 'ohta--net-dll)) (strcase (ohta--duong-dan-dll *ohta-root-dir*))))
+  (princ (strcat "\n[OHTA TOOL] DLL dang chay tu " (vl-bb-ref 'ohta--net-dll)
+                 "\n[OHTA TOOL] Khoi dong lai CAD de nap DLL tai thu muc moi: " *ohta-root-dir*))
 )
 
 (princ "\n[OHTA TOOL] Da nap OHTA_Loader.lsp. Go lenh OHTA de mo Tool Palettes (OHTARELOAD de lam moi Tab).\n")
