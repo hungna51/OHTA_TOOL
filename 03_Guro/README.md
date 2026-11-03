@@ -6,7 +6,7 @@ Bộ lệnh **GURO** (đánh số bango, gán mã khắc, tạo F-name, xuất C
 
 ```
 03_Guro/
-├── module.json                  Tab "Guro" + các nút GRO, GI, DST, XLN, XLNDS, GROKHUNG, GROTAM, FIXFD, NETRELOAD
+├── module.json                  Tab "Guro" + nút GRO, GI, DST
 ├── lisp/autoload.lsp            Lệnh mồi: OHTA_Loader.lsp nạp ở MỌI bản vẽ; lần đầu gõ GRO/XLN/DST... mới nạp guro_gro.lsp
 ├── lisp/guro_gro.lsp            Lisp GRO (bản DUY NHẤT còn sửa — trước là ZWLISP\GURO\Guro ZWCAD(gro).lsp)
 ├── plot/gro.ctb                 Bảng kiểu in; lisp tự chép vào thư mục plot style của CAD khi thiếu
