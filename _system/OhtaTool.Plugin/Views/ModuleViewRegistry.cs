@@ -46,13 +46,20 @@ namespace OhtaTool.Plugin.Views
             Register("guro", guroFactory);
             Register("03_Guro", guroFactory);
 
-            // Tab AI: giao diện nằm trong AITOOL.dll (ADR 0005, đang thử nghiệm)
+            // Tab PRINT (lệnh OI v2.0) — ADR 0005
+            Func<ModuleManifest, Action, FrameworkElement> printFactory = (manifest, reloadCallback) =>
+                new PrintTabControl(new PrintTabViewModel(manifest));
+
+            Register("print", printFactory);
+            Register("04_In", printFactory);
+
+            // Tab AI: giao diện nằm trong AITOOL.dll (ADR 0006, đang thử nghiệm)
             Func<ModuleManifest, Action, FrameworkElement> aiFactory = (manifest, reloadCallback) =>
                 DllTabLoader.TaoGiaoDien(manifest, "AITOOL", "AiTool.AiOhtaTab", "AI") ??
                 new ModuleTabControl(new ModuleTabViewModel(manifest, reloadCallback));
 
             Register("ai", aiFactory);
-            Register("04_AI", aiFactory);
+            Register("05_AI", aiFactory);
         }
 
         public static void Register(string moduleIdOrFolder, Func<ModuleManifest, Action, FrameworkElement> viewFactory)

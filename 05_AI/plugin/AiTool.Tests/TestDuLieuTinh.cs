@@ -27,7 +27,7 @@ namespace AiTool.Tests
             Kiem("Khoi vat lieu: hai lan goi giong het", DuLieuTinh.KhoiVatLieu(sheet, cho) == co, true);
 
             Kiem("ThuMucFname = <cha>\\01_Fname",
-                 DuLieuTinh.ThuMucFname(Path.Combine("C:\\x", "OHTA_TOOL", "04_AI")), Path.Combine("C:\\x", "OHTA_TOOL", "01_Fname"));
+                 DuLieuTinh.ThuMucFname(Path.Combine("C:\\x", "OHTA_TOOL", "05_AI")), Path.Combine("C:\\x", "OHTA_TOOL", "01_Fname"));
 
             string tam = Path.Combine(Path.GetTempPath(), "aitool_test_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(tam);

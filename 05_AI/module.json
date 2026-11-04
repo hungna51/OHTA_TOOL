@@ -1,7 +1,7 @@
 {
   "id": "ai",
   "enabled": true,
-  "order": 40,
+  "order": 50,
   "tabTitle": "AI",
   "title": "AI KIỂM TRA",
   "version": "0.1",

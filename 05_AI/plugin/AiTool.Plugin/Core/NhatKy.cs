@@ -8,7 +8,7 @@ using OhtaTool.Plugin.Core;
 namespace AiTool.Core
 {
     /// <summary>
-    /// Ghi mỗi lần kiểm ra 04_AI\log\yyyyMMdd_HHmmss.json (thư mục trong .gitignore) để so sánh khi
+    /// Ghi mỗi lần kiểm ra 05_AI\log\yyyyMMdd_HHmmss.json (thư mục trong .gitignore) để so sánh khi
     /// chỉnh lời dặn. Không ghi key: key chỉ nằm ở header HTTP, không có trong body.
     /// </summary>
     public static class NhatKy

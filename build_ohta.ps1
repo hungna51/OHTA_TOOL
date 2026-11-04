@@ -10,9 +10,9 @@ $TestProj   = Join-Path $OhtaRoot "_system\OhtaTool.Tests\OhtaTool.Tests.csproj"
 # 03_Guro: DLL rieng GROTOOL.dll cua lenh GRO (nguon cu laptrinhlisp\ZwCadPlugin)
 $GroProj     = Join-Path $OhtaRoot "03_Guro\plugin\GroTool.Plugin\GroTool.Plugin.csproj"
 $GroTestProj = Join-Path $OhtaRoot "03_Guro\plugin\GroTool.Tests\GroTool.Tests.csproj"
-# 04_AI: DLL rieng AITOOL.dll cua tab AI (ADR 0005) - chi build khi thu muc co tren may
-$AiProj     = Join-Path $OhtaRoot "04_AI\plugin\AiTool.Plugin\AiTool.Plugin.csproj"
-$AiTestProj = Join-Path $OhtaRoot "04_AI\plugin\AiTool.Tests\AiTool.Tests.csproj"
+# 05_AI: DLL rieng AITOOL.dll cua tab AI (ADR 0006) - chi build khi thu muc co tren may
+$AiProj     = Join-Path $OhtaRoot "05_AI\plugin\AiTool.Plugin\AiTool.Plugin.csproj"
+$AiTestProj = Join-Path $OhtaRoot "05_AI\plugin\AiTool.Tests\AiTool.Tests.csproj"
 $HasAi = Test-Path $AiProj
 
 # --- Tu do SDK CAD dang cai tren may (moi may co the cai phien ban khac nhau) ---
@@ -68,7 +68,7 @@ if ($LASTEXITCODE -ne 0) {
 if ($HasAi) {
     dotnet build $AiProj @BuildArgs
     if ($LASTEXITCODE -ne 0) {
-        throw "Bien dich AiTool.Plugin (04_AI) THAT BAI!"
+        throw "Bien dich AiTool.Plugin (05_AI) THAT BAI!"
     }
 }
 
@@ -77,15 +77,21 @@ function Publish-CadDll($srcDir, $destDir, $label, $name = "OHTATOOL") {
     if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
 
     # Don dep cac ban .old_* cu tu phien truoc neu CAD da dong
-    Get-ChildItem -Path $destDir -Filter "$name.old_*" -ErrorAction SilentlyContinue | ForEach-Object {
+    Get-ChildItem -Path $destDir -Filter "*.old_*" -ErrorAction SilentlyContinue | ForEach-Object {
         Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
     }
 
     $stamp = [DateTime]::Now.ToString("yyyyMMdd_HHmmss")
     $locked = $false
-    foreach ($ext in @("dll", "pdb")) {
-        $srcFile = Join-Path $srcDir "$name.$ext"
-        $dstFile = Join-Path $destDir "$name.$ext"
+    $copyList = @("$name.dll", "$name.pdb")
+    # OHTATOOL kem DLL phu thuoc (PdfSharp, Microsoft.Extensions.* ...) cho tab PRINT - ADR 0005
+    if ($name -eq "OHTATOOL") {
+        $copyList += Get-ChildItem -Path $srcDir -Filter "*.dll" -File |
+            Where-Object { $_.Name -ne "$name.dll" } | ForEach-Object { $_.Name }
+    }
+    foreach ($fileName in $copyList) {
+        $srcFile = Join-Path $srcDir $fileName
+        $dstFile = Join-Path $destDir $fileName
         if (-not (Test-Path $srcFile)) { continue }
 
         try {
@@ -93,7 +99,9 @@ function Publish-CadDll($srcDir, $destDir, $label, $name = "OHTATOOL") {
         } catch {
             # File dang bi AutoCAD / ZWCAD giu khoa -> doi ten sang .old tren NTFS roi chep ban moi vao!
             $locked = $true
-            $oldName = Join-Path $destDir "$name.old_${stamp}.$ext"
+            $base = [IO.Path]::GetFileNameWithoutExtension($fileName)
+            $ext = [IO.Path]::GetExtension($fileName)
+            $oldName = Join-Path $destDir "$base.old_${stamp}$ext"
             Move-Item -Path $dstFile -Destination $oldName -Force -ErrorAction Stop
             Copy-Item -Path $srcFile -Destination $dstFile -Force -ErrorAction Stop
         }
@@ -111,12 +119,12 @@ function Publish-CadDll($srcDir, $destDir, $label, $name = "OHTATOOL") {
 if ($HasZwCad) {
     Publish-CadDll (Join-Path $OhtaRoot "_system\OhtaTool.Plugin\bin\Release\net48") (Join-Path $OhtaRoot "_system\bin\ZwCAD") "ZWCAD"
     Publish-CadDll (Join-Path $OhtaRoot "03_Guro\plugin\GroTool.Plugin\bin\Release\net48") (Join-Path $OhtaRoot "03_Guro\bin\ZwCAD") "ZWCAD" "GROTOOL"
-    if ($HasAi) { Publish-CadDll (Join-Path $OhtaRoot "04_AI\plugin\AiTool.Plugin\bin\Release\net48") (Join-Path $OhtaRoot "04_AI\bin\ZwCAD") "ZWCAD" "AITOOL" }
+    if ($HasAi) { Publish-CadDll (Join-Path $OhtaRoot "05_AI\plugin\AiTool.Plugin\bin\Release\net48") (Join-Path $OhtaRoot "05_AI\bin\ZwCAD") "ZWCAD" "AITOOL" }
 }
 if ($AutoCadSdkDir) {
     Publish-CadDll (Join-Path $OhtaRoot "_system\OhtaTool.Plugin\bin\Release\$AutoCadTfm") (Join-Path $OhtaRoot "_system\bin\AutoCAD") "AutoCAD $AutoCadYear"
     Publish-CadDll (Join-Path $OhtaRoot "03_Guro\plugin\GroTool.Plugin\bin\Release\$AutoCadTfm") (Join-Path $OhtaRoot "03_Guro\bin\AutoCAD") "AutoCAD $AutoCadYear" "GROTOOL"
-    if ($HasAi) { Publish-CadDll (Join-Path $OhtaRoot "04_AI\plugin\AiTool.Plugin\bin\Release\$AutoCadTfm") (Join-Path $OhtaRoot "04_AI\bin\AutoCAD") "AutoCAD $AutoCadYear" "AITOOL" }
+    if ($HasAi) { Publish-CadDll (Join-Path $OhtaRoot "05_AI\plugin\AiTool.Plugin\bin\Release\$AutoCadTfm") (Join-Path $OhtaRoot "05_AI\bin\AutoCAD") "AutoCAD $AutoCadYear" "AITOOL" }
 }
 
 Write-Host "`n[2/3] Chay bo Unit Tests OhtaTool.Tests + GroTool.Tests..." -ForegroundColor Cyan
@@ -131,7 +139,7 @@ if ($LASTEXITCODE -ne 0) {
 if ($HasAi) {
     dotnet run --project $AiTestProj -c Release --nologo
     if ($LASTEXITCODE -ne 0) {
-        throw "Unit Tests AiTool.Tests (04_AI) THAT BAI!"
+        throw "Unit Tests AiTool.Tests (05_AI) THAT BAI!"
     }
 }
 

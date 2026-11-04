@@ -6,7 +6,7 @@
              FontSize="12"
              UseLayoutRounding="True"
              SnapsToDevicePixels="True">
-    <!-- Tab AI (ADR 0005): AI chi canh bao, khong sua ban ve -->
+    <!-- Tab AI (ADR 0006): AI chi canh bao, khong sua ban ve -->
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="HienKhi"/>
 

@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
-    AITOOL.dll - tab AI kiem tra ban ve (OHTA_TOOL/04_AI, ADR 0005).
+    AITOOL.dll - tab AI kiem tra ban ve (OHTA_TOOL/05_AI, ADR 0006).
     Bien dich kep giong _system/OhtaTool.Plugin: net48 = ZWCAD 2026 (define ZWCAD), net10.0-windows = AutoCAD 2027 (define AUTOCAD).
     Build bang OHTA_TOOL\build_ohta.ps1 (tu do SDK, chep DLL ra 03_Guro\bin\ZwCAD | bin\AutoCAD).
   -->
@@ -77,7 +77,7 @@
     <EmbeddedResource Include="Assets\loi_dan_mac_dinh.md" LogicalName="AiTool.Assets.loi_dan_mac_dinh.md" />
   </ItemGroup>
 
-  <!-- Dung lai ma Fname bang LINK NGUON (khong tham chieu OHTATOOL.dll, ADR 0005) -->
+  <!-- Dung lai ma Fname bang LINK NGUON (khong tham chieu OHTATOOL.dll, ADR 0006) -->
   <ItemGroup>
     <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\JsonLite.cs" Link="Shared\JsonLite.cs" />
     <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\FnameCore.cs" Link="Shared\FnameCore.cs" />
@@ -87,7 +87,7 @@
     <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\TraVThuCore.cs" Link="Shared\TraVThuCore.cs" />
   </ItemGroup>
 
-  <!-- Xuat DLL ra 04_AI/bin/ZwCAD va 04_AI/bin/AutoCAD (build_ohta.ps1 tat buoc nay va tu chep) -->
+  <!-- Xuat DLL ra 05_AI/bin/ZwCAD va 05_AI/bin/AutoCAD (build_ohta.ps1 tat buoc nay va tu chep) -->
   <Target Name="CopyOutputToAiBin" AfterTargets="Build" Condition="'$(SkipPostBuildCopy)' != 'true'">
     <PropertyGroup>
       <CadOutSubDir Condition="'$(TargetFramework)' == 'net48'">ZwCAD</CadOutSubDir>

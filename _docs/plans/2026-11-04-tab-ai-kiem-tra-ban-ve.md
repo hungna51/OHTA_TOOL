@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Thêm tab **AI** (mục con `04_AI`, DLL riêng `AITOOL.dll`) gửi dữ liệu trong từng khung lên Claude API và hiện danh sách cảnh báo F-name / số lượng / ghi chú, bấm vào thì zoom tới khung.
+**Goal:** Thêm tab **AI** (mục con `05_AI`, DLL riêng `AITOOL.dll`) gửi dữ liệu trong từng khung lên Claude API và hiện danh sách cảnh báo F-name / số lượng / ghi chú, bấm vào thì zoom tới khung.
 
 **Architecture:** `AITOOL.dll` build kép (net48 ZWCAD, net10 AutoCAD) giống `GROTOOL.dll`; OHTATOOL.dll nạp nó bằng phản chiếu qua một bộ nạp DLL-tab dùng chung (tổng quát hoá từ `GuroTabLoader`). Logic thuần (gom đối tượng theo khung, đổi toạ độ, đóng chữ, dựng request JSON, đọc response, chia lô, tính tiền) nằm trong `Core/` và có bộ test console chạy ngoài CAD. Phần CAD chỉ quét bản vẽ thành mô hình thuần và zoom; phần mạng là `HttpClient` gọi thẳng `POST /v1/messages`.
 
@@ -19,9 +19,9 @@
 - Khung = polyline kín đúng 4 đỉnh trên layer chọn trên tab (mặc định `Khung_IN`).
 - Lô ~10 khung (`KichThuocLo = 10`), tối đa 3 lô chạy song song.
 - Model mặc định `claude-sonnet-5-5`; ô chọn có thêm `claude-opus-5-5`, `claude-haiku-5-5`.
-- Key: `04_AI/data/ai.key`; lời dặn: `04_AI/data/loi_dan.md`; nhật ký: `04_AI/log/`. `ai.key` và `log/` vào `.gitignore`.
+- Key: `05_AI/data/ai.key`; lời dặn: `05_AI/data/loi_dan.md`; nhật ký: `05_AI/log/`. `ai.key` và `log/` vào `.gitignore`.
 - Registry riêng: `HKCU\Software\OFT_Lisp\OhtaTool\AI` (giá trị `layer_khung`, `model`).
-- `04_AI` không vào zip phát hành (`release_ohta.ps1`).
+- `05_AI` không vào zip phát hành (`release_ohta.ps1`).
 - Mọi truy cập CAD Database từ palette chạy qua lệnh CAD (`SendStringToExecute`) hoặc `using (doc.LockDocument())`.
 - `princ`/`WriteMessage` ra dòng lệnh dùng tiếng Việt **không dấu**; chữ trên giao diện WPF có dấu.
 - Hoàn tất mỗi task: `powershell -ExecutionPolicy Bypass -File build_ohta.ps1` xanh (OhtaTool.Tests, GroTool.Tests, AiTool.Tests).
@@ -39,7 +39,7 @@
 ## File Structure
 
 ```
-04_AI/
+05_AI/
 ├── module.json                         Tab "AI" (id "ai", order 40)
 ├── README.md                           Mô tả tab + hướng dẫn tạo API key (Task 10)
 ├── data/loi_dan.md                     Lời dặn đang dùng (tự sinh từ bản mặc định nếu thiếu; có trong git)
@@ -72,16 +72,16 @@
         └── Program.cs
 ```
 
-Sửa: `_system/OhtaTool.Plugin/Views/GuroTabLoader.cs` → `DllTabLoader.cs`, `_system/OhtaTool.Plugin/Views/ModuleViewRegistry.cs`, `build_ohta.ps1`, `release_ohta.ps1`, `.gitignore`, `GEMINI.md`; tạo `_docs/adr/0005-tab-ai-dll-rieng.md`.
+Sửa: `_system/OhtaTool.Plugin/Views/GuroTabLoader.cs` → `DllTabLoader.cs`, `_system/OhtaTool.Plugin/Views/ModuleViewRegistry.cs`, `build_ohta.ps1`, `release_ohta.ps1`, `.gitignore`, `GEMINI.md`; tạo `_docs/adr/0006-tab-ai-dll-rieng.md`.
 
 **Dùng lại mã Fname bằng link nguồn** (không tham chiếu OHTATOOL.dll): `AiTool.Plugin.csproj` và `AiTool.Tests.csproj` thêm `<Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\{JsonLite,FnameCore,FnameDataStore,FnameLocalAdditions}.cs" Link="Shared\..." />`. Nếu các file này cần thêm file `Core/` thuần khác để biên dịch thì link thêm file đó. Kiểu nằm trong namespace `OhtaTool.Plugin.Core` nhưng thuộc assembly AITOOL, nên không xung đột.
 
 ---
 
-### Task 1: Khung mục con 04_AI, dự án AITOOL, build và loại khỏi bản phát hành
+### Task 1: Khung mục con 05_AI, dự án AITOOL, build và loại khỏi bản phát hành
 
 **Files:**
-- Create: `04_AI/module.json`, `04_AI/plugin/AiTool.Plugin/AiTool.Plugin.csproj`, `04_AI/plugin/AiTool.Plugin/AiOhtaTab.cs`, `04_AI/plugin/AiTool.Tests/AiTool.Tests.csproj`, `04_AI/plugin/AiTool.Tests/Program.cs`, `_docs/adr/0005-tab-ai-dll-rieng.md`
+- Create: `05_AI/module.json`, `05_AI/plugin/AiTool.Plugin/AiTool.Plugin.csproj`, `05_AI/plugin/AiTool.Plugin/AiOhtaTab.cs`, `05_AI/plugin/AiTool.Tests/AiTool.Tests.csproj`, `05_AI/plugin/AiTool.Tests/Program.cs`, `_docs/adr/0006-tab-ai-dll-rieng.md`
 - Modify: `build_ohta.ps1`, `release_ohta.ps1:64-71`, `.gitignore`, `GEMINI.md` (bảng mục 4)
 
 **Interfaces:**
@@ -90,17 +90,17 @@ Sửa: `_system/OhtaTool.Plugin/Views/GuroTabLoader.cs` → `DllTabLoader.cs`, `
 - [ ] **Step 1:** Tạo `module.json`: `id` `"ai"`, `enabled` true, `order` 40, `tabTitle` `"AI"`, `title` `"AI KIỂM TRA"`, `version` `"0.1"`, `description` `"AI đọc dữ liệu trong khung, cảnh báo F-name / số lượng / ghi chú."`, `accentColor` `"#5B3FD1"`, `tools` `[]`.
 - [ ] **Step 2:** Tạo `AiTool.Plugin.csproj` bằng cách chép `03_Guro/plugin/GroTool.Plugin/GroTool.Plugin.csproj`, đổi `RootNamespace` → `AiTool`, `AssemblyName` → `AITOOL`, target copy → `CopyOutputToAiBin` (ra `..\..\bin\<sub>`). Bỏ `EmbeddedResource` settings_logo, thêm `<EmbeddedResource Include="Assets\loi_dan_mac_dinh.md" LogicalName="AiTool.Assets.loi_dan_mac_dinh.md" />` (để file rỗng ở task này). Thêm các dòng link nguồn Fname như ở mục File Structure. Với nhánh `net48`, thêm `<Reference Include="System.Net.Http" />`.
 - [ ] **Step 3:** Tạo `AiTool.Tests.csproj` theo mẫu `GroTool.Tests.csproj`: `net10.0`, `DefineConstants` không cần ZWCAD, `<Compile Include="..\AiTool.Plugin\Core\*.cs" Link="Core\%(Filename)%(Extension)" />` cộng 4 file Fname đã link. `Program.cs` có một ca `Kiem("khung test chay", 1, 1)`.
-- [ ] **Step 4:** Sửa `build_ohta.ps1`: thêm `$AiProj` và `$AiTestProj`, **chỉ build khi `Test-Path`**. Build ngay sau GroTool. Thêm `Publish-CadDll ... "04_AI\bin\<ZwCAD|AutoCAD>" ... "AITOOL"`, rồi chạy `dotnet run --project $AiTestProj` trong bước [2/3].
-- [ ] **Step 5:** Sửa `release_ohta.ps1`: trong bộ lọc `$Files`, thêm `if ($top -eq '04_AI') { return $false }` trước dòng `return -not (...)`. Thêm vào `.gitignore` hai dòng `04_AI/data/ai.key` và `04_AI/log/`.
-- [ ] **Step 6:** Viết `_docs/adr/0005-tab-ai-dll-rieng.md` theo giọng ADR 0003. Các điểm cần ghi:
+- [ ] **Step 4:** Sửa `build_ohta.ps1`: thêm `$AiProj` và `$AiTestProj`, **chỉ build khi `Test-Path`**. Build ngay sau GroTool. Thêm `Publish-CadDll ... "05_AI\bin\<ZwCAD|AutoCAD>" ... "AITOOL"`, rồi chạy `dotnet run --project $AiTestProj` trong bước [2/3].
+- [ ] **Step 5:** Sửa `release_ohta.ps1`: trong bộ lọc `$Files`, thêm `if ($top -eq '05_AI') { return $false }` trước dòng `return -not (...)`. Thêm vào `.gitignore` hai dòng `05_AI/data/ai.key` và `05_AI/log/`.
+- [ ] **Step 6:** Viết `_docs/adr/0006-tab-ai-dll-rieng.md` theo giọng ADR 0003. Các điểm cần ghi:
   - AITOOL là DLL riêng, nạp bằng phản chiếu, cùng hợp đồng 4 chuỗi.
   - Gọi API bằng `HttpClient` thẳng thay vì SDK `Anthropic`. Lý do: plugin CAD là một DLL đơn, chạy net48, `CopyLocalLockFileAssemblies=false`, kéo thêm gói NuGet vào AppDomain của CAD dễ xung đột phiên bản; OHTA đã có tiền lệ `GitHubReleaseClient`.
   - Mã Fname dùng lại bằng link nguồn.
   - Tab không có trong bản phát hành cho tới khi gỡ dòng loại trong `release_ohta.ps1`.
 - [ ] **Step 7:** Thêm 1 dòng `04` vào bảng mục 4 của `GEMINI.md` (Tab **AI**, trạng thái "Thử nghiệm — chỉ máy phát triển").
 - [ ] **Step 8:** Run `powershell -ExecutionPolicy Bypass -File build_ohta.ps1` — Expected: `[OK] Da xuat DLL ... AITOOL`, dòng `OK   khung test chay`, kết thúc `=== HOAN TAT`.
-- [ ] **Step 9:** Run `powershell -ExecutionPolicy Bypass -File release_ohta.ps1 -DryRun` rồi liệt kê zip: không có đường dẫn nào chứa `04_AI/`.
-- [ ] **Step 10:** Commit `"Tab AI: khung muc con 04_AI + AITOOL.dll (ADR 0005)"`.
+- [ ] **Step 9:** Run `powershell -ExecutionPolicy Bypass -File release_ohta.ps1 -DryRun` rồi liệt kê zip: không có đường dẫn nào chứa `05_AI/`.
+- [ ] **Step 10:** Commit `"Tab AI: khung muc con 05_AI + AITOOL.dll (ADR 0006)"`.
 
 ### Task 2: OHTATOOL nạp tab AI qua bộ nạp DLL-tab dùng chung
 
@@ -113,7 +113,7 @@ Sửa: `_system/OhtaTool.Plugin/Views/GuroTabLoader.cs` → `DllTabLoader.cs`, `
 - Produces: `internal static FrameworkElement DllTabLoader.TaoGiaoDien(ModuleManifest manifest, string tenDll, string tenLop, string tenTab)`. Hàm trả `null` khi không nạp được, giữ nguyên hành vi của GuroTabLoader: tìm assembly đã nạp theo tên, nếu chưa có thì `CadExtensionLoader.Load`, bọc kết quả trong `CuonHo`.
 
 - [ ] **Step 1:** Đổi `GuroTabLoader` thành `DllTabLoader` có tham số. Các thông báo `WriteMessage` thay "tab Guro" bằng `"tab " + tenTab`, còn "GROTOOL.dll" thay bằng `tenDll + ".dll"`.
-- [ ] **Step 2:** Trong `ModuleViewRegistry`, factory Guro gọi `DllTabLoader.TaoGiaoDien(manifest, "GROTOOL", "ZwCadPlugin.GuroOhtaTab", "Guro")`. Thêm factory AI gọi `DllTabLoader.TaoGiaoDien(manifest, "AITOOL", "AiTool.AiOhtaTab", "AI")`, nếu nạp không được thì dùng `ModuleTabControl`. Đăng ký với cả hai khoá `"ai"` và `"04_AI"`.
+- [ ] **Step 2:** Trong `ModuleViewRegistry`, factory Guro gọi `DllTabLoader.TaoGiaoDien(manifest, "GROTOOL", "ZwCadPlugin.GuroOhtaTab", "Guro")`. Thêm factory AI gọi `DllTabLoader.TaoGiaoDien(manifest, "AITOOL", "AiTool.AiOhtaTab", "AI")`, nếu nạp không được thì dùng `ModuleTabControl`. Đăng ký với cả hai khoá `"ai"` và `"05_AI"`.
 - [ ] **Step 3:** Chạy `build_ohta.ps1`. Kết quả mong đợi: xanh.
 - [ ] **Step 4:** Kiểm thử tay trong ZWCAD: `OHTARELOAD`, tab Guro vẫn hiện giao diện cũ, tab AI hiện "Tab AI đang dựng".
 - [ ] **Step 5:** Commit `"OHTA: DllTabLoader dung chung cho tab Guro va tab AI"`.
@@ -121,8 +121,8 @@ Sửa: `_system/OhtaTool.Plugin/Views/GuroTabLoader.cs` → `DllTabLoader.cs`, `
 ### Task 3: Mô hình dữ liệu khung, hình học và gom khung
 
 **Files:**
-- Create: `04_AI/plugin/AiTool.Plugin/Core/KhungModel.cs`, `Core/HinhHoc.cs`, `Core/GomKhung.cs`
-- Test: `04_AI/plugin/AiTool.Tests/Program.cs`
+- Create: `05_AI/plugin/AiTool.Plugin/Core/KhungModel.cs`, `Core/HinhHoc.cs`, `Core/GomKhung.cs`
+- Test: `05_AI/plugin/AiTool.Tests/Program.cs`
 
 **Interfaces:**
 - Produces (namespace `AiTool.Core`, mọi toạ độ là `double`):
@@ -140,7 +140,7 @@ Sửa: `_system/OhtaTool.Plugin/Views/GuroTabLoader.cs` → `DllTabLoader.cs`, `
   - `Gom_NgoaiKhung_BoQua`
   - `Gom_KhungChongNhau_DoiTuongVaoCaHai`
   - `Gom_ThuTuKhung_TrenXuongTraiSang`
-- [ ] **Step 2:** Run `dotnet run --project 04_AI/plugin/AiTool.Tests`. Kết quả mong đợi: lỗi biên dịch hoặc FAIL.
+- [ ] **Step 2:** Run `dotnet run --project 05_AI/plugin/AiTool.Tests`. Kết quả mong đợi: lỗi biên dịch hoặc FAIL.
 - [ ] **Step 3:** Viết `KhungModel.cs`, `HinhHoc.cs`, `GomKhung.cs` theo Interfaces.
 - [ ] **Step 4:** Chạy lại lệnh ở Step 2. Kết quả mong đợi: toàn bộ OK.
 - [ ] **Step 5:** Commit `"Tab AI: mo hinh khung, bulge, gom khung"`.
@@ -148,8 +148,8 @@ Sửa: `_system/OhtaTool.Plugin/Views/GuroTabLoader.cs` → `DllTabLoader.cs`, `
 ### Task 4: Đóng dữ liệu khung thành chữ
 
 **Files:**
-- Create: `04_AI/plugin/AiTool.Plugin/Core/DongChu.cs`
-- Test: `04_AI/plugin/AiTool.Tests/Program.cs`
+- Create: `05_AI/plugin/AiTool.Plugin/Core/DongChu.cs`
+- Test: `05_AI/plugin/AiTool.Tests/Program.cs`
 
 **Interfaces:**
 - Consumes: `KhungDuLieu`, `DoiTuong`, `HinhHoc.Tron` (Task 3); `FnameParser.SplitAndCleanMText`, `FnameParser.Parse` (link nguồn).
@@ -188,8 +188,8 @@ Text/MText trên layer `2-F-NAME` chỉ vào dòng `FNAME`, không lặp lại t
 ### Task 5: Dữ liệu cố định — bảng vật liệu, lời dặn, key
 
 **Files:**
-- Create: `04_AI/plugin/AiTool.Plugin/Core/DuLieuTinh.cs`
-- Test: `04_AI/plugin/AiTool.Tests/Program.cs` (dùng thư mục tạm `Path.GetTempPath()/aitool_test_<guid>`, xoá khi xong)
+- Create: `05_AI/plugin/AiTool.Plugin/Core/DuLieuTinh.cs`
+- Test: `05_AI/plugin/AiTool.Tests/Program.cs` (dùng thư mục tạm `Path.GetTempPath()/aitool_test_<guid>`, xoá khi xong)
 
 **Interfaces:**
 - Consumes: `FnameDataStore.ReadLines`, `FnameDataStore.DefaultCacheDirectory`, `FnameLocalAdditions.Load` (link nguồn).
@@ -214,8 +214,8 @@ Text/MText trên layer `2-F-NAME` chỉ vào dòng `FNAME`, không lặp lại t
 ### Task 6: Dựng request, đọc response, tính tiền
 
 **Files:**
-- Create: `04_AI/plugin/AiTool.Plugin/Core/YeuCauApi.cs`, `Core/PhanHoiApi.cs`, `Core/BangGia.cs`
-- Test: `04_AI/plugin/AiTool.Tests/Program.cs`
+- Create: `05_AI/plugin/AiTool.Plugin/Core/YeuCauApi.cs`, `Core/PhanHoiApi.cs`, `Core/BangGia.cs`
+- Test: `05_AI/plugin/AiTool.Tests/Program.cs`
 
 **Interfaces:**
 - Consumes: `JsonLite.Parse`/`Serialize`, `JsonObject` (link nguồn).
@@ -263,8 +263,8 @@ Text/MText trên layer `2-F-NAME` chỉ vào dòng `FNAME`, không lặp lại t
 ### Task 7: Chạy kiểm tra theo lô, client HTTP, nhật ký
 
 **Files:**
-- Create: `04_AI/plugin/AiTool.Plugin/Core/KiemTraRunner.cs`, `Services/ClaudeHttp.cs`, `Services/NhatKy.cs`
-- Test: `04_AI/plugin/AiTool.Tests/Program.cs` (dùng `IGuiYeuCau` giả)
+- Create: `05_AI/plugin/AiTool.Plugin/Core/KiemTraRunner.cs`, `Services/ClaudeHttp.cs`, `Services/NhatKy.cs`
+- Test: `05_AI/plugin/AiTool.Tests/Program.cs` (dùng `IGuiYeuCau` giả)
 
 **Interfaces:**
 - Consumes: Task 4–6.
@@ -278,7 +278,7 @@ Text/MText trên layer `2-F-NAME` chỉ vào dòng `FNAME`, không lặp lại t
     - Trên net48 đặt `ServicePointManager.SecurityProtocol |= Tls12`.
   - `static string NhatKy.Ghi(string thuMucModule, string model, KetQuaKiemTra kq)`: ghi `log/yyyyMMdd_HHmmss.json` với các trường thời điểm, model, tổng token, tiền, các cặp body/phản hồi. **Không** ghi key. Hàm trả đường dẫn file.
   - Runner kiểm tra key **trước khi** tạo `ClaudeHttp`, qua hàm `static string KiemTraRunner.LoiTruocKhiChay(string key, int soKhung)`:
-    - key `null` hoặc rỗng: `"Chua co API key: tao file 04_AI\\data\\ai.key (xem README)"`
+    - key `null` hoặc rỗng: `"Chua co API key: tao file 05_AI\\data\\ai.key (xem README)"`
     - `soKhung == 0`: `"Khong thay khung tren layer da chon"`
     - hợp lệ: `null`
 
@@ -295,7 +295,7 @@ Text/MText trên layer `2-F-NAME` chỉ vào dòng `FNAME`, không lặp lại t
 ### Task 8: Quét bản vẽ và zoom
 
 **Files:**
-- Create: `04_AI/plugin/AiTool.Plugin/CadServices/QuetKhung.cs`, `CadServices/ZoomKhung.cs`
+- Create: `05_AI/plugin/AiTool.Plugin/CadServices/QuetKhung.cs`, `CadServices/ZoomKhung.cs`
 
 **Interfaces:**
 - Consumes: `DoiTuong`, `GomKhung.Gom`, `HinhHoc.TuBulge` (Task 3).
@@ -324,8 +324,8 @@ Text/MText trên layer `2-F-NAME` chỉ vào dòng `FNAME`, không lặp lại t
 ### Task 9: Giao diện tab AI và lệnh CAD
 
 **Files:**
-- Create: `04_AI/plugin/AiTool.Plugin/ViewModels/AiTabViewModel.cs`, `Views/AiTabControl.xaml`, `Views/AiTabControl.xaml.cs`, `04_AI/plugin/AiTool.Plugin/AiCommands.cs`
-- Modify: `04_AI/plugin/AiTool.Plugin/AiOhtaTab.cs` (trả `new AiTabControl(new AiTabViewModel(...))`)
+- Create: `05_AI/plugin/AiTool.Plugin/ViewModels/AiTabViewModel.cs`, `Views/AiTabControl.xaml`, `Views/AiTabControl.xaml.cs`, `05_AI/plugin/AiTool.Plugin/AiCommands.cs`
+- Modify: `05_AI/plugin/AiTool.Plugin/AiOhtaTab.cs` (trả `new AiTabControl(new AiTabViewModel(...))`)
 
 **Interfaces:**
 - Consumes: Task 5–8.
@@ -356,8 +356,8 @@ Lệnh trong `AiCommands.cs` (`[CommandMethod]`, không dùng `CommandFlags.Sess
 ### Task 10: Lời dặn mặc định, README hướng dẫn key, chạy thử thật
 
 **Files:**
-- Modify: `04_AI/plugin/AiTool.Plugin/Assets/loi_dan_mac_dinh.md`
-- Create: `04_AI/README.md`, `04_AI/data/loi_dan.md` (chép từ bản mặc định)
+- Modify: `05_AI/plugin/AiTool.Plugin/Assets/loi_dan_mac_dinh.md`
+- Create: `05_AI/README.md`, `05_AI/data/loi_dan.md` (chép từ bản mặc định)
 
 - [ ] **Step 1:** Viết lời dặn mặc định bằng tiếng Việt, gồm các phần:
   - **Vai trò**: kiểm tra viên bản vẽ kim loại tấm, chỉ cảnh báo, không sửa.
@@ -369,11 +369,11 @@ Lệnh trong `AiCommands.cs` (`[CommandMethod]`, không dùng `CommandFlags.Sess
   - **Ba nhóm cần kiểm**: MTZ, Q với số lượng trong ghi chú, GHI_CHU (yêu cầu tiếng Nhật mà F-name không phản ánh). Kèm bảng nghĩa các từ hay gặp: 逆 (đối xứng / mirror), タップ (taro ren), 曲げ (bẻ), 板厚 (độ dày), 数量 / 個 / 枚 (số lượng), 材質 (vật liệu), 本図 / 逆図.
   - **Mức độ**: `do` khi chắc chắn mâu thuẫn với dữ liệu hoặc bảng vật liệu; `vang` khi nghi ngờ hoặc khi vật liệu chỉ có trong mục CHƯA DUYỆT.
   - **Khung ổn thì không báo**. `ly_do` và `goi_y` viết bằng tiếng Việt, ngắn gọn.
-- [ ] **Step 2:** Viết `04_AI/README.md`: tab làm gì, cấu trúc thư mục, lệnh `OHTAAI` / `OHTAAIVUNG` / `OHTAAIZOOM`, nơi đặt key, lời dặn và nhật ký, cùng ghi chú "chưa có trong bản phát hành (ADR 0005)". Mục **Tạo API key Anthropic** gồm các bước:
+- [ ] **Step 2:** Viết `05_AI/README.md`: tab làm gì, cấu trúc thư mục, lệnh `OHTAAI` / `OHTAAIVUNG` / `OHTAAIZOOM`, nơi đặt key, lời dặn và nhật ký, cùng ghi chú "chưa có trong bản phát hành (ADR 0006)". Mục **Tạo API key Anthropic** gồm các bước:
   1. Đăng ký hoặc đăng nhập console.anthropic.com.
   2. Vào Billing, nạp tiền (credit trả trước).
   3. Vào API Keys, Create Key, đặt tên `OHTA-AI`.
-  4. Chép key vào `04_AI\data\ai.key`, một dòng duy nhất.
+  4. Chép key vào `05_AI\data\ai.key`, một dòng duy nhất.
   5. Không gửi key qua chat, không đưa lên git.
   6. Đặt giới hạn chi tiêu tháng ở Limits.
 - [ ] **Step 3:** Chạy thử thật trong ZWCAD **và** AutoCAD trên một bản vẽ có ít nhất 12 khung (để có 2 lô), trong đó cố ý sai một `Z=`. Kết quả mong đợi:
@@ -381,6 +381,6 @@ Lệnh trong `AiCommands.cs` (`[CommandMethod]`, không dùng `CommandFlags.Sess
   - lô thứ hai có `cache_read_input_tokens > 0` trong file log;
   - bấm vào cảnh báo thì zoom đúng khung;
   - file log không chứa key.
-  Nếu API trả 400 vì kết hợp `fallbacks` với `output_config.format`, bỏ `fallbacks` cùng header beta, rồi ghi lý do vào ADR 0005.
+  Nếu API trả 400 vì kết hợp `fallbacks` với `output_config.format`, bỏ `fallbacks` cùng header beta, rồi ghi lý do vào ADR 0006.
 - [ ] **Step 4:** Chạy `build_ohta.ps1`. Kết quả mong đợi: xanh.
 - [ ] **Step 5:** Commit `"Tab AI: loi dan mac dinh, README huong dan API key"`.

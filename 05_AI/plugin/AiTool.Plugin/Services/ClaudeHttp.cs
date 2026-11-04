@@ -9,7 +9,7 @@ using AiTool.Core;
 namespace AiTool.Services
 {
     /// <summary>
-    /// Gọi thẳng POST /v1/messages của Claude API bằng HttpClient (ADR 0005: không kéo gói NuGet vào CAD).
+    /// Gọi thẳng POST /v1/messages của Claude API bằng HttpClient (ADR 0006: không kéo gói NuGet vào CAD).
     /// 429 / 5xx / 529 thử lại tối đa 2 lần (theo retry-after nếu có, không thì 2 s rồi 4 s).
     /// Trả body response kể cả khi là JSON lỗi để PhanHoiApi đọc message.
     /// </summary>

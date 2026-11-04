@@ -2,7 +2,7 @@
   <!--
     Test cho phan LOGIC THUAN cua AiTool.Plugin (thu muc Core/), chay KHONG can CAD.
     Bien dich THANG cac file Core/*.cs (+ ma Fname link nguon) chu khong tham chieu AITOOL.dll.
-    Chay tu thu muc OHTA_TOOL: dotnet run (tham so project) 04_AI/plugin/AiTool.Tests
+    Chay tu thu muc OHTA_TOOL: dotnet run (tham so project) 05_AI/plugin/AiTool.Tests
     (build_ohta.ps1 tu chay).
   -->
   <PropertyGroup>

@@ -5,7 +5,7 @@ using AiTool.Views;
 namespace AiTool
 {
     /// <summary>
-    /// Cửa vào của tab AI trên bảng OHTA (ADR 0005). OHTATOOL.dll KHÔNG tham chiếu AITOOL.dll:
+    /// Cửa vào của tab AI trên bảng OHTA (ADR 0006). OHTATOOL.dll KHÔNG tham chiếu AITOOL.dll:
     /// nó nạp DLL này rồi gọi TaoGiaoDien bằng phản chiếu (DllTabLoader), nên chữ ký
     /// (tên lớp, tên hàm, 4 tham số chuỗi) là hợp đồng giữa hai DLL.
     /// </summary>

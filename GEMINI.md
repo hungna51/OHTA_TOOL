@@ -37,6 +37,7 @@ OHTA        : Mở bảng Tool Palettes "OHTA TOOL" (tự nhận diện ZWCAD / 
               Mỗi thư mục con hợp lệ trong OHTA_TOOL/ hiển thị thành 1 Tab sườn dọc trên PaletteSet.
 FN          : Lệnh tắt — mở bảng OHTA TOOL và chuyển thẳng sang tab Fname.
               (Thay lệnh FN cũ của lisp GURO: khi OHTATOOL.dll đã nạp, CAD ưu tiên lệnh .NET.)
+OI          : Lệnh tắt — mở bảng OHTA TOOL và chuyển sang tab Print (in PDF, thay lệnh OI lisp cũ).
 OHTARELOAD  : Quét lại thư mục OHTA_TOOL/ và cập nhật nóng toàn bộ danh sách Tab + nút công cụ
               ngay trong phiên làm việc CAD (không cần tắt mở lại CAD).
 OHTACLOSE   : Ẩn / Bật nhanh bảng Tool Palettes OHTA TOOL.
@@ -59,7 +60,8 @@ OHTAROLLBACK: Quay về bản trước lần tự cập nhật gần nhất (gi�
 | 01 | [`01_Fname/`](01_Fname/README.md) | Tab **Fname**: tạo, hút, sửa F-NAME (`N=, M=, T=, Q=, Z=`) & các lệnh Fname tấm | [`01_Fname/rules/`](01_Fname/rules/) | Đã tích hợp UI chọn Fname |
 | 02 | [`More/`](More/README.md) | Nhóm chức năng mẫu 02 | [`More/rules/`](More/rules/) | Khung sẵn sàng mở rộng |
 | 03 | [`03_Guro/`](03_Guro/README.md) | Tab **Guro**: lệnh `GRO` (bango + mã khắc + F-name + CSV + PDF + chuyển layer), `DST`, `XLN`, `GI`… — DLL riêng `GROTOOL.dll`, chạy ZWCAD 2026 + AutoCAD 2027 | [`03_Guro/rules/`](03_Guro/rules/) | Đã tích hợp (chuyển từ ZWLISP\GURO) |
-| 04 | [`04_AI/`](04_AI/README.md) | Tab **AI**: AI (Claude API) đọc dữ liệu trong từng khung, cảnh báo F-name / số lượng / ghi chú — DLL riêng `AITOOL.dll` ([ADR 0005](_docs/adr/0005-tab-ai-dll-rieng.md)) | — | Thử nghiệm — chỉ máy phát triển, chưa phát hành |
+| 04 | [`04_In/`](04_In/README.md) | Tab **Print**: lệnh `OI` v2.0 — in khung `Khung_IN` / vùng quét / extents ra PDF (PlotEngine + PdfSharp), cấu hình in đặt tên, ưu tiên thông số bản vẽ. Giao diện trong `OHTATOOL.dll` ([ADR 0005](_docs/adr/0005-tab-print-va-pdfsharp.md)) | [`04_In/rules/`](04_In/rules/) | Đã tích hợp (chờ kiểm tra trên CAD) |
+| 05 | [`05_AI/`](05_AI/README.md) | Tab **AI**: AI (Claude API) đọc dữ liệu trong từng khung, cảnh báo F-name / số lượng / ghi chú — DLL riêng `AITOOL.dll` ([ADR 0006](_docs/adr/0006-tab-ai-dll-rieng.md)) | — | Thử nghiệm — chỉ máy phát triển, chưa phát hành |
 | cuối | *(dựng sẵn, `_system`)* | Tab **Info**: thông tin Tool, phiên bản từng tab, kiểm tra cập nhật | — | Đã tích hợp (v1.1.1) |
 
 *(Khi tạo thêm thư mục mục con mới, hãy cập nhật bổ sung 1 dòng vào bảng trên để đồng bộ bản đồ dự án).*

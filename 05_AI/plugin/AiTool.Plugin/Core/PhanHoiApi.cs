@@ -62,7 +62,7 @@ namespace AiTool.Core
             string msg = err.GetString("message") ?? string.Empty;
             switch (err.GetString("type"))
             {
-                case "authentication_error": return "API key sai hoặc đã bị xoá (kiểm tra 04_AI\\data\\ai.key)";
+                case "authentication_error": return "API key sai hoặc đã bị xoá (kiểm tra 05_AI\\data\\ai.key)";
                 case "permission_error": return "API key không có quyền dùng model này";
                 case "rate_limit_error": return "AI quá tải (429), thử lại sau ít phút";
                 case "overloaded_error": return "AI đang quá tải, thử lại sau ít phút";

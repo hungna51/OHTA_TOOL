@@ -15,7 +15,7 @@ namespace OhtaTool.Plugin.Views
 {
     /// <summary>
     /// Tab có giao diện nằm trong DLL riêng của mục con (Guro: GROTOOL.dll — ADR 0003;
-    /// AI: AITOOL.dll — ADR 0005), không nằm trong OHTATOOL.dll. Ở đây chỉ nạp DLL đó
+    /// AI: AITOOL.dll — ADR 0006), không nằm trong OHTATOOL.dll. Ở đây chỉ nạp DLL đó
     /// (thư mục bin\&lt;ZwCAD|AutoCAD&gt; của mục con) và gọi
     /// &lt;tenLop&gt;.TaoGiaoDien(tieuDe, moTa, mauNhan, thuMucModule) bằng phản chiếu — các DLL
     /// không tham chiếu nhau khi build. Không nạp được thì trả null để ModuleViewRegistry

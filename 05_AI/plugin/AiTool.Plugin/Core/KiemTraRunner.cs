@@ -30,7 +30,7 @@ namespace AiTool.Core
         public static string LoiTruocKhiChay(string key, int soKhung, string layer)
         {
             if (string.IsNullOrWhiteSpace(key))
-                return "Chưa có API key: tạo file 04_AI\\data\\ai.key (xem README)";
+                return "Chưa có API key: tạo file 05_AI\\data\\ai.key (xem README)";
             if (soKhung == 0)
                 return "Không thấy khung trên layer " + layer;
             return null;

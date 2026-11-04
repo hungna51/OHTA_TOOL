@@ -66,7 +66,7 @@ namespace AiTool.Tests
             KiemTraRunner.Chay(NhieuKhung(5), "claude-sonnet-5-5", "LD", "VL", new GuiGia(), p, CancellationToken.None).Wait();
             Kiem("Tien do: bao xong 1/1", tienDo.LastOrDefault(), (1, 1));
 
-            Kiem("Runner_ThieuKey_BaoLoi", KiemTraRunner.LoiTruocKhiChay(null, 3, "Khung_IN"), "Chưa có API key: tạo file 04_AI\\data\\ai.key (xem README)");
+            Kiem("Runner_ThieuKey_BaoLoi", KiemTraRunner.LoiTruocKhiChay(null, 3, "Khung_IN"), "Chưa có API key: tạo file 05_AI\\data\\ai.key (xem README)");
             Kiem("Key rong cung bao loi", KiemTraRunner.LoiTruocKhiChay("  ", 3, "Khung_IN") != null, true);
             Kiem("Khong co khung -> neu ten layer", KiemTraRunner.LoiTruocKhiChay("sk", 0, "Khung_IN"), "Không thấy khung trên layer Khung_IN");
             Kiem("Hop le -> null", KiemTraRunner.LoiTruocKhiChay("sk", 1, "Khung_IN"), null);

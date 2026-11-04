@@ -96,6 +96,13 @@ namespace OhtaTool.Plugin
             ActivateModuleTab("fname");
         }
 
+        /// <summary>OI v2.0: mở bảng OHTA và chuyển sang tab PRINT (thay lisp OI cũ).</summary>
+        [CommandMethod("OI")]
+        public static void CmdOpenPrintTab()
+        {
+            ActivateModuleTab("print");
+        }
+
         /// <summary>
         /// (ohta_net_tab "guro"): mở palette và chuyển sang tab có module.Id đó; T nếu được,
         /// nil nếu không. Lisp của mục con dùng để mở tab của mình (lệnh GRO — mục 193 GURO).

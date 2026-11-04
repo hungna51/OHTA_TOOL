@@ -70,7 +70,7 @@ namespace AiTool.Tests
             Kiem("Body response hong", PhanHoiApi.Doc("<html>", hopLe).Loi, "Phản hồi không đọc được");
             Kiem("Loi API authentication -> API key sai (tieng Viet)",
                  PhanHoiApi.Doc("{\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"}}", hopLe).Loi,
-                 "API key sai hoặc đã bị xoá (kiểm tra 04_AI\\data\\ai.key)");
+                 "API key sai hoặc đã bị xoá (kiểm tra 05_AI\\data\\ai.key)");
             Kiem("Loi API rate_limit -> qua tai 429",
                  PhanHoiApi.Doc("{\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"message\":\"x\"}}", hopLe).Loi,
                  "AI quá tải (429), thử lại sau ít phút");

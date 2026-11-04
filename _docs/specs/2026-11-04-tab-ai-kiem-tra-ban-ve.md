@@ -39,8 +39,8 @@ Tab **AI** là chỗ **thử nghiệm** cho việc dùng Claude (Anthropic API) 
 
 | # | Quyết định |
 |---|---|
-| 1 | Tab riêng tên **AI**, mục con mới `04_AI/`. |
-| 2 | Code nằm trong **DLL riêng `AITOOL.dll`** (`04_AI/plugin/AiTool.Plugin`, ra `04_AI/bin/<ZwCAD|AutoCAD>/AITOOL.dll`), OHTATOOL.dll nạp bằng phản chiếu theo cùng cách nạp như tab Guro ([ADR 0003](../adr/0003-tab-guro-nam-trong-grotool.md)). Lỗi tab AI không kéo sập OHTA. |
+| 1 | Tab riêng tên **AI**, mục con mới `05_AI/`. |
+| 2 | Code nằm trong **DLL riêng `AITOOL.dll`** (`05_AI/plugin/AiTool.Plugin`, ra `05_AI/bin/<ZwCAD|AutoCAD>/AITOOL.dll`), OHTATOOL.dll nạp bằng phản chiếu theo cùng cách nạp như tab Guro ([ADR 0003](../adr/0003-tab-guro-nam-trong-grotool.md)). Lỗi tab AI không kéo sập OHTA. |
 | 3 | **Chỉ máy người phát triển** thấy tab AI trong lúc thử nghiệm; không có trong zip phát hành. |
 | 4 | Đơn vị kiểm là **khung**: polyline kín 4 đỉnh trên một layer (mặc định `Khung_IN`). Mỗi khung ứng với một tấm (biên dạng + F-name + ghi chú…). Chỉ xét đối tượng **bên trong khung**; phần ngoài khung bỏ qua. Không phụ thuộc GRO. |
 | 5 | Phạm vi: mặc định **mọi khung trong bản vẽ**; có nút **Chọn vùng** để kiểm vài khung. |
@@ -51,10 +51,10 @@ Tab **AI** là chỗ **thử nghiệm** cho việc dùng Claude (Anthropic API) 
 | 10 | Gửi theo **lô khoảng 10 khung** một lần, các lô chạy song song, có thanh tiến độ. |
 | 11 | Mỗi cảnh báo: **khung nào** (tên tấm `N=` nếu có, kèm số thứ tự khung), **mức độ** (🔴 chắc chắn sai / 🟡 nghi ngờ), **lý do tiếng Việt**, **giá trị gợi ý** (vd. "Z nên là SUS-N2"). Khung ổn thì không hiện. Có lọc "chỉ hiện 🔴". Bấm cảnh báo → zoom tới khung. |
 | 12 | AI **không bao giờ** sửa bản vẽ hay CSV. |
-| 13 | Claude API qua HTTPS; **key** trong file riêng `04_AI/data/ai.key`, thêm vào `.gitignore`. Mặc định model **Sonnet** (`claude-sonnet-5-5`), có ô chọn model trên tab. Mỗi lần kiểm hiện số token và tiền ước tính. |
-| 14 | **Lời dặn** (system prompt) lưu ở file text `04_AI/data/loi_dan.md`, sửa được trên tab, có nút **Khôi phục mặc định**. Bản mặc định do người phát triển soạn từ luật đã có: bảng M→T/Z, quy tắc SIMA (`裏から見た図` dưới `Z=`), thứ tự dòng F-name, nghĩa các từ tiếng Nhật hay gặp trong ghi chú. |
-| 15 | **Nhật ký** mỗi lần kiểm ghi ra `04_AI/log/` (không lên git): dữ liệu gửi, câu trả lời, token, tiền, model, thời điểm. |
-| 16 | Hướng dẫn tạo API key Anthropic (console.anthropic.com, nạp tiền, chép key vào `ai.key`) viết vào `04_AI/README.md` **sau khi code xong**. |
+| 13 | Claude API qua HTTPS; **key** trong file riêng `05_AI/data/ai.key`, thêm vào `.gitignore`. Mặc định model **Sonnet** (`claude-sonnet-5-5`), có ô chọn model trên tab. Mỗi lần kiểm hiện số token và tiền ước tính. |
+| 14 | **Lời dặn** (system prompt) lưu ở file text `05_AI/data/loi_dan.md`, sửa được trên tab, có nút **Khôi phục mặc định**. Bản mặc định do người phát triển soạn từ luật đã có: bảng M→T/Z, quy tắc SIMA (`裏から見た図` dưới `Z=`), thứ tự dòng F-name, nghĩa các từ tiếng Nhật hay gặp trong ghi chú. |
+| 15 | **Nhật ký** mỗi lần kiểm ghi ra `05_AI/log/` (không lên git): dữ liệu gửi, câu trả lời, token, tiền, model, thời điểm. |
+| 16 | Hướng dẫn tạo API key Anthropic (console.anthropic.com, nạp tiền, chép key vào `ai.key`) viết vào `05_AI/README.md` **sau khi code xong**. |
 
 ### Quyết định của người viết tài liệu (người dùng xem lại)
 
@@ -78,7 +78,7 @@ Tab **AI** là chỗ **thử nghiệm** cho việc dùng Claude (Anthropic API) 
 - Gọi API bằng SDK chính thức `Anthropic` cho C# nếu chạy được trên cả net48 và net10; không thì HttpClient thẳng (OHTA đã có tiền lệ `GitHubReleaseClient`). Ghi lý do chọn.
 - Số lô song song tối đa, timeout, thử lại khi lỗi 429/5xx.
 - Bố cục giao diện tab (theo phong cách tab Guro/Fname: nền trắng, nút ⚙ màu tab).
-- Cách loại `04_AI` khỏi zip phát hành (vd. thêm điều kiện trong `release_ohta.ps1`) và khỏi build mặc định nếu cần; ghi vào ADR mới `0005`.
+- Cách loại `05_AI` khỏi zip phát hành (vd. thêm điều kiện trong `release_ohta.ps1`) và khỏi build mặc định nếu cần; ghi vào ADR mới `0005`.
 - Unit test cho phần thuần C#: gom đối tượng theo khung, đổi toạ độ, tách F-name, chia lô, đọc JSON trả về.
 
 ## 7. Câu hỏi còn mở
