@@ -16,8 +16,9 @@ Chốt qua buổi hỏi đáp 04/11/2026. Thay lisp `innhanh(OI)-CaNhan.lsp` b�
 - Dòng cảnh báo màu cam dưới ô Cấu hình (xem dưới). Không chặn nút In.
 
 ## Cấu hình in (⚙)
-- ⚙ chứa: giá trị mặc định (máy in, khổ giấy, ctb, in lineweight, gộp 1 file, mở sau khi in), danh sách tên layer khung ưu tiên (mặc định `Khung_IN`), quản lý cấu hình (thêm / sửa / xoá, tên do người dùng đặt).
-- Một cấu hình lưu: máy in, khổ giấy, ctb, in lineweight, gộp 1 file, mở sau khi in. Không lưu layer khung, chế độ.
+- ⚙ chứa: giá trị mặc định (máy in, khổ giấy, ctb, gộp 1 file, mở sau khi in), danh sách tên layer khung ưu tiên (mặc định `Khung_IN`), quản lý cấu hình (thêm / sửa / xoá, tên do người dùng đặt).
+- Một cấu hình lưu: máy in, khổ giấy, ctb, gộp 1 file, mở sau khi in. Không lưu layer khung, chế độ.
+- Nét in (lineweight) không có ô cài đặt (bỏ 04/11/2026): luôn theo page setup của bản vẽ, không đặt thì bật.
 - Ô Cấu hình luôn có mục đầu **"Theo bản vẽ"**: từng thông số — bản vẽ (page setup của Model) có và máy có → dùng; không thì mặc định ⚙.
 - Chọn cấu hình có tên → cấu hình thắng bản vẽ. Thông số của cấu hình mà máy không có → thay bằng của bản vẽ, không có nữa thì mặc định ⚙; hiện cảnh báo trên palette dạng `⚠ Không có bw.ctb → đang dùng monochrome.ctb (theo bản vẽ)`.
 - Cảnh báo hiện ngay khi chọn cấu hình và cập nhật khi đổi bản vẽ.
@@ -41,4 +42,4 @@ Chốt qua buổi hỏi đáp 04/11/2026. Thay lisp `innhanh(OI)-CaNhan.lsp` b�
 - A1. Bỏ "Gộp 1 file": mỗi khung một file `<tên>-1.pdf`, `<tên>-2.pdf`…; kiểm tra trùng / hỏi ghi đè một lần cho cả bộ.
 - A2. "Mở sau khi in" khi không gộp: mở thư mục chứa file.
 - A3. Bản vẽ chưa lưu lần nào (không có thư mục): báo "Hãy lưu bản vẽ trước khi in", không in.
-- A4. Mặc định ⚙ ban đầu: ZWCAD `DWG to PDF.pc5`, AutoCAD `DWG To PDF.pc3`; khổ `ISO_full_bleed_A3_(420.00_x_297.00_MM)`; ctb `monochrome.ctb`; lineweight bật; gộp bật; mở bật.
+- A4. Mặc định ⚙ ban đầu: ZWCAD `DWG to PDF.pc5`, AutoCAD `DWG To PDF.pc3`; khổ `ISO_full_bleed_A3_(420.00_x_297.00_MM)`; ctb `monochrome.ctb`; gộp bật; mở bật.

@@ -87,7 +87,8 @@ namespace OhtaTool.Plugin.Core
             res.Values.StyleSheet = Pick(prof?.StyleSheet, drawing.StyleSheet, defaults.StyleSheet,
                 catalog?.StyleSheets, "bảng ctb", res.Warnings);
 
-            res.Values.Lineweights = prof?.Lineweights ?? drawing.Lineweights ?? defaults.Lineweights ?? true;
+            // Nét in không có ô cài đặt: chỉ theo page setup của bản vẽ, không đặt thì bật
+            res.Values.Lineweights = drawing.Lineweights ?? true;
             res.Values.Merge = prof?.Merge ?? defaults.Merge ?? true;
             res.Values.OpenAfter = prof?.OpenAfter ?? defaults.OpenAfter ?? true;
             return res;

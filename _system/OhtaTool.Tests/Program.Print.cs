@@ -90,6 +90,12 @@ namespace OhtaTool.Tests
                 r5.Values.Media == "A3" && r5.Values.StyleSheet == "monochrome.ctb" && r5.Warnings.Count == 3 &&
                 r5.Values.Lineweights == true && r5.Values.OpenAfter == true, string.Join(" | ", r5.Warnings));
 
+            // Bỏ cài đặt nét in: lineweight chỉ theo page setup của bản vẽ, bản vẽ không đặt -> bật
+            var lwOff = new PrintParams { Lineweights = false };
+            var rLw1 = PrintSettingsResolver.Resolve(new PrintProfile { Name = "lw", Params = lwOff }, new PrintParams(), lwOff, cat);
+            var rLw2 = PrintSettingsResolver.Resolve(null, new PrintParams { Lineweights = false }, new PrintParams { Lineweights = true }, cat);
+            Check("Resolve_Lineweights_FollowDrawingOnly", rLw1.Values.Lineweights == true && rLw2.Values.Lineweights == false);
+
             var r6 = PrintSettingsResolver.Resolve(null, new PrintParams { Media = "a4" }, def, cat);
             Check("Resolve_CaseInsensitive_ReturnsCatalogName", r6.Values.Media == "A4" && r6.Warnings.Count == 0);
 

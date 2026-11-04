@@ -19,7 +19,7 @@ namespace OhtaTool.Plugin.Views
         private readonly IPlotCatalog _catalog;
         private readonly bool _allowUnset;
         private readonly ComboBox _device, _media, _style;
-        private readonly CheckBox _lineweights, _merge, _openAfter;
+        private readonly CheckBox _merge, _openAfter;
 
         public StackPanel Panel { get; } = new StackPanel();
 
@@ -34,7 +34,6 @@ namespace OhtaTool.Plugin.Views
             _style = Combo(catalog.StyleSheets, p.StyleSheet);
             _device.SelectionChanged += (s, e) => RefillMedia();
 
-            _lineweights = Check("In nét dày (lineweight)", p.Lineweights);
             _merge = Check("Gộp 1 file", p.Merge);
             _openAfter = Check("Mở sau khi in", p.OpenAfter);
 
@@ -45,7 +44,6 @@ namespace OhtaTool.Plugin.Views
             Panel.Children.Add(DialogKit.Label("Bảng ctb"));
             Panel.Children.Add(_style);
             var checks = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
-            checks.Children.Add(_lineweights);
             checks.Children.Add(_merge);
             checks.Children.Add(_openAfter);
             Panel.Children.Add(checks);
@@ -56,7 +54,6 @@ namespace OhtaTool.Plugin.Views
             Device = Value(_device),
             Media = Value(_media),
             StyleSheet = Value(_style),
-            Lineweights = _lineweights.IsChecked,
             Merge = _merge.IsChecked,
             OpenAfter = _openAfter.IsChecked
         };
