@@ -101,6 +101,26 @@ namespace OhtaTool.Plugin.Core
             return null;
         }
 
+        /// <summary>
+        /// Lý do không in được (null = in được). Tab Layout (TILEMODE=0): khung nhìn và toạ độ pick là
+        /// của paper space nên vùng in sai -> bắt quay về Model. Bản vẽ chưa lưu: không có thư mục đặt PDF.
+        /// </summary>
+        public static string PreflightError(int tileMode, int dwgTitled)
+        {
+            if (tileMode == 0)
+                return "Chuyển sang tab Model rồi in lại (OI chỉ in Model).";
+            if (dwgTitled == 0)
+                return "Hãy lưu bản vẽ trước khi in.";
+            return null;
+        }
+
+        /// <summary>Bản vẽ kiểu màu (PSTYLEMODE=1) chỉ nhận .ctb, kiểu đặt tên chỉ nhận .stb.</summary>
+        public static bool StyleSheetMatchesMode(string styleSheet, bool colorDependent)
+        {
+            string ext = Path.GetExtension(styleSheet ?? string.Empty);
+            return string.Equals(ext, colorDependent ? ".ctb" : ".stb", StringComparison.OrdinalIgnoreCase);
+        }
+
         /// <summary>Layer cảnh báo không được lên giấy: CANH_BAO_* và GRO_XEP_NHOM.</summary>
         public static bool IsWarningLayer(string layerName)
         {

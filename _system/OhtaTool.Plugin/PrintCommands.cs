@@ -54,7 +54,11 @@ namespace OhtaTool.Plugin
             PrintRunner.Pending = null;
             CadDocument doc = CadCompat.ActiveDocument;
             if (req == null || req.Params == null || doc == null)
+            {
+                if (req != null)
+                    PrintRunner.Report("Không có bản vẽ để in.");
                 return;
+            }
 
             object oldBgPlot = null;
             string tempDir = null;
@@ -95,16 +99,21 @@ namespace OhtaTool.Plugin
             PrintParams p = req.Params;
 
             // A3: bản vẽ chưa lưu thì không có thư mục để đặt PDF
-            object titled = CadApp.GetSystemVariable("DWGTITLED");
-            if (Convert.ToInt32(titled) == 0)
+            string blocked = PrintCore.PreflightError(
+                Convert.ToInt32(CadApp.GetSystemVariable("TILEMODE")),
+                Convert.ToInt32(CadApp.GetSystemVariable("DWGTITLED")));
+            if (blocked != null)
             {
-                PrintRunner.Report("Hãy lưu bản vẽ trước khi in.");
+                PrintRunner.Report(blocked);
                 return;
             }
 
             List<PlotArea> areas = CollectAreas(doc, req);
             if (areas == null)
+            {
+                PrintRunner.Report("Đã huỷ in.");
                 return; // người dùng huỷ
+            }
             if (areas.Count == 0)
             {
                 PrintRunner.Report(req.Mode == "frames" || req.Mode == "pick"

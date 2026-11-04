@@ -255,8 +255,16 @@ namespace OhtaTool.Plugin.Services
                     psv.SetUseStandardScale(ps, true);
                     psv.SetStdScaleType(ps, StdScaleType.ScaleToFit);
                     psv.SetPlotCentered(ps, true);
+                    // Bản vẽ kiểu đặt tên (.stb) không nhận .ctb (và ngược lại): giữ bảng của page setup, báo
                     if (!string.IsNullOrWhiteSpace(p.StyleSheet))
-                        psv.SetCurrentStyleSheet(ps, p.StyleSheet);
+                    {
+                        if (PrintCore.StyleSheetMatchesMode(p.StyleSheet, db.PlotStyleMode))
+                            psv.SetCurrentStyleSheet(ps, p.StyleSheet);
+                        else
+                            CadCompat.WriteMessage($"\n[OI] Bản vẽ dùng kiểu in {(db.PlotStyleMode ? ".ctb" : ".stb")}, không áp được {p.StyleSheet} → giữ bảng của bản vẽ.\n");
+                    }
+                    // PlotPlotStyles = áp bảng kiểu in khi in (ShowPlotStyles chỉ là hiển thị trên màn hình)
+                    ps.PlotPlotStyles = true;
                     ps.ShowPlotStyles = true;
                     ps.PrintLineweights = p.Lineweights ?? true;
 

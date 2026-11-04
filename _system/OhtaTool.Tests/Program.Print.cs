@@ -39,6 +39,15 @@ namespace OhtaTool.Tests
             Check("PickFrameLayer_None", PrintCore.PickFrameLayer(new[] { "0" }, new[] { "Khung_IN" }) == null);
             Check("IsWarningLayer", PrintCore.IsWarningLayer("canh_bao_lech") && PrintCore.IsWarningLayer("GRO_XEP_NHOM") &&
                 !PrintCore.IsWarningLayer("0-KAKOU"));
+
+            // Review: in từ tab Layout (TILEMODE=0) cho vùng in sai -> chặn; bản vẽ chưa lưu -> chặn
+            Check("Preflight_LayoutTab_Blocked", PrintCore.PreflightError(tileMode: 0, dwgTitled: 1) != null);
+            Check("Preflight_Untitled_Blocked", PrintCore.PreflightError(tileMode: 1, dwgTitled: 0) == "Hãy lưu bản vẽ trước khi in.");
+            Check("Preflight_ModelSaved_Ok", PrintCore.PreflightError(tileMode: 1, dwgTitled: 1) == null);
+            // Review: bản vẽ STB (named plot styles) không nhận .ctb và ngược lại
+            Check("StyleSheetMatchesMode", PrintCore.StyleSheetMatchesMode("monochrome.ctb", colorDependent: true) &&
+                !PrintCore.StyleSheetMatchesMode("monochrome.ctb", colorDependent: false) &&
+                PrintCore.StyleSheetMatchesMode("acad.STB", colorDependent: false));
         }
 
         private sealed class FakeCatalog : IPlotCatalog
