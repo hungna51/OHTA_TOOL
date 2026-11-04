@@ -1,5 +1,6 @@
 using System.Windows;
-using System.Windows.Controls;
+using AiTool.ViewModels;
+using AiTool.Views;
 
 namespace AiTool
 {
@@ -12,7 +13,7 @@ namespace AiTool
     {
         public static FrameworkElement TaoGiaoDien(string tieuDe, string moTa, string mauNhan, string thuMucModule)
         {
-            return new TextBlock { Text = "Tab AI đang dựng", Margin = new Thickness(12) };
+            return new AiTabControl(new AiTabViewModel(tieuDe, moTa, mauNhan, thuMucModule));
         }
     }
 }

@@ -1,0 +1,47 @@
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using AiTool.ViewModels;
+
+namespace AiTool.Views
+{
+    public partial class AiTabControl : UserControl
+    {
+        private readonly AiTabViewModel _vm;
+
+        public AiTabControl(AiTabViewModel vm)
+        {
+            InitializeComponent();
+            _vm = vm;
+            DataContext = vm;
+            try
+            {
+                var mau = (Color)ColorConverter.ConvertFromString(vm.MauNhan);
+                Header.Background = new SolidColorBrush(mau);
+                NutKiemTra.Background = new SolidColorBrush(mau);
+            }
+            catch (Exception)
+            {
+                Header.Background = NutKiemTra.Background = new SolidColorBrush(Color.FromRgb(0x5B, 0x3F, 0xD1));
+            }
+        }
+
+        /// <summary>CuonHo của OHTATOOL gọi bằng phản chiếu để lăn chuột trên PaletteSet.</summary>
+        public void ScrollByMouseWheel(int wheelDelta)
+        {
+            if (KhungCuon == null || wheelDelta == 0) return;
+            KhungCuon.ScrollToVerticalOffset(KhungCuon.VerticalOffset - wheelDelta / 120.0 * 48.0);
+        }
+
+        /// <summary>Mở ô chọn layer -> đọc lại layer của bản vẽ đang mở.</summary>
+        private void LayerMo(object sender, EventArgs e) => _vm.LamMoiLayer();
+
+        private void CanhBaoBam(object sender, MouseButtonEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is DongCanhBao c)
+                _vm.ZoomToi(c);
+        }
+    }
+}
