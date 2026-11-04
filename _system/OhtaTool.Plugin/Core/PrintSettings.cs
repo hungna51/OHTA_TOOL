@@ -28,6 +28,8 @@ namespace OhtaTool.Plugin.Core
         public List<PrintProfile> Profiles = new List<PrintProfile>();
         /// <summary>Tên cấu hình chọn lần trước; null = "Theo bản vẽ".</summary>
         public string LastProfile;
+        /// <summary>Trùng tên file PDF thì tự lưu "&lt;tên&gt; (n).pdf", không hỏi ghi đè. Mặc định tắt (hỏi).</summary>
+        public bool SkipOverwritePrompt;
 
         public static PrintSettingsData CreateDefault(bool isZwcad) => new PrintSettingsData
         {

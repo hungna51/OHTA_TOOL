@@ -49,6 +49,25 @@ namespace OhtaTool.Tests
                 !PrintCore.IsPdfHeader(System.Text.Encoding.ASCII.GetBytes("(DWF V06.00)PK")) &&
                 !PrintCore.IsPdfHeader(new byte[0]) && !PrintCore.IsPdfHeader(null));
 
+            // Chọn tên file đích: có / không hỏi ghi đè
+            var have = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { @"C:\d\A.pdf" };
+            int asked = 0;
+            Func<string, int, OverwriteDecision> askOverwrite = (f, n) => { asked++; return OverwriteDecision.Overwrite; };
+            var t1 = PrintCore.PlanTargets(@"C:\d\A.pdf", 1, true, true, have.Contains, f => false, askOverwrite);
+            Check("PlanTargets_SkipPrompt_Numbered", t1 != null && t1.Targets.Single() == @"C:\d\A (1).pdf" && asked == 0);
+            var t2 = PrintCore.PlanTargets(@"C:\d\B.pdf", 1, true, false, have.Contains, f => false, askOverwrite);
+            Check("PlanTargets_NoConflict_Base", t2.Targets.Single() == @"C:\d\B.pdf" && asked == 0 && t2.Notice == null);
+            var t3 = PrintCore.PlanTargets(@"C:\d\A.pdf", 1, true, false, have.Contains, f => false, askOverwrite);
+            Check("PlanTargets_Ask_Overwrite", t3.Targets.Single() == @"C:\d\A.pdf" && asked == 1);
+            var t4 = PrintCore.PlanTargets(@"C:\d\A.pdf", 1, true, false, have.Contains, f => true, askOverwrite);
+            Check("PlanTargets_OverwriteLocked_Numbered", t4.Targets.Single() == @"C:\d\A (1).pdf" && t4.Notice != null);
+            var t5 = PrintCore.PlanTargets(@"C:\d\A.pdf", 1, true, false, have.Contains, f => false, (f, n) => OverwriteDecision.Cancel);
+            Check("PlanTargets_Cancel_Null", t5 == null);
+            var have2 = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { @"C:\d\A-2.pdf", @"C:\d\A (1)-1.pdf" };
+            var t6 = PrintCore.PlanTargets(@"C:\d\A.pdf", 2, false, true, have2.Contains, f => false, askOverwrite);
+            Check("PlanTargets_PerFrame_SharedNumber", string.Join("|", t6.Targets) == @"C:\d\A (2)-1.pdf|C:\d\A (2)-2.pdf",
+                string.Join("|", t6.Targets));
+
             // Review: bản vẽ STB (named plot styles) không nhận .ctb và ngược lại
             Check("StyleSheetMatchesMode", PrintCore.StyleSheetMatchesMode("monochrome.ctb", colorDependent: true) &&
                 !PrintCore.StyleSheetMatchesMode("monochrome.ctb", colorDependent: false) &&

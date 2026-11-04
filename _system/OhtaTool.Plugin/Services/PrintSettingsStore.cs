@@ -45,6 +45,7 @@ namespace OhtaTool.Plugin.Services
                     }
                     if (key.GetValue("profiles") is string profJson)
                         data.Profiles = PrintSettingsCodec.ProfilesFromJson(profJson);
+                    data.SkipOverwritePrompt = (key.GetValue("skip_overwrite_prompt") as string) == "1";
                     string last = key.GetValue("last_profile") as string;
                     data.LastProfile = string.IsNullOrWhiteSpace(last) ? null : last;
                 }
@@ -68,6 +69,7 @@ namespace OhtaTool.Plugin.Services
                     key.SetValue("frame_layers", PrintSettingsCodec.LayersToJson(data.FrameLayers));
                     key.SetValue("profiles", PrintSettingsCodec.ProfilesToJson(data.Profiles));
                     key.SetValue("last_profile", data.LastProfile ?? string.Empty);
+                    key.SetValue("skip_overwrite_prompt", data.SkipOverwritePrompt ? "1" : "0");
                 }
             }
             catch (Exception ex)

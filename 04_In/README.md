@@ -25,13 +25,13 @@ In bản vẽ ra PDF, thay lisp `innhanh(OI)-CaNhan.lsp`. Toàn bộ viết bằ
 
 1. Bản vẽ chưa lưu → báo, không in.
 2. Khung = LWPOLYLINE kín 4 đỉnh trên layer khung, trong Model. Sắp theo Y điểm cao nhất giảm dần, lệch ≤ 1 mm thì trái → phải (`PrintCore.SortFrames`). Khung cao ≥ rộng → trang dọc.
-3. Tên: `<DWGPREFIX><tên bản vẽ bỏ -S/-A>.pdf`; không gộp → `<tên>-1.pdf`, `<tên>-2.pdf`… Có file trùng → hỏi **Ghi đè / Lưu thành (1) / Huỷ in**; ghi đè mà file đang mở → lưu `(n)` và báo.
+3. Tên: `<DWGPREFIX><tên bản vẽ bỏ -S/-A>.pdf`; không gộp → `<tên>-1.pdf`, `<tên>-2.pdf`… Có file trùng → hỏi **Ghi đè / Lưu thành (1) / Huỷ in**; ghi đè mà file đang mở → lưu `(n)` và báo. Bật ô ⚙ "Không hỏi khi trùng tên" thì tự lưu `(n)`, không hỏi (`PrintCore.PlanTargets`).
 4. Tắt plottable layer `CANH_BAO_*`, `GRO_XEP_NHOM`. In mỗi trang ra một PDF tạm trong `%TEMP%\OHTA_PRINT\<guid>\` (`CadPrintService.PlotPagesToPdfFiles`: thông số + driver máy in dựng một lần), kiểm tra file bắt đầu bằng `%PDF`, rồi gộp bằng PdfSharp. **Không** in nhiều trang trong một document PlotEngine: AutoCAD xuất ra DWF nhiều trang dù máy in là PDF (lỗi thật 04/11/2026). Dòng báo cuối có thời gian in.
 5. Mở file (hoặc thư mục khi không gộp).
 
 ## Cài đặt
 
-Registry `HKCU\Software\OFT_Lisp\IN`: `defaults`, `frame_layers`, `profiles` (JSON), `last_profile`.
+Registry `HKCU\Software\OFT_Lisp\IN`: `defaults`, `frame_layers`, `profiles` (JSON), `last_profile`, `skip_overwrite_prompt` (`1` = không hỏi ghi đè).
 
 ## Mã nguồn
 

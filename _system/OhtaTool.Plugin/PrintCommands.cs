@@ -29,6 +29,8 @@ namespace OhtaTool.Plugin
         public string Layer;
         /// <summary>Thông số đã giải quyết (mọi trường khác null).</summary>
         public PrintParams Params;
+        /// <summary>Cài đặt ⚙: trùng tên thì tự lưu "(n)", không hỏi ghi đè.</summary>
+        public bool SkipOverwritePrompt;
     }
 
     public static class PrintRunner
@@ -119,7 +121,7 @@ namespace OhtaTool.Plugin
             string basePath = Path.Combine(dir, PrintCore.PdfBaseName((string)CadApp.GetSystemVariable("DWGNAME")) + ".pdf");
             // Một trang thì luôn là <tên>.pdf, không thêm -1
             bool merge = (p.Merge ?? true) || areas.Count == 1;
-            List<string> targets = ResolveTargets(basePath, areas.Count, merge);
+            List<string> targets = ResolveTargets(basePath, areas.Count, merge, req.SkipOverwritePrompt);
             if (targets == null)
             {
                 PrintRunner.Report("Đã huỷ in.");
@@ -209,33 +211,16 @@ namespace OhtaTool.Plugin
             return areas;
         }
 
-        /// <summary>
-        /// Tên file đích. Có file trùng -> hỏi Ghi đè / Lưu thành (n) / Huỷ (null). Ghi đè mà file đang
-        /// bị khoá -> chuyển sang (n) và báo.
-        /// </summary>
-        private static List<string> ResolveTargets(string basePath, int count, bool merge)
+        /// <summary>Tên file đích (logic ở PrintCore.PlanTargets). null = người dùng huỷ.</summary>
+        private static List<string> ResolveTargets(string basePath, int count, bool merge, bool skipPrompt)
         {
-            List<string> targets = merge ? new List<string> { basePath } : PrintCore.PerFrameNames(basePath, count);
-            string firstExisting = targets.FirstOrDefault(File.Exists);
-            if (firstExisting == null)
-                return targets;
-
-            OverwriteChoice choice = PrintDialogs.AskOverwrite(firstExisting, targets.Count);
-            if (choice == OverwriteChoice.Cancel)
+            TargetPlan plan = PrintCore.PlanTargets(basePath, count, merge, skipPrompt,
+                File.Exists, IsLocked, PrintDialogs.AskOverwrite);
+            if (plan == null)
                 return null;
-
-            if (choice == OverwriteChoice.Overwrite)
-            {
-                string locked = targets.FirstOrDefault(t => File.Exists(t) && IsLocked(t));
-                if (locked == null)
-                    return targets;
-                PrintRunner.Report($"File {Path.GetFileName(locked)} đang mở, không ghi đè được → lưu thành tên mới.");
-            }
-
-            // Lưu thành (n): một số n chung cho cả bộ để các file đi cùng nhau
-            string numberedBase = PrintCore.NextFreeName(basePath, candidate =>
-                merge ? File.Exists(candidate) : PrintCore.PerFrameNames(candidate, count).Any(File.Exists));
-            return merge ? new List<string> { numberedBase } : PrintCore.PerFrameNames(numberedBase, count);
+            if (plan.Notice != null)
+                PrintRunner.Report(plan.Notice);
+            return plan.Targets;
         }
 
         private static bool IsLocked(string path)

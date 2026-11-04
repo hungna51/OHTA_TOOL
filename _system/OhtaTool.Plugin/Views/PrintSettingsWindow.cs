@@ -116,6 +116,14 @@ namespace OhtaTool.Plugin.Views
             var defaults = new PrintParamsEditor(data.Defaults, catalog, allowUnset: false);
             root.Children.Add(defaults.Panel);
 
+            var skipPrompt = new CheckBox
+            {
+                Content = "Không hỏi khi trùng tên file — tự lưu thành <tên> (1).pdf",
+                IsChecked = data.SkipOverwritePrompt,
+                Margin = new Thickness(0, 6, 0, 0)
+            };
+            root.Children.Add(skipPrompt);
+
             root.Children.Add(Header("Layer khung ưu tiên (mỗi dòng một tên)"));
             TextBox layers = DialogKit.Input(string.Join(Environment.NewLine, data.FrameLayers));
             layers.AcceptsReturn = true;
@@ -175,6 +183,7 @@ namespace OhtaTool.Plugin.Views
                 Defaults = defaults.ToParams(),
                 FrameLayers = frameLayers.Count > 0 ? frameLayers : new List<string> { "Khung_IN" },
                 Profiles = profiles,
+                SkipOverwritePrompt = skipPrompt.IsChecked == true,
                 LastProfile = profiles.Any(p => string.Equals(p.Name, data.LastProfile, StringComparison.OrdinalIgnoreCase)) ? data.LastProfile : null
             };
             return true;

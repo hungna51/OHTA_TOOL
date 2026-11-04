@@ -37,6 +37,7 @@ Chốt qua buổi hỏi đáp 04/11/2026. Thay lisp `innhanh(OI)-CaNhan.lsp` b�
 ## File PDF
 - Cạnh file DWG, tên `<tên bản vẽ>.pdf`; bỏ đúng hậu tố `-S` / `-A` cuối tên (không phân biệt hoa thường).
 - Đã có file: hộp thoại **Ghi đè / Lưu thành (1) / Huỷ in**. `(1)` đã có → `(2)`, `(3)`… không hỏi lại. Chọn Ghi đè mà file đang bị khoá (đang mở) → lưu thành `(n)` và báo.
+- ⚙ có ô "Không hỏi khi trùng tên" (thêm 04/11/2026, mặc định tắt): bật thì trùng tên tự lưu `<tên> (n).pdf`, không hỏi.
 
 ## Giả định do người viết plan chọn (spec chưa nói — xác nhận khi duyệt plan)
 - A1. Bỏ "Gộp 1 file": mỗi khung một file `<tên>-1.pdf`, `<tên>-2.pdf`…; kiểm tra trùng / hỏi ghi đè một lần cho cả bộ.

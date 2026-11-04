@@ -15,6 +15,16 @@ namespace OhtaTool.Plugin.Core
         public double Height => Ymax - Ymin;
     }
 
+    /// <summary>Trả lời khi file PDF đích đã có.</summary>
+    public enum OverwriteDecision { Overwrite, SaveAsNumbered, Cancel }
+
+    /// <summary>Tên file đích đã chọn; Notice = thông báo cho người dùng (vd file đang mở nên đổi tên).</summary>
+    public sealed class TargetPlan
+    {
+        public List<string> Targets = new List<string>();
+        public string Notice;
+    }
+
     /// <summary>Logic thuần của tab PRINT (lệnh OI): thứ tự khung, hướng giấy, tên file PDF.</summary>
     public static class PrintCore
     {
@@ -82,6 +92,41 @@ namespace OhtaTool.Plugin.Core
             for (int i = 1; i <= count; i++)
                 list.Add(Path.Combine(dir, baseName + "-" + i + ext));
             return list;
+        }
+
+        /// <summary>
+        /// Chọn tên file đích. Chưa có file trùng -> tên gốc. Có trùng: skipPrompt -> tự lưu "(n)" không hỏi;
+        /// ngược lại hỏi (ask: file trùng đầu tiên, số file). Ghi đè mà file đang bị khoá -> "(n)" + Notice.
+        /// Không gộp: một số n chung cho cả bộ &lt;tên&gt; (n)-1.pdf… Trả null nếu người dùng huỷ.
+        /// </summary>
+        public static TargetPlan PlanTargets(string basePath, int count, bool merge, bool skipPrompt,
+            Func<string, bool> exists, Func<string, bool> isLocked, Func<string, int, OverwriteDecision> ask)
+        {
+            List<string> targets = merge ? new List<string> { basePath } : PerFrameNames(basePath, count);
+            string firstExisting = targets.FirstOrDefault(exists);
+            if (firstExisting == null)
+                return new TargetPlan { Targets = targets };
+
+            var plan = new TargetPlan();
+            OverwriteDecision choice = skipPrompt ? OverwriteDecision.SaveAsNumbered : ask(firstExisting, targets.Count);
+            if (choice == OverwriteDecision.Cancel)
+                return null;
+
+            if (choice == OverwriteDecision.Overwrite)
+            {
+                string locked = targets.FirstOrDefault(t => exists(t) && isLocked(t));
+                if (locked == null)
+                {
+                    plan.Targets = targets;
+                    return plan;
+                }
+                plan.Notice = $"File {Path.GetFileName(locked)} đang mở, không ghi đè được → lưu thành tên mới.";
+            }
+
+            string numberedBase = NextFreeName(basePath, candidate =>
+                merge ? exists(candidate) : PerFrameNames(candidate, count).Any(exists));
+            plan.Targets = merge ? new List<string> { numberedBase } : PerFrameNames(numberedBase, count);
+            return plan;
         }
 
         /// <summary>Layer khung: mục ưu tiên đầu tiên bản vẽ có (không phân biệt hoa thường), trả tên như trong bản vẽ.</summary>

@@ -216,6 +216,7 @@ namespace OhtaTool.Plugin.ViewModels
             {
                 Mode = mode,
                 Layer = _selectedLayer,
+                SkipOverwritePrompt = _settings.SkipOverwritePrompt,
                 Params = new PrintParams
                 {
                     Device = _selectedDevice,
