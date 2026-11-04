@@ -21,9 +21,15 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <!-- true: chep DLL PdfSharp (va phu thuoc) ra canh OHTATOOL.dll - ADR 0005 -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <NoWarn>$(NoWarn);CA1416;MSB3277;CS8981</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Gop PDF cho tab PRINT (ADR 0005) -->
+    <PackageReference Include="PDFsharp" Version="6.2.4" />
+  </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Assets\settings_logo.png" LogicalName="OhtaTool.Plugin.Assets.settings_logo.png" />
@@ -79,7 +85,10 @@
       <CadBinDest>$(MSBuildProjectDirectory)\..\bin\$(CadOutSubDir)</CadBinDest>
     </PropertyGroup>
     <MakeDir Directories="$(CadBinDest)" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CadBinDest)" Retries="0" ContinueOnError="true" />
+    <ItemGroup>
+      <OhtaOutDll Include="$(TargetDir)*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(OhtaOutDll)" DestinationFolder="$(CadBinDest)" Retries="0" ContinueOnError="true" />
     <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CadBinDest)" Condition="Exists('$(TargetDir)$(TargetName).pdb')" Retries="0" ContinueOnError="true" />
   </Target>
 </Project>

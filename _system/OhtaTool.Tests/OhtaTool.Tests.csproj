@@ -13,6 +13,11 @@
 
   <ItemGroup>
     <Compile Include="..\OhtaTool.Plugin\Core\*.cs" Link="Core\%(Filename)%(Extension)" />
+    <Compile Include="..\OhtaTool.Plugin\Services\PdfSharpMerge.cs" Link="Services\PdfSharpMerge.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PDFsharp" Version="6.2.4" />
   </ItemGroup>
 </Project>
 

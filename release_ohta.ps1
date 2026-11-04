@@ -55,6 +55,12 @@ foreach ($d in $Dlls) {
     $f = Get-Item (Join-Path $Root $d) -ErrorAction SilentlyContinue
     if (-not $f) { throw "Thieu DLL sau khi build: $d" }
 }
+# DLL phu thuoc canh OHTATOOL.dll (PdfSharp ... cho tab PRINT - ADR 0005)
+foreach ($sub in @("ZwCAD", "AutoCAD")) {
+    $Dlls += Get-ChildItem -Path (Join-Path $Root "_system/bin/$sub") -Filter "*.dll" -File |
+        Where-Object { $_.Name -ne "OHTATOOL.dll" -and $_.Name -notmatch '\.old_' } |
+        ForEach-Object { "_system/bin/$sub/" + $_.Name }
+}
 
 # --- 4. Gom file vao thu muc tam ---
 # Goi gom: file goc can cho may doi + moi thu muc tab (git dang theo doi) + DLL vua build.

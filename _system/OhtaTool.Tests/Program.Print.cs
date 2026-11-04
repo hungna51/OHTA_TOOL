@@ -104,6 +104,37 @@ namespace OhtaTool.Tests
                 ac.FrameLayers.Single() == "Khung_IN" && ac.LastProfile == null && ac.Profiles.Count == 0);
         }
 
+        private static void TestPdfMerge()
+        {
+            Console.WriteLine("--- Tab PRINT: gop PDF (PdfSharp) ---");
+            string dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ohta_print_test_" + Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(dir);
+            try
+            {
+                var inputs = new List<string>();
+                for (int i = 1; i <= 2; i++)
+                {
+                    string p = System.IO.Path.Combine(dir, i + ".pdf");
+                    using (var doc = new PdfSharp.Pdf.PdfDocument())
+                    {
+                        doc.AddPage();
+                        doc.Save(p);
+                    }
+                    inputs.Add(p);
+                }
+                string output = System.IO.Path.Combine(dir, "gop.pdf");
+                OhtaTool.Plugin.Services.PdfSharpMerge.Merge(inputs, output);
+                int pages;
+                using (var merged = PdfSharp.Pdf.IO.PdfReader.Open(output, PdfSharp.Pdf.IO.PdfDocumentOpenMode.Import))
+                    pages = merged.PageCount;
+                Check("PdfMerge_TwoPages", pages == 2, "pages=" + pages);
+            }
+            finally
+            {
+                try { System.IO.Directory.Delete(dir, true); } catch (Exception) { }
+            }
+        }
+
         private sealed class EmptyCatalog : IPlotCatalog
         {
             public IList<string> Devices { get; } = new List<string>();

@@ -67,15 +67,21 @@ function Publish-CadDll($srcDir, $destDir, $label, $name = "OHTATOOL") {
     if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
 
     # Don dep cac ban .old_* cu tu phien truoc neu CAD da dong
-    Get-ChildItem -Path $destDir -Filter "$name.old_*" -ErrorAction SilentlyContinue | ForEach-Object {
+    Get-ChildItem -Path $destDir -Filter "*.old_*" -ErrorAction SilentlyContinue | ForEach-Object {
         Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
     }
 
     $stamp = [DateTime]::Now.ToString("yyyyMMdd_HHmmss")
     $locked = $false
-    foreach ($ext in @("dll", "pdb")) {
-        $srcFile = Join-Path $srcDir "$name.$ext"
-        $dstFile = Join-Path $destDir "$name.$ext"
+    $copyList = @("$name.dll", "$name.pdb")
+    # OHTATOOL kem DLL phu thuoc (PdfSharp, Microsoft.Extensions.* ...) cho tab PRINT - ADR 0005
+    if ($name -eq "OHTATOOL") {
+        $copyList += Get-ChildItem -Path $srcDir -Filter "*.dll" -File |
+            Where-Object { $_.Name -ne "$name.dll" } | ForEach-Object { $_.Name }
+    }
+    foreach ($fileName in $copyList) {
+        $srcFile = Join-Path $srcDir $fileName
+        $dstFile = Join-Path $destDir $fileName
         if (-not (Test-Path $srcFile)) { continue }
 
         try {
@@ -83,7 +89,9 @@ function Publish-CadDll($srcDir, $destDir, $label, $name = "OHTATOOL") {
         } catch {
             # File dang bi AutoCAD / ZWCAD giu khoa -> doi ten sang .old tren NTFS roi chep ban moi vao!
             $locked = $true
-            $oldName = Join-Path $destDir "$name.old_${stamp}.$ext"
+            $base = [IO.Path]::GetFileNameWithoutExtension($fileName)
+            $ext = [IO.Path]::GetExtension($fileName)
+            $oldName = Join-Path $destDir "$base.old_${stamp}$ext"
             Move-Item -Path $dstFile -Destination $oldName -Force -ErrorAction Stop
             Copy-Item -Path $srcFile -Destination $dstFile -Force -ErrorAction Stop
         }
