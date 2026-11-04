@@ -24,6 +24,7 @@ namespace AiTool.Tests
 
             TestHinhHoc();
             TestGomKhung();
+            TestDongChu();
 
             Console.WriteLine();
             Console.WriteLine("Tong: {0} OK, {1} FAIL", _ok, _fail);
