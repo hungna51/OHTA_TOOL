@@ -51,7 +51,7 @@ namespace OhtaTool.Plugin.Views
 
                 var view = ham.Invoke(null, new object[]
                 {
-                    manifest.Title, manifest.Description, manifest.AccentColor, manifest.DirectoryPath
+                    manifest.DisplayTitle, manifest.Description, manifest.AccentColor, manifest.DirectoryPath
                 }) as FrameworkElement;
                 return view == null ? null : new CuonHo(view);
             }

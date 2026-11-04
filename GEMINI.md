@@ -41,6 +41,9 @@ OHTARELOAD  : Quét lại thư mục OHTA_TOOL/ và cập nhật nóng toàn b�
               ngay trong phiên làm việc CAD (không cần tắt mở lại CAD).
 OHTACLOSE   : Ẩn / Bật nhanh bảng Tool Palettes OHTA TOOL.
 OHTAINFO    : In thông tin chẩn đoán (phiên bản, nền tảng CAD, đường dẫn gốc OHTA_TOOL, danh sách Tab đã nạp).
+              Cùng nội dung có ở tab **Info** (luôn nằm cuối bảng, dựng sẵn trong OHTATOOL.dll — không phải thư mục):
+              nhà phát triển, phiên bản Tool, phiên bản riêng + số lisp/lệnh từng tab (trường `version` trong module.json),
+              nút Kiểm tra cập nhật (= OHTAUPDATE) và Quay về bản trước (= OHTAROLLBACK), mục đầu CHANGELOG.md.
 OHTAUPDATE  : Kiểm tra ngay bản mới trên GitHub Releases, có thì hỏi cài (ADR 0004).
               Không cần gõ: mỗi lần mở bản vẽ, OHTA_Loader.lsp (S::STARTUP) tự hỏi khi còn bản mới chưa cài.
 OHTAROLLBACK: Quay về bản trước lần tự cập nhật gần nhất (giữ 1 bản sao lưu ở %LOCALAPPDATA%\OHTA_TOOL\update\backup).
@@ -56,6 +59,7 @@ OHTAROLLBACK: Quay về bản trước lần tự cập nhật gần nhất (gi�
 | 01 | [`01_Fname/`](01_Fname/README.md) | Tab **Fname**: tạo, hút, sửa F-NAME (`N=, M=, T=, Q=, Z=`) & các lệnh Fname tấm | [`01_Fname/rules/`](01_Fname/rules/) | Đã tích hợp UI chọn Fname |
 | 02 | [`More/`](More/README.md) | Nhóm chức năng mẫu 02 | [`More/rules/`](More/rules/) | Khung sẵn sàng mở rộng |
 | 03 | [`03_Guro/`](03_Guro/README.md) | Tab **Guro**: lệnh `GRO` (bango + mã khắc + F-name + CSV + PDF + chuyển layer), `DST`, `XLN`, `GI`… — DLL riêng `GROTOOL.dll`, chạy ZWCAD 2026 + AutoCAD 2027 | [`03_Guro/rules/`](03_Guro/rules/) | Đã tích hợp (chuyển từ ZWLISP\GURO) |
+| cuối | *(dựng sẵn, `_system`)* | Tab **Info**: thông tin Tool, phiên bản từng tab, kiểm tra cập nhật | — | Đã tích hợp (v1.1.1) |
 
 *(Khi tạo thêm thư mục mục con mới, hãy cập nhật bổ sung 1 dòng vào bảng trên để đồng bộ bản đồ dự án).*
 

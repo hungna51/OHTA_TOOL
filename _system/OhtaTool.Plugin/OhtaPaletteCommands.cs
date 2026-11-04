@@ -175,6 +175,7 @@ namespace OhtaTool.Plugin
                 : new List<ModuleManifest>();
 
             CadCompat.WriteMessage("\n================ OHTA TOOL INFO ================\n");
+            CadCompat.WriteMessage($"  Nhà phát triển: {ToolInfoCore.Developer}\n");
             CadCompat.WriteMessage($"  Phiên bản    : v{OhtaUpdateCommands.LoadedVersion} (OHTAUPDATE: kiểm tra bản mới)\n");
             CadCompat.WriteMessage($"  Nền tảng CAD : {CadCompat.PlatformName}\n");
             CadCompat.WriteMessage($"  Thư mục gốc  : {root}\n");
@@ -182,8 +183,8 @@ namespace OhtaTool.Plugin
             for (int i = 0; i < modules.Count; i++)
             {
                 ModuleManifest m = modules[i];
-                int toolCount = m.Tools != null ? m.Tools.Count : 0;
-                CadCompat.WriteMessage($"    [{i + 1}] {m.TabTitle} ({m.FolderName}) -> {toolCount} công cụ\n");
+                string version = m.VersionLabel.Length == 0 ? "" : " " + m.VersionLabel;
+                CadCompat.WriteMessage($"    [{i + 1}] {m.TabTitle}{version} ({m.FolderName}) -> {ToolInfoCore.DescribeContents(m)}\n");
             }
             CadCompat.WriteMessage("================================================\n");
         }
@@ -320,9 +321,49 @@ namespace OhtaTool.Plugin
                 LoadStartupLispFiles(module);
             }
 
+            AddInfoTab(modules, rootDir);
+
             if (_paletteSet.Count > 0)
             {
                 try { _paletteSet.Activate(0); } catch { }
+            }
+        }
+
+        /// <summary>Tab Info dựng sẵn, luôn nằm cuối (không phải thư mục mục con, không xoá / tắt được).</summary>
+        private static void AddInfoTab(List<ModuleManifest> modules, string rootDir)
+        {
+            try
+            {
+                var view = new InfoTabControl(
+                    modules,
+                    OhtaUpdateCommands.LoadedVersion,
+                    UpdateVersion.ReadInstalled(rootDir),
+                    CadCompat.PlatformName,
+                    rootDir,
+                    OhtaUpdateCommands.DescribeStatus,
+                    OhtaUpdateCommands.CmdUpdateNow,
+                    OhtaUpdateCommands.CmdRollback);
+
+                var host = new ElementHost { Dock = DockStyle.Fill, Child = view };
+                _paletteSet.Add(ToolInfoCore.InfoTabTitle, host);
+                _hostedTabs.Add(new HostedModuleTab
+                {
+                    Manifest = new ModuleManifest
+                    {
+                        Id = ToolInfoCore.InfoTabId,
+                        TabTitle = ToolInfoCore.InfoTabTitle,
+                        Title = "OHTA TOOL",
+                        AccentColor = ToolInfoCore.InfoAccentColor,
+                        DirectoryPath = rootDir,
+                        Tools = new List<ToolItem>()
+                    },
+                    Host = host,
+                    View = view
+                });
+            }
+            catch (System.Exception ex)
+            {
+                CadCompat.WriteMessage("\n[OHTA TOOL] Khong dung duoc tab Info: " + ex.Message + "\n");
             }
         }
 

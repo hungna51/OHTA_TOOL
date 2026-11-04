@@ -38,6 +38,15 @@ namespace OhtaTool.Plugin
         /// <summary>Phiên bản lúc nạp DLL (bản đang chạy trong phiên CAD này).</summary>
         public static string LoadedVersion => _loadedVersion;
 
+        /// <summary>Dòng trạng thái cập nhật cho tab Info (đọc state.json, không gọi mạng).</summary>
+        public static string DescribeStatus()
+        {
+            string root = CadCompat.GetRootDirectory();
+            string current = string.IsNullOrEmpty(root) ? _loadedVersion : UpdateVersion.ReadInstalled(root);
+            string text = ToolInfoCore.DescribeUpdateStatus(UpdateState.Load(StatePath), current);
+            return _checking == 1 ? "Đang kiểm tra bản mới trên GitHub..." : text;
+        }
+
         /// <summary>Gọi từ OhtaPaletteCommands.Initialize() (luồng giao diện).</summary>
         public static void OnInitialize()
         {

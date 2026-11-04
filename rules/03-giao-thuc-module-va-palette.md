@@ -17,6 +17,7 @@ Mỗi thư mục con trong `OHTA_TOOL/` tương ứng với một **Tab sườn 
   "order": 10,
   "tabTitle": "01. Nhóm Mẫu 1",
   "title": "Nhóm Chức Năng Mẫu 01",
+  "version": "1.0",
   "description": "Mô tả ngắn gọn nhiệm vụ của nhóm chức năng này.",
   "accentColor": "#1E88E5",
   "startupLisp": [
@@ -44,7 +45,9 @@ Mỗi thư mục con trong `OHTA_TOOL/` tương ứng với một **Tab sườn 
 | `enabled` | Tùy chọn | Mặc định `true`. Đặt `false` nếu muốn tạm ẩn Tab của thư mục này mà không cần xóa thư mục. |
 | `order` | Tùy chọn | Số thứ tự ưu tiên hiển thị Tab từ trên xuống dưới (nhỏ xếp trước, mặc định `1000`). |
 | `tabTitle` | Khuyến nghị | Nhãn ngắn gọn hiển thị trực tiếp trên **dải Tab dọc** của CAD PaletteSet (nên dài từ 6–20 ký tự để dễ đọc). |
-| `title` | Tùy chọn | Tiêu đề đầy đủ hiển thị trên phần Header bên trong Tab. |
+| `title` | Tùy chọn | Tiêu đề đầy đủ hiển thị trên phần Header bên trong Tab. **Không ghi phiên bản vào đây** — dùng `version`. |
+| `version` | Khuyến nghị | Phiên bản riêng của tab (chuỗi, vd `"1.5"`). Header tự hiện `title · v1.5`; tab **Info** liệt kê phiên bản mọi tab. **Sửa tab nào thì tăng `version` của tab đó** trong cùng commit. Bản phát hành luôn thắng khi gộp `module.json` (không thuộc `HeaderKeys`). |
+| `stage` | Tùy chọn | Giai đoạn hiện sau phiên bản, vd `"beta"` → `v1.1 (beta)`. Bỏ trường khi tab ổn định. |
 | `description` | Tùy chọn | Dòng mô tả nhiệm vụ của nhóm nằm dưới tiêu đề Header. |
 | `accentColor` | Tùy chọn | Mã màu Hex (`#RRGGBB`, ví dụ `#1E88E5`, `#2E7D32`, `#EF6C00`, `#6A1B9A`) làm màu nhận diện Header & Icon Badge của nhóm. |
 | `startupLisp` | Tùy chọn | Danh sách đường dẫn tương đối (tính từ thư mục mục con) của các file `.lsp` muốn tự nạp sẵn khi mở bảng `OHTA`. |
