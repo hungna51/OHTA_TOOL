@@ -40,11 +40,19 @@ namespace OhtaTool.Plugin.Views
 
             // Tab Guro: giao diện nằm trong GROTOOL.dll (ADR 0003); không nạp được thì dùng danh sách nút
             Func<ModuleManifest, Action, FrameworkElement> guroFactory = (manifest, reloadCallback) =>
-                GuroTabLoader.TaoGiaoDien(manifest) ??
+                DllTabLoader.TaoGiaoDien(manifest, "GROTOOL", "ZwCadPlugin.GuroOhtaTab", "Guro") ??
                 new ModuleTabControl(new ModuleTabViewModel(manifest, reloadCallback));
 
             Register("guro", guroFactory);
             Register("03_Guro", guroFactory);
+
+            // Tab AI: giao diện nằm trong AITOOL.dll (ADR 0005, đang thử nghiệm)
+            Func<ModuleManifest, Action, FrameworkElement> aiFactory = (manifest, reloadCallback) =>
+                DllTabLoader.TaoGiaoDien(manifest, "AITOOL", "AiTool.AiOhtaTab", "AI") ??
+                new ModuleTabControl(new ModuleTabViewModel(manifest, reloadCallback));
+
+            Register("ai", aiFactory);
+            Register("04_AI", aiFactory);
         }
 
         public static void Register(string moduleIdOrFolder, Func<ModuleManifest, Action, FrameworkElement> viewFactory)
