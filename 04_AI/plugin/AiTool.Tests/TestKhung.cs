@@ -80,6 +80,12 @@ namespace AiTool.Tests
             string thuTu = string.Join(" ", kq3.OrderBy(k => k.SoThuTu).Select(k => k.MinX + "/" + k.MinY));
             Kiem("Thu tu khung: tren xuong, trai sang", thuTu, "0/200 200/200 0/0 200/0");
             Kiem("So thu tu bat dau tu 1", kq3.Min(k => k.SoThuTu), 1);
+
+            // Khung vien ban ve (cung layer) bao trum cac khung tam -> bo, khong gui ca ban ve thanh 1 khung
+            var vien = new List<(double, double, double, double)> { (0, 0, 1000, 1000), (10, 10, 100, 100), (200, 10, 300, 100) };
+            List<KhungDuLieu> kq4 = GomKhung.Gom(vien, new List<DoiTuong> { Line("0-KAKOU", 20, 20, 30, 20) });
+            Kiem("Khung bao trum khung khac bi bo -> con 2", kq4.Count, 2);
+            Kiem("Khung bi bo khong lay doi tuong", kq4.Sum(k => k.DoiTuong.Count), 1);
             Console.WriteLine();
         }
     }

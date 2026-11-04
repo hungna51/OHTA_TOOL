@@ -38,7 +38,7 @@ Tab gửi dữ liệu trong từng **khung** (polyline kín 4 đỉnh, mặc đ�
 
 Cài đặt riêng: `HKCU\Software\OFT_Lisp\OhtaTool\AI` (`layer_khung`, `model`). Build + test: `powershell -ExecutionPolicy Bypass -File OHTA_TOOL\build_ohta.ps1` (chạy cả `AiTool.Tests`).
 
-Dữ liệu gửi đi: mọi đối tượng có tâm hộp bao nằm trong khung (line, cung, tròn, polyline, chữ, dim — kèm layer), toạ độ tính từ góc dưới trái khung, làm tròn 2 chữ số; cùng bảng vật liệu và lời dặn (được Claude cache 5 phút nên các lô sau rẻ hơn). Không gửi ảnh. Đối tượng nằm trong block (BlockReference) **không** được đọc.
+Dữ liệu gửi đi: mọi đối tượng có tâm hộp bao nằm trong khung (line, cung, tròn, polyline, chữ, dim — kèm layer), toạ độ tính từ góc dưới trái khung, làm tròn 2 chữ số; cùng bảng vật liệu và lời dặn (được Claude cache 5 phút nên các lô sau rẻ hơn). Không gửi ảnh. Ghi chú MLeader được đọc; đối tượng nằm trong block (BlockReference) **không** được đọc. Khung bao trùm trọn một khung khác (vd. viền bản vẽ cùng layer) bị bỏ qua — không phải một tấm.
 
 ## Tạo API key Anthropic
 

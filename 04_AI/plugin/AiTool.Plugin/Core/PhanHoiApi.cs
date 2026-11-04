@@ -35,9 +35,42 @@ namespace AiTool.Core
 
     public static class PhanHoiApi
     {
-        public const string LoiTuChoi = "AI tu choi lo nay";
-        public const string LoiBiCat = "Phan hoi bi cat (lo qua dai)";
-        public const string LoiKhongDoc = "Phan hoi khong doc duoc";
+        // Thông báo chỉ hiện trên tab (WPF) và nhật ký -> tiếng Việt có dấu.
+        public const string LoiTuChoi = "AI từ chối lô này";
+        public const string LoiBiCat = "Phản hồi bị cắt (lô quá dài)";
+        public const string LoiKhongDoc = "Phản hồi không đọc được";
+
+        /// <summary>
+        /// Body lỗi HTTP không phải JSON (vd. trang HTML của proxy / cổng 502) -> bọc thành JSON lỗi
+        /// có mã HTTP để Doc() báo đúng. Body JSON thì giữ nguyên.
+        /// </summary>
+        public static string BocLoiHttp(int ma, string body)
+        {
+            if (!string.IsNullOrEmpty(body) && body.TrimStart().StartsWith("{", StringComparison.Ordinal))
+                return body;
+            var err = new JsonObject();
+            err.Set("type", "http_error");
+            err.Set("message", "Máy chủ AI trả lỗi HTTP " + ma.ToString(CultureInfo.InvariantCulture));
+            var o = new JsonObject();
+            o.Set("type", "error");
+            o.Set("error", err);
+            return JsonLite.Serialize(o);
+        }
+
+        private static string DichLoi(JsonObject err)
+        {
+            string msg = err.GetString("message") ?? string.Empty;
+            switch (err.GetString("type"))
+            {
+                case "authentication_error": return "API key sai hoặc đã bị xoá (kiểm tra 04_AI\\data\\ai.key)";
+                case "permission_error": return "API key không có quyền dùng model này";
+                case "rate_limit_error": return "AI quá tải (429), thử lại sau ít phút";
+                case "overloaded_error": return "AI đang quá tải, thử lại sau ít phút";
+                case "billing_error": return "Tài khoản API hết tiền / chưa nạp tiền";
+                case "invalid_request_error": return "Yêu cầu không hợp lệ: " + msg;
+                default: return msg.Length > 0 ? msg : LoiKhongDoc;
+            }
+        }
 
         public static KetQuaLo Doc(string json, ISet<int> khungHopLe)
         {
@@ -53,7 +86,7 @@ namespace AiTool.Core
 
             if (goc.Get("error") is JsonObject err)
             {
-                kq.Loi = err.GetString("message") ?? err.GetString("type") ?? LoiKhongDoc;
+                kq.Loi = DichLoi(err);
                 return kq;
             }
 

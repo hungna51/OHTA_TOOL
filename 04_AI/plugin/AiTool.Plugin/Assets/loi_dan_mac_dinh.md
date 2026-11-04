@@ -9,7 +9,7 @@ Nhiệm vụ: tìm chỗ **F-name mâu thuẫn với bảng vật liệu, với 
 Toạ độ tính bằng mm, gốc (0,0) là góc dưới trái khung, làm tròn 2 chữ số thập phân. Mỗi dòng một đối tượng; từ thứ hai luôn là tên layer.
 
 - `#KHUNG <số> rong=<W> cao=<H>` — bắt đầu một khung. `<số>` là số bạn ghi vào trường `khung` của cảnh báo.
-- `FNAME: ...` — các dòng F-name (layer `2-F-NAME`), trên xuống dưới, ngăn cách bằng ` | `. `(khong co)` = khung không có F-name.
+- `FNAME: ...` — các dòng F-name (layer `2-F-NAME`), trên xuống dưới, ngăn cách bằng ` | `. `(khong co)` = khung không có F-name. `(2 cum N=, …)` = khung chứa nhiều khối F-name (khung chồng nhau): khi đó từng dòng F-name nằm ở các dòng `T 2-F-NAME x,y …` — tự nhóm theo vị trí (cùng cột X, liền nhau theo Y là một khối) và chỉ báo cho khối thuộc tấm của khung này.
 - `FNAME_TACH: N=..; M=..; T=..; Q=..; Z=..; BE=..` — F-name đã tách sẵn (chỉ có khi khung có đúng một dòng `N=`). `BE` là các dòng bẻ/uốn nguyên văn, nối bằng ` ; `.
 - `L <layer> x1,y1 x2,y2` — đoạn thẳng.
 - `C <layer> cx,cy d=<đường kính>` — đường tròn (thường là lỗ).

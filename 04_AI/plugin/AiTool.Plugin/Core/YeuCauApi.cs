@@ -14,12 +14,19 @@ namespace AiTool.Core
         public const string BetaFallback = "server-side-fallback-2026-07-01";
         public const int MaxTokens = 16000;
 
+        /// <summary>
+        /// Model có fallback phía máy chủ khi bị từ chối (fallbacks:"default"). Haiku 5.5 KHÔNG có —
+        /// gửi kèm sẽ bị 400, nên chỉ bật cho Sonnet / Opus.
+        /// </summary>
+        public static bool CoFallback(string model) =>
+            model == "claude-sonnet-5-5" || model == "claude-opus-5-5";
+
         public static string Body(string model, string loiDan, string khoiVatLieu, string duLieuLo)
         {
             var body = new JsonObject();
             body.Set("model", model);
             body.Set("max_tokens", MaxTokens);
-            body.Set("fallbacks", "default");
+            if (CoFallback(model)) body.Set("fallbacks", "default");
 
             var format = new JsonObject();
             format.Set("type", "json_schema");

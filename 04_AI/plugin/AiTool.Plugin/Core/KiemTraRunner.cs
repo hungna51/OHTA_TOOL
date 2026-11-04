@@ -26,13 +26,13 @@ namespace AiTool.Core
         public const int KichThuocLo = 10;
         public const int SongSong = 3;
 
-        /// <summary>Lỗi chặn trước khi gọi mạng; null = chạy được.</summary>
-        public static string LoiTruocKhiChay(string key, int soKhung)
+        /// <summary>Lỗi chặn trước khi gọi mạng (hiện trên tab, có dấu); null = chạy được.</summary>
+        public static string LoiTruocKhiChay(string key, int soKhung, string layer)
         {
             if (string.IsNullOrWhiteSpace(key))
-                return "Chua co API key: tao file 04_AI\\data\\ai.key (xem README)";
+                return "Chưa có API key: tạo file 04_AI\\data\\ai.key (xem README)";
             if (soKhung == 0)
-                return "Khong thay khung tren layer da chon";
+                return "Không thấy khung trên layer " + layer;
             return null;
         }
 
@@ -63,9 +63,18 @@ namespace AiTool.Core
                     phanHoi = await gui.Gui(body, ct).ConfigureAwait(false);
                     kq = PhanHoiApi.Doc(phanHoi, new HashSet<int>(lo[i].Select(k => k.SoThuTu)));
                 }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    kq = new KetQuaLo { Loi = "đã dừng" };
+                }
                 catch (OperationCanceledException)
                 {
-                    kq = new KetQuaLo { Loi = "da dung" };
+                    // HttpClient.Timeout cũng ném TaskCanceledException nhưng người dùng không bấm Dừng
+                    kq = new KetQuaLo { Loi = "hết giờ chờ AI (quá 180 giây)" };
+                }
+                catch (System.Net.Http.HttpRequestException ex)
+                {
+                    kq = new KetQuaLo { Loi = "không kết nối được AI (mạng / proxy): " + ex.GetBaseException().Message };
                 }
                 catch (Exception ex)
                 {
@@ -88,7 +97,7 @@ namespace AiTool.Core
                 tong.NhatKy.Add((ketQua[i].Body, ketQua[i].PhanHoi));
                 tong.TongSuDung.Cong(kq.SuDung);
                 if (kq.Loi != null)
-                    tong.LoiLo.Add("Lo " + (i + 1) + ": " + kq.Loi);
+                    tong.LoiLo.Add("Lô " + (i + 1) + ": " + kq.Loi);
                 foreach (CanhBao cb in kq.CanhBao)
                     tong.CanhBao.Add((lo[i].First(k => k.SoThuTu == cb.Khung), cb));
             }

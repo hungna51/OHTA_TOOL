@@ -92,6 +92,10 @@ namespace AiTool.CadServices
                     return new DoiTuong { Loai = LoaiDoiTuong.Text, X1 = m.Location.X, Y1 = m.Location.Y, NoiDung = m.Contents, ChieuCao = m.TextHeight };
                 case Dimension dim:
                     return DoiDim(dim);
+                case MLeader ml when ml.ContentType == ContentType.MTextContent && ml.MText != null:
+                    // Ghi chú tiếng Nhật (タップ M6, 逆図, 曲げ…) hay ghi bằng MLeader
+                    MText mt = ml.MText;
+                    return new DoiTuong { Loai = LoaiDoiTuong.Text, X1 = mt.Location.X, Y1 = mt.Location.Y, NoiDung = mt.Contents, ChieuCao = mt.TextHeight };
                 default:
                     return null;
             }

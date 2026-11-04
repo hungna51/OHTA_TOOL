@@ -41,6 +41,9 @@ namespace AiTool.Tests
                 Kiem("Key khong co file -> null", DuLieuTinh.DocKey(tam), null);
                 File.WriteAllText(Path.Combine(tam, "data", "ai.key"), "# key cua OHTA\n\n  sk-ant-x  \nrac\n");
                 Kiem("Key bo dong chu thich + trim", DuLieuTinh.DocKey(tam), "sk-ant-x");
+                File.Delete(Path.Combine(tam, "data", "ai.key"));
+                File.WriteAllText(Path.Combine(tam, "data", "ai.key.txt"), "sk-ant-txt\n");
+                Kiem("Key luu nham ai.key.txt (Notepad) van doc duoc", DuLieuTinh.DocKey(tam), "sk-ant-txt");
             }
             finally
             {

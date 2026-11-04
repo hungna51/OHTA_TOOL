@@ -181,10 +181,10 @@ namespace AiTool.ViewModels
             LocCanhBao();
 
             string key = DuLieuTinh.DocKey(ThuMucModule);
-            string loiTruoc = KiemTraRunner.LoiTruocKhiChay(key, KhungLanCuoi.Count);
+            string loiTruoc = KiemTraRunner.LoiTruocKhiChay(key, KhungLanCuoi.Count, LayerKhung);
             if (loiTruoc != null)
             {
-                Loi.Add(Viet(loiTruoc));
+                Loi.Add(loiTruoc);
                 Tong = "Chưa kiểm tra.";
                 return;
             }
@@ -201,7 +201,7 @@ namespace AiTool.ViewModels
             TienDo = "Đang gửi " + ds.Count + " khung…";
             var tienDo = new BaoTienDo(_ui, p => TienDo = "Lô " + p.xong + "/" + p.tong);
 
-            Task.Run(() => KiemTraRunner.Chay(ds, model, loiDan, vatLieu, new ClaudeHttp(key), tienDo, ct))
+            Task.Run(() => KiemTraRunner.Chay(ds, model, loiDan, vatLieu, new ClaudeHttp(key, YeuCauApi.CoFallback(model)), tienDo, ct))
                 .ContinueWith(t => _ui.BeginInvoke(new Action(() => XongKiemTra(t, model, thuMuc))));
         }
 
@@ -209,13 +209,14 @@ namespace AiTool.ViewModels
         {
             DangChay = false;
             TienDo = "";
-            if (t.IsFaulted || t.Result == null)
+            // Đọc t.Result khi task bị huỷ / lỗi sẽ ném trong callback Dispatcher -> có thể kéo sập CAD
+            if (t.Status != TaskStatus.RanToCompletion || t.Result == null)
             {
-                Loi.Add("Lỗi khi kiểm tra: " + (t.Exception?.GetBaseException().Message ?? "không rõ"));
+                Loi.Add(t.IsCanceled ? "Đã dừng." : "Lỗi khi kiểm tra: " + (t.Exception?.GetBaseException().Message ?? "không rõ"));
                 return;
             }
             KetQuaKiemTra kq = t.Result;
-            foreach (string l in kq.LoiLo) Loi.Add(Viet(l));
+            foreach (string l in kq.LoiLo) Loi.Add(l);
             _tatCa = kq.CanhBao.Select(x => new DongCanhBao
             {
                 SoThuTu = x.Khung.SoThuTu,
@@ -292,19 +293,6 @@ namespace AiTool.ViewModels
             }
         }
 
-        /// <summary>Thông báo lõi viết không dấu (dùng chung với dòng lệnh) -> hiện trên tab có dấu.</summary>
-        private static string Viet(string s)
-        {
-            if (s == null) return null;
-            return s.Replace("Chua co API key: tao file", "Chưa có API key: tạo file")
-                    .Replace("(xem README)", "(xem README)")
-                    .Replace("Khong thay khung tren layer da chon", "Không thấy khung trên layer đã chọn")
-                    .Replace("AI tu choi lo nay", "AI từ chối lô này")
-                    .Replace("Phan hoi bi cat (lo qua dai)", "Phản hồi bị cắt (lô quá dài)")
-                    .Replace("Phan hoi khong doc duoc", "Phản hồi không đọc được")
-                    .Replace("da dung", "đã dừng")
-                    .Replace("Lo ", "Lô ");
-        }
 
         private static void CanhBaoDongLenh(string s)
         {

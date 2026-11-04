@@ -30,6 +30,13 @@ namespace AiTool.Tests
             }
         }
 
+        private sealed class GuiNem : IGuiYeuCau
+        {
+            private readonly Exception _ex;
+            public GuiNem(Exception ex) { _ex = ex; }
+            public Task<string> Gui(string body, CancellationToken ct) => Task.FromException<string>(_ex);
+        }
+
         private static List<KhungDuLieu> NhieuKhung(int n) =>
             Enumerable.Range(1, n).Select(i => new KhungDuLieu { SoThuTu = i, MaxX = 10, MaxY = 10 }).ToList();
 
@@ -59,10 +66,21 @@ namespace AiTool.Tests
             KiemTraRunner.Chay(NhieuKhung(5), "claude-sonnet-5-5", "LD", "VL", new GuiGia(), p, CancellationToken.None).Wait();
             Kiem("Tien do: bao xong 1/1", tienDo.LastOrDefault(), (1, 1));
 
-            Kiem("Runner_ThieuKey_BaoLoi", KiemTraRunner.LoiTruocKhiChay(null, 3), "Chua co API key: tao file 04_AI\\data\\ai.key (xem README)");
-            Kiem("Key rong cung bao loi", KiemTraRunner.LoiTruocKhiChay("  ", 3) != null, true);
-            Kiem("Khong co khung", KiemTraRunner.LoiTruocKhiChay("sk", 0), "Khong thay khung tren layer da chon");
-            Kiem("Hop le -> null", KiemTraRunner.LoiTruocKhiChay("sk", 1), null);
+            Kiem("Runner_ThieuKey_BaoLoi", KiemTraRunner.LoiTruocKhiChay(null, 3, "Khung_IN"), "Chưa có API key: tạo file 04_AI\\data\\ai.key (xem README)");
+            Kiem("Key rong cung bao loi", KiemTraRunner.LoiTruocKhiChay("  ", 3, "Khung_IN") != null, true);
+            Kiem("Khong co khung -> neu ten layer", KiemTraRunner.LoiTruocKhiChay("sk", 0, "Khung_IN"), "Không thấy khung trên layer Khung_IN");
+            Kiem("Hop le -> null", KiemTraRunner.LoiTruocKhiChay("sk", 1, "Khung_IN"), null);
+
+            var het = new GuiNem(new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout"));
+            KetQuaKiemTra kqHet = KiemTraRunner.Chay(NhieuKhung(2), "claude-sonnet-5-5", "LD", "VL", het, null, CancellationToken.None).Result;
+            Kiem("Het gio HttpClient KHONG phai 'da dung'", kqHet.LoiLo[0], "Lô 1: hết giờ chờ AI (quá 180 giây)");
+            var mang = new GuiNem(new HttpRequestException("An error occurred while sending the request.", new Exception("No such host is known")));
+            KetQuaKiemTra kqMang = KiemTraRunner.Chay(NhieuKhung(2), "claude-sonnet-5-5", "LD", "VL", mang, null, CancellationToken.None).Result;
+            Kiem("Mat mang -> tieng Viet + ly do goc", kqMang.LoiLo[0], "Lô 1: không kết nối được AI (mạng / proxy): No such host is known");
+            var huy = new CancellationTokenSource();
+            huy.Cancel();
+            KetQuaKiemTra kqHuy = KiemTraRunner.Chay(NhieuKhung(2), "claude-sonnet-5-5", "LD", "VL", new GuiGia(), null, huy.Token).Result;
+            Kiem("Nguoi dung bam Dung -> da dung", kqHuy.LoiLo[0], "Lô 1: đã dừng");
 
             string tam = Path.Combine(Path.GetTempPath(), "aitool_test_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(tam);

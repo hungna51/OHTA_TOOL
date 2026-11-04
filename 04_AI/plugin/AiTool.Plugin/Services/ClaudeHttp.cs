@@ -18,10 +18,13 @@ namespace AiTool.Services
         private static readonly HttpClient Http = TaoHttp();
         private const int SoLanThuLai = 2;
         private readonly string _apiKey;
+        private readonly bool _fallback;
 
-        public ClaudeHttp(string apiKey)
+        /// <param name="fallback">Gửi header beta fallback (chỉ model có fallback — YeuCauApi.CoFallback).</param>
+        public ClaudeHttp(string apiKey, bool fallback)
         {
             _apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
+            _fallback = fallback;
         }
 
         private static HttpClient TaoHttp()
@@ -39,9 +42,12 @@ namespace AiTool.Services
             {
                 using (var req = new HttpRequestMessage(HttpMethod.Post, YeuCauApi.Url))
                 {
-                    req.Headers.Add("x-api-key", _apiKey);
-                    req.Headers.Add("anthropic-version", YeuCauApi.PhienBanApi);
-                    req.Headers.Add("anthropic-beta", YeuCauApi.BetaFallback);
+                    // TryAddWithoutValidation: Headers.Add ném FormatException CHỨA giá trị header -> key
+                    // có ký tự lạ sẽ lọt vào thông báo lỗi và nhật ký.
+                    if (!req.Headers.TryAddWithoutValidation("x-api-key", _apiKey))
+                        throw new InvalidOperationException("API key trong ai.key có ký tự không hợp lệ");
+                    req.Headers.TryAddWithoutValidation("anthropic-version", YeuCauApi.PhienBanApi);
+                    if (_fallback) req.Headers.TryAddWithoutValidation("anthropic-beta", YeuCauApi.BetaFallback);
                     req.Content = new StringContent(body, new UTF8Encoding(false), "application/json");
 
                     using (HttpResponseMessage res = await Http.SendAsync(req, ct).ConfigureAwait(false))
@@ -50,7 +56,7 @@ namespace AiTool.Services
                         int ma = (int)res.StatusCode;
                         bool thuLai = ma == 429 || ma >= 500;
                         if (!thuLai || lan >= SoLanThuLai)
-                            return text;
+                            return res.IsSuccessStatusCode ? text : PhanHoiApi.BocLoiHttp(ma, text);
 
                         TimeSpan cho = res.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(2 << lan);
                         if (cho > TimeSpan.FromSeconds(60)) cho = TimeSpan.FromSeconds(60);

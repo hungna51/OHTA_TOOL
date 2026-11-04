@@ -24,8 +24,14 @@ namespace AiTool.Core
               .Append(" cao=").Append(T(k.MaxY - k.MinY)).Append('\n');
 
             List<string> fname = DongFname(k);
-            sb.Append("FNAME: ").Append(fname.Count == 0 ? "(khong co)" : string.Join(" | ", fname)).Append('\n');
-            if (DemN(fname) == 1)
+            int soN = DemN(fname);
+            // Nhiều cụm F-name (khung chồng nhau): không trộn thành một dòng — để từng dòng F-name
+            // thành dòng T kèm vị trí cho AI tự nhóm.
+            bool nhieuCum = soN > 1;
+            if (fname.Count == 0) sb.Append("FNAME: (khong co)\n");
+            else if (nhieuCum) sb.Append("FNAME: (").Append(soN).Append(" cum N=, xem cac dong T 2-F-NAME theo vi tri)\n");
+            else sb.Append("FNAME: ").Append(string.Join(" | ", fname)).Append('\n');
+            if (soN == 1)
             {
                 FnameRecord r = FnameParser.Parse(fname);
                 sb.Append("FNAME_TACH: N=").Append(r.N).Append("; M=").Append(r.M).Append("; T=").Append(r.T)
@@ -35,21 +41,21 @@ namespace AiTool.Core
 
             foreach (DoiTuong d in k.DoiTuong)
             {
-                if (LaFname(d)) continue;
+                if (LaFname(d) && !nhieuCum) continue;
                 string dong = Dong(d);
                 if (dong != null) sb.Append(dong).Append('\n');
             }
             return sb.ToString().TrimEnd('\n');
         }
 
-        /// <summary>Tên hiện trên cảnh báo: "N=..." khi khung có đúng một dòng N=, ngược lại "Khung n".</summary>
+        /// <summary>Tên hiện trên cảnh báo: "N=... (khung n)" khi khung có đúng một dòng N=, ngược lại "Khung n".</summary>
         public static string TenKhung(KhungDuLieu k)
         {
             List<string> fname = DongFname(k);
             if (DemN(fname) == 1)
             {
                 string n = fname.First(LaDongN).Trim();
-                return "N=" + n.Substring(2).Trim();
+                return "N=" + n.Substring(2).Trim() + " (khung " + k.SoThuTu + ")";
             }
             return "Khung " + k.SoThuTu;
         }

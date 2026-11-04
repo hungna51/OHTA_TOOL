@@ -25,5 +25,5 @@ _graphify-out/
 module.json.bak
 
 # Tab AI: API key va nhat ky (ADR 0005)
-04_AI/data/ai.key
+04_AI/data/ai.key*
 04_AI/log/

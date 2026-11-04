@@ -67,6 +67,8 @@ namespace AiTool.Core
         {
             string f = Path.Combine(thuMucModule, "data", "ai.key");
             if (!File.Exists(f))
+                f = f + ".txt"; // Notepad hay lưu thành ai.key.txt (đuôi bị ẩn)
+            if (!File.Exists(f))
                 return null;
             return File.ReadAllLines(f, Encoding.UTF8)
                 .Select(l => l.Trim().TrimStart('﻿'))

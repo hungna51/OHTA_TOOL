@@ -63,15 +63,18 @@ namespace AiTool.Tests
             Kiem("FNAME: cac dong theo Y giam", dfn.Contains("FNAME: N=A-1 | M=SUS304 2B | T=1.5 | Q=2 | V=10-引代(90°) | Z=SUS-N2"), true);
             Kiem("FNAME_TACH khi dung 1 dong N=", dfn.Contains("FNAME_TACH: N=A-1; M=SUS304 2B; T=1.5; Q=2; Z=SUS-N2; BE=V=10-引代(90°)"), true);
             Kiem("F-name khong lap thanh dong T", dfn.Count(d => d.StartsWith("T 2-F-NAME")), 0);
-            Kiem("TenKhung = N=", DongChu.TenKhung(fn), "N=A-1");
+            Kiem("TenKhung = N= kem so khung (spec 4.11)", DongChu.TenKhung(fn), "N=A-1 (khung 1)");
 
             var hai = KhungMau(Chu("2-F-NAME", 0, 50, "N=A-1"), Chu("2-F-NAME", 0, 45, "M=SS400"),
                                Chu("2-F-NAME", 200, 50, "N=A-2"), Chu("2-F-NAME", 200, 45, "M=SPCC"));
             string[] dhai = Dong(DongChu.Khung(hai));
             Kiem("DongChu_KhungHaiCumN_KhongTachTruong", dhai.Any(d => d.StartsWith("FNAME_TACH")), false);
+            Kiem("Hai cum: KHONG tron thanh 1 dong FNAME", dhai.Any(d => d.Contains("N=A-1 | N=A-2")), false);
+            Kiem("Hai cum: FNAME bao nhieu cum", dhai.Contains("FNAME: (2 cum N=, xem cac dong T 2-F-NAME theo vi tri)"), true);
+            Kiem("Hai cum: tung dong F-name giu vi tri", dhai.Contains("T 2-F-NAME 200,50 h=3.5 \"N=A-2\""), true);
             Kiem("Khung 2 cum N=: TenKhung = Khung 1", DongChu.TenKhung(hai), "Khung 1");
             Kiem("F-name 1 MText co \\P: van tach",
-                 DongChu.TenKhung(KhungMau(Chu("2-f-name", 0, 0, "N=B-7\\PM=SS400"))), "N=B-7");
+                 DongChu.TenKhung(KhungMau(Chu("2-f-name", 0, 0, "N=B-7\\PM=SS400"))), "N=B-7 (khung 1)");
 
             var lo = new List<KhungDuLieu> { KhungMau(), KhungMau() };
             lo[1].SoThuTu = 2;

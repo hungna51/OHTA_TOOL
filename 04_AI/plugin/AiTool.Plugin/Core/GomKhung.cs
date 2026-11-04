@@ -14,7 +14,11 @@ namespace AiTool.Core
         {
             var kq = new List<KhungDuLieu>();
             int so = 0;
-            foreach (var k in khung.OrderByDescending(k => k.MaxY).ThenBy(k => k.MinX))
+            // Khung bao trùm trọn một khung khác (vd. viền bản vẽ cùng layer) không phải một tấm:
+            // bỏ, để không gửi cả bản vẽ thành một khung khổng lồ.
+            var tam = khung.Where(k => !khung.Any(c => !c.Equals(k) &&
+                c.MinX >= k.MinX && c.MinY >= k.MinY && c.MaxX <= k.MaxX && c.MaxY <= k.MaxY)).ToList();
+            foreach (var k in tam.OrderByDescending(k => k.MaxY).ThenBy(k => k.MinX))
             {
                 var kd = new KhungDuLieu { SoThuTu = ++so, MinX = k.MinX, MinY = k.MinY, MaxX = k.MaxX, MaxY = k.MaxY };
                 foreach (DoiTuong d in doiTuong)
