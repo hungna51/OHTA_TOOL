@@ -51,14 +51,57 @@
         </Style>
     </UserControl.Resources>
 
-    <ScrollViewer x:Name="KhungCuon" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="10">
-            <!-- Tieu de -->
-            <Border x:Name="Header" CornerRadius="6" Padding="10,8" Margin="0,0,0,8">
-                <StackPanel>
-                    <TextBlock Text="{Binding TieuDe}" Foreground="White" FontWeight="Bold" FontSize="14"/>
-                    <TextBlock Text="{Binding MoTa}" Foreground="#E8E4FF" TextWrapping="Wrap" Margin="0,2,0,0"/>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- 0. Header -->
+            <RowDefinition Height="*"/>      <!-- 1. Noi dung (cuon) -->
+        </Grid.RowDefinitions>
+
+        <!-- 0. Header: cung kieu tab Fname / Guro, nut cai dat nen trang banh rang to mau tab -->
+        <Border Grid.Row="0" Background="{Binding AccentBrush}" Padding="12,10">
+            <DockPanel LastChildFill="True">
+                <Button DockPanel.Dock="Right" Command="{Binding CaiDatCmd}"
+                        Width="30" Height="30" Margin="6,0,0,0" VerticalAlignment="Top" Cursor="Hand"
+                        ToolTip="Cài đặt AI: API key, file hướng dẫn AI chạy">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="#FFFFFF" BorderBrush="#CFD8DC"
+                                    BorderThickness="1" CornerRadius="4">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#ECEFF1"/>
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#90A4AE"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#CFD8DC"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                    <Rectangle Width="18" Height="18" Fill="{Binding AccentBrush}">
+                        <Rectangle.OpacityMask>
+                            <ImageBrush ImageSource="{Binding SettingsLogo}" Stretch="Uniform"/>
+                        </Rectangle.OpacityMask>
+                    </Rectangle>
+                </Button>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding TieuDe}" Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding MoTa}" Foreground="#DDD6FE" FontSize="10.5" Margin="0,1,0,0"
+                               TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
+            </DockPanel>
+        </Border>
+
+    <ScrollViewer x:Name="KhungCuon" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="8">
+            <!-- Trang thai key: bam de mo cai dat -->
+            <Border Background="#FFF4E5" BorderBrush="#F9C97A" BorderThickness="1" CornerRadius="4" Padding="8,5" Margin="0,0,0,8"
+                    Cursor="Hand" MouseLeftButtonUp="MoCaiDat"
+                    Visibility="{Binding ChuaCoKey, Converter={StaticResource HienKhi}}">
+                <TextBlock Text="{Binding TrangThaiKey}" Foreground="#8A5300" TextWrapping="Wrap"/>
             </Border>
 
             <!-- Chon layer + model -->
@@ -143,18 +186,7 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <!-- Loi dan -->
-            <Expander Header="Lời dặn cho AI" Margin="0,8,0,0">
-                <StackPanel Margin="0,6,0,0">
-                    <TextBox Text="{Binding LoiDan, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" AcceptsTab="True"
-                             TextWrapping="Wrap" MinHeight="160" MaxHeight="420" VerticalScrollBarVisibility="Auto"
-                             FontFamily="Consolas, Meiryo UI"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                        <Button Style="{StaticResource NutPhu}" Content="Lưu" Command="{Binding LuuLoiDanCmd}" Margin="0,0,6,0"/>
-                        <Button Style="{StaticResource NutPhu}" Content="Khôi phục mặc định" Command="{Binding KhoiPhucCmd}"/>
-                    </StackPanel>
-                </StackPanel>
-            </Expander>
         </StackPanel>
     </ScrollViewer>
+    </Grid>
 </UserControl>

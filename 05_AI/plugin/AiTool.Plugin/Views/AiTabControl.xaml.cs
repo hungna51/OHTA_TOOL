@@ -16,17 +16,11 @@ namespace AiTool.Views
             InitializeComponent();
             _vm = vm;
             DataContext = vm;
-            try
-            {
-                var mau = (Color)ColorConverter.ConvertFromString(vm.MauNhan);
-                Header.Background = new SolidColorBrush(mau);
-                NutKiemTra.Background = new SolidColorBrush(mau);
-            }
-            catch (Exception)
-            {
-                Header.Background = NutKiemTra.Background = new SolidColorBrush(Color.FromRgb(0x5B, 0x3F, 0xD1));
-            }
+            NutKiemTra.Background = vm.AccentBrush;
         }
+
+        /// <summary>Bấm dòng "Chưa có API key" -> mở cài đặt.</summary>
+        private void MoCaiDat(object sender, MouseButtonEventArgs e) => _vm.CaiDatCmd.Execute(null);
 
         /// <summary>CuonHo của OHTATOOL gọi bằng phản chiếu để lăn chuột trên PaletteSet.</summary>
         public void ScrollByMouseWheel(int wheelDelta)

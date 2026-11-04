@@ -16,7 +16,9 @@ Tab gửi dữ liệu trong từng **khung** (polyline kín 4 đỉnh, mặc đ�
 1. Gõ `OHTA` → tab **AI**. Chọn **Layer khung** và **Model** (mặc định `claude-sonnet-5-5`; Opus kỹ hơn và đắt gấp đôi; Haiku rẻ nhất).
 2. **▶ Kiểm tra** (= lệnh `OHTAAI`) kiểm mọi khung trong bản vẽ; **⬚ Chọn vùng** (= `OHTAAIVUNG`) chỉ kiểm khung nằm trọn trong vùng quét. Gửi theo lô 10 khung, 3 lô song song; **■ Dừng** để huỷ.
 3. Dòng tổng hiện số cảnh báo, token, tiền ước tính (USD). **Nhật ký** mở file log của lần kiểm.
-4. **Lời dặn cho AI** (cuối tab): sửa rồi **Lưu** để đổi cách AI kiểm — không cần build lại. **Khôi phục mặc định** ghi lại bản gốc.
+4. Nút **⚙** (góc phải tiêu đề) mở **Cài Đặt AI**:
+   - **API key**: dán key rồi **Lưu** (hiện dạng che `sk-ant-…1234`), **Xoá key** để gỡ khỏi máy.
+   - **File hướng dẫn AI chạy** (`data\huong_dan_ai.md`): AI đọc file này trước mỗi lần kiểm — vai trò, cách đọc dữ liệu khung, luật F-name, nhóm lỗi. Sửa ngay trong ô hoặc **Mở bằng Notepad**; **Khôi phục mặc định** lấy lại bản gốc. Không cần build lại.
 
 | Lệnh | Việc |
 |---|---|
@@ -29,7 +31,7 @@ Tab gửi dữ liệu trong từng **khung** (polyline kín 4 đỉnh, mặc đ�
 ```
 05_AI/
 ├── module.json              Tab "AI" (id "ai", order 40)
-├── data/loi_dan.md          Lời dặn đang dùng (sửa trên tab)
+├── data/huong_dan_ai.md     File hướng dẫn AI chạy (sửa ở nút ⚙ hoặc Notepad)
 ├── data/ai.key              API key — KHÔNG lên git (.gitignore chặn ai.key*)
 ├── log/                     Nhật ký mỗi lần kiểm (JSON) — không lên git
 ├── bin/<ZwCAD|AutoCAD>/AITOOL.dll
@@ -38,7 +40,7 @@ Tab gửi dữ liệu trong từng **khung** (polyline kín 4 đỉnh, mặc đ�
 
 Cài đặt riêng: `HKCU\Software\OFT_Lisp\OhtaTool\AI` (`layer_khung`, `model`). Build + test: `powershell -ExecutionPolicy Bypass -File OHTA_TOOL\build_ohta.ps1` (chạy cả `AiTool.Tests`).
 
-Dữ liệu gửi đi: mọi đối tượng có tâm hộp bao nằm trong khung (line, cung, tròn, polyline, chữ, dim — kèm layer), toạ độ tính từ góc dưới trái khung, làm tròn 2 chữ số; cùng bảng vật liệu và lời dặn (được Claude cache 5 phút nên các lô sau rẻ hơn). Không gửi ảnh. Ghi chú MLeader được đọc; đối tượng nằm trong block (BlockReference) **không** được đọc. Khung bao trùm trọn một khung khác (vd. viền bản vẽ cùng layer) bị bỏ qua — không phải một tấm.
+Dữ liệu gửi đi: mọi đối tượng có tâm hộp bao nằm trong khung (line, cung, tròn, polyline, chữ, dim — kèm layer), toạ độ tính từ góc dưới trái khung, làm tròn 2 chữ số; cùng bảng vật liệu và file hướng dẫn AI (được Claude cache 5 phút nên các lô sau rẻ hơn). Không gửi ảnh. Ghi chú MLeader được đọc; đối tượng nằm trong block (BlockReference) **không** được đọc. Khung bao trùm trọn một khung khác (vd. viền bản vẽ cùng layer) bị bỏ qua — không phải một tấm.
 
 ## Tạo API key Anthropic
 
@@ -46,7 +48,7 @@ Dữ liệu gửi đi: mọi đối tượng có tâm hộp bao nằm trong khun
 2. **Billing** (Plans & Billing) → nạp tiền (credit trả trước). Vài USD đủ thử hàng trăm khung với Sonnet.
 3. **Limits** → đặt **giới hạn chi tiêu tháng** để không phát sinh ngoài ý muốn.
 4. **API Keys** → **Create Key**, đặt tên `OHTA-AI` → chép key (chỉ hiện một lần; bắt đầu bằng `sk-ant-`).
-5. Tạo file `05_AI\data\ai.key`, dán key vào **một dòng duy nhất** (dòng bắt đầu bằng `#` được bỏ qua), lưu. Notepad hay lưu thành `ai.key.txt` (đuôi bị ẩn) — tab vẫn đọc được, và `.gitignore` chặn cả `ai.key*`.
+5. Trên tab AI bấm **⚙** → dán key vào ô **API KEY** → **Lưu**. (Key được ghi vào `05_AI\data\ai.key`. Tự tạo file bằng Notepad cũng được: một dòng duy nhất; Notepad hay lưu thành `ai.key.txt` — tab vẫn đọc được, và `.gitignore` chặn cả `ai.key*`.)
 6. Không gửi key qua chat / email, không đưa lên git (repo public). Lộ key thì vào **API Keys** xoá key cũ, tạo key mới.
 
 Chưa có key thì tab báo đỏ "Chưa có API key…" và không gửi gì.

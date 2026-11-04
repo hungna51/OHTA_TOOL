@@ -44,28 +44,56 @@ namespace AiTool.Core
             return KhoiVatLieu(sheet, cho);
         }
 
-        private static string FileLoiDan(string thuMucModule) => Path.Combine(thuMucModule, "data", "loi_dan.md");
+        /// <summary>File hướng dẫn AI chạy (system prompt), sửa trong cửa sổ cài đặt hoặc bằng Notepad.</summary>
+        public static string FileHuongDan(string thuMucModule) => Path.Combine(thuMucModule, "data", "huong_dan_ai.md");
 
-        public static string DocLoiDan(string thuMucModule, string macDinh)
+        private static string FileKey(string thuMucModule) => Path.Combine(thuMucModule, "data", "ai.key");
+
+        public static string DocHuongDan(string thuMucModule, string macDinh)
         {
-            string f = FileLoiDan(thuMucModule);
+            string f = FileHuongDan(thuMucModule);
             if (File.Exists(f))
                 return File.ReadAllText(f, Encoding.UTF8);
-            GhiLoiDan(thuMucModule, macDinh);
+            GhiHuongDan(thuMucModule, macDinh);
             return macDinh;
         }
 
-        public static void GhiLoiDan(string thuMucModule, string noiDung)
+        public static void GhiHuongDan(string thuMucModule, string noiDung)
         {
-            string f = FileLoiDan(thuMucModule);
+            string f = FileHuongDan(thuMucModule);
             Directory.CreateDirectory(Path.GetDirectoryName(f));
             File.WriteAllText(f, noiDung ?? string.Empty, Utf8KhongBom);
+        }
+
+        /// <summary>Ghi key vào data\ai.key (một dòng). File nằm trong .gitignore.</summary>
+        public static void GhiKey(string thuMucModule, string key)
+        {
+            string f = FileKey(thuMucModule);
+            Directory.CreateDirectory(Path.GetDirectoryName(f));
+            File.WriteAllText(f, (key ?? string.Empty).Trim() + "\n", Utf8KhongBom);
+            if (File.Exists(f + ".txt")) File.Delete(f + ".txt"); // bản Notepad cũ không còn được dùng
+        }
+
+        public static void XoaKey(string thuMucModule)
+        {
+            string f = FileKey(thuMucModule);
+            if (File.Exists(f)) File.Delete(f);
+            if (File.Exists(f + ".txt")) File.Delete(f + ".txt");
+        }
+
+        /// <summary>Hiện key đã che: phần đầu "sk-ant-" + 4 ký tự cuối. Key quá ngắn thì chỉ "…".</summary>
+        public static string AnKey(string key)
+        {
+            if (key == null) return null;
+            const string dau = "sk-ant-";
+            if (key.Length < 12) return "…";
+            return (key.StartsWith(dau, StringComparison.Ordinal) ? dau : "") + "…" + key.Substring(key.Length - 4);
         }
 
         /// <summary>Dòng đầu không rỗng, không bắt đầu bằng # của data\ai.key; không có file thì null.</summary>
         public static string DocKey(string thuMucModule)
         {
-            string f = Path.Combine(thuMucModule, "data", "ai.key");
+            string f = FileKey(thuMucModule);
             if (!File.Exists(f))
                 f = f + ".txt"; // Notepad hay lưu thành ai.key.txt (đuôi bị ẩn)
             if (!File.Exists(f))

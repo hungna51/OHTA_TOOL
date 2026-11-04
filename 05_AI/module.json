@@ -3,9 +3,9 @@
   "enabled": true,
   "order": 50,
   "tabTitle": "AI",
-  "title": "AI KIỂM TRA",
-  "version": "0.1",
-  "description": "AI đọc dữ liệu trong khung, cảnh báo F-name / số lượng / ghi chú.",
+  "title": "AI kiểm tra",
+  "version": "0.1 (beta)",
+  "description": "Claude đọc khung · cảnh báo F-name / Q / ghi chú",
   "accentColor": "#5B3FD1",
   "tools": []
 }

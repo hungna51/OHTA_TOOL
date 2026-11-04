@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using AiTool.Core;
 using AiTool.Services;
@@ -75,13 +76,13 @@ namespace AiTool.ViewModels
             if (!BangGia.Model.Contains(_model)) _model = BangGia.Model[0];
             _layerKhung = DocReg("layer_khung") ?? LayerMacDinh;
             LamMoiLayer();
-            _loiDan = DuLieuTinh.DocLoiDan(ThuMucModule, LoiDanMacDinh());
+            try { DuLieuTinh.DocHuongDan(ThuMucModule, HuongDanMacDinh()); } // chưa có file thì tạo từ bản mặc định
+            catch (Exception) { }
 
             KiemTraCmd = new Lenh(() => GuiLenh("OHTAAI "));
             ChonVungCmd = new Lenh(() => GuiLenh("OHTAAIVUNG "));
             DungCmd = new Lenh(() => _huy?.Cancel());
-            LuuLoiDanCmd = new Lenh(LuuLoiDan);
-            KhoiPhucCmd = new Lenh(KhoiPhucLoiDan);
+            CaiDatCmd = new Lenh(MoCaiDat);
             MoNhatKyCmd = new Lenh(MoNhatKy);
             HienTai = this;
         }
@@ -89,6 +90,49 @@ namespace AiTool.ViewModels
         public string TieuDe { get; }
         public string MoTa { get; }
         public string MauNhan { get; }
+
+        public Brush AccentBrush
+        {
+            get
+            {
+                try { return new SolidColorBrush((Color)ColorConverter.ConvertFromString(MauNhan)); }
+                catch (Exception) { return new SolidColorBrush(Color.FromRgb(0x5B, 0x3F, 0xD1)); }
+            }
+        }
+
+        /// <summary>Bánh răng của nút cài đặt (cùng ảnh các tab khác), tô theo màu tab bằng OpacityMask.</summary>
+        public ImageSource SettingsLogo => _settingsLogo ?? (_settingsLogo = NapLogo());
+        private static ImageSource _settingsLogo;
+
+        private static ImageSource NapLogo()
+        {
+            try
+            {
+                using (Stream s = typeof(AiTabViewModel).Assembly.GetManifestResourceStream("AiTool.Assets.settings_logo.png"))
+                {
+                    if (s == null) return null;
+                    var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                    bmp.BeginInit();
+                    bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                    bmp.StreamSource = s;
+                    bmp.EndInit();
+                    bmp.Freeze();
+                    return bmp;
+                }
+            }
+            catch (Exception) { return null; }
+        }
+
+        /// <summary>Trạng thái key hiện dưới tiêu đề nút cài đặt / trên tab.</summary>
+        public string TrangThaiKey
+        {
+            get
+            {
+                string k = DuLieuTinh.DocKey(ThuMucModule);
+                return k == null ? "Chưa có API key — bấm ⚙ để nhập" : "API key: " + DuLieuTinh.AnKey(k);
+            }
+        }
+        public bool ChuaCoKey => DuLieuTinh.DocKey(ThuMucModule) == null;
         public string ThuMucModule { get; }
         public string[] DanhSachModel => BangGia.Model;
         public ObservableCollection<string> DanhSachLayer { get; } = new ObservableCollection<string>();
@@ -102,8 +146,7 @@ namespace AiTool.ViewModels
         public ICommand KiemTraCmd { get; }
         public ICommand ChonVungCmd { get; }
         public ICommand DungCmd { get; }
-        public ICommand LuuLoiDanCmd { get; }
-        public ICommand KhoiPhucCmd { get; }
+        public ICommand CaiDatCmd { get; }
         public ICommand MoNhatKyCmd { get; }
 
         private string _layerKhung;
@@ -140,8 +183,6 @@ namespace AiTool.ViewModels
         private string _fileNhatKy;
         public bool CoNhatKy => !string.IsNullOrEmpty(_fileNhatKy);
 
-        private string _loiDan;
-        public string LoiDan { get => _loiDan; set => Dat(ref _loiDan, value); }
 
         /// <summary>Đọc lại danh sách layer của bản vẽ đang mở (gọi khi mở ô chọn layer).</summary>
         public void LamMoiLayer()
@@ -189,8 +230,10 @@ namespace AiTool.ViewModels
                 return;
             }
 
-            string model = Model, loiDan = LoiDan, thuMuc = ThuMucModule;
-            string vatLieu;
+            string model = Model, thuMuc = ThuMucModule;
+            string loiDan, vatLieu;
+            try { loiDan = DuLieuTinh.DocHuongDan(thuMuc, HuongDanMacDinh()); }
+            catch (Exception ex) { Loi.Add("Không đọc được file hướng dẫn AI: " + ex.Message); return; }
             try { vatLieu = DuLieuTinh.KhoiVatLieuTrenMay(thuMuc); }
             catch (Exception ex) { Loi.Add("Không đọc được bảng vật liệu: " + ex.Message); return; }
 
@@ -262,19 +305,22 @@ namespace AiTool.ViewModels
             doc.SendStringToExecute("\x03\x03" + lenh, true, false, false);
         }
 
-        private void LuuLoiDan()
+        /// <summary>Nút ⚙: cửa sổ cài đặt (API key + file hướng dẫn AI). Đóng thì cập nhật trạng thái key.</summary>
+        private void MoCaiDat()
         {
-            try { DuLieuTinh.GhiLoiDan(ThuMucModule, LoiDan); }
-            catch (Exception ex) { MessageBox.Show("Không lưu được lời dặn: " + ex.Message, "AI"); }
-        }
-
-        private void KhoiPhucLoiDan()
-        {
-            if (MessageBox.Show("Ghi đè lời dặn hiện tại bằng bản mặc định?", "AI",
-                                MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-                return;
-            LoiDan = LoiDanMacDinh();
-            LuuLoiDan();
+            try
+            {
+                CadApplication.ShowModalWindow(new Views.AiCaiDatWindow(ThuMucModule, HuongDanMacDinh(), AccentBrush));
+            }
+            catch (Exception ex)
+            {
+                Loi.Add("Không mở được cài đặt: " + ex.Message);
+            }
+            OnChanged(nameof(TrangThaiKey));
+            OnChanged(nameof(ChuaCoKey));
+            if (!ChuaCoKey)
+                for (int i = Loi.Count - 1; i >= 0; i--)
+                    if (Loi[i].StartsWith("Chưa có API key", StringComparison.Ordinal)) Loi.RemoveAt(i);
         }
 
         private void MoNhatKy()
@@ -284,9 +330,10 @@ namespace AiTool.ViewModels
             catch (Exception) { }
         }
 
-        public static string LoiDanMacDinh()
+        /// <summary>Bản mặc định của file hướng dẫn AI (nhúng trong DLL).</summary>
+        public static string HuongDanMacDinh()
         {
-            using (Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("AiTool.Assets.loi_dan_mac_dinh.md"))
+            using (Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("AiTool.Assets.huong_dan_ai_mac_dinh.md"))
             {
                 if (s == null) return string.Empty;
                 using (var r = new StreamReader(s, System.Text.Encoding.UTF8)) return r.ReadToEnd();

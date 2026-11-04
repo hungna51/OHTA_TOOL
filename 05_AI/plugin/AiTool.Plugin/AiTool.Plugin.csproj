@@ -72,9 +72,10 @@
     <Reference Include="System.Net.Http" />
   </ItemGroup>
 
-  <!-- Loi dan mac dinh cho AI (nut "Khoi phuc mac dinh"), nap qua ManifestResourceStream -->
+  <!-- File huong dan AI mac dinh + logo nut cai dat (nut "Khoi phuc mac dinh"), nap qua ManifestResourceStream -->
   <ItemGroup>
-    <EmbeddedResource Include="Assets\loi_dan_mac_dinh.md" LogicalName="AiTool.Assets.loi_dan_mac_dinh.md" />
+    <EmbeddedResource Include="Assets\huong_dan_ai_mac_dinh.md" LogicalName="AiTool.Assets.huong_dan_ai_mac_dinh.md" />
+    <EmbeddedResource Include="Assets\settings_logo.png" LogicalName="AiTool.Assets.settings_logo.png" />
   </ItemGroup>
 
   <!-- Dung lai ma Fname bang LINK NGUON (khong tham chieu OHTATOOL.dll, ADR 0006) -->

@@ -33,10 +33,20 @@ namespace AiTool.Tests
             Directory.CreateDirectory(tam);
             try
             {
-                Kiem("Loi dan chua co file -> tra mac dinh", DuLieuTinh.DocLoiDan(tam, "MAC DINH"), "MAC DINH");
-                Kiem("Loi dan chua co file -> da ghi file", File.Exists(Path.Combine(tam, "data", "loi_dan.md")), true);
-                DuLieuTinh.GhiLoiDan(tam, "moi");
-                Kiem("Loi dan ghi roi doc", DuLieuTinh.DocLoiDan(tam, "MAC DINH"), "moi");
+                Kiem("File huong dan AI = data\\huong_dan_ai.md", DuLieuTinh.FileHuongDan(tam), Path.Combine(tam, "data", "huong_dan_ai.md"));
+                Kiem("Huong dan chua co file -> tra mac dinh", DuLieuTinh.DocHuongDan(tam, "MAC DINH"), "MAC DINH");
+                Kiem("Huong dan chua co file -> da ghi file", File.Exists(DuLieuTinh.FileHuongDan(tam)), true);
+                DuLieuTinh.GhiHuongDan(tam, "moi");
+                Kiem("Huong dan ghi roi doc", DuLieuTinh.DocHuongDan(tam, "MAC DINH"), "moi");
+
+                DuLieuTinh.GhiKey(tam, "  sk-ant-api03-abcdefgh1234  ");
+                Kiem("GhiKey: trim, doc lai duoc", DuLieuTinh.DocKey(tam), "sk-ant-api03-abcdefgh1234");
+                Kiem("AnKey: chi lo dau va 4 ky tu cuoi", DuLieuTinh.AnKey("sk-ant-api03-abcdefgh1234"), "sk-ant-…1234");
+                Kiem("AnKey: null -> null", DuLieuTinh.AnKey(null), null);
+                Kiem("AnKey: key ngan -> chi dau sao", DuLieuTinh.AnKey("abc"), "…");
+                File.WriteAllText(Path.Combine(tam, "data", "ai.key.txt"), "cu\n");
+                DuLieuTinh.XoaKey(tam);
+                Kiem("XoaKey: xoa ca ai.key va ai.key.txt", DuLieuTinh.DocKey(tam), null);
 
                 Kiem("Key khong co file -> null", DuLieuTinh.DocKey(tam), null);
                 File.WriteAllText(Path.Combine(tam, "data", "ai.key"), "# key cua OHTA\n\n  sk-ant-x  \nrac\n");
