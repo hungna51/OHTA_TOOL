@@ -45,6 +45,13 @@ namespace OhtaTool.Plugin.Views
 
             Register("guro", guroFactory);
             Register("03_Guro", guroFactory);
+
+            // Tab PRINT (lệnh OI v2.0) — ADR 0005
+            Func<ModuleManifest, Action, FrameworkElement> printFactory = (manifest, reloadCallback) =>
+                new PrintTabControl(new PrintTabViewModel(manifest));
+
+            Register("print", printFactory);
+            Register("04_In", printFactory);
         }
 
         public static void Register(string moduleIdOrFolder, Func<ModuleManifest, Action, FrameworkElement> viewFactory)

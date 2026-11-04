@@ -1,0 +1,12 @@
+{
+  "id": "print",
+  "enabled": true,
+  "order": 40,
+  "tabTitle": "PRINT",
+  "title": "OI",
+  "version": "2.0",
+  "description": "In khung Khung_IN / vùng quét / extents ra PDF, gộp 1 file; cấu hình in đặt tên, ưu tiên thông số của bản vẽ.",
+  "accentColor": "#2E7D32",
+  "startupLisp": [],
+  "tools": []
+}
