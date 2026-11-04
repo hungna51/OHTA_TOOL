@@ -4,7 +4,7 @@ Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_oh
 
 ## v1.2.0
 
-- Tab **PRINT** mới (lệnh `OI` v2.0, thay lisp OI cũ): in khung `Khung_IN` / vùng quét / extents ra PDF, gộp 1 file, không cần Ghostscript.
+- Tab **Print** mới (lệnh `OI` v2.0, thay lisp OI cũ): in khung `Khung_IN` / vùng quét / extents ra PDF, gộp 1 file, không cần Ghostscript.
 - Cấu hình in tự đặt tên (vd "Đen trắng" dùng ctb khác) ở nút ⚙; mục "Theo bản vẽ" lấy máy in / khổ / ctb của bản vẽ nếu có.
 - File PDF đã có: hỏi Ghi đè / Lưu thành (1) / Huỷ in.
 

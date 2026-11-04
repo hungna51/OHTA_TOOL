@@ -1,4 +1,4 @@
-# Mục lục luật riêng — Tab PRINT
+# Mục lục luật riêng — Tab Print
 
 | Việc | Đọc |
 |---|---|

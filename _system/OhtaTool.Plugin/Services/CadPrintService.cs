@@ -19,6 +19,14 @@ using OhtaTool.Plugin.Core;
 
 namespace OhtaTool.Plugin.Services
 {
+    /// <summary>Một trang in: cửa sổ (WCS) của Model hoặc Extents.</summary>
+    public sealed class PlotPage
+    {
+        public Point2d LowerLeft, UpperRight;
+        public bool Portrait;
+        public bool Extents;
+    }
+
     /// <summary>Máy in / khổ giấy / bảng ctb đang có trên máy (PlotSettingsValidator).</summary>
     public sealed class CadPlotCatalog : IPlotCatalog
     {
@@ -211,86 +219,98 @@ namespace OhtaTool.Plugin.Services
             }
         }
 
-        /// <summary>In một cửa sổ (toạ độ WCS) của Model ra một file PDF một trang.</summary>
-        public static void PlotWindowToPdf(CadDocument doc, PrintParams p, Point2d lowerLeftWcs, Point2d upperRightWcs,
-            bool portrait, string pdfPath)
+        /// <summary>
+        /// In nhiều trang trong MỘT lần PlotEngine ra một file PDF nhiều trang: driver máy in chỉ nạp một
+        /// lần, không cần gộp. Mỗi trang có cửa sổ / hướng giấy riêng (PlotInfo riêng).
+        /// </summary>
+        public static void PlotPagesToPdf(CadDocument doc, PrintParams p, IList<PlotPage> pages, string pdfPath)
         {
-            Matrix3d wcsToDcs = WcsToDcs(doc);
-            Point3d a = new Point3d(lowerLeftWcs.X, lowerLeftWcs.Y, 0).TransformBy(wcsToDcs);
-            Point3d b = new Point3d(upperRightWcs.X, upperRightWcs.Y, 0).TransformBy(wcsToDcs);
-            var window = new Extents2d(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Max(a.X, b.X), Math.Max(a.Y, b.Y));
-            Plot(doc, p, portrait, pdfPath, (psv, ps) =>
-            {
-                psv.SetPlotWindowArea(ps, window);
-                psv.SetPlotType(ps, PlotType.Window);
-            });
-        }
-
-        /// <summary>In toàn bộ bản vẽ (Extents) ra một trang ngang.</summary>
-        public static void PlotExtentsToPdf(CadDocument doc, PrintParams p, string pdfPath)
-        {
-            Plot(doc, p, false, pdfPath, (psv, ps) => psv.SetPlotType(ps, PlotType.Extents));
-        }
-
-        private static void Plot(CadDocument doc, PrintParams p, bool portrait, string pdfPath,
-            Action<PlotSettingsValidator, PlotSettings> setArea)
-        {
+            if (pages == null || pages.Count == 0)
+                return;
             if (PlotFactory.ProcessPlotState != ProcessPlotState.NotPlotting)
                 throw new InvalidOperationException("CAD đang in bản khác, hãy thử lại sau.");
 
             Database db = doc.Database;
-            using (Transaction tr = db.TransactionManager.StartTransaction())
+            Matrix3d wcsToDcs = WcsToDcs(doc);
+            var settings = new List<PlotSettings>();
+            try
             {
-                var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForRead);
-                var lo = (Layout)tr.GetObject(ms.LayoutId, OpenMode.ForRead);
-
-                var pi = new PlotInfo { Layout = ms.LayoutId };
-                using (var ps = new PlotSettings(lo.ModelType))
+                using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
-                    ps.CopyFrom(lo);
+                    var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForRead);
+                    var lo = (Layout)tr.GetObject(ms.LayoutId, OpenMode.ForRead);
                     PlotSettingsValidator psv = PlotSettingsValidator.Current;
-                    psv.SetPlotConfigurationName(ps, p.Device, p.Media);
-                    psv.RefreshLists(ps);
-                    setArea(psv, ps);
-                    psv.SetUseStandardScale(ps, true);
-                    psv.SetStdScaleType(ps, StdScaleType.ScaleToFit);
-                    psv.SetPlotCentered(ps, true);
+
+                    // Bộ thông số chung dựng một lần (nạp driver máy in một lần)
+                    var template = new PlotSettings(lo.ModelType);
+                    settings.Add(template);
+                    template.CopyFrom(lo);
+                    psv.SetPlotConfigurationName(template, p.Device, p.Media);
+                    psv.SetUseStandardScale(template, true);
+                    psv.SetStdScaleType(template, StdScaleType.ScaleToFit);
+                    psv.SetPlotCentered(template, true);
                     // Bản vẽ kiểu đặt tên (.stb) không nhận .ctb (và ngược lại): giữ bảng của page setup, báo
                     if (!string.IsNullOrWhiteSpace(p.StyleSheet))
                     {
                         if (PrintCore.StyleSheetMatchesMode(p.StyleSheet, db.PlotStyleMode))
-                            psv.SetCurrentStyleSheet(ps, p.StyleSheet);
+                            psv.SetCurrentStyleSheet(template, p.StyleSheet);
                         else
                             CadCompat.WriteMessage($"\n[OI] Bản vẽ dùng kiểu in {(db.PlotStyleMode ? ".ctb" : ".stb")}, không áp được {p.StyleSheet} → giữ bảng của bản vẽ.\n");
                     }
                     // PlotPlotStyles = áp bảng kiểu in khi in (ShowPlotStyles chỉ là hiển thị trên màn hình)
-                    ps.PlotPlotStyles = true;
-                    ps.ShowPlotStyles = true;
-                    ps.PrintLineweights = p.Lineweights ?? true;
-
+                    template.PlotPlotStyles = true;
+                    template.ShowPlotStyles = true;
+                    template.PrintLineweights = p.Lineweights ?? true;
                     // PlotPaperSize là kích thước khổ chưa xoay: khổ ngang mà cần dọc (hoặc ngược lại) thì xoay 90°
-                    Point2d paper = ps.PlotPaperSize;
-                    bool paperIsLandscape = paper.X > paper.Y;
-                    psv.SetPlotRotation(ps, paperIsLandscape == portrait ? PlotRotation.Degrees090 : PlotRotation.Degrees000);
+                    bool paperIsLandscape = template.PlotPaperSize.X > template.PlotPaperSize.Y;
 
-                    pi.OverrideSettings = ps;
+                    var infos = new List<PlotInfo>();
                     var piv = new PlotInfoValidator { MediaMatchingPolicy = MatchingPolicy.MatchEnabled };
-                    piv.Validate(pi);
+                    foreach (PlotPage page in pages)
+                    {
+                        var ps = new PlotSettings(lo.ModelType);
+                        settings.Add(ps);
+                        ps.CopyFrom(template);
+                        if (page.Extents)
+                        {
+                            psv.SetPlotType(ps, PlotType.Extents);
+                        }
+                        else
+                        {
+                            Point3d a = new Point3d(page.LowerLeft.X, page.LowerLeft.Y, 0).TransformBy(wcsToDcs);
+                            Point3d b = new Point3d(page.UpperRight.X, page.UpperRight.Y, 0).TransformBy(wcsToDcs);
+                            psv.SetPlotWindowArea(ps, new Extents2d(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Max(a.X, b.X), Math.Max(a.Y, b.Y)));
+                            psv.SetPlotType(ps, PlotType.Window);
+                        }
+                        psv.SetPlotRotation(ps, paperIsLandscape == page.Portrait ? PlotRotation.Degrees090 : PlotRotation.Degrees000);
+
+                        var pi = new PlotInfo { Layout = ms.LayoutId, OverrideSettings = ps };
+                        piv.Validate(pi);
+                        infos.Add(pi);
+                    }
 
                     using (PlotEngine pe = PlotFactory.CreatePublishEngine())
                     {
                         pe.BeginPlot(null, null);
-                        pe.BeginDocument(pi, doc.Name, null, 1, true, pdfPath);
-                        var ppi = new PlotPageInfo();
-                        pe.BeginPage(ppi, pi, true, null);
-                        pe.BeginGenerateGraphics(null);
-                        pe.EndGenerateGraphics(null);
-                        pe.EndPage(null);
+                        pe.BeginDocument(infos[0], doc.Name, null, 1, true, pdfPath);
+                        for (int i = 0; i < infos.Count; i++)
+                        {
+                            var ppi = new PlotPageInfo();
+                            pe.BeginPage(ppi, infos[i], i == infos.Count - 1, null);
+                            pe.BeginGenerateGraphics(null);
+                            pe.EndGenerateGraphics(null);
+                            pe.EndPage(null);
+                        }
                         pe.EndDocument(null);
                         pe.EndPlot(null);
                     }
+                    tr.Commit();
                 }
-                tr.Commit();
+            }
+            finally
+            {
+                foreach (PlotSettings ps in settings)
+                    ps.Dispose();
             }
         }
 
