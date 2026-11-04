@@ -220,13 +220,16 @@ namespace OhtaTool.Plugin.Services
         }
 
         /// <summary>
-        /// In nhiều trang trong MỘT lần PlotEngine ra một file PDF nhiều trang: driver máy in chỉ nạp một
-        /// lần, không cần gộp. Mỗi trang có cửa sổ / hướng giấy riêng (PlotInfo riêng).
+        /// In mỗi trang ra một file PDF (pdfPaths[i]). Thông số chung + driver máy in dựng MỘT lần, mỗi trang
+        /// chỉ đổi cửa sổ / hướng giấy. Không in nhiều trang trong một document: PlotEngine khi đó xuất DWF
+        /// nhiều trang dù máy in là PDF (lỗi thật 04/11/2026). File ra không phải PDF -> ném lỗi.
         /// </summary>
-        public static void PlotPagesToPdf(CadDocument doc, PrintParams p, IList<PlotPage> pages, string pdfPath)
+        public static void PlotPagesToPdfFiles(CadDocument doc, PrintParams p, IList<PlotPage> pages, IList<string> pdfPaths)
         {
             if (pages == null || pages.Count == 0)
                 return;
+            if (pdfPaths == null || pdfPaths.Count != pages.Count)
+                throw new ArgumentException("Số file PDF phải bằng số trang.", nameof(pdfPaths));
             if (PlotFactory.ProcessPlotState != ProcessPlotState.NotPlotting)
                 throw new InvalidOperationException("CAD đang in bản khác, hãy thử lại sau.");
 
@@ -289,20 +292,21 @@ namespace OhtaTool.Plugin.Services
                         infos.Add(pi);
                     }
 
-                    using (PlotEngine pe = PlotFactory.CreatePublishEngine())
+                    for (int i = 0; i < infos.Count; i++)
                     {
-                        pe.BeginPlot(null, null);
-                        pe.BeginDocument(infos[0], doc.Name, null, 1, true, pdfPath);
-                        for (int i = 0; i < infos.Count; i++)
+                        using (PlotEngine pe = PlotFactory.CreatePublishEngine())
                         {
+                            pe.BeginPlot(null, null);
+                            pe.BeginDocument(infos[i], doc.Name, null, 1, true, pdfPaths[i]);
                             var ppi = new PlotPageInfo();
-                            pe.BeginPage(ppi, infos[i], i == infos.Count - 1, null);
+                            pe.BeginPage(ppi, infos[i], true, null);
                             pe.BeginGenerateGraphics(null);
                             pe.EndGenerateGraphics(null);
                             pe.EndPage(null);
+                            pe.EndDocument(null);
+                            pe.EndPlot(null);
                         }
-                        pe.EndDocument(null);
-                        pe.EndPlot(null);
+                        EnsurePdf(pdfPaths[i], i + 1);
                     }
                     tr.Commit();
                 }
@@ -312,6 +316,18 @@ namespace OhtaTool.Plugin.Services
                 foreach (PlotSettings ps in settings)
                     ps.Dispose();
             }
+        }
+
+        private static void EnsurePdf(string path, int pageNo)
+        {
+            if (!System.IO.File.Exists(path))
+                throw new System.IO.IOException($"Không tạo được PDF cho trang {pageNo}.");
+            var head = new byte[4];
+            int n;
+            using (var fs = System.IO.File.OpenRead(path))
+                n = fs.Read(head, 0, 4);
+            if (n < 4 || !PrintCore.IsPdfHeader(head))
+                throw new System.IO.IOException($"Trang {pageNo} in ra không phải PDF — kiểm tra máy in đã chọn có phải máy in PDF.");
         }
 
         /// <summary>Ma trận WCS -> DCS của khung nhìn hiện hành (SetPlotWindowArea nhận toạ độ DCS).</summary>

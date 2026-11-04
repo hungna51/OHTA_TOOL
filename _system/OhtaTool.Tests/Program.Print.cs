@@ -44,6 +44,11 @@ namespace OhtaTool.Tests
             Check("Preflight_LayoutTab_Blocked", PrintCore.PreflightError(tileMode: 0, dwgTitled: 1) != null);
             Check("Preflight_Untitled_Blocked", PrintCore.PreflightError(tileMode: 1, dwgTitled: 0) == "Hãy lưu bản vẽ trước khi in.");
             Check("Preflight_ModelSaved_Ok", PrintCore.PreflightError(tileMode: 1, dwgTitled: 1) == null);
+            // Lỗi thật 04/11: in nhiều trang một lần PlotEngine ra file DWF đội tên .pdf -> phải nhận ra
+            Check("IsPdfHeader", PrintCore.IsPdfHeader(System.Text.Encoding.ASCII.GetBytes("%PDF-1.7\n")) &&
+                !PrintCore.IsPdfHeader(System.Text.Encoding.ASCII.GetBytes("(DWF V06.00)PK")) &&
+                !PrintCore.IsPdfHeader(new byte[0]) && !PrintCore.IsPdfHeader(null));
+
             // Review: bản vẽ STB (named plot styles) không nhận .ctb và ngược lại
             Check("StyleSheetMatchesMode", PrintCore.StyleSheetMatchesMode("monochrome.ctb", colorDependent: true) &&
                 !PrintCore.StyleSheetMatchesMode("monochrome.ctb", colorDependent: false) &&

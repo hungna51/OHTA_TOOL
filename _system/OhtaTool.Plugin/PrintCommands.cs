@@ -132,36 +132,21 @@ namespace OhtaTool.Plugin
             Directory.CreateDirectory(tempDir);
             var watch = Stopwatch.StartNew();
 
+            // Mỗi trang một file PDF tạm (driver máy in nạp một lần), gộp thì nối bằng PdfSharp
+            var pages = new List<string>();
+            for (int i = 0; i < areas.Count; i++)
+                pages.Add(Path.Combine(tempDir, (i + 1).ToString("D3") + ".pdf"));
+            CadPrintService.PlotPagesToPdfFiles(doc, p, areas, pages);
+
             if (merge)
             {
-                // Nhanh: mọi trang trong MỘT lần PlotEngine ra thẳng PDF nhiều trang
-                string all = Path.Combine(tempDir, "all.pdf");
-                bool done = false;
-                if (areas.Count > 1)
-                {
-                    try
-                    {
-                        CadPrintService.PlotPagesToPdf(doc, p, areas, all);
-                        done = File.Exists(all) && new FileInfo(all).Length > 0;
-                    }
-                    catch (System.Exception ex)
-                    {
-                        CadCompat.WriteMessage("\n[OI] Máy in không in được nhiều trang một lần (" + ex.Message + ") → in từng trang rồi gộp.\n");
-                    }
-                }
-                if (!done)
-                {
-                    List<string> pages = PlotEachPage(doc, p, areas, tempDir);
-                    if (pages.Count == 1)
-                        File.Copy(pages[0], all, true);
-                    else
-                        PdfMerger.Merge(pages, all);
-                }
-                File.Copy(all, targets[0], true);
+                if (pages.Count == 1)
+                    File.Copy(pages[0], targets[0], true);
+                else
+                    PdfMerger.Merge(pages, targets[0]);
             }
             else
             {
-                List<string> pages = PlotEachPage(doc, p, areas, tempDir);
                 for (int i = 0; i < pages.Count; i++)
                     File.Copy(pages[i], targets[i], true);
             }
@@ -175,21 +160,6 @@ namespace OhtaTool.Plugin
                 try { Process.Start(new ProcessStartInfo(shown) { UseShellExecute = true }); }
                 catch (System.Exception ex) { CadCompat.WriteMessage("\n[OI] Không mở được: " + ex.Message + "\n"); }
             }
-        }
-
-        /// <summary>In từng trang thành file riêng (khi không gộp, hoặc máy in không in được nhiều trang một lần).</summary>
-        private static List<string> PlotEachPage(CadDocument doc, PrintParams p, List<PlotPage> areas, string tempDir)
-        {
-            var files = new List<string>();
-            for (int i = 0; i < areas.Count; i++)
-            {
-                string tmp = Path.Combine(tempDir, (i + 1).ToString("D3") + ".pdf");
-                CadPrintService.PlotPagesToPdf(doc, p, new[] { areas[i] }, tmp);
-                if (!File.Exists(tmp))
-                    throw new IOException($"Không tạo được PDF cho trang {i + 1}.");
-                files.Add(tmp);
-            }
-            return files;
         }
 
         private static List<PlotPage> CollectAreas(CadDocument doc, PrintRequest req)

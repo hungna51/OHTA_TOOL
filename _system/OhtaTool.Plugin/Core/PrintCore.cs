@@ -114,6 +114,13 @@ namespace OhtaTool.Plugin.Core
             return null;
         }
 
+        /// <summary>File bắt đầu bằng "%PDF" (PlotEngine nhiều trang một lần ra DWF dù máy in là PDF).</summary>
+        public static bool IsPdfHeader(byte[] head)
+        {
+            return head != null && head.Length >= 4 &&
+                   head[0] == (byte)'%' && head[1] == (byte)'P' && head[2] == (byte)'D' && head[3] == (byte)'F';
+        }
+
         /// <summary>Bản vẽ kiểu màu (PSTYLEMODE=1) chỉ nhận .ctb, kiểu đặt tên chỉ nhận .stb.</summary>
         public static bool StyleSheetMatchesMode(string styleSheet, bool colorDependent)
         {

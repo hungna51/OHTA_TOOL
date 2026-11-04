@@ -26,7 +26,7 @@ In bản vẽ ra PDF, thay lisp `innhanh(OI)-CaNhan.lsp`. Toàn bộ viết bằ
 1. Bản vẽ chưa lưu → báo, không in.
 2. Khung = LWPOLYLINE kín 4 đỉnh trên layer khung, trong Model. Sắp theo Y điểm cao nhất giảm dần, lệch ≤ 1 mm thì trái → phải (`PrintCore.SortFrames`). Khung cao ≥ rộng → trang dọc.
 3. Tên: `<DWGPREFIX><tên bản vẽ bỏ -S/-A>.pdf`; không gộp → `<tên>-1.pdf`, `<tên>-2.pdf`… Có file trùng → hỏi **Ghi đè / Lưu thành (1) / Huỷ in**; ghi đè mà file đang mở → lưu `(n)` và báo.
-4. Tắt plottable layer `CANH_BAO_*`, `GRO_XEP_NHOM`. Gộp 1 file: in mọi trang trong **một** lần `PlotEngine` ra thẳng PDF nhiều trang (`CadPrintService.PlotPagesToPdf`) — driver máy in nạp một lần. Máy in không in được nhiều trang một lần thì tự in từng trang ra `%TEMP%\OHTA_PRINT\<guid>\` rồi gộp bằng PdfSharp. Không gộp: in từng trang. Dòng báo cuối có thời gian in.
+4. Tắt plottable layer `CANH_BAO_*`, `GRO_XEP_NHOM`. In mỗi trang ra một PDF tạm trong `%TEMP%\OHTA_PRINT\<guid>\` (`CadPrintService.PlotPagesToPdfFiles`: thông số + driver máy in dựng một lần), kiểm tra file bắt đầu bằng `%PDF`, rồi gộp bằng PdfSharp. **Không** in nhiều trang trong một document PlotEngine: AutoCAD xuất ra DWF nhiều trang dù máy in là PDF (lỗi thật 04/11/2026). Dòng báo cuối có thời gian in.
 5. Mở file (hoặc thư mục khi không gộp).
 
 ## Cài đặt
