@@ -30,7 +30,7 @@ Tab gửi dữ liệu trong từng **khung** (polyline kín 4 đỉnh, mặc đ�
 04_AI/
 ├── module.json              Tab "AI" (id "ai", order 40)
 ├── data/loi_dan.md          Lời dặn đang dùng (sửa trên tab)
-├── data/ai.key              API key — KHÔNG lên git (.gitignore)
+├── data/ai.key              API key — KHÔNG lên git (.gitignore chặn ai.key*)
 ├── log/                     Nhật ký mỗi lần kiểm (JSON) — không lên git
 ├── bin/<ZwCAD|AutoCAD>/AITOOL.dll
 └── plugin/AiTool.Plugin, AiTool.Tests
@@ -46,7 +46,7 @@ Dữ liệu gửi đi: mọi đối tượng có tâm hộp bao nằm trong khun
 2. **Billing** (Plans & Billing) → nạp tiền (credit trả trước). Vài USD đủ thử hàng trăm khung với Sonnet.
 3. **Limits** → đặt **giới hạn chi tiêu tháng** để không phát sinh ngoài ý muốn.
 4. **API Keys** → **Create Key**, đặt tên `OHTA-AI` → chép key (chỉ hiện một lần; bắt đầu bằng `sk-ant-`).
-5. Tạo file `04_AI\data\ai.key`, dán key vào **một dòng duy nhất** (dòng bắt đầu bằng `#` được bỏ qua), lưu.
+5. Tạo file `04_AI\data\ai.key`, dán key vào **một dòng duy nhất** (dòng bắt đầu bằng `#` được bỏ qua), lưu. Notepad hay lưu thành `ai.key.txt` (đuôi bị ẩn) — tab vẫn đọc được, và `.gitignore` chặn cả `ai.key*`.
 6. Không gửi key qua chat / email, không đưa lên git (repo public). Lộ key thì vào **API Keys** xoá key cũ, tạo key mới.
 
 Chưa có key thì tab báo đỏ "Chưa có API key…" và không gửi gì.
