@@ -22,8 +22,8 @@ namespace AiTool.Tests
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-            Console.WriteLine("=== Khung test ===");
-            Kiem("khung test chay", 1, 1);
+            TestHinhHoc();
+            TestGomKhung();
 
             Console.WriteLine();
             Console.WriteLine("Tong: {0} OK, {1} FAIL", _ok, _fail);
