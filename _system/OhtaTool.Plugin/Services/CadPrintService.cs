@@ -223,8 +223,10 @@ namespace OhtaTool.Plugin.Services
         /// In mỗi trang ra một file PDF (pdfPaths[i]). Thông số chung + driver máy in dựng MỘT lần, mỗi trang
         /// chỉ đổi cửa sổ / hướng giấy. Không in nhiều trang trong một document: PlotEngine khi đó xuất DWF
         /// nhiều trang dù máy in là PDF (lỗi thật 04/11/2026). File ra không phải PDF -> ném lỗi.
+        /// afterPage(số trang đã xong) trả false -> dừng, ném OperationCanceledException.
         /// </summary>
-        public static void PlotPagesToPdfFiles(CadDocument doc, PrintParams p, IList<PlotPage> pages, IList<string> pdfPaths)
+        public static void PlotPagesToPdfFiles(CadDocument doc, PrintParams p, IList<PlotPage> pages, IList<string> pdfPaths,
+            Func<int, bool> afterPage = null)
         {
             if (pages == null || pages.Count == 0)
                 return;
@@ -307,6 +309,9 @@ namespace OhtaTool.Plugin.Services
                             pe.EndPlot(null);
                         }
                         EnsurePdf(pdfPaths[i], i + 1);
+                        // Báo tiến độ (số trang đã xong); false = người dùng bấm Huỷ
+                        if (afterPage != null && !afterPage(i + 1))
+                            throw new OperationCanceledException();
                     }
                     tr.Commit();
                 }

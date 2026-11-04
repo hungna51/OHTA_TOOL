@@ -32,6 +32,9 @@ namespace OhtaTool.Plugin.ViewModels
         private string _mode = "frames";
         private bool _merge = true, _openAfter = true;
         private string _warningText = string.Empty, _statusText = string.Empty;
+        private bool _busy;
+        private double _progressValue, _progressMax = 1;
+        private string _progressText = string.Empty;
 
         public PrintTabViewModel(ModuleManifest manifest)
         {
@@ -44,6 +47,11 @@ namespace OhtaTool.Plugin.ViewModels
             PrintCommand = new RelayCommand(_ => SendPrint(_mode));
             SettingsCommand = new RelayCommand(_ => OpenSettings());
             RefreshCommand = new RelayCommand(_ => Refresh());
+            CancelCommand = new RelayCommand(_ =>
+            {
+                PrintRunner.CancelRequested = true;
+                ProgressText = "Đang huỷ… (dừng sau trang đang in)";
+            }, _ => _busy && !PrintRunner.CancelRequested);
 
             _active = this;
             HookStaticEvents();
@@ -68,6 +76,7 @@ namespace OhtaTool.Plugin.ViewModels
         public ICommand PrintCommand { get; }
         public ICommand SettingsCommand { get; }
         public ICommand RefreshCommand { get; }
+        public ICommand CancelCommand { get; }
 
         public string SelectedLayer
         {
@@ -112,8 +121,15 @@ namespace OhtaTool.Plugin.ViewModels
         public bool ModeFrames { get => _mode == "frames"; set { if (value) SetMode("frames"); } }
         public bool ModeWindow { get => _mode == "window"; set { if (value) SetMode("window"); } }
         public bool ModeExtents { get => _mode == "extents"; set { if (value) SetMode("extents"); } }
-        public Visibility FramesButtonsVisibility => _mode == "frames" ? Visibility.Visible : Visibility.Collapsed;
-        public Visibility PrintButtonVisibility => _mode == "frames" ? Visibility.Collapsed : Visibility.Visible;
+        public Visibility FramesButtonsVisibility => _mode == "frames" && !_busy ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility PrintButtonVisibility => _mode != "frames" && !_busy ? Visibility.Visible : Visibility.Collapsed;
+
+        // --- Thanh tiến độ khi lệnh OIIN đang in ---
+        public bool IsIdle => !_busy;
+        public Visibility ProgressVisibility => _busy ? Visibility.Visible : Visibility.Collapsed;
+        public double ProgressValue { get => _progressValue; set => Set(ref _progressValue, value); }
+        public double ProgressMax { get => _progressMax; set => Set(ref _progressMax, value); }
+        public string ProgressText { get => _progressText; set => Set(ref _progressText, value); }
 
         public bool CanPrintFrames => !string.IsNullOrEmpty(_selectedLayer);
 
@@ -257,22 +273,59 @@ namespace OhtaTool.Plugin.ViewModels
             if (_hooked)
                 return;
             _hooked = true;
-            PrintRunner.Finished += msg =>
+            // Gọi trên luồng chính của CAD (cùng luồng palette): cập nhật thẳng để kịp vẽ lại khi
+            // PrintRunner đẩy khung dispatcher giữa hai trang.
+            PrintRunner.Finished += msg => OnUi(vm =>
             {
-                PrintTabViewModel vm = _active;
-                vm?._dispatcher.BeginInvoke(new Action(() => vm.StatusText = msg));
-            };
+                vm.SetBusy(false);
+                vm.StatusText = msg;
+            });
+            PrintRunner.Progress += (done, total, text) => OnUi(vm =>
+            {
+                vm.SetBusy(true);
+                vm.ProgressMax = Math.Max(1, total);
+                vm.ProgressValue = done;
+                vm.ProgressText = PrintRunner.CancelRequested ? "Đang huỷ… (" + text + ")" : text;
+            });
             try
             {
                 CadApp.DocumentManager.DocumentActivated += (s, e) =>
                 {
                     PrintTabViewModel vm = _active;
-                    vm?._dispatcher.BeginInvoke(new Action(vm.Refresh));
+                    // Đang in thì không đọc lại bản vẽ (tránh đụng lệnh OIIN đang chạy)
+                    if (vm == null || PrintRunner.IsBusy)
+                        return;
+                    vm._dispatcher.BeginInvoke(new Action(vm.Refresh));
                 };
             }
             catch (Exception)
             {
             }
+        }
+
+        private static void OnUi(Action<PrintTabViewModel> act)
+        {
+            PrintTabViewModel vm = _active;
+            if (vm == null)
+                return;
+            if (vm._dispatcher.CheckAccess())
+                act(vm);
+            else
+                vm._dispatcher.BeginInvoke(new Action(() => act(vm)));
+        }
+
+        private void SetBusy(bool busy)
+        {
+            if (_busy == busy)
+                return;
+            _busy = busy;
+            if (!busy)
+                ProgressValue = 0;
+            OnPropertyChanged(nameof(IsIdle));
+            OnPropertyChanged(nameof(ProgressVisibility));
+            OnPropertyChanged(nameof(FramesButtonsVisibility));
+            OnPropertyChanged(nameof(PrintButtonVisibility));
+            CommandManager.InvalidateRequerySuggested();
         }
 
         private static bool IsFromDrawing(string name) =>

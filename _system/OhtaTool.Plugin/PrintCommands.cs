@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Windows.Threading;
 using OhtaTool.Plugin.Core;
 using OhtaTool.Plugin.Services;
 using OhtaTool.Plugin.Views;
@@ -39,10 +40,47 @@ namespace OhtaTool.Plugin
         /// <summary>Báo kết quả cho tab (dòng trạng thái).</summary>
         public static event Action<string> Finished;
 
+        /// <summary>Tiến độ: (số trang đã xong, tổng số trang, chữ hiển thị). Gọi trên luồng chính của CAD.</summary>
+        public static event Action<int, int, string> Progress;
+
+        /// <summary>Đang chạy lệnh OIIN (palette khoá ô, không tự đọc lại bản vẽ).</summary>
+        public static bool IsBusy { get; internal set; }
+
+        /// <summary>Nút Huỷ trên palette đặt cờ này; lệnh in dừng ở chỗ giữa hai trang.</summary>
+        public static volatile bool CancelRequested;
+
         internal static void Report(string message)
         {
             CadCompat.WriteMessage("\n[OI] " + message + "\n");
             try { Finished?.Invoke(message); } catch (System.Exception) { }
+        }
+
+        internal static void ReportProgress(int done, int total)
+        {
+            try { Progress?.Invoke(done, total, PrintCore.ProgressText(done, total)); } catch (System.Exception) { }
+            PumpUi();
+        }
+
+        /// <summary>
+        /// Cho palette vẽ lại và nhận cú bấm (nút Huỷ) giữa hai trang: luồng chính đang bận in nên
+        /// WPF không tự vẽ. Đẩy một khung dispatcher tới mức Background (sau Render và Input).
+        /// </summary>
+        private static void PumpUi()
+        {
+            try
+            {
+                var frame = new DispatcherFrame();
+                Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background,
+                    new DispatcherOperationCallback(f =>
+                    {
+                        ((DispatcherFrame)f).Continue = false;
+                        return null;
+                    }), frame);
+                Dispatcher.PushFrame(frame);
+            }
+            catch (System.Exception)
+            {
+            }
         }
     }
 
@@ -73,6 +111,7 @@ namespace OhtaTool.Plugin
                 }
                 catch (System.Exception) { oldBgPlot = null; }
 
+                PrintRunner.IsBusy = true;
                 Run(doc, req, out tempDir);
             }
             catch (System.Exception ex)
@@ -81,6 +120,8 @@ namespace OhtaTool.Plugin
             }
             finally
             {
+                PrintRunner.IsBusy = false;
+                PrintRunner.CancelRequested = false;
                 if (oldBgPlot != null)
                     try { CadApp.SetSystemVariable("BACKGROUNDPLOT", oldBgPlot); } catch (System.Exception) { }
                 if (tempDir != null)
@@ -138,7 +179,26 @@ namespace OhtaTool.Plugin
             var pages = new List<string>();
             for (int i = 0; i < areas.Count; i++)
                 pages.Add(Path.Combine(tempDir, (i + 1).ToString("D3") + ".pdf"));
-            CadPrintService.PlotPagesToPdfFiles(doc, p, areas, pages);
+
+            int done = 0;
+            PrintRunner.CancelRequested = false;
+            PrintRunner.ReportProgress(0, areas.Count);
+            try
+            {
+                CadPrintService.PlotPagesToPdfFiles(doc, p, areas, pages, n =>
+                {
+                    done = n;
+                    CadCompat.WriteMessage($"\n[OI] Trang {n}/{areas.Count}");
+                    PrintRunner.ReportProgress(n, areas.Count);
+                    // Huỷ sau trang cuối thì vẫn lưu (đã in xong hết)
+                    return !PrintRunner.CancelRequested || n == areas.Count;
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                PrintRunner.Report(PrintCore.CancelledText(done, areas.Count));
+                return;
+            }
 
             if (merge)
             {

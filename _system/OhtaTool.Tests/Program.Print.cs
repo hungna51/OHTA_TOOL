@@ -68,6 +68,12 @@ namespace OhtaTool.Tests
             Check("PlanTargets_PerFrame_SharedNumber", string.Join("|", t6.Targets) == @"C:\d\A (2)-1.pdf|C:\d\A (2)-2.pdf",
                 string.Join("|", t6.Targets));
 
+            // Thanh tiến độ
+            Check("ProgressText_Page", PrintCore.ProgressText(2, 8) == "Đang in trang 3/8");
+            Check("ProgressText_Merge", PrintCore.ProgressText(8, 8) == "Đang gộp PDF…");
+            Check("ProgressText_Single", PrintCore.ProgressText(0, 1) == "Đang in trang 1/1" && PrintCore.ProgressText(1, 1) == "Đang lưu PDF…");
+            Check("CancelledText", PrintCore.CancelledText(3, 8) == "Đã huỷ in (đã in 3/8 trang).");
+
             // Review: bản vẽ STB (named plot styles) không nhận .ctb và ngược lại
             Check("StyleSheetMatchesMode", PrintCore.StyleSheetMatchesMode("monochrome.ctb", colorDependent: true) &&
                 !PrintCore.StyleSheetMatchesMode("monochrome.ctb", colorDependent: false) &&

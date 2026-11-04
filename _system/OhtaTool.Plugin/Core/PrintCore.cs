@@ -159,6 +159,16 @@ namespace OhtaTool.Plugin.Core
             return null;
         }
 
+        /// <summary>Chữ trên thanh tiến độ: done = số trang đã in xong. In xong hết -> bước gộp / lưu.</summary>
+        public static string ProgressText(int done, int total)
+        {
+            if (done >= total)
+                return total > 1 ? "Đang gộp PDF…" : "Đang lưu PDF…";
+            return $"Đang in trang {done + 1}/{total}";
+        }
+
+        public static string CancelledText(int done, int total) => $"Đã huỷ in (đã in {done}/{total} trang).";
+
         /// <summary>File bắt đầu bằng "%PDF" (PlotEngine nhiều trang một lần ra DWF dù máy in là PDF).</summary>
         public static bool IsPdfHeader(byte[] head)
         {

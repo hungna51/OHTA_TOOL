@@ -77,7 +77,7 @@
             <Border Background="{Binding AccentBrush}" Padding="12,10">
                 <DockPanel LastChildFill="True">
                     <!-- Nền trắng, bánh răng tô màu tab (logo làm mặt nạ) như Fname/Guro -->
-                    <Button DockPanel.Dock="Right" Style="{StaticResource WhiteIconBtnStyle}" Command="{Binding SettingsCommand}"
+                    <Button DockPanel.Dock="Right" Style="{StaticResource WhiteIconBtnStyle}" Command="{Binding SettingsCommand}" IsEnabled="{Binding IsIdle}"
                             Width="30" Height="30" Padding="4" Margin="6,0,0,0" VerticalAlignment="Top"
                             ToolTip="Cài đặt in: mặc định, layer khung, cấu hình in">
                         <Rectangle Width="18" Height="18" Fill="{Binding AccentBrush}">
@@ -86,7 +86,7 @@
                             </Rectangle.OpacityMask>
                         </Rectangle>
                     </Button>
-                    <Button DockPanel.Dock="Right" Style="{StaticResource WhiteIconBtnStyle}" Command="{Binding RefreshCommand}"
+                    <Button DockPanel.Dock="Right" Style="{StaticResource WhiteIconBtnStyle}" Command="{Binding RefreshCommand}" IsEnabled="{Binding IsIdle}"
                             Width="30" Height="30" Padding="0" Margin="6,0,0,0" VerticalAlignment="Top"
                             ToolTip="Đọc lại bản vẽ và danh sách máy in">
                         <TextBlock Text="⟳" FontSize="15" Foreground="{Binding AccentBrush}"/>
@@ -99,6 +99,8 @@
             </Border>
 
             <StackPanel Margin="12,4,12,12">
+                <!-- Khoá khi đang in (palette vẫn nhận cú bấm giữa hai trang) -->
+                <StackPanel IsEnabled="{Binding IsIdle}">
                 <TextBlock Style="{StaticResource FieldLabel}" Text="Cấu hình in"/>
                 <ComboBox ItemsSource="{Binding ProfileNames}" SelectedItem="{Binding SelectedProfile}"/>
                 <Border Visibility="{Binding WarningVisibility}" Background="#FFF3E0" BorderBrush="#FFB74D" BorderThickness="1"
@@ -127,6 +129,20 @@
                     <CheckBox Content="Gộp 1 file" IsChecked="{Binding Merge}" Margin="0,0,16,0"/>
                     <CheckBox Content="Mở sau khi in" IsChecked="{Binding OpenAfter}"/>
                 </WrapPanel>
+                </StackPanel>
+
+                <!-- Tiến độ in: nhảy sau mỗi trang (CAD đang in một trang thì palette đứng im) -->
+                <Border Margin="0,12,0,0" Visibility="{Binding ProgressVisibility}" Background="#FFFFFF"
+                        BorderBrush="#C8E6C9" BorderThickness="1" CornerRadius="5" Padding="9,8">
+                    <StackPanel>
+                        <TextBlock Text="{Binding ProgressText}" Foreground="#1B5E20" FontSize="12" FontWeight="SemiBold"/>
+                        <ProgressBar Height="10" Margin="0,6,0,0" Minimum="0" Maximum="{Binding ProgressMax}"
+                                     Value="{Binding ProgressValue}" Foreground="{Binding AccentBrush}" Background="#E8F5E9"
+                                     BorderThickness="0"/>
+                        <Button Margin="0,8,0,0" HorizontalAlignment="Right" Style="{StaticResource WhiteIconBtnStyle}"
+                                Padding="14,4" Content="Huỷ" Command="{Binding CancelCommand}"/>
+                    </StackPanel>
+                </Border>
 
                 <Grid Margin="0,12,0,0" Visibility="{Binding FramesButtonsVisibility}">
                     <Grid.ColumnDefinitions>
