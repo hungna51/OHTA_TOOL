@@ -141,7 +141,7 @@ namespace OhtaTool.Plugin.ViewModels
         public event PropertyChangedEventHandler PropertyChanged;
 
         public ModuleManifest Manifest => _manifest;
-        public string Title => _manifest.Title;
+        public string Title => _manifest.DisplayTitle;
         public string FolderName => _manifest.FolderName;
         public string Description => _manifest.Description;
         public string LoadWarning => _manifest.LoadWarning;

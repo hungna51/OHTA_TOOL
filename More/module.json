@@ -4,6 +4,7 @@
   "order": 90,
   "tabTitle": "More",
   "title": "More",
+  "version": "1.0",
   "description": "Bổ sung các lisp tùy chỉnh",
   "accentColor": "#EF6C00",
   "startupLisp": [

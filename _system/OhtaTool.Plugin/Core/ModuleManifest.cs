@@ -29,6 +29,14 @@ namespace OhtaTool.Plugin.Core
         [DataMember(Name = "description", IsRequired = false)]
         public string Description { get; set; }
 
+        /// <summary>Phiên bản riêng của tab (vd "1.5"). Sửa tab nào thì tăng version tab đó. Hiện ở tab Info + đầu tab.</summary>
+        [DataMember(Name = "version", IsRequired = false)]
+        public string Version { get; set; }
+
+        /// <summary>Giai đoạn tuỳ chọn (vd "beta") hiện sau phiên bản: "v1.1 (beta)".</summary>
+        [DataMember(Name = "stage", IsRequired = false)]
+        public string Stage { get; set; }
+
         [DataMember(Name = "accentColor", IsRequired = false)]
         public string AccentColor { get; set; }
 
@@ -52,6 +60,34 @@ namespace OhtaTool.Plugin.Core
 
         public bool IsEnabled => Enabled ?? true;
         public int EffectiveOrder => Order ?? 1000;
+
+        /// <summary>"v1.1 (beta)", "v1.5"; chưa khai báo version -> "".</summary>
+        public string VersionLabel
+        {
+            get
+            {
+                string v = (Version ?? string.Empty).Trim();
+                if (v.Length == 0)
+                    return string.Empty;
+                if (!v.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+                    v = "v" + v;
+                string stage = (Stage ?? string.Empty).Trim();
+                return stage.Length == 0 ? v : v + " (" + stage + ")";
+            }
+        }
+
+        /// <summary>Tiêu đề đầu tab kèm phiên bản: "GURO · v1.5".</summary>
+        public string DisplayTitle
+        {
+            get
+            {
+                string label = VersionLabel;
+                string title = (Title ?? string.Empty).Trim();
+                if (label.Length == 0)
+                    return title;
+                return title.Length == 0 ? label : title + " · " + label;
+            }
+        }
     }
 
     /// <summary>

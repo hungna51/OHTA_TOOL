@@ -449,7 +449,7 @@ namespace OhtaTool.Plugin.ViewModels
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public string Title => _manifest.Title;
+        public string Title => _manifest.DisplayTitle;
         public string FolderName => _manifest.FolderName;
         public SolidColorBrush AccentBrush { get; }
 
