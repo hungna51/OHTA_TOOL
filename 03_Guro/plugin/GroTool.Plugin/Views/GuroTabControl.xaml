@@ -80,12 +80,32 @@
         <!-- 0. Header: nut cai dat cung kieu cac tab khac -->
         <Border Grid.Row="0" Background="{Binding AccentBrush}" Padding="12,10">
             <DockPanel LastChildFill="True">
+                <!-- Nen trang nhu nut cai dat Fname; banh rang to theo mau tab -->
                 <Button DockPanel.Dock="Right" Command="{Binding CaiDatCommand}"
-                        Background="#33000000" BorderThickness="0" Width="24" Height="22"
-                        Margin="6,0,0,0" VerticalAlignment="Top" Cursor="Hand"
+                        Width="30" Height="30" Margin="6,0,0,0" VerticalAlignment="Top" Cursor="Hand"
                         ToolTip="Cài đặt GURO: khung tấm, in PDF, xếp cụm, mã khắc, xử lý nét">
-                    <TextBlock Text="⚙" Foreground="#FFFFFF" FontSize="13"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="#FFFFFF" BorderBrush="#CFD8DC"
+                                    BorderThickness="1" CornerRadius="4">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#ECEFF1"/>
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#90A4AE"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#CFD8DC"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                    <Rectangle Width="18" Height="18" Fill="{Binding AccentBrush}">
+                        <Rectangle.OpacityMask>
+                            <ImageBrush ImageSource="{Binding SettingsLogo}" Stretch="Uniform"/>
+                        </Rectangle.OpacityMask>
+                    </Rectangle>
                 </Button>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="{Binding TieuDe}" Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold"

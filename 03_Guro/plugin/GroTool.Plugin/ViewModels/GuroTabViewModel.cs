@@ -90,6 +90,29 @@ namespace ZwCadPlugin.ViewModels
         public string MoTa { get; }
         public Brush AccentBrush { get; }
 
+        /// <summary>Logo bánh răng nhúng trong DLL — XAML dùng làm mặt nạ, tô theo màu tab.</summary>
+        public ImageSource SettingsLogo => _settingsLogo ?? (_settingsLogo = NapLogo());
+        private static ImageSource _settingsLogo;
+
+        private static ImageSource NapLogo()
+        {
+            try
+            {
+                using (Stream s = typeof(GuroTabViewModel).Assembly.GetManifestResourceStream("GroTool.Assets.settings_logo.png"))
+                {
+                    if (s == null) return null;
+                    var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                    bmp.BeginInit();
+                    bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                    bmp.StreamSource = s;
+                    bmp.EndInit();
+                    bmp.Freeze();
+                    return bmp;
+                }
+            }
+            catch { return null; }
+        }
+
         public ICommand ChayGroCommand { get; }
         public ICommand ChayGiCommand { get; }
         public ICommand MoDstCommand { get; }

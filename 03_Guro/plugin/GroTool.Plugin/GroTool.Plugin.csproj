@@ -68,6 +68,11 @@
     </Reference>
   </ItemGroup>
 
+  <!-- Logo banh rang cua nut cai dat (giong OhtaTool.Plugin), nap qua ManifestResourceStream -->
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\settings_logo.png" LogicalName="GroTool.Assets.settings_logo.png" />
+  </ItemGroup>
+
   <!-- Xuat DLL ra 03_Guro/bin/ZwCAD va 03_Guro/bin/AutoCAD (build_ohta.ps1 tat buoc nay va tu chep) -->
   <Target Name="CopyOutputToGuroBin" AfterTargets="Build" Condition="'$(SkipPostBuildCopy)' != 'true'">
     <PropertyGroup>
