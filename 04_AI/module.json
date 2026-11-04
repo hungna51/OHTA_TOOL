@@ -1,0 +1,11 @@
+{
+  "id": "ai",
+  "enabled": true,
+  "order": 40,
+  "tabTitle": "AI",
+  "title": "AI KIỂM TRA",
+  "version": "0.1",
+  "description": "AI đọc dữ liệu trong khung, cảnh báo F-name / số lượng / ghi chú.",
+  "accentColor": "#5B3FD1",
+  "tools": []
+}

@@ -1,0 +1,101 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    AITOOL.dll - tab AI kiem tra ban ve (OHTA_TOOL/04_AI, ADR 0005).
+    Bien dich kep giong _system/OhtaTool.Plugin: net48 = ZWCAD 2026 (define ZWCAD), net10.0-windows = AutoCAD 2027 (define AUTOCAD).
+    Build bang OHTA_TOOL\build_ohta.ps1 (tu do SDK, chep DLL ra 03_Guro\bin\ZwCAD | bin\AutoCAD).
+  -->
+  <PropertyGroup>
+    <ZwCadSdkDir Condition="'$(ZwCadSdkDir)' == ''">C:\Program Files\ZWSOFT\ZWCAD 2026</ZwCadSdkDir>
+    <AutoCadSdkDir Condition="'$(AutoCadSdkDir)' == ''">C:\Program Files\Autodesk\AutoCAD 2027</AutoCadSdkDir>
+    <AutoCadTfm Condition="'$(AutoCadTfm)' == ''">net10.0-windows</AutoCadTfm>
+
+    <HasZwCadSdk Condition="Exists('$(ZwCadSdkDir)\ZwManaged.dll')">true</HasZwCadSdk>
+    <HasAutoCadSdk Condition="Exists('$(AutoCadSdkDir)\acmgd.dll')">true</HasAutoCadSdk>
+
+    <TargetFrameworks Condition="'$(HasZwCadSdk)' == 'true' and '$(HasAutoCadSdk)' == 'true'">net48;$(AutoCadTfm)</TargetFrameworks>
+    <TargetFrameworks Condition="'$(HasZwCadSdk)' == 'true' and '$(HasAutoCadSdk)' != 'true'">net48</TargetFrameworks>
+    <TargetFrameworks Condition="'$(HasZwCadSdk)' != 'true' and '$(HasAutoCadSdk)' == 'true'">$(AutoCadTfm)</TargetFrameworks>
+    <TargetFrameworks Condition="'$(TargetFrameworks)' == ''">net48</TargetFrameworks>
+
+    <LangVersion>latest</LangVersion>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <RootNamespace>AiTool</RootNamespace>
+    <AssemblyName>AITOOL</AssemblyName>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <NoWarn>$(NoWarn);CA1416;MSB3277;CS8981</NoWarn>
+  </PropertyGroup>
+
+  <!-- Nhanh ZWCAD 2026 (.NET Framework 4.8) -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+    <DefineConstants>$(DefineConstants);ZWCAD</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <!-- Cho phep bien dich .NET 4.8 bang .NET SDK hien dai ma khong can cai VS Developer Pack -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+    <Reference Include="ZwDatabaseMgd">
+      <HintPath>$(ZwCadSdkDir)\ZwDatabaseMgd.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="ZwManaged">
+      <HintPath>$(ZwCadSdkDir)\ZwManaged.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Nhanh AutoCAD (.NET 10.0 / 8.0 Windows) -->
+  <PropertyGroup Condition="'$(TargetFramework)' != 'net48'">
+    <DefineConstants>$(DefineConstants);AUTOCAD</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != 'net48'">
+    <Reference Include="accoremgd">
+      <HintPath>$(AutoCadSdkDir)\accoremgd.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="acdbmgd">
+      <HintPath>$(AutoCadSdkDir)\acdbmgd.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="acmgd">
+      <HintPath>$(AutoCadSdkDir)\acmgd.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
+  <!-- Loi dan mac dinh cho AI (nut "Khoi phuc mac dinh"), nap qua ManifestResourceStream -->
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\loi_dan_mac_dinh.md" LogicalName="AiTool.Assets.loi_dan_mac_dinh.md" />
+  </ItemGroup>
+
+  <!-- Dung lai ma Fname bang LINK NGUON (khong tham chieu OHTATOOL.dll, ADR 0005) -->
+  <ItemGroup>
+    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\JsonLite.cs" Link="Shared\JsonLite.cs" />
+    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\FnameCore.cs" Link="Shared\FnameCore.cs" />
+    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\FnameDataStore.cs" Link="Shared\FnameDataStore.cs" />
+    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\FnameLocalAdditions.cs" Link="Shared\FnameLocalAdditions.cs" />
+    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\TraVCore.cs" Link="Shared\TraVCore.cs" />
+    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\TraVThuCore.cs" Link="Shared\TraVThuCore.cs" />
+  </ItemGroup>
+
+  <!-- Xuat DLL ra 04_AI/bin/ZwCAD va 04_AI/bin/AutoCAD (build_ohta.ps1 tat buoc nay va tu chep) -->
+  <Target Name="CopyOutputToAiBin" AfterTargets="Build" Condition="'$(SkipPostBuildCopy)' != 'true'">
+    <PropertyGroup>
+      <CadOutSubDir Condition="'$(TargetFramework)' == 'net48'">ZwCAD</CadOutSubDir>
+      <CadOutSubDir Condition="'$(TargetFramework)' != 'net48'">AutoCAD</CadOutSubDir>
+      <CadBinDest>$(MSBuildProjectDirectory)\..\..\bin\$(CadOutSubDir)</CadBinDest>
+    </PropertyGroup>
+    <MakeDir Directories="$(CadBinDest)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CadBinDest)" Retries="0" ContinueOnError="true" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CadBinDest)" Condition="Exists('$(TargetDir)$(TargetName).pdb')" Retries="0" ContinueOnError="true" />
+  </Target>
+</Project>

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Test cho phan LOGIC THUAN cua AiTool.Plugin (thu muc Core/), chay KHONG can CAD.
+    Bien dich THANG cac file Core/*.cs (+ ma Fname link nguon) chu khong tham chieu AITOOL.dll.
+    Chay tu thu muc OHTA_TOOL: dotnet run (tham so project) 04_AI/plugin/AiTool.Tests
+    (build_ohta.ps1 tu chay).
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\AiTool.Plugin\Core\*.cs" Link="Core\%(Filename)%(Extension)" />
+    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\JsonLite.cs" Link="Shared\JsonLite.cs" />
+    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\FnameCore.cs" Link="Shared\FnameCore.cs" />
+    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\FnameDataStore.cs" Link="Shared\FnameDataStore.cs" />
+    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\FnameLocalAdditions.cs" Link="Shared\FnameLocalAdditions.cs" />
+    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\TraVCore.cs" Link="Shared\TraVCore.cs" />
+    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\TraVThuCore.cs" Link="Shared\TraVThuCore.cs" />
+  </ItemGroup>
+</Project>

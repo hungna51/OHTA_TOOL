@@ -10,6 +10,10 @@ $TestProj   = Join-Path $OhtaRoot "_system\OhtaTool.Tests\OhtaTool.Tests.csproj"
 # 03_Guro: DLL rieng GROTOOL.dll cua lenh GRO (nguon cu laptrinhlisp\ZwCadPlugin)
 $GroProj     = Join-Path $OhtaRoot "03_Guro\plugin\GroTool.Plugin\GroTool.Plugin.csproj"
 $GroTestProj = Join-Path $OhtaRoot "03_Guro\plugin\GroTool.Tests\GroTool.Tests.csproj"
+# 04_AI: DLL rieng AITOOL.dll cua tab AI (ADR 0005) - chi build khi thu muc co tren may
+$AiProj     = Join-Path $OhtaRoot "04_AI\plugin\AiTool.Plugin\AiTool.Plugin.csproj"
+$AiTestProj = Join-Path $OhtaRoot "04_AI\plugin\AiTool.Tests\AiTool.Tests.csproj"
+$HasAi = Test-Path $AiProj
 
 # --- Tu do SDK CAD dang cai tren may (moi may co the cai phien ban khac nhau) ---
 # ZWCAD co the cai o o khac (vd D:\ZWCAD) -> lay InstallLocation tu registry, fallback duong dan mac dinh
@@ -49,7 +53,7 @@ $Targets = @()
 if ($HasZwCad) { $Targets += "ZWCAD 2026 net48" } else { Write-Host "  [!] Khong co ZWCAD 2026 -> BO QUA ban ZWCAD (giu nguyen DLL cu trong bin\ZwCAD)" -ForegroundColor Yellow }
 if ($AutoCadSdkDir) { $Targets += "AutoCAD $AutoCadYear $AutoCadTfm" } else { Write-Host "  [!] Khong co AutoCAD 2025+ -> BO QUA ban AutoCAD (giu nguyen DLL cu trong bin\AutoCAD)" -ForegroundColor Yellow }
 
-Write-Host "`n[1/3] Bien dich OhtaTool.Plugin + GroTool.Plugin ($($Targets -join ' & '))..." -ForegroundColor Cyan
+Write-Host "`n[1/3] Bien dich OhtaTool.Plugin + GroTool.Plugin (+ AiTool.Plugin) ($($Targets -join ' & '))..." -ForegroundColor Cyan
 $BuildArgs = @("-c", "Release", "-p:SkipPostBuildCopy=true", "--nologo", "-p:ZwCadSdkDir=$ZwCadSdkDir")
 if ($AutoCadSdkDir) { $BuildArgs += @("-p:AutoCadSdkDir=$AutoCadSdkDir", "-p:AutoCadTfm=$AutoCadTfm") }
 else { $BuildArgs += "-p:AutoCadSdkDir=__KHONG_CO_AUTOCAD__" }
@@ -60,6 +64,12 @@ if ($LASTEXITCODE -ne 0) {
 dotnet build $GroProj @BuildArgs
 if ($LASTEXITCODE -ne 0) {
     throw "Bien dich GroTool.Plugin (03_Guro) THAT BAI!"
+}
+if ($HasAi) {
+    dotnet build $AiProj @BuildArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Bien dich AiTool.Plugin (04_AI) THAT BAI!"
+    }
 }
 
 function Publish-CadDll($srcDir, $destDir, $label, $name = "OHTATOOL") {
@@ -101,10 +111,12 @@ function Publish-CadDll($srcDir, $destDir, $label, $name = "OHTATOOL") {
 if ($HasZwCad) {
     Publish-CadDll (Join-Path $OhtaRoot "_system\OhtaTool.Plugin\bin\Release\net48") (Join-Path $OhtaRoot "_system\bin\ZwCAD") "ZWCAD"
     Publish-CadDll (Join-Path $OhtaRoot "03_Guro\plugin\GroTool.Plugin\bin\Release\net48") (Join-Path $OhtaRoot "03_Guro\bin\ZwCAD") "ZWCAD" "GROTOOL"
+    if ($HasAi) { Publish-CadDll (Join-Path $OhtaRoot "04_AI\plugin\AiTool.Plugin\bin\Release\net48") (Join-Path $OhtaRoot "04_AI\bin\ZwCAD") "ZWCAD" "AITOOL" }
 }
 if ($AutoCadSdkDir) {
     Publish-CadDll (Join-Path $OhtaRoot "_system\OhtaTool.Plugin\bin\Release\$AutoCadTfm") (Join-Path $OhtaRoot "_system\bin\AutoCAD") "AutoCAD $AutoCadYear"
     Publish-CadDll (Join-Path $OhtaRoot "03_Guro\plugin\GroTool.Plugin\bin\Release\$AutoCadTfm") (Join-Path $OhtaRoot "03_Guro\bin\AutoCAD") "AutoCAD $AutoCadYear" "GROTOOL"
+    if ($HasAi) { Publish-CadDll (Join-Path $OhtaRoot "04_AI\plugin\AiTool.Plugin\bin\Release\$AutoCadTfm") (Join-Path $OhtaRoot "04_AI\bin\AutoCAD") "AutoCAD $AutoCadYear" "AITOOL" }
 }
 
 Write-Host "`n[2/3] Chay bo Unit Tests OhtaTool.Tests + GroTool.Tests..." -ForegroundColor Cyan
@@ -115,6 +127,12 @@ if ($LASTEXITCODE -ne 0) {
 dotnet run --project $GroTestProj -c Release --nologo
 if ($LASTEXITCODE -ne 0) {
     throw "Unit Tests GroTool.Tests (03_Guro) THAT BAI!"
+}
+if ($HasAi) {
+    dotnet run --project $AiTestProj -c Release --nologo
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unit Tests AiTool.Tests (04_AI) THAT BAI!"
+    }
 }
 
 Write-Host "`n[3/3] Kiem tra can bang ngoac () va chuan ASCII cho tat ca file .lsp trong OHTA_TOOL..." -ForegroundColor Cyan

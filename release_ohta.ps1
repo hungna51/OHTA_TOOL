@@ -67,6 +67,8 @@ $Files = $Tracked | Where-Object {
     if ($p -notmatch '/') { return $RootFiles -contains $p }
     if ($p -match '^[^/]+/plugin/' -or $p -match '\.gs$' -or $p -match 'google_sheet\.key$') { return $false }
     if ($top -eq '_Template_Module') { return $true }
+    # Tab AI dang thu nghiem: chua phat hanh cho doi (ADR 0005)
+    if ($top -eq '04_AI') { return $false }
     return -not ($top.StartsWith('_') -or $top.StartsWith('.') -or $top -eq 'rules')
 }
 $Files = @($Files) + $Dlls

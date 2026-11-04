@@ -23,3 +23,7 @@ _graphify-out/
 
 # Ban sao luu module.json do nut + / cai dat tab tu sinh (ADR 0002)
 module.json.bak
+
+# Tab AI: API key va nhat ky (ADR 0005)
+04_AI/data/ai.key
+04_AI/log/

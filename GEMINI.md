@@ -59,6 +59,7 @@ OHTAROLLBACK: Quay về bản trước lần tự cập nhật gần nhất (gi�
 | 01 | [`01_Fname/`](01_Fname/README.md) | Tab **Fname**: tạo, hút, sửa F-NAME (`N=, M=, T=, Q=, Z=`) & các lệnh Fname tấm | [`01_Fname/rules/`](01_Fname/rules/) | Đã tích hợp UI chọn Fname |
 | 02 | [`More/`](More/README.md) | Nhóm chức năng mẫu 02 | [`More/rules/`](More/rules/) | Khung sẵn sàng mở rộng |
 | 03 | [`03_Guro/`](03_Guro/README.md) | Tab **Guro**: lệnh `GRO` (bango + mã khắc + F-name + CSV + PDF + chuyển layer), `DST`, `XLN`, `GI`… — DLL riêng `GROTOOL.dll`, chạy ZWCAD 2026 + AutoCAD 2027 | [`03_Guro/rules/`](03_Guro/rules/) | Đã tích hợp (chuyển từ ZWLISP\GURO) |
+| 04 | [`04_AI/`](04_AI/README.md) | Tab **AI**: AI (Claude API) đọc dữ liệu trong từng khung, cảnh báo F-name / số lượng / ghi chú — DLL riêng `AITOOL.dll` ([ADR 0005](_docs/adr/0005-tab-ai-dll-rieng.md)) | — | Thử nghiệm — chỉ máy phát triển, chưa phát hành |
 | cuối | *(dựng sẵn, `_system`)* | Tab **Info**: thông tin Tool, phiên bản từng tab, kiểm tra cập nhật | — | Đã tích hợp (v1.1.1) |
 
 *(Khi tạo thêm thư mục mục con mới, hãy cập nhật bổ sung 1 dòng vào bảng trên để đồng bộ bản đồ dự án).*
