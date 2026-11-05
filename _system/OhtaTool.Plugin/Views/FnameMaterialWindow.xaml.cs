@@ -129,14 +129,13 @@ namespace OhtaTool.Plugin.Views
             return sima && TraVThuData.NormalizeLoai(loai).IndexOf("SIMA", StringComparison.Ordinal) < 0 ? loai + " SIMA" : loai;
         }
 
-        /// <summary>Độ dày đang xét: T đã có của mác + T vừa gõ trong ô Độ dày (bỏ trùng, xếp tăng dần).</summary>
+        /// <summary>Độ dày đang xét: chỉ các T người dùng gõ trong ô Độ dày (bỏ trùng, xếp tăng dần) — không liệt kê cả mác cho đỡ rối.</summary>
         private List<string> CurrentThicknesses()
         {
             var list = new List<string>();
-            FnameMaterialSpec spec = (_getCatalog?.Invoke())?.FindMaterial((CmbM.Text ?? string.Empty).Trim());
             IEnumerable<string> typed = (TxtT.Text ?? string.Empty).Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(x => FnameCatalogData.FormatThickness(x)).Where(x => TraVThuData.ParseNumber(x) > 0);
-            foreach (string t in (spec?.Thicknesses ?? new List<string>()).Concat(typed))
+            foreach (string t in typed)
                 if (!list.Any(x => FnameCatalogData.ContainsThickness(new[] { x }, t)))
                     list.Add(t);
             return list.OrderBy(t => TraVThuData.ParseNumber(t) ?? 0).ToList();
@@ -162,7 +161,7 @@ namespace OhtaTool.Plugin.Views
             TxtTamLoai.Text = $"T thực áp cho loại {loai} — dùng chung cho mọi mác cùng loại. Chỉ nhập cho độ dày chưa có, để trống thì bỏ qua.";
             if (ts.Count == 0)
             {
-                PanelTam.Children.Add(new TextBlock { Text = "(chưa có độ dày — nhập ở ô Độ dày T= phía trên)", FontSize = 11, Foreground = Hint });
+                PanelTam.Children.Add(new TextBlock { Text = "Gõ độ dày ở ô Độ dày T= phía trên để xem / bổ sung T thực (vd 6.0).", FontSize = 11, Foreground = Hint, TextWrapping = TextWrapping.Wrap });
                 UpdateEvidenceVisibility();
                 return;
             }
