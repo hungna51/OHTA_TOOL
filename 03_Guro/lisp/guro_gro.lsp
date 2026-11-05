@@ -13432,6 +13432,31 @@
   kq
 )
 
+;;; Muc 205: danh sach ma Unicode -> chuoi ASCII cho bao cao gui sang .NET: ky tu ngoai
+;;; ASCII viet thanh \U+XXXX (C# ThongTinGro.GiaiEscape doi lai), ky tu dieu khien -> dau cach.
+(defun gro--bao-cao-chu (L / s c n d h)
+  (setq s "")
+  (foreach c L
+    (cond
+      ((and (> c 31) (< c 127)) (setq s (strcat s (chr c))))
+      ((< c 32) (setq s (strcat s " ")))
+      (t
+       (setq n c
+             h ""
+       )
+       (repeat 4
+         (setq d (rem n 16)
+               h (strcat (substr "0123456789ABCDEF" (1+ d) 1) h)
+               n (/ n 16)
+         )
+       )
+       (setq s (strcat s (chr 92) "U+" h))
+      )
+    )
+  )
+  s
+)
+
 ;;; Noi danh sach chuoi bang ", ", toi da n phan tu (them "...").
 (defun gro--noi-ds (l n / s k)
   (setq s "" k 0)
@@ -15630,8 +15655,39 @@
                   )
         )
       )
-      (if (or vd-th4 mocoi vd-tnghi gro--loi-trung-sl msg-sht) 
-        (setq msg (strcat msg "\nCo canh bao - xem dong lenh."))
+      ;; Muc 205: ba nhom canh bao bat buoc dua THANG vao bao cao (tab Thong Tin cua DST
+      ;; hien tung dong) thay cho cau chung "Co canh bao - xem dong lenh". Chu Nhat gui
+      ;; dang \U+XXXX (gro--bao-cao-chu) - C# ThongTinGro.GiaiEscape doi lai.
+      (if vd-th4
+        (progn
+          (setq msg (strcat msg "\n\n!!! " (itoa th4)
+                            " ghi chu co \"t=\" nhung KHONG nhan ra kieu viet so luong (tam van tao, Q rong):"))
+          (foreach v (reverse vd-th4)
+            (setq msg (strcat msg "\n  [" (gro--bao-cao-chu (bg--codes v)) "]"))
+          )
+        )
+      )
+      (if mocoi
+        (progn
+          (setq msg (strcat msg "\n\n!!! " (itoa (length mocoi)) " dong so luong KHONG ghep duoc vao ghi chu nao:")
+                k   0
+          )
+          (foreach c mocoi
+            (if (< k 5)
+              (setq msg (strcat msg "\n  [" (gro--bao-cao-chu (gro--it-codes c)) "]"
+                                "  tai X=" (rtos (gro--it-x c) 2 1) " Y=" (rtos (gro--it-y c) 2 1)))
+            )
+            (setq k (1+ k))
+          )
+        )
+      )
+      (if vd-tnghi
+        (progn
+          (setq msg (strcat msg "\n\n!!! Doi tuong bi bo qua nhung CO chu t/T (co the la ghi chu tam viet kieu khac):"))
+          (foreach v (reverse vd-tnghi)
+            (setq msg (strcat msg "\n  [" (gro--bao-cao-chu (bg--codes v)) "]"))
+          )
+        )
       )
       (if gro--loi-trung-sl
         (setq msg (strcat msg

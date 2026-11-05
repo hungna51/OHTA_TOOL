@@ -145,6 +145,14 @@ namespace ZwCadPlugin.Core
             M(@"^!!! SO TAM NHO HON SO GHI CHU - co tam bi mat, bao loi ngay!$",
               m => "!!! SỐ TẤM ÍT HƠN SỐ GHI CHÚ — có tấm bị mất, cần báo lỗi ngay!"),
             M(@"^Co canh bao - xem dong lenh\.$", m => "Có cảnh báo — xem chi tiết ở dòng lệnh."),
+            // Mục 205: 3 nhóm cảnh báo bắt buộc nay nằm ngay trong báo cáo (trước chỉ in ra dòng lệnh)
+            M(@"^!!! (\d+) ghi chu co ""t="" nhung KHONG nhan ra kieu viet so luong \(tam van tao, Q rong\):$",
+              m => $"!!! {m.Groups[1]} ghi chú có \"t=\" nhưng KHÔNG nhận ra cách viết số lượng (tấm vẫn được tạo, Q trống):"),
+            M(@"^!!! (\d+) dong so luong KHONG ghep duoc vao ghi chu nao:$",
+              m => $"!!! {m.Groups[1]} dòng số lượng KHÔNG ghép được vào ghi chú nào:"),
+            M(@"^!!! Doi tuong bi bo qua nhung CO chu t/T \(co the la ghi chu tam viet kieu khac\):$",
+              m => "!!! Chữ bị bỏ qua nhưng CÓ chữ t/T (có thể là ghi chú tấm viết kiểu khác):"),
+            M(@"^\[(.*)\]  tai X=(\S+) Y=(\S+)$", m => $"[{m.Groups[1]}]  tại X={m.Groups[2]} Y={m.Groups[3]}"),
             M(@"^(\*\*\*|!!!)\s*CANH BAO:\s*Co\s*(\d+)\s*tam\s*can xu ly doi net sang 4-SHT.*?-\s*bango:\s*(.*)$",
               m => $"*** CẢNH BÁO: Có {m.Groups[2]} tấm cần xử lý đổi nét sang 4-SHT (ghi chú \"xử lý SHT\") — bango: {m.Groups[3]}"),
             M(@"^\*\*\* CANH BAO: CO (\d+) CUM TEXT BI TRUNG LOAI SO LUONG \(HONZU/GYAKUZU\)!$",
@@ -196,13 +204,25 @@ namespace ZwCadPlugin.Core
             if (string.IsNullOrWhiteSpace(dong)) return dong ?? string.Empty;
             int n = 0;
             while (n < dong.Length && dong[n] == ' ') n++;
-            string thut = dong.Substring(0, n), than = dong.Substring(n).TrimEnd();
+            string thut = dong.Substring(0, n), than = GiaiEscape(dong.Substring(n).TrimEnd());
             foreach (var kv in MauDich)
             {
                 Match m = kv.Key.Match(than);
                 if (m.Success) return thut + kv.Value(m);
             }
-            return dong;
+            return thut + than;
+        }
+
+        private static readonly Regex REscape = new Regex(@"\\U\+([0-9A-Fa-f]{4})", RegexOptions.CultureInvariant);
+
+        /// <summary>
+        /// Mục 205: lisp gửi chữ Nhật trong báo cáo dạng \U+XXXX — chuỗi ASCII đi từ lisp sang
+        /// .NET không phụ thuộc bảng mã của máy — đổi lại thành ký tự.
+        /// </summary>
+        public static string GiaiEscape(string s)
+        {
+            if (string.IsNullOrEmpty(s) || s.IndexOf("\\U+", StringComparison.Ordinal) < 0) return s;
+            return REscape.Replace(s, m => ((char)Convert.ToInt32(m.Groups[1].Value, 16)).ToString());
         }
 
         /// <summary>Số dòng cảnh báo + lỗi — hiện thành huy hiệu trên tiêu đề tab.</summary>

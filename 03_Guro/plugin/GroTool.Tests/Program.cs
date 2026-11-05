@@ -927,6 +927,20 @@ namespace ZwCadPlugin.Tests
             Kiem("98 5A -> kanji (U+516D)", GroText.Cp932SangUnicode(0x98, 0x5A), 0x516D);
             Kiem("1 byte A ascii", GroText.Cp932SangUnicode(0x41, 0), 0x41);
             Kiem("cap byte khong hop le -> -1", GroText.Cp932SangUnicode(0x85, 0x20), -1);
+
+            Console.WriteLine();
+            Console.WriteLine("=== Canh bao chi tiet trong bao cao, chu Nhat dang \\U+XXXX (muc 205) ===");
+            Kiem("giai \\U+FF14\\U+679A -> ４枚", ThongTinGro.GiaiEscape("\\U+FF14\\U+679A"), "４枚");
+            Kiem("chuoi ASCII giu nguyen", ThongTinGro.GiaiEscape("t=6mm"), "t=6mm");
+            var bcMoCoi = BaoCaoGro.Doc("4 ghi chu -> 4 tam:\nDa danh so tu 1 den 4" +
+                "\n\n!!! 1 dong so luong KHONG ghep duoc vao ghi chu nao:\n  [(\\U+FF14\\U+679A)]  tai X=7715.1 Y=7853.3" +
+                "\n\n!!! 2 ghi chu co \"t=\" nhung KHONG nhan ra kieu viet so luong (tam van tao, Q rong):\n  [t=6mm ABC]");
+            Kiem("2 khoi canh bao", bcMoCoi.CanhBao.Count, 2);
+            Kiem("tieu de dong so luong mo coi (tieng Viet)", bcMoCoi.CanhBao[0].TieuDe,
+                 "!!! 1 dòng số lượng KHÔNG ghép được vào ghi chú nào:");
+            Kiem("chi tiet co chu Nhat + toa do", bcMoCoi.CanhBao[0].ChiTiet.FirstOrDefault(), "[(４枚)]  tại X=7715.1 Y=7853.3");
+            Kiem("tieu de TH4 (tieng Viet)", bcMoCoi.CanhBao[1].TieuDe,
+                 "!!! 2 ghi chú có \"t=\" nhưng KHÔNG nhận ra cách viết số lượng (tấm vẫn được tạo, Q trống):");
             Console.WriteLine();
             Console.WriteLine("=== Tu cap nhat tu dien ghi chu moi ngay (muc 197) ===");
             JapanNoteTranslator.GhiNgayCapNhat(new DateTime(2026, 11, 2));
