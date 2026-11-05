@@ -606,7 +606,7 @@ namespace OhtaTool.Plugin.ViewModels
             if (src != null && src.IsBoSung)
             {
                 RealThicknessMarker = src.ChoDuyet ? "bổ sung · chờ duyệt" : "bổ sung";
-                RealThicknessTooltip = $"T thực bổ sung: {src.Loai} T={src.T} = {src.THienThi}\nNgười xác nhận: {src.NguoiXacNhan}\nGhi chú: {src.GhiChu}"
+                RealThicknessTooltip = $"Bổ sung — {src.Loai} T={src.T}: T thực = {src.THienThi}\nNgười xác nhận: {src.NguoiXacNhan}\nGhi chú: {src.GhiChu}"
                     + (src.Ngay.Length > 0 ? $"\nNgày: {src.Ngay}" : string.Empty)
                     + $"\nẢnh bằng chứng: {src.AnhLinks.Count}"
                     + (src.ChoDuyet ? "\n(Đang chờ admin duyệt — mới dùng trên máy này)" : string.Empty);

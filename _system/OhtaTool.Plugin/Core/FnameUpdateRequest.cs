@@ -50,7 +50,7 @@ namespace OhtaTool.Plugin.Core
             if (IsLoai(LoaiTam))
             {
                 int n = ImageLinks.Count;
-                return $"T thực {Get("Loai")} T={Get("T")} = {Get("T_hienthi")} — xác nhận: {Get("Nguoi_xac_nhan")} — {Get("Ghi_chu")}"
+                return $"{Get("Loai")} T={Get("T")}: T thực = {Get("T_hienthi")} — xác nhận: {Get("Nguoi_xac_nhan")} — {Get("Ghi_chu")}"
                     + (n > 0 ? $" — {n} ảnh" : " — chưa có ảnh");
             }
             return ThongSo;

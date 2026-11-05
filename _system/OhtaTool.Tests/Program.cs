@@ -546,7 +546,7 @@ namespace OhtaTool.Tests
             Check("Thong_so tam khu hoi + link anh co dau =",
                 back.Loai == "SUS SIMA" && back.THienThi == "7.3" && back.GhiChu == "do   3 diem" && req.ImageLinks.Count == 1 && req.HasImages
                 && req.ImageLinks[0].EndsWith("usp=drivesdk"), ps);
-            Check("Describe tam", req.Describe().StartsWith("T thực SUS SIMA T=6.0 = 7.3 — xác nhận: Anh Tu") && req.Describe().EndsWith("1 ảnh"), req.Describe());
+            Check("Describe tam", req.Describe().StartsWith("SUS SIMA T=6.0: T thực = 7.3 — xác nhận: Anh Tu") && req.Describe().EndsWith("1 ảnh"), req.Describe());
             var reply = FnameSheetReply.Parse("{\"ok\":true,\"message\":\"x\",\"anh\":\"https://a https://b\"}");
             Check("Tra loi submit tam co link anh", reply != null && reply.Anh == "https://a https://b");
 
