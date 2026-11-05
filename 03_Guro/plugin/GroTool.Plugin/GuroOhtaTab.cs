@@ -29,8 +29,9 @@ namespace ZwCadPlugin
         }
 
         /// <summary>
-        /// Mục 194: (gro_net_layer_ban_ve) -> ("khung" "vung" "goc") — layer người dùng chọn
-        /// trên tab Guro cho BẢN VẼ ĐANG MỞ; phần tử nil = chưa chọn, lisp dùng mặc định.
+        /// Mục 194: (gro_net_layer_ban_ve 0) -> ("khung" "vung" "goc") — layer người dùng chọn
+        /// trên tab Guro cho BẢN VẼ ĐANG MỞ; "" = chưa chọn, lisp dùng mặc định. Tham số bỏ qua.
+        /// Mục 201: trả chuỗi rỗng chứ KHÔNG trả nil trong danh sách — ZWCAD báo "consp nil".
         /// </summary>
         [LispFunction("GRO_NET_LAYER_BAN_VE")]
         public static ResultBuffer LayerBanVe(ResultBuffer rb)
@@ -38,9 +39,7 @@ namespace ZwCadPlugin
             Document doc = Application.DocumentManager.MdiActiveDocument;
             var kq = new ResultBuffer();
             foreach (string t in LayerTheoBanVe.Lay(doc))
-                kq.Add(string.IsNullOrEmpty(t)
-                    ? new TypedValue((int)LispDataType.Nil)
-                    : new TypedValue((int)LispDataType.Text, t));
+                kq.Add(new TypedValue((int)LispDataType.Text, t ?? ""));
             return kq;
         }
     }

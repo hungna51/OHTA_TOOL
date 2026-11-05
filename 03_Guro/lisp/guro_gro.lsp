@@ -894,12 +894,14 @@
         gro--buoc "khoi dong: dem doi tuong layer goc"
         lays-x    (car (gro--layer-xln-ds))
         gro--buoc "khoi dong: layer chon tren tab Guro"
+        ;; Muc 201: ZWCAD bao "consp nil" o day -> goi CO 1 tham so gia (khong goi voi
+        ;; danh sach rong), C# tra chuoi "" thay nil, kiem bang length (khong vl-list-length).
         chon      (if (vl-symbol-value 'gro_net_layer_ban_ve)
-                    (vl-catch-all-apply 'gro_net_layer_ban_ve '())
+                    (vl-catch-all-apply 'gro_net_layer_ban_ve (list 0))
                   )
   )
-  ;; Chi nhan dung danh sach 3 phan tu (chuoi / nil); khac di thi coi nhu chua chon.
-  (if (not (and (listp chon) (vl-list-length chon) (= (vl-list-length chon) 3)))
+  ;; Chi nhan dung danh sach 3 phan tu; khac di (loi, DLL cu) thi coi nhu chua chon.
+  (if (not (and chon (= (type chon) 'LIST) (= (length chon) 3)))
     (setq chon nil)
   )
   (if (null lays-x) (setq lays-x (list "0")))
