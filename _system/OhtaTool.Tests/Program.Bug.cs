@@ -39,6 +39,41 @@ namespace OhtaTool.Tests
             BugDedup.ResetForTest();
 
             TestBugLog();
+            TestBugAttachmentsAndQueue();
+        }
+
+        private static void TestBugAttachmentsAndQueue()
+        {
+            string d = Path.Combine(Path.GetTempPath(), "ohta_bugatt_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(d);
+            string a = Path.Combine(d, "a.csv");
+            File.WriteAllText(a, "x,y\n1,2");
+            var (zip, err) = BugAttachments.Zip(new[] { a, Path.Combine(d, "khong_co.dwg") });
+            Check("BugAtt: zip co du lieu", zip != null && zip.Length > 0 && err == null, err);
+            using (new FileStream(a, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
+                Check("BugAtt: zip file dang mo ghi", BugAttachments.Zip(new[] { a }).zip != null);
+            var (z2, e2) = BugAttachments.Zip(new[] { a }, maxBytes: 10);
+            Check("BugAtt: vuot gioi han bi chan", z2 == null && e2 != null && e2.Contains("25 MB"), e2);
+            Check("BugAtt: rong tra null", BugAttachments.Zip(new string[0]).zip == null && BugAttachments.Zip(new string[0]).error == null);
+            string sub = Path.Combine(d, "sub"); Directory.CreateDirectory(sub);
+            string a2 = Path.Combine(sub, "a.csv"); File.WriteAllText(a2, "khac");
+            var (z3, _) = BugAttachments.Zip(new[] { a, a2 });
+            using (var zs = new System.IO.Compression.ZipArchive(new MemoryStream(z3)))
+                Check("BugAtt: trung ten them hau to", zs.Entries.Select(x => x.Name).OrderBy(x => x, StringComparer.Ordinal).SequenceEqual(new[] { "a.csv", "a_2.csv" }),
+                    string.Join(",", zs.Entries.Select(x => x.Name)));
+
+            string oldQ = BugQueue.Directory;
+            BugQueue.Directory = Path.Combine(d, "queue");
+            Check("BugQueue: thu muc chua co -> rong", BugQueue.Pending().Count == 0);
+            var r = BugReport.Create(); r.MoTa = "test";
+            BugQueue.Enqueue(r); BugQueue.Enqueue(r);
+            Check("BugQueue: cung Id khong nhan doi", BugQueue.Pending().Count == 1);
+            Check("BugQueue: giu Id", BugQueue.Pending()[0].Id == r.Id);
+            File.WriteAllText(Path.Combine(BugQueue.Directory, "hong.json"), "{khong phai json");
+            Check("BugQueue: bo qua file hong", BugQueue.Pending().Count == 1);
+            BugQueue.Remove(r.Id);
+            Check("BugQueue: xoa", BugQueue.Pending().Count == 0);
+            BugQueue.Directory = oldQ;
         }
 
         private static void TestBugLog()
