@@ -252,24 +252,33 @@ namespace ZwCadPlugin.ViewModels
 
         // ---------------------------- Tiện ích ----------------------------
 
+        /// <summary>Đánh dấu trong Document.UserData: bản vẽ này đã nạp autoload.lsp của tab (mục 206).</summary>
+        private const string KhoaDaNap = "GRO_DA_NAP_AUTOLOAD";
+
         /// <summary>
-        /// Gửi lệnh xuống dòng lệnh như nút của OHTA: hủy lệnh đang treo, nạp
-        /// lisp/autoload.lsp của mục con (bản vẽ mới mở chưa kịp nạp) rồi gọi lệnh.
+        /// Gửi lệnh xuống dòng lệnh như nút của OHTA: hủy lệnh đang treo rồi gọi lệnh. Lần bấm
+        /// đầu tiên trên mỗi bản vẽ thì nạp trước lisp/autoload.lsp của mục con (bản vẽ mới mở
+        /// có thể chưa kịp nạp) — mục 206: chỉ 1 lần mỗi bản vẽ và KHÔNG hiện trên dòng lệnh.
         /// </summary>
         private void GuiLenh(string lenh)
         {
             Document doc = Application.DocumentManager.MdiActiveDocument;
             if (doc == null) return;
-            string nap = "";
-            if (!string.IsNullOrEmpty(_thuMucModule))
+            bool daNap = false;
+            try { daNap = doc.UserData?[KhoaDaNap] is bool b && b; } catch { }
+            if (!daNap && !string.IsNullOrEmpty(_thuMucModule))
             {
                 string f = Path.Combine(_thuMucModule, "lisp", "autoload.lsp").Replace('\\', '/');
                 // Mục 198: báo sẵn thư mục 03_Guro cho autoload.lsp — máy khác có thể không đặt
                 // OHTA_TOOL trong Support Path nên lisp không tự dò ra.
                 string d = _thuMucModule.TrimEnd('\\', '/').Replace("\\", "\\\\");
-                nap = "(setq *gro-module-dir* \"" + d + "\") (if (findfile \"" + f + "\") (load \"" + f + "\")) ";
+                string nap = "(setq *gro-module-dir* \"" + d + "\") (if (findfile \"" + f + "\") (load \"" + f + "\")) (princ)";
+                doc.SendStringToExecute("\x03\x03" + nap + "\n", true, false, false);   // không hiện lên dòng lệnh
+                try { if (doc.UserData != null) doc.UserData[KhoaDaNap] = true; } catch { }
+                doc.SendStringToExecute(lenh + "\n", true, false, true);
+                return;
             }
-            doc.SendStringToExecute("\x03\x03" + nap + lenh + "\n", true, false, true);
+            doc.SendStringToExecute("\x03\x03" + lenh + "\n", true, false, true);
         }
 
         private static Brush TaoBrush(string mau, string macDinh)
