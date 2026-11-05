@@ -731,6 +731,8 @@
 
 210. **Tấm gộp không cắt khi ghi chú dài hơn đoạn ngắn** (người dùng báo kèm ảnh, 05/11/2026).
 
+   > Bài học (sửa đúng bản vẽ này, hỏng bản vẽ khác) + bảng ca hồi quy: [15-phuong-phap-debug.md](15-phuong-phap-debug.md) phần **Tách tấm gộp**.
+
    ### Triệu chứng
    Thanh dài vẽ liền `570 | 240` (cao 22.4), ghi chú 89 trên đoạn 570, ghi chú 92 trên đoạn 240, cùng hàng. GRO: khung 89 ôm cả 810, khung 92 không có hình (92 thành text thiếu hình).
 

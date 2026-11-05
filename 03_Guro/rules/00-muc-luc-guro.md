@@ -11,6 +11,7 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 | Sắp viết một hàm mới | [03-ban-do-ham.md](03-ban-do-ham.md) — **hầu hết việc cần làm đã có hàm sẵn** |
 | Sắp sửa layer / chiều cao / vị trí / CSV | [04-du-lieu-va-layer.md](04-du-lieu-va-layer.md) |
 | **Sắp chuyển một phần lisp sang C#** | [16-chuyen-sang-csharp.md](16-chuyen-sang-csharp.md) — đọc luật + bảng trạng thái TRƯỚC |
+| **Sắp sửa tách / cắt tấm gộp** (text thiếu hình, tấm ôm 2 hình) | [15-phuong-phap-debug.md](15-phuong-phap-debug.md) phần **Tách tấm gộp** — luật + bảng ca hồi quy, chạy `sim_tach_tam.py` |
 | Gặp kết quả lạ, chưa rõ nguyên nhân | [14-can-kiem-tra-lai.md](14-can-kiem-tra-lai.md) rồi [15-phuong-phap-debug.md](15-phuong-phap-debug.md) |
 
 ## Các file rule
