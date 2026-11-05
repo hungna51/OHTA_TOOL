@@ -7,6 +7,10 @@ Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_oh
 - Tab **Print** mới (lệnh `OI` v2.0, thay lisp OI cũ): in khung `Khung_IN` / vùng quét / extents ra PDF, gộp 1 file, không cần Ghostscript.
 - Cấu hình in tự đặt tên (vd "Đen trắng" dùng ctb khác) ở nút ⚙; mục "Theo bản vẽ" lấy máy in / khổ / ctb của bản vẽ nếu có.
 - File PDF đã có: hỏi Ghi đè / Lưu thành (1) / Huỷ in.
+- Tab **Fname v1.2**: bổ sung **T thực** của tấm ngay trong cửa sổ "Bổ sung vật liệu" (kèm 1–3 ảnh bằng chứng, người xác nhận, ghi chú); máy gửi dùng được ngay, T thực bổ sung có dấu `*` và chú thích ở cuối bảng.
+- Fname: dữ liệu T thực hiển thị tách sang bảng `tam` riêng (vd SUS SIMA T=6 → T thực 6.2); Sheet có thể đặt phiên bản tối thiểu — bản cũ hơn sẽ không ghi được lên Sheet.
+- Fname: mục Cài đặt > Bổ sung dữ liệu chia rõ 3 phần (vật liệu / góc bẻ thử / T thực), có cảnh báo khi liên kết dữ liệu lỗi.
+- Tab Guro: sửa lỗi máy khác bấm **Chạy GRO** báo không tìm thấy `guro_gro.lsp`.
 
 ## v1.1.1
 

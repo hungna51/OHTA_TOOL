@@ -4,7 +4,7 @@
   "order": 10,
   "tabTitle": "Fname",
   "title": "Fname",
-  "version": "1.1",
+  "version": "1.2",
   "stage": "beta",
   "description": "Tạo mới, hút dữ liệu và cập nhật F-NAME (N=, M=, T=, Q=, Z=) cùng các lệnh kiểm tra Fname của tấm.",
   "accentColor": "#0277BD",
