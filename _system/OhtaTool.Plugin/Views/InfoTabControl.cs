@@ -163,7 +163,12 @@ namespace OhtaTool.Plugin.Views
                 {
                     var res = OhtaTool.Plugin.Services.BugReportService.ListBugs();
                     if (!res.ok || !res.isAdmin)
+                    {
+                        // Không hiện gì cho người dùng, nhưng ghi lý do để admin tra được (thiếu khoá, script cũ, mất mạng...)
+                        BugLog.Write("INFO", "khong hien nut danh sach bao loi: "
+                            + (res.ok ? "may " + Environment.MachineName + " khong co trong tab admin" : res.message));
                         return;
+                    }
                     Dispatcher.BeginInvoke(new Action(() => ShowAdminButton(res.bugs.Count)));
                 }
                 catch (Exception ex)
