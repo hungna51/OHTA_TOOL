@@ -46,6 +46,7 @@ namespace OhtaTool.Tests
             TestPrintCore();
             TestPrintSettings();
             TestPdfMerge();
+            TestBugReport();
 
             Console.WriteLine($"=== KET QUA: {_passed} PASS, {_failed} FAIL ===");
             return _failed == 0 ? 0 : 1;
