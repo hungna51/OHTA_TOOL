@@ -11532,8 +11532,21 @@
 ;;; Nap GROTOOL.dll neu chua nap (muc 86, 179). Tra T neu ban .NET da san sang.
 ;;; Dung chung cho c:gro (tu nap TRUOC hop thoai, tu mo bang DST cuoi lenh) va
 ;;; c:netdst - nguoi dung khong phai go NETDST nua.
+;;; Muc 207: ham .NET co GOI DUOC that khong (khong chi co ten). Tren ZWCAD, neu GROTOOL.dll
+;;; da duoc nap theo duong khac (bang OHTA truoc muc 207 nap bang ExtensionLoader) thi ten
+;;; gro_net_* van con nhung goi bao "undefined function" -> phai NETLOAD lai.
+;;; Goi thu gro_net_cp932 (vo hai); DLL cu chua co ham do thi xet nhu truoc (gro_net_dsn).
+(defun gro--net-san-sang-p ()
+  (cond
+    ((vl-symbol-value 'gro_net_cp932)
+     (not (vl-catch-all-error-p (vl-catch-all-apply 'gro_net_cp932 (list 65 0))))
+    )
+    ((vl-symbol-value 'gro_net_dsn) T)
+  )
+)
+
 (defun gro--nap-net (/ dll old-ce old-fd)
-  (if (not (vl-symbol-value 'gro_net_dsn))
+  (if (not (gro--net-san-sang-p))
     (progn
       (setq dll (gro--tim-dll))
       (if dll
@@ -11546,9 +11559,16 @@
           (vl-catch-all-apply 'vl-cmdf (list "NETLOAD" (vl-string-translate "/" "\\" dll)))
           (setvar "FILEDIA" old-fd)
           (setvar "CMDECHO" old-ce)
-          (if (or (vl-symbol-value 'gro_net_dsn) (vl-symbol-value 'gro_net_dst))
-            (princ (strcat "\n[GRO] Da nap ban .NET: " dll))
-            (princ (strcat "\n[GRO] Khong nap duoc " dll " - dung hop thoai / bang DCL."))
+          (cond
+            ((gro--net-san-sang-p)
+             (princ (strcat "\n[GRO] Da nap ban .NET: " dll))
+            )
+            ((or (vl-symbol-value 'gro_net_dsn) (vl-symbol-value 'gro_net_dst))
+             ;; Muc 207: co ten ham nhung van khong goi duoc -> chi con cach mo lai CAD
+             (princ (strcat "\n[GRO] Da NETLOAD " dll " nhung ham .NET van khong goi duoc."
+                            "\n      Hay DONG ZWCAD roi mo lai, chay GRO truoc khi mo bang OHTA."))
+            )
+            (t (princ (strcat "\n[GRO] Khong nap duoc " dll " - dung hop thoai / bang DCL.")))
           )
         )
       )
