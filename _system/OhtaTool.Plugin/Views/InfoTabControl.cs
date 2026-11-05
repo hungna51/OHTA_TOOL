@@ -27,6 +27,7 @@ namespace OhtaTool.Plugin.Views
         private readonly Func<string> _getUpdateStatus;
         private readonly StackPanel _bugPanel;
         private readonly WrapPanel _bugButtons;
+        private Button _adminButton;
 
         /// <param name="modules">Các tab đang nạp (không gồm tab Info).</param>
         /// <param name="loadedVersion">Phiên bản DLL đang chạy trong phiên CAD.</param>
@@ -124,6 +125,7 @@ namespace OhtaTool.Plugin.Views
             _bugButtons.Children.Add(bug);
             _bugPanel.Children.Add(_bugButtons);
             stack.Children.Add(Card("BÁO LỖI", _bugPanel));
+            LoadAdminBugCount();
 
             // 5. Có gì mới (mục đầu CHANGELOG.md)
             string notes = ToolInfoCore.ReadLatestChangelogEntry(rootDir, out string notesVersion);
@@ -148,6 +150,42 @@ namespace OhtaTool.Plugin.Views
                 return;
             _scroller.ScrollToVerticalOffset(_scroller.VerticalOffset - (wheelDelta / 120.0) * 48.0);
         }
+
+        /// <summary>
+        /// Máy admin (tab admin trên Sheet): thêm nút "🐞 Báo lỗi (N)" mở danh sách. Hỏi Sheet ở luồng nền;
+        /// không phải admin / mất mạng thì im lặng, không hiện gì.
+        /// </summary>
+        private void LoadAdminBugCount()
+        {
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    var res = OhtaTool.Plugin.Services.BugReportService.ListBugs();
+                    if (!res.ok || !res.isAdmin)
+                        return;
+                    Dispatcher.BeginInvoke(new Action(() => ShowAdminButton(res.bugs.Count)));
+                }
+                catch (Exception ex)
+                {
+                    BugLog.Write("INFO", ex);
+                }
+            });
+        }
+
+        private void ShowAdminButton(int count)
+        {
+            if (_adminButton == null)
+            {
+                _adminButton = MakeButton("", primary: false);
+                _adminButton.ToolTip = "Máy admin: xem báo lỗi người dùng gửi, mở ảnh / nhật ký, đánh dấu đã xử lý.";
+                _adminButton.Click += (s, e) => BugAdminWindow.ShowSingle(n => Dispatcher.BeginInvoke(new Action(() => SetAdminCount(n))));
+                _bugButtons.Children.Add(_adminButton);
+            }
+            SetAdminCount(count);
+        }
+
+        private void SetAdminCount(int count) => _adminButton.Content = "🗂  Danh sách báo lỗi (" + count + ")";
 
         private void RefreshStatus()
         {
