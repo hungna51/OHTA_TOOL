@@ -605,7 +605,9 @@ namespace OhtaTool.Plugin.ViewModels
             TamRecord src = RealThicknessText.Length > 0 ? TraVCalculator.GetRealThicknessSource(_valM, _valT) : null;
             if (src != null && src.IsBoSung)
             {
-                RealThicknessMarker = src.ChoDuyet ? "bổ sung · chờ duyệt" : "bổ sung";
+                RealThicknessMarker = $"* T thực {src.THienThi} ({src.Loai} T={src.T}) là số bổ sung"
+                    + (src.ChoDuyet ? " — đang chờ admin duyệt" : string.Empty)
+                    + (src.NguoiXacNhan.Length > 0 ? $" · xác nhận: {src.NguoiXacNhan}" : string.Empty);
                 RealThicknessTooltip = $"Bổ sung — {src.Loai} T={src.T}: T thực = {src.THienThi}\nNgười xác nhận: {src.NguoiXacNhan}\nGhi chú: {src.GhiChu}"
                     + (src.Ngay.Length > 0 ? $"\nNgày: {src.Ngay}" : string.Empty)
                     + $"\nẢnh bằng chứng: {src.AnhLinks.Count}"
@@ -619,7 +621,7 @@ namespace OhtaTool.Plugin.ViewModels
         }
 
         private string _realThicknessMarker = string.Empty;
-        /// <summary>"bổ sung" / "bổ sung · chờ duyệt" cạnh số T thực; rỗng khi lấy từ dữ liệu chuẩn OFT.</summary>
+        /// <summary>Dòng giải thích ở dải cuối bảng khi T thực là số bổ sung (cạnh số chỉ hiện "*"); rỗng khi lấy từ dữ liệu chuẩn OFT.</summary>
         public string RealThicknessMarker
         {
             get => _realThicknessMarker;

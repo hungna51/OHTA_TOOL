@@ -429,13 +429,14 @@
                                                    FontWeight="Bold"
                                                    Foreground="#0F172A"
                                                    VerticalAlignment="Center"/>
-                                        <!-- T thực lấy từ dòng Bổ sung của tab tam (người xác nhận / ảnh ở tooltip) -->
-                                        <TextBlock Text="{Binding RealThicknessMarker}"
+                                        <!-- T thực lấy từ dòng Bổ sung của tab tam: chỉ 1 dấu * (giải thích ở dải cuối bảng + tooltip),
+                                             không ghi chữ dài ở đây để khỏi ép mất ô nhập T= -->
+                                        <TextBlock Text="*"
                                                    Visibility="{Binding RealThicknessMarkerVisibility}"
-                                                   FontSize="9.5"
-                                                   FontWeight="SemiBold"
+                                                   FontSize="12"
+                                                   FontWeight="Bold"
                                                    Foreground="#C2410C"
-                                                   Margin="4,0,0,0"
+                                                   Margin="1,0,0,0"
                                                    VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Border>
@@ -937,6 +938,18 @@
 
         <!-- 3. Thanh phản hồi trạng thái dưới chân Tab (+ dải đỏ khi bản đang chạy thấp hơn phien_ban_toi_thieu trên Sheet) -->
         <StackPanel Grid.Row="3">
+            <!-- T thực đang lấy từ số bổ sung (tab tam, Nguon = Bổ sung) -->
+            <Border Visibility="{Binding RealThicknessMarkerVisibility}"
+                    Background="#FFF7ED"
+                    BorderBrush="#FED7AA"
+                    BorderThickness="0,1,0,0"
+                    Padding="10,4"
+                    ToolTip="{Binding RealThicknessTooltip}">
+                <TextBlock Text="{Binding RealThicknessMarker}"
+                           Foreground="#C2410C"
+                           FontSize="11"
+                           TextWrapping="Wrap"/>
+            </Border>
             <Border Visibility="{Binding UpdateRequiredVisibility}"
                     Background="#DC2626"
                     Padding="10,5">
