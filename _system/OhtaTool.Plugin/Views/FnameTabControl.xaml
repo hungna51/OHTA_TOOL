@@ -421,14 +421,23 @@
                                         MinWidth="34"
                                         Padding="5,0"
                                         VerticalAlignment="Center"
-                                        ToolTip="Chiều dày thực tế khi chấn bẻ (tra từ bảng TraV chuẩn OFT)">
-                                    <TextBlock Text="{Binding RealThicknessText}"
-                                               FontFamily="Consolas"
-                                               FontSize="12"
-                                               FontWeight="Bold"
-                                               Foreground="#0F172A"
-                                               VerticalAlignment="Center"
-                                               HorizontalAlignment="Center"/>
+                                        ToolTip="{Binding RealThicknessTooltip}">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding RealThicknessText}"
+                                                   FontFamily="Consolas"
+                                                   FontSize="12"
+                                                   FontWeight="Bold"
+                                                   Foreground="#0F172A"
+                                                   VerticalAlignment="Center"/>
+                                        <!-- T thực lấy từ dòng Bổ sung của tab tam (người xác nhận / ảnh ở tooltip) -->
+                                        <TextBlock Text="{Binding RealThicknessMarker}"
+                                                   Visibility="{Binding RealThicknessMarkerVisibility}"
+                                                   FontSize="9.5"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#C2410C"
+                                                   Margin="4,0,0,0"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
                                 </Border>
                             </Grid>
 

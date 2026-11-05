@@ -58,7 +58,8 @@ namespace OhtaTool.Plugin.Core
             error = null;
             if (lines.Length == 0 || lines[0].TrimStart().StartsWith("<", StringComparison.Ordinal))
                 error = "không phải CSV (Sheet chưa chia sẻ 'Bất kỳ ai có link' hoặc sai gid)";
-            else if (lines.Any(l => l.IndexOf('"') >= 0))
+            // tab tam có cột Ghi_chu do người gõ -> ô có dấu phẩy được Sheet bọc ngoặc kép (TamData đọc được), không phải lỗi locale
+            else if (table != "tam" && lines.Any(l => l.IndexOf('"') >= 0))
                 error = "có dấu \" trong dữ liệu (đặt Locale của Sheet = United States để dùng dấu chấm thập phân)";
             else
             {

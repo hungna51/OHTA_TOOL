@@ -68,6 +68,45 @@ namespace OhtaTool.Plugin.Core
             return results;
         }
 
+        /// <summary>
+        /// Dòng bảng tam đang cấp T thực cho M= / T= (để hiện "(bổ sung)" + người xác nhận); null khi không có
+        /// hoặc T thực lấy từ cột cũ của trav_90.
+        /// </summary>
+        public static TamRecord GetRealThicknessSource(string fnameM, string fnameT)
+        {
+            double? t = TraVThuData.ParseNumber(fnameT);
+            if (!t.HasValue)
+                return null;
+            foreach (string matKey in GetTraVMaterialKeys(fnameM))
+            {
+                TamRecord r = TamData.Find(TableTam, matKey, t.Value);
+                if (r != null)
+                    return r;
+            }
+            return null;
+        }
+
+        /// <summary>Dòng tam đang có (Sheet hoặc chờ duyệt) của Loai + T; null nếu chưa có T hiển thị.</summary>
+        public static TamRecord FindTam(string loai, double t) => TamData.Find(TableTam, loai, t);
+
+        /// <summary>Loại vật liệu cho bảng tam: loại của trav_90 với SIMA gộp 1 tên chung ("SS SIMA"), cộng loại đã có trong tam.</summary>
+        public static List<string> GetTamLoaiOptions()
+        {
+            var result = new List<string>();
+            foreach (string mat in Table90.Select(r => r.Mat?.Trim()).Concat(TableTam.Select(r => r.Loai)))
+            {
+                if (string.IsNullOrEmpty(mat))
+                    continue;
+                string display = mat;
+                string folded = TraVThuData.NormalizeLoai(mat);
+                if (folded.Contains(" SIMA ") && folded != TamData.BaseLoai(mat))
+                    display = mat.Substring(0, mat.TrimEnd().LastIndexOf(' ')).Trim();
+                if (!result.Any(x => TamData.SameLoai(x, display)))
+                    result.Add(display);
+            }
+            return result;
+        }
+
         public static string GetRealThickness(string fnameM, string fnameT)
         {
             if (string.IsNullOrWhiteSpace(fnameT))
@@ -864,7 +903,11 @@ namespace OhtaTool.Plugin.Core
                 TraVThuData.Upsert(thu, r);
             TableThu = thu;
 
-            TableTam = TamData.Parse(FnameDataStore.ReadLines(moduleDirectory, "tam", cacheDirectory));
+            // Thông số tấm: Sheet + dòng máy này đã gửi bổ sung nhưng admin chưa duyệt (tam_local.csv, đánh dấu ChoDuyet)
+            var tam = TamData.Parse(FnameDataStore.ReadLines(moduleDirectory, "tam", cacheDirectory));
+            foreach (TamRecord r in TamLocalAdditions.Load(cacheDirectory))
+                TamData.Upsert(tam, r);
+            TableTam = tam;
             SheetConfig = FnameSheetConfig.Parse(FnameDataStore.ReadLines(moduleDirectory, "cau_hinh", cacheDirectory));
         }
 

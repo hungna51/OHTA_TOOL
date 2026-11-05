@@ -111,6 +111,8 @@ namespace OhtaTool.Plugin.Services
                     mine?.Where(r => r.IsLoai(FnameUpdateRequest.LoaiCatalog)).Select(r => r.Get("M")).ToList());
                 TraVThuLocalAdditions.Prune(dir, TraVThuData.Parse(FnameDataStore.ReadLines(moduleDirectory, "trav_thu", dir)),
                     mine?.Where(r => r.IsLoai(FnameUpdateRequest.LoaiTrialBend)).Select(r => TraVThuRecord.FromParams(r.Params)).ToList());
+                TamLocalAdditions.Prune(dir, TamData.Parse(FnameDataStore.ReadLines(moduleDirectory, "tam", dir)),
+                    mine?.Where(r => r.IsLoai(FnameUpdateRequest.LoaiTam)).Select(r => TamRecord.FromParams(r.Params)).ToList());
             }
             catch (Exception ex)
             {

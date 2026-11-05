@@ -77,6 +77,13 @@ Các bảng dữ liệu được quản lý trên **1 Google Sheet** (mỗi bả
 - Dòng tím ghi rõ 2 góc gốc + mã tấm: `[Nội suy] từ góc 70° (tấm A1) và 80° (tấm B2)`. `Ma_tam` gửi lên Sheet cho góc tính ra: `A1 (70°) / B2 (80°)`.
 - Gốc ưu tiên chỉ lấy góc **Bẻ thử**. Không đủ góc bẻ thử mới dùng cả góc **Nội suy / Ngoại suy** làm gốc — khi đó **luôn** hỏi quản lý (kể cả khi cách < 1°), dòng tím ghi `80° (nội suy: ...)`.
 - **📋 Danh sách góc bẻ thử** (Cài đặt → 🗄 Dữ liệu): bảng toàn bộ góc bẻ thử / nội suy / ngoại suy trên máy (Loại, T, Góc, Dao, Denta, Mã tấm, Định danh, Trạng thái Đã duyệt / Chờ duyệt), lọc theo từ khoá và định danh, có nút ➕ bổ sung.
+
+**Bổ sung thông số tấm (T thực) có bằng chứng** — Cài đặt ⚙ → 🗄 Dữ liệu → **➕ Bổ sung thông số tấm** (vd SUS SIMA 6.0 chưa có T thực):
+- Chỉ cho Loại + T **chưa có** T thực trong tab `tam` (kể cả dòng đang chờ duyệt). Sửa số đã có: sửa trực tiếp trên Sheet.
+- Bắt buộc: **người xác nhận** (người đo / kiểm tra thực tế), **ghi chú**, **1–3 ảnh** (📁 Chọn ảnh hoặc 📋 / Ctrl+V dán ảnh từ clipboard). Ảnh tự thu nhỏ (cạnh dài ≤ 1600px, JPEG) trước khi gửi.
+- Apps Script lưu ảnh vào thư mục Drive **`OHTA Fname - Bang chung`** của tài khoản chủ Sheet (ai có link được xem), ghi link vào yêu cầu. Máy gửi dùng được ngay; nhãn hiện `T thực: 7.3 bổ sung · chờ duyệt`, rê chuột xem người xác nhận / ghi chú.
+- Admin: tab Chờ phê duyệt có nút **🖼 Xem ảnh**. Duyệt → ghi dòng vào `tam` (`Nguon = Bổ sung`, giữ người xác nhận, ghi chú, link ảnh, ngày). Từ chối → ảnh bị bỏ vào Thùng rác Drive.
+- Lần đầu cập nhật Apps Script có phần này: chạy hàm `capQuyenDrive` trong trình chỉnh sửa và bấm **Cho phép** để script được ghi Drive, rồi triển khai phiên bản mới.
 - Mỗi góc nội suy / ngoại suy vừa dùng để Đặt / Cập nhật Fname được tự gửi vào tab `update` chờ admin duyệt (`trav_thu`, `Dinh_danh=Nội suy`, `Ma_tam` = 2 tấm tham khảo); máy gửi lưu `trav_thu_local.csv` để dùng ngay và không gửi lại.
 - Nhập góc bẻ thử mới: **Cài đặt ⚙ → 🗄 Dữ liệu → ➕ Bổ sung góc bẻ thử** (Loại, T, Góc, Dao, Denta, Mã tấm). Admin duyệt → Apps Script ghi vào tab `trav_thu` (tự tạo nếu chưa có; trùng Loai + T + Góc + Dao thì ghi đè).
 

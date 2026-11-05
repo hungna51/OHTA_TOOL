@@ -18,6 +18,7 @@ namespace OhtaTool.Plugin.Core
     {
         public const string LoaiCatalog = "catalog";
         public const string LoaiTrialBend = "trav_thu";
+        public const string LoaiTam = "tam";
 
         [DataMember(Name = "id")] public string Id { get; set; } = string.Empty;
         [DataMember(Name = "loai")] public string Loai { get; set; } = string.Empty;
@@ -46,6 +47,12 @@ namespace OhtaTool.Plugin.Core
                 return $"{Get("Dinh_danh")} {Get("Loai")} T={Get("T")} — {Get("Goc")}° — {Get("Dao")} — Denta {Get("Denta")} — tấm {Get("Ma_tam")}"
                     + (note.Length > 0 ? " — " + note : string.Empty);
             }
+            if (IsLoai(LoaiTam))
+            {
+                int n = ImageLinks.Count;
+                return $"T thực {Get("Loai")} T={Get("T")} = {Get("T_hienthi")} — xác nhận: {Get("Nguoi_xac_nhan")} — {Get("Ghi_chu")}"
+                    + (n > 0 ? $" — {n} ảnh" : " — chưa có ảnh");
+            }
             return ThongSo;
         }
 
@@ -54,7 +61,14 @@ namespace OhtaTool.Plugin.Core
         public string LoaiLabel =>
             IsLoai(LoaiCatalog) ? "Danh mục vật liệu (catalog)"
             : IsLoai(LoaiTrialBend) ? "Góc bẻ thử / nội suy (trav_thu)"
+            : IsLoai(LoaiTam) ? "Thông số tấm — T thực (tam)"
             : Loai;
+
+        /// <summary>Link ảnh bằng chứng (Apps Script lưu ảnh lên Drive rồi ghi vào khoá Anh).</summary>
+        public List<string> ImageLinks => TamData.SplitLinks(Get("Anh"));
+
+        /// <summary>Có ảnh để xem (hiện nút Xem ảnh trong tab Chờ phê duyệt).</summary>
+        public bool HasImages => ImageLinks.Count > 0;
 
         // ---------- Thong_so ----------
 
@@ -87,6 +101,22 @@ namespace OhtaTool.Plugin.Core
         }
 
         /// <summary>Thong_so 1 dòng góc bẻ thử / nội suy (khoá trùng tên cột tab trav_thu, Ghi_chu chỉ để admin đọc).</summary>
+        /// <summary>
+        /// Thong_so bổ sung T thực của tấm (tab tam). Ảnh không nằm ở đây: gửi kèm dạng anh_1..anh_3 (base64 JPEG),
+        /// Apps Script lưu lên Drive rồi tự thêm khoá Anh = các link.
+        /// </summary>
+        public static string BuildTamParams(TamRecord r)
+        {
+            return FormatParams(new[]
+            {
+                new KeyValuePair<string, string>("Loai", r.Loai),
+                new KeyValuePair<string, string>("T", r.T),
+                new KeyValuePair<string, string>("T_hienthi", r.THienThi),
+                new KeyValuePair<string, string>("Nguoi_xac_nhan", r.NguoiXacNhan),
+                new KeyValuePair<string, string>("Ghi_chu", r.GhiChu)
+            });
+        }
+
         public static string BuildTrialParams(TraVThuRecord r, string ghiChu = null)
         {
             return FormatParams(new[]
@@ -115,6 +145,8 @@ namespace OhtaTool.Plugin.Core
         [DataMember(Name = "message")] public string Message { get; set; }
         [DataMember(Name = "isAdmin")] public bool IsAdmin { get; set; }
         [DataMember(Name = "requests")] public List<FnameUpdateRequest> Requests { get; set; }
+        /// <summary>submit_request loại tam: link ảnh bằng chứng Apps Script vừa lưu lên Drive (cách nhau dấu cách).</summary>
+        [DataMember(Name = "anh")] public string Anh { get; set; }
 
         /// <summary>Đọc JSON trả về; không phải JSON hợp lệ (trang HTML lỗi, rỗng...) thì trả null.</summary>
         public static FnameSheetReply Parse(string body)

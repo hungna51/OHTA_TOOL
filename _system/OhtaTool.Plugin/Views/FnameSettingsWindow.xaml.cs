@@ -206,6 +206,34 @@ namespace OhtaTool.Plugin.Views
         /// <summary>Mở danh sách góc bẻ thử / nội suy (tham số = cửa sổ cha).</summary>
         public Action<Window> OpenTrialList { get; set; }
 
+        /// <summary>Mở cửa sổ bổ sung thông số tấm (T thực kèm ảnh bằng chứng).</summary>
+        public Action<Window> OpenTamEditor { get; set; }
+
+        private void OnAddTamClick(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                OpenTamEditor?.Invoke(this);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Không mở được cửa sổ bổ sung thông số tấm: " + ex.GetBaseException().Message,
+                    "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        /// <summary>Mở các ảnh bằng chứng của yêu cầu trong trình duyệt (tab Chờ phê duyệt).</summary>
+        private void OnViewImagesClick(object sender, RoutedEventArgs e)
+        {
+            if (!(sender is FrameworkElement btn) || !(btn.Tag is OhtaTool.Plugin.Core.FnameUpdateRequest req))
+                return;
+            foreach (string url in req.ImageLinks)
+            {
+                try { Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true }); }
+                catch { }
+            }
+        }
+
         private void OnTrialListClick(object sender, RoutedEventArgs e)
         {
             try

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using Microsoft.Win32;
@@ -113,7 +114,57 @@ namespace OhtaTool.Plugin.Services
                     note = " (Chưa cập nhật được dữ liệu trên máy: " + ex.GetBaseException().Message + " — bấm Cập nhật từ Google Sheet.)";
                 }
             }
+            else if (approve && request.IsLoai(FnameUpdateRequest.LoaiTam))
+            {
+                try
+                {
+                    TamRecord rec = TamRecord.FromParams(request.Params);
+                    rec.Ngay = DateTime.Today.ToString("yyyy-MM-dd");
+                    ApplyTamToLocalCache(moduleDirectory, rec);
+                }
+                catch (Exception ex)
+                {
+                    note = " (Chưa cập nhật được dữ liệu trên máy: " + ex.GetBaseException().Message + " — bấm Cập nhật từ Google Sheet.)";
+                }
+            }
             return (true, (r.Message ?? string.Empty) + note);
+        }
+
+        /// <summary>
+        /// Gửi bổ sung T thực của tấm kèm 1–3 ảnh JPEG bằng chứng. Apps Script lưu ảnh vào thư mục Drive
+        /// (ai có link được xem), ghi link vào khoá Anh của yêu cầu; admin duyệt thì ghi dòng vào tab tam.
+        /// Trả về Thong_so đã có link ảnh (để máy gửi lưu tam_local.csv) qua message khi thành công.
+        /// </summary>
+        public static (bool ok, string message, string anh) SubmitTamRequest(string moduleDirectory, TamRecord record, IList<byte[]> jpegs)
+        {
+            var fields = new Dictionary<string, string>
+            {
+                ["loai"] = FnameUpdateRequest.LoaiTam,
+                ["thong_so"] = FnameUpdateRequest.BuildTamParams(record)
+            };
+            for (int i = 0; i < (jpegs?.Count ?? 0) && i < 3; i++)
+                fields["anh_" + (i + 1)] = Convert.ToBase64String(jpegs[i]);
+
+            FnameSheetReply r = Post(moduleDirectory, "submit_request", fields, out string error);
+            if (r == null)
+                return (false, error, string.Empty);
+            string msg = r.Message ?? string.Empty;
+            if (!r.Ok && msg.IndexOf("không hỗ trợ", StringComparison.OrdinalIgnoreCase) >= 0)
+                msg += " — Apps Script trên Google chưa cập nhật: dán lại google_sheet_apps_script.gs rồi Triển khai > Quản lý các tùy chọn triển khai > Sửa > Phiên bản mới.";
+            return (r.Ok, msg, r.Anh ?? string.Empty);
+        }
+
+        /// <summary>Thêm / thay dòng thông số tấm trong tam.csv của cache máy (cùng khoá với Apps Script).</summary>
+        public static void ApplyTamToLocalCache(string moduleDirectory, TamRecord record, string cacheDirectory = null)
+        {
+            string dir = cacheDirectory ?? FnameDataStore.DefaultCacheDirectory;
+            List<TamRecord> rows = TamData.Parse(FnameDataStore.ReadLines(moduleDirectory, "tam", dir));
+            TamData.Upsert(rows, record);
+            Directory.CreateDirectory(dir);
+            string target = Path.Combine(dir, "tam.csv");
+            File.WriteAllText(target + ".tmp", string.Join("\n", TamData.ToCsvLines(rows)) + "\n", new UTF8Encoding(true));
+            File.Copy(target + ".tmp", target, overwrite: true);
+            File.Delete(target + ".tmp");
         }
 
         /// <summary>Gộp vật liệu vào catalog.csv trong cache máy (cùng quy tắc với Apps Script).</summary>
@@ -176,6 +227,26 @@ namespace OhtaTool.Plugin.Services
             }
         }
 
+        /// <summary>Uri.EscapeDataString theo từng đoạn (bản .NET Framework giới hạn ~65k ký tự mỗi lần gọi).</summary>
+        private static string EscapeLong(string value)
+        {
+            const int chunk = 30000;
+            if (value.Length <= chunk)
+                return Uri.EscapeDataString(value);
+            var sb = new StringBuilder(value.Length + value.Length / 4);
+            int i = 0;
+            while (i < value.Length)
+            {
+                int len = Math.Min(chunk, value.Length - i);
+                // không cắt giữa cặp surrogate (ký tự 4 byte)
+                if (i + len < value.Length && char.IsHighSurrogate(value[i + len - 1]))
+                    len--;
+                sb.Append(Uri.EscapeDataString(value.Substring(i, len)));
+                i += len;
+            }
+            return sb.ToString();
+        }
+
         /// <summary>Máy đang chạy bản thấp hơn phien_ban_toi_thieu trên tab cau_hinh của Sheet.</summary>
         public static bool IsUpdateRequired() =>
             FnameVersionGate.IsOutdated(OhtaUpdateCommands.LoadedVersion, TraVCalculator.GetSheetConfig());
@@ -218,9 +289,13 @@ namespace OhtaTool.Plugin.Services
                 System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;
 #endif
                 // Apps Script trả 302 sang link kết quả; HttpClient tự đi theo (đổi sang GET) để lấy JSON.
-                using (var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) })
+                // Có ảnh bằng chứng (base64 vài trăm KB) -> cho thêm thời gian
+                using (var http = new HttpClient { Timeout = TimeSpan.FromSeconds(fields.ContainsKey("anh_1") ? 120 : 30) })
                 {
-                    HttpResponseMessage resp = http.PostAsync(url, new FormUrlEncodedContent(fields)).GetAwaiter().GetResult();
+                    // Tự mã hoá form thay FormUrlEncodedContent: bản .NET Framework báo "Uri string is too long" khi giá trị > ~65k ký tự (ảnh base64)
+                    string form = string.Join("&", fields.Select(kv => Uri.EscapeDataString(kv.Key) + "=" + EscapeLong(kv.Value ?? string.Empty)));
+                    var content = new StringContent(form, Encoding.UTF8, "application/x-www-form-urlencoded");
+                    HttpResponseMessage resp = http.PostAsync(url, content).GetAwaiter().GetResult();
                     string body = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                     FnameSheetReply reply = FnameSheetReply.Parse(body);
                     if (reply == null)

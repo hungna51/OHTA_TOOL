@@ -600,6 +600,82 @@ namespace OhtaTool.Plugin.ViewModels
         private void UpdateRealThickness()
         {
             RealThicknessText = TraVCalculator.GetRealThickness(_valM, _valT);
+
+            // T thực lấy từ dòng Bổ sung của tab tam -> đánh dấu + tooltip người xác nhận / ghi chú / ngày
+            TamRecord src = RealThicknessText.Length > 0 ? TraVCalculator.GetRealThicknessSource(_valM, _valT) : null;
+            if (src != null && src.IsBoSung)
+            {
+                RealThicknessMarker = src.ChoDuyet ? "bổ sung · chờ duyệt" : "bổ sung";
+                RealThicknessTooltip = $"T thực bổ sung: {src.Loai} T={src.T} = {src.THienThi}\nNgười xác nhận: {src.NguoiXacNhan}\nGhi chú: {src.GhiChu}"
+                    + (src.Ngay.Length > 0 ? $"\nNgày: {src.Ngay}" : string.Empty)
+                    + $"\nẢnh bằng chứng: {src.AnhLinks.Count}"
+                    + (src.ChoDuyet ? "\n(Đang chờ admin duyệt — mới dùng trên máy này)" : string.Empty);
+            }
+            else
+            {
+                RealThicknessMarker = string.Empty;
+                RealThicknessTooltip = "T thực để xem / tính toán (tab tam của dữ liệu Fname, tra theo loại vật liệu + T)";
+            }
+        }
+
+        private string _realThicknessMarker = string.Empty;
+        /// <summary>"bổ sung" / "bổ sung · chờ duyệt" cạnh số T thực; rỗng khi lấy từ dữ liệu chuẩn OFT.</summary>
+        public string RealThicknessMarker
+        {
+            get => _realThicknessMarker;
+            private set
+            {
+                if (_realThicknessMarker == value) return;
+                _realThicknessMarker = value ?? string.Empty;
+                OnPropertyChanged(nameof(RealThicknessMarker));
+                OnPropertyChanged(nameof(RealThicknessMarkerVisibility));
+            }
+        }
+
+        public Visibility RealThicknessMarkerVisibility => _realThicknessMarker.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        private string _realThicknessTooltip = string.Empty;
+        public string RealThicknessTooltip
+        {
+            get => _realThicknessTooltip;
+            private set
+            {
+                if (_realThicknessTooltip == value) return;
+                _realThicknessTooltip = value ?? string.Empty;
+                OnPropertyChanged(nameof(RealThicknessTooltip));
+            }
+        }
+
+        /// <summary>
+        /// Gửi bổ sung T thực của tấm kèm ảnh vào hàng chờ duyệt ở luồng nền. Gửi được thì máy này dùng ngay (tam_local.csv, có link ảnh).
+        /// </summary>
+        public async System.Threading.Tasks.Task<(bool ok, string message)> SubmitTamAsync(TamRecord record, List<byte[]> jpegs)
+        {
+            var ui = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+            var result = await System.Threading.Tasks.Task.Run(() =>
+            {
+                var r = FnameSheetWriter.SubmitTamRequest(_manifest.DirectoryPath, record, jpegs);
+                if (!r.ok)
+                    return (false, "Chưa gửi được lên Google Sheet: " + r.message);
+                try
+                {
+                    record.Anh = r.anh;
+                    record.Ngay = DateTime.Today.ToString("yyyy-MM-dd");
+                    TamLocalAdditions.Add(null, record);
+                    return (true, $"Đã gửi T thực {record.Loai} T={record.T} = {record.THienThi} kèm {jpegs.Count} ảnh — dùng được ngay trên máy này, chờ admin duyệt.");
+                }
+                catch (Exception ex)
+                {
+                    return (true, r.message + " (Chưa lưu được trên máy: " + ex.GetBaseException().Message + ")");
+                }
+            }).ConfigureAwait(false);
+            ui.Invoke(() =>
+            {
+                if (result.Item1)
+                    ReloadDataKeepingInputs();
+                SetFeedback(result.Item2, isWarning: !result.Item1);
+            });
+            return result;
         }
 
         public string ValQ
@@ -1135,6 +1211,11 @@ namespace OhtaTool.Plugin.ViewModels
                 editor.ShowDialog();
             };
             dlg.OpenTrialEditor = openTrialEditor;
+            dlg.OpenTamEditor = owner =>
+            {
+                var editor = new FnameTamWindow(_valM, _valT, SubmitTamAsync) { Owner = owner };
+                editor.ShowDialog();
+            };
             dlg.OpenTrialList = owner =>
             {
                 // Lọc sẵn theo loại vật liệu + T đang nhập trên bảng

@@ -14,6 +14,7 @@
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <Style x:Key="DialogSecondaryBtnStyle" TargetType="Button">
             <Setter Property="Background" Value="#FFFFFF"/>
             <Setter Property="Foreground" Value="#334E68"/>
@@ -230,8 +231,11 @@
                                             Content="➕  Bổ sung góc bẻ thử" Click="OnAddTrialBendClick" Margin="0,0,8,4"
                                             ToolTip="Số liệu bẻ thử thực tế (Loại, T, Góc, Dao, Denta, Mã tấm) — dùng khi bảng TraV không tính được góc"/>
                                     <Button Style="{StaticResource DialogSecondaryBtnStyle}"
-                                            Content="📋  Danh sách góc bẻ thử" Click="OnTrialListClick" Margin="0,0,0,4"
+                                            Content="📋  Danh sách góc bẻ thử" Click="OnTrialListClick" Margin="0,0,8,4"
                                             ToolTip="Xem các góc bẻ thử / nội suy / ngoại suy đã có (lọc theo loại, T, dao, mã tấm)"/>
+                                    <Button Style="{StaticResource DialogPrimaryBtnStyle}"
+                                            Content="➕  Bổ sung thông số tấm" Click="OnAddTamClick" Margin="0,0,0,4"
+                                            ToolTip="T thực của tấm chưa có trong dữ liệu (vd SUS SIMA 6.0) — kèm người xác nhận, ghi chú và ảnh bằng chứng"/>
                                 </WrapPanel>
                                 <TextBlock x:Name="TxtWriteConfig" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"/>
                             </StackPanel>
@@ -295,6 +299,10 @@
                                                             Background="#16A34A" Tag="{Binding}" Click="OnApproveClick" Margin="0,0,0,5"/>
                                                     <Button Style="{StaticResource DialogSecondaryBtnStyle}" Content="✕  Từ chối" Padding="12,5"
                                                             Foreground="#B91C1C" Tag="{Binding}" Click="OnRejectClick"/>
+                                                    <Button Style="{StaticResource DialogSecondaryBtnStyle}" Content="🖼  Xem ảnh" Padding="12,5"
+                                                            Margin="0,5,0,0" Tag="{Binding}" Click="OnViewImagesClick"
+                                                            Visibility="{Binding HasImages, Converter={StaticResource BoolToVis}}"
+                                                            ToolTip="Mở ảnh bằng chứng trong trình duyệt"/>
                                                 </StackPanel>
                                             </Grid>
                                         </Border>

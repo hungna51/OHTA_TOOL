@@ -49,6 +49,22 @@ var HANDLERS = {
       return '';
     },
     apply: function (p, ctx) { return applyTravThu_(p, ctx); }
+  },
+  // Bổ sung T thực (T_hienthi) của tấm vào tab tam, kèm ảnh bằng chứng lưu trên Drive + người xác nhận + ghi chú.
+  // Chỉ lấp chỗ trống: Loai + T đã có T_hienthi trên tab tam thì từ chối.
+  tam: {
+    prepare: function (params, p, ctx) { return prepareTam_(params, p, ctx); },
+    validate: function (p) {
+      if (!clean_(p.Loai)) return 'Thiếu loại vật liệu.';
+      if (!isNum_(p.T) || parseFloat(p.T) <= 0) return 'Độ dày T không hợp lệ.';
+      if (!isNum_(p.T_hienthi) || parseFloat(p.T_hienthi) <= 0) return 'T thực không hợp lệ.';
+      if (!clean_(p.Nguoi_xac_nhan)) return 'Thiếu người xác nhận.';
+      if (!clean_(p.Ghi_chu)) return 'Thiếu ghi chú.';
+      if (!clean_(p.Anh)) return 'Thiếu ảnh bằng chứng.';
+      return '';
+    },
+    apply: function (p, ctx) { return applyTam_(p, ctx); },
+    onReject: function (p) { trashAnh_(p.Anh); }
   }
 };
 var TRAV_THU_SHEET_NAME = 'trav_thu';
@@ -89,16 +105,21 @@ function submitRequest_(p, ctx) {
   var handler = HANDLERS[loai];
   if (!handler) return { ok: false, message: 'Loại dữ liệu không hỗ trợ: ' + loai };
   var params = parseParams_(p.thong_so);
+  if (!ctx.machine) return { ok: false, message: 'Thiếu tên máy gửi.' };
+  // Bước chuẩn bị riêng của loại dữ liệu (vd tam: kiểm tra rồi lưu ảnh lên Drive, ghi link vào params.Anh)
+  if (handler.prepare) {
+    var perr = handler.prepare(params, p, ctx);
+    if (perr) return { ok: false, message: perr };
+  }
   var err = handler.validate(params);
   if (err) return { ok: false, message: err };
-  if (!ctx.machine) return { ok: false, message: 'Thiếu tên máy gửi.' };
 
   var sh = updateSheet_(ctx.ss);
   var row = [loai, formatParams_(params), ctx.machine,
              Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'), Utilities.getUuid()];
   var r = sh.getLastRow() + 1;
   sh.getRange(r, 1, 1, row.length).setNumberFormat('@').setValues([row]);
-  return { ok: true, message: 'Đã gửi yêu cầu cập nhật "' + loai + '", chờ admin duyệt.' };
+  return { ok: true, message: 'Đã gửi yêu cầu cập nhật "' + loai + '", chờ admin duyệt.', anh: params.Anh || '' };
 }
 
 function listRequests_(ctx) {
@@ -146,6 +167,8 @@ function resolveRequest_(id, approve, ctx) {
       if (err) return { ok: false, message: err };
       message = handler.apply(params, ctx);
     } else {
+      var rh = HANDLERS[vals[i][0]];
+      if (rh && rh.onReject) { try { rh.onReject(parseParams_(vals[i][1])); } catch (x) {} }
       message = 'Đã từ chối yêu cầu của máy ' + vals[i][2] + '.';
     }
     sh.deleteRow(i + 2);
@@ -263,7 +286,116 @@ function applyTravThu_(p, ctx) {
     ' ' + vals.Goc + '° ' + vals.Dao + ' Denta ' + vals.Denta + (vals.Ma_tam ? ' (tấm ' + vals.Ma_tam + ')' : '') + '.';
 }
 
+// ---------- Bộ xử lý thông số tấm (tam) ----------
+
+var BANG_CHUNG_FOLDER_NAME = 'OHTA Fname - Bang chung';
+var MAX_ANH = 3;
+var MAX_ANH_BYTES = 5 * 1024 * 1024;
+
+// Kiểm tra trước (không lưu ảnh khi dữ liệu sai), rồi lưu anh_1..anh_3 (base64 JPEG) vào Drive, ghi link vào params.Anh
+function prepareTam_(params, p, ctx) {
+  ['Loai', 'T', 'T_hienthi', 'Nguoi_xac_nhan', 'Ghi_chu'].forEach(function (k) { params[k] = cleanText_(params[k]); });
+  if (!params.Loai || !isNum_(params.T) || !isNum_(params.T_hienthi)) return 'Thiếu / sai Loai, T hoặc T thực.';
+  if (!params.Nguoi_xac_nhan || !params.Ghi_chu) return 'Thiếu người xác nhận hoặc ghi chú.';
+  if (findTamRow_(ctx.ss, params.Loai, params.T).hasValue)
+    return 'Tab tam đã có T thực cho ' + params.Loai + ' T=' + params.T + ' — không bổ sung đè (sửa trực tiếp trên Sheet nếu cần).';
+
+  var blobs = [];
+  for (var i = 1; i <= MAX_ANH; i++) {
+    var b64 = p['anh_' + i];
+    if (!b64) continue;
+    var bytes = Utilities.base64Decode(String(b64));
+    if (bytes.length > MAX_ANH_BYTES) return 'Ảnh ' + i + ' quá lớn (tối đa 5 MB).';
+    blobs.push(bytes);
+  }
+  if (!blobs.length) return 'Cần ít nhất 1 ảnh bằng chứng.';
+
+  var folder = bangChungFolder_();
+  var stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd_HHmm');
+  var links = blobs.map(function (bytes, idx) {
+    var name = params.Loai + ' T' + params.T + ' - ' + stamp + ' - ' + (idx + 1) + '.jpg';
+    var file = folder.createFile(Utilities.newBlob(bytes, 'image/jpeg', name));
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    file.setDescription('Bang chung T thuc ' + params.Loai + ' T=' + params.T + ' - xac nhan: ' + params.Nguoi_xac_nhan + ' - may gui: ' + ctx.machine);
+    return file.getUrl();
+  });
+  params.Anh = links.join(' ');
+  return '';
+}
+
+// Ghi dòng Bổ sung vào tab tam (khoá Loai bỏ chiều SIMA + T); đã có T_hienthi thì báo lỗi, không ghi đè
+function applyTam_(p, ctx) {
+  var sh = ctx.ss.getSheetByName(TAM_SHEET_NAME);
+  if (!sh) throw new Error('Không thấy tab tam.');
+  var found = findTamRow_(ctx.ss, p.Loai, p.T);
+  if (found.hasValue) throw new Error('Tab tam đã có T thực cho ' + p.Loai + ' T=' + p.T + ' — từ chối yêu cầu này hoặc sửa trực tiếp trên Sheet.');
+
+  var cols = found.cols;
+  var row = found.row || sh.getLastRow() + 1;
+  var vals = {
+    Loai: cleanText_(p.Loai), T: cleanText_(p.T), T_hienthi: cleanText_(p.T_hienthi), Nguon: 'Bổ sung',
+    Nguoi_xac_nhan: cleanText_(p.Nguoi_xac_nhan), Ghi_chu: cleanText_(p.Ghi_chu), Anh: cleanText_(p.Anh),
+    Ngay: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd')
+  };
+  TAM_HEADER.forEach(function (name) { if (cols[name]) setText_(sh.getRange(row, cols[name]), vals[name]); });
+  return 'Đã duyệt: T thực ' + vals.Loai + ' T=' + vals.T + ' = ' + vals.T_hienthi + ' (xác nhận: ' + vals.Nguoi_xac_nhan + ').';
+}
+
+// Tìm dòng tab tam theo Loai (bỏ chiều SIMA) + T. Trả { row, hasValue, cols } — cols = vị trí cột (thiếu cột thì tự thêm)
+function findTamRow_(ss, loai, t) {
+  var sh = ss.getSheetByName(TAM_SHEET_NAME);
+  if (!sh) return { row: 0, hasValue: false, cols: {} };
+  var lastCol = Math.max(sh.getLastColumn(), 1);
+  var header = sh.getRange(1, 1, 1, lastCol).getDisplayValues()[0].map(function (h) { return fold_(h).replace(/[_\s]/g, ''); });
+  var cols = {};
+  TAM_HEADER.forEach(function (name) {
+    var i = header.indexOf(fold_(name).replace(/[_\s]/g, ''));
+    if (i < 0) { i = lastCol++; sh.getRange(1, i + 1).setValue(name); }
+    cols[name] = i + 1;
+  });
+  var key = tamBaseLoai_(loai).key, tNum = parseFloat(t);
+  var n = sh.getLastRow() - 1;
+  if (n > 0) {
+    var data = sh.getRange(2, 1, n, lastCol).getDisplayValues();
+    for (var r = 0; r < data.length; r++) {
+      if (tamBaseLoai_(data[r][cols.Loai - 1]).key === key && Math.abs(parseFloat(data[r][cols.T - 1]) - tNum) < 0.05)
+        return { row: r + 2, hasValue: String(data[r][cols.T_hienthi - 1]).trim() !== '', cols: cols };
+    }
+  }
+  return { row: 0, hasValue: false, cols: cols };
+}
+
+function bangChungFolder_() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty('BANG_CHUNG_FOLDER_ID');
+  if (id) { try { return DriveApp.getFolderById(id); } catch (x) {} }
+  var it = DriveApp.getFoldersByName(BANG_CHUNG_FOLDER_NAME);
+  var folder = it.hasNext() ? it.next() : DriveApp.createFolder(BANG_CHUNG_FOLDER_NAME);
+  props.setProperty('BANG_CHUNG_FOLDER_ID', folder.getId());
+  return folder;
+}
+
+// Bỏ ảnh của yêu cầu bị từ chối vào Thùng rác Drive (khôi phục được trong 30 ngày)
+function trashAnh_(anh) {
+  String(anh || '').split(/\s+/).forEach(function (url) {
+    var m = url.match(/\/d\/([\w-]{20,})/) || url.match(/[?&]id=([\w-]{20,})/);
+    if (m) { try { DriveApp.getFileById(m[1]).setTrashed(true); } catch (x) {} }
+  });
+}
+
+// Chạy tay 1 lần trong trình chỉnh sửa để cấp quyền Drive cho script (tạo / tìm thư mục bằng chứng)
+function capQuyenDrive() {
+  var f = bangChungFolder_();
+  Logger.log('Thư mục bằng chứng: ' + f.getName() + ' — ' + f.getUrl());
+  return f.getUrl();
+}
+
 // ---------- Tiện ích ----------
+
+// Văn bản người gõ (ghi chú, tên): bỏ dấu phẩy, ngoặc kép, xuống dòng, | để CSV xuất ra luôn đọc được
+function cleanText_(s) {
+  return String(s === undefined || s === null ? '' : s).replace(/[,"|\r\n]/g, ' ').replace(/\s+/g, ' ').trim();
+}
 
 // Viết hoa + bỏ dấu tiếng Việt để so khớp ("SS SIMA Ngoài" = "ss sima ngoai")
 function fold_(s) {

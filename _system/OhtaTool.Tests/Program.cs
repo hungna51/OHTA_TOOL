@@ -36,6 +36,7 @@ namespace OhtaTool.Tests
             TestTraVCalculations();
             TestTrialBendLookup();
             TestTamTableAndConfig();
+            TestTamBoSung();
             TestPressOneTimeFormatAndParsing();
             TestFnameRecordBendAndPressOrdering();
             TestFnameParserWithBendAndPress();
@@ -519,6 +520,62 @@ namespace OhtaTool.Tests
             Check("T thuc SS400 T=14.0 (khong co trong bang TraV) tra ra rong ''", TraVCalculator.GetRealThickness("SS400", "14.0") == "");
             Check("T thuc SUS304 2B T=0.1 (khong co trong bang TraV) tra ra rong ''", TraVCalculator.GetRealThickness("SUS304 2B", "0.1") == "");
             Check("T thuc SUS SIMA T=4.0 (dong trong bang khong co T_thuc) tra ra rong ''", TraVCalculator.GetRealThickness("SUS304 縞板", "4.0") == "");
+        }
+
+        private static void TestTamBoSung()
+        {
+            // Ghi_chu nguoi go co dau phay / ngoac kep -> Sheet boc ngoac kep khi xuat CSV
+            Check("SplitCsvLine doc o co ngoac kep, dau phay va \"\" ben trong",
+                string.Join("|", TamData.SplitCsvLine("SS,\"a, b\",\"x \"\"y\"\"\",")) == "SS|a, b|x \"y\"|");
+            string[] sheet =
+            {
+                "Loai,T,T_hienthi,Nguon,Nguoi_xac_nhan,Ghi_chu,Anh,Ngay",
+                "SUS SIMA,6.0,7.3,Bổ sung,Anh Tu,\"do thuoc kep, 3 diem\",https://drive.google.com/file/d/abc/view https://drive.google.com/file/d/def/view,2026-11-05"
+            };
+            Check("Validate tab tam chap nhan o ngoac kep", FnameDataStore.Validate("tam", sheet, out string verr), verr);
+            var rec = TamData.Parse(sheet).Single();
+            Check("Parse tam: ghi chu giu dau phay, 2 link anh, IsBoSung",
+                rec.GhiChu == "do thuoc kep, 3 diem" && rec.AnhLinks.Count == 2 && rec.IsBoSung && !rec.ChoDuyet, rec.GhiChu);
+            Check("Clean bo dau phay / ngoac kep / xuong dong", TamData.Clean("a, \"b\"\nc") == "a  'b' c");
+
+            // Thong_so yeu cau + link anh Apps Script them vao
+            var send = new TamRecord { Loai = "SUS SIMA", T = "6.0", THienThi = "7.3", NguoiXacNhan = "Anh Tu", GhiChu = "do | 3 diem" };
+            string ps = FnameUpdateRequest.BuildTamParams(send) + " | Anh=https://drive.google.com/file/d/abc/view?usp=drivesdk";
+            var req = new FnameUpdateRequest { Loai = FnameUpdateRequest.LoaiTam, ThongSo = ps };
+            var back = TamRecord.FromParams(req.Params);
+            Check("Thong_so tam khu hoi + link anh co dau =",
+                back.Loai == "SUS SIMA" && back.THienThi == "7.3" && back.GhiChu == "do   3 diem" && req.ImageLinks.Count == 1 && req.HasImages
+                && req.ImageLinks[0].EndsWith("usp=drivesdk"), ps);
+            Check("Describe tam", req.Describe().StartsWith("T thực SUS SIMA T=6.0 = 7.3 — xác nhận: Anh Tu") && req.Describe().EndsWith("1 ảnh"), req.Describe());
+            var reply = FnameSheetReply.Parse("{\"ok\":true,\"message\":\"x\",\"anh\":\"https://a https://b\"}");
+            Check("Tra loi submit tam co link anh", reply != null && reply.Anh == "https://a https://b");
+
+            // Bo sung cuc bo: dung ngay (cho duyet), Sheet co roi / bi tu choi thi bo
+            string cache = Path.Combine(Path.GetTempPath(), "ohta_tam_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(cache);
+            try
+            {
+                Check("Truoc khi bo sung: SUS SIMA 6.0 chua co T thuc", TraVCalculator.GetRealThickness("SUS304 縞板", "6.0") == "");
+                TamLocalAdditions.Add(cache, new TamRecord { Loai = "SUS SIMA", T = "6.0", THienThi = "7.3", Nguon = TamRecord.NguonBoSung, NguoiXacNhan = "Anh Tu", GhiChu = "x" });
+                TraVCalculator.Load(FnameDir, cache);
+                var src = TraVCalculator.GetRealThicknessSource("SUS304 縞板", "6.0");
+                Check("Sau khi gui: T thuc 7.3 dung ngay, danh dau bo sung + cho duyet (ca chieu Trong / Ngoai)",
+                    TraVCalculator.GetRealThickness("SUS304 縞板", "6.0") == "7.3" && src != null && src.IsBoSung && src.ChoDuyet
+                    && TraVCalculator.FindTam("SUS SIMA Ngoài", 6) != null);
+                Check("T thuc tu OFT khong danh dau bo sung", TraVCalculator.GetRealThicknessSource("SS400", "3.2")?.IsBoSung == false);
+
+                var pending = new List<TamRecord> { new TamRecord { Loai = "SUS SIMA", T = "6" } };
+                Check("Prune: con cho duyet -> giu", TamLocalAdditions.Prune(cache, new List<TamRecord>(), pending) == 0);
+                Check("Prune: khong doc duoc hang cho -> giu", TamLocalAdditions.Prune(cache, new List<TamRecord>(), null) == 0);
+                Check("Prune: Sheet da co (duyet) -> bo", TamLocalAdditions.Prune(cache, TamData.Parse(sheet), null) == 1 && TamLocalAdditions.Load(cache).Count == 0);
+                TamLocalAdditions.Add(cache, new TamRecord { Loai = "SUS SIMA", T = "6.0", THienThi = "7.3" });
+                Check("Prune: bi tu choi (khong con trong hang cho) -> bo", TamLocalAdditions.Prune(cache, new List<TamRecord>(), new List<TamRecord>()) == 1);
+            }
+            finally
+            {
+                Directory.Delete(cache, true);
+                TraVCalculator.Load(FnameDir, NoCache);
+            }
         }
 
         private static void TestTamTableAndConfig()
