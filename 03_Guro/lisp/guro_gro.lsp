@@ -13840,11 +13840,20 @@
                   ")"
           )
         )
+        ;; Muc 209: hoi gui bao loi cho admin (OHTATOOL.dll). vl-catch-all-apply:
+        ;; DLL chua nap / ham khong co thi bo qua, khong lam hong *error*.
+        (vl-catch-all-apply 'ohta_net_bug_auto
+          (list "GRO"
+                (strcat m " (buoc: " (cond ((eq (type gro--buoc) 'STR) gro--buoc) ("?")) ")")
+          )
+        )
       )
     )
     (princ)
   )
 
+  ;; Muc 209: nhat ky cho bao loi
+  (vl-catch-all-apply 'ohta_net_log (list "GRO" "GROCHAY bat dau"))
   (gro--moc-bat-dau)
   ;; Muc 199: ban ve moi chua luu (Drawing1) -> DWGPREFIX la thu muc tam, CSV / PDF
   ;; se ghi lung tung ma khong bao. Chan ngay, chua dong vao ban ve.
@@ -15897,6 +15906,7 @@
     )
   )
   (gro--moc-bao-cao)
+  (vl-catch-all-apply 'ohta_net_log (list "GRO" "GROCHAY xong"))
   (princ)
 )
 

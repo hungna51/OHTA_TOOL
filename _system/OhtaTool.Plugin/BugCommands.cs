@@ -26,6 +26,29 @@ namespace OhtaTool.Plugin
             BugReportWindow.Show(tabLenh, null, null, anh);
         }
 
+        /// <summary>Gắn phần CAD/UI vào BugGuard (gọi 1 lần trong Initialize của OHTATOOL.dll).</summary>
+        public static void WireGuard()
+        {
+            BugGuard.Capture = CadScreenshot.CaptureMainWindowJpeg;
+            BugGuard.AskUser = (nguon, loi) => System.Windows.MessageBox.Show(
+                "Lệnh " + nguon + " gặp lỗi:\n\n" + loi + "\n\nGửi báo lỗi cho admin (kèm ảnh cửa sổ CAD và nhật ký)?",
+                "OHTA TOOL — Gặp lỗi", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
+                == System.Windows.MessageBoxResult.Yes;
+            BugGuard.ShowForm = BugReportWindow.Show;
+        }
+
+        /// <summary>
+        /// (ohta_net_bug_auto "GRO" "Loi: ... (buoc: ...)") -> T. *error* của lisp gọi khi gặp lỗi thật
+        /// (không phải Esc/Cancel), qua vl-catch-all-apply.
+        /// </summary>
+        [LispFunction("OHTA_NET_BUG_AUTO")]
+        public static object OhtaNetBugAuto(ResultBuffer rb)
+        {
+            List<string> args = StringArgs(rb);
+            BugGuard.ReportLispError(args.Count > 0 && args[0].Length > 0 ? args[0] : "LISP", args.Count > 1 ? args[1] : "");
+            return true;
+        }
+
         /// <summary>(ohta_net_log "nguon" "noi dung") -> T. Lisp gọi qua vl-catch-all-apply để không hỏng khi DLL chưa nạp.</summary>
         [LispFunction("OHTA_NET_LOG")]
         public static object OhtaNetLog(ResultBuffer rb)

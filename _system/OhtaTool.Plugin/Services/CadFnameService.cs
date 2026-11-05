@@ -222,49 +222,61 @@ namespace OhtaTool.Plugin.Services
         [CommandMethod("OHTA_FN_PLACE")]
         public static void CmdPlaceFname()
         {
-            FnameTabViewModel vm = ActiveViewModel;
-            if (vm == null)
+            BugGuard.Run("OHTA_FN_PLACE", () =>
             {
-                CadCompat.WriteMessage("\n[OHTA Fname] Hãy mở bảng OHTA (Tab Fname) trước.\n");
-                return;
-            }
+                FnameTabViewModel vm = ActiveViewModel;
+                if (vm == null)
+                {
+                    CadCompat.WriteMessage("\n[OHTA Fname] Hãy mở bảng OHTA (Tab Fname) trước.\n");
+                    return;
+                }
 
-            vm.SyncActiveDrawing();
-            CadFnameService.PlaceNewFnameInteractive(vm);
+                vm.SyncActiveDrawing();
+                CadFnameService.PlaceNewFnameInteractive(vm);
+            });
         }
 
         [CommandMethod("OHTA_FN_PICK")]
         public static void CmdPickFname()
         {
-            FnameTabViewModel vm = ActiveViewModel;
-            if (vm == null)
+            BugGuard.Run("OHTA_FN_PICK", () =>
             {
-                CadCompat.WriteMessage("\n[OHTA Fname] Hãy mở bảng OHTA (Tab Fname) trước.\n");
-                return;
-            }
+                FnameTabViewModel vm = ActiveViewModel;
+                if (vm == null)
+                {
+                    CadCompat.WriteMessage("\n[OHTA Fname] Hãy mở bảng OHTA (Tab Fname) trước.\n");
+                    return;
+                }
 
-            vm.SyncActiveDrawing();
-            CadFnameService.PickExistingFnameInteractive(vm);
+                vm.SyncActiveDrawing();
+                CadFnameService.PickExistingFnameInteractive(vm);
+            });
         }
 
         [CommandMethod("OHTA_FN_UPDATE")]
         public static void CmdPickAndUpdateFname()
         {
-            FnameTabViewModel vm = ActiveViewModel;
-            if (vm == null)
+            BugGuard.Run("OHTA_FN_UPDATE", () =>
             {
-                CadCompat.WriteMessage("\n[OHTA Fname] Hãy mở bảng OHTA (Tab Fname) trước.\n");
-                return;
-            }
+                FnameTabViewModel vm = ActiveViewModel;
+                if (vm == null)
+                {
+                    CadCompat.WriteMessage("\n[OHTA Fname] Hãy mở bảng OHTA (Tab Fname) trước.\n");
+                    return;
+                }
 
-            vm.SyncActiveDrawing();
-            CadFnameService.PickAndOverwriteFnameInteractive(vm);
+                vm.SyncActiveDrawing();
+                CadFnameService.PickAndOverwriteFnameInteractive(vm);
+            });
         }
 
         [CommandMethod("OHTA_FN_PICK_ANGLE")]
         public static void CmdPickAngle()
         {
-            CadFnameService.PickAngleInteractive();
+            BugGuard.Run("OHTA_FN_PICK_ANGLE", () =>
+            {
+                CadFnameService.PickAngleInteractive();
+            });
         }
     }
 

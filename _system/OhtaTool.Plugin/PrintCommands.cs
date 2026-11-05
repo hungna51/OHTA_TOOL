@@ -90,43 +90,46 @@ namespace OhtaTool.Plugin
         [CommandMethod("OIIN", CommandFlags.Modal)]
         public static void CmdPrint()
         {
-            PrintRequest req = PrintRunner.Pending;
-            PrintRunner.Pending = null;
-            CadDocument doc = CadCompat.ActiveDocument;
-            if (req == null || req.Params == null || doc == null)
+            BugGuard.Run("OIIN", () =>
             {
-                if (req != null)
-                    PrintRunner.Report("Không có bản vẽ để in.");
-                return;
-            }
+                PrintRequest req = PrintRunner.Pending;
+                PrintRunner.Pending = null;
+                CadDocument doc = CadCompat.ActiveDocument;
+                if (req == null || req.Params == null || doc == null)
+                {
+                    if (req != null)
+                        PrintRunner.Report("Không có bản vẽ để in.");
+                    return;
+                }
 
-            object oldBgPlot = null;
-            string tempDir = null;
-            try
-            {
+                object oldBgPlot = null;
+                string tempDir = null;
                 try
                 {
-                    oldBgPlot = CadApp.GetSystemVariable("BACKGROUNDPLOT");
-                    CadApp.SetSystemVariable("BACKGROUNDPLOT", (short)0);
-                }
-                catch (System.Exception) { oldBgPlot = null; }
+                    try
+                    {
+                        oldBgPlot = CadApp.GetSystemVariable("BACKGROUNDPLOT");
+                        CadApp.SetSystemVariable("BACKGROUNDPLOT", (short)0);
+                    }
+                    catch (System.Exception) { oldBgPlot = null; }
 
-                PrintRunner.IsBusy = true;
-                Run(doc, req, out tempDir);
-            }
-            catch (System.Exception ex)
-            {
-                PrintRunner.Report("Lỗi khi in: " + ex.Message);
-            }
-            finally
-            {
-                PrintRunner.IsBusy = false;
-                PrintRunner.CancelRequested = false;
-                if (oldBgPlot != null)
-                    try { CadApp.SetSystemVariable("BACKGROUNDPLOT", oldBgPlot); } catch (System.Exception) { }
-                if (tempDir != null)
-                    try { Directory.Delete(tempDir, true); } catch (System.Exception) { }
-            }
+                    PrintRunner.IsBusy = true;
+                    Run(doc, req, out tempDir);
+                }
+                catch (System.Exception ex)
+                {
+                    PrintRunner.Report("Lỗi khi in: " + ex.Message);
+                }
+                finally
+                {
+                    PrintRunner.IsBusy = false;
+                    PrintRunner.CancelRequested = false;
+                    if (oldBgPlot != null)
+                        try { CadApp.SetSystemVariable("BACKGROUNDPLOT", oldBgPlot); } catch (System.Exception) { }
+                    if (tempDir != null)
+                        try { Directory.Delete(tempDir, true); } catch (System.Exception) { }
+                }
+            });
         }
 
         private static void Run(CadDocument doc, PrintRequest req, out string tempDir)

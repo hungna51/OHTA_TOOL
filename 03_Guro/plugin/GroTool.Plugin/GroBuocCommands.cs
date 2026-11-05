@@ -366,36 +366,39 @@ namespace ZwCadPlugin
         [CommandMethod("GROCS")]
         public static void LenhGroCs()
         {
-            Document doc = Application.DocumentManager.MdiActiveDocument;
-            if (doc == null) return;
-            Editor ed = doc.Editor;
-            while (true)
+            OhtaBugBridge.Run("GROCS", () =>
             {
-                ed.WriteMessage("\n=== Che do tung buoc GRO (lisp / ab = so A/B / cs = chay C#) ===");
-                foreach (var b in GroCongTac.Buoc)
-                    ed.WriteMessage("\n  " + b.Key.PadRight(10) + GroCongTac.TenCheDo(DocCheDo(b.Key)).PadRight(6) + b.Value);
-                var po = new PromptStringOptions("\nTen buoc can doi (Enter = thoat, TAT = tat het ve lisp): ") { AllowSpaces = false };
-                PromptResult r = ed.GetString(po);
-                if (r.Status != PromptStatus.OK || string.IsNullOrWhiteSpace(r.StringResult)) return;
-                string ma = GroCongTac.ChuanMa(r.StringResult);
-                if (ma == "tat")
+                Document doc = Application.DocumentManager.MdiActiveDocument;
+                if (doc == null) return;
+                Editor ed = doc.Editor;
+                while (true)
                 {
-                    foreach (var b in GroCongTac.Buoc) GhiCheDo(b.Key, CheDoBuoc.Lisp);
-                    ed.WriteMessage("\nDa dua MOI buoc ve lisp.");
-                    continue;
+                    ed.WriteMessage("\n=== Che do tung buoc GRO (lisp / ab = so A/B / cs = chay C#) ===");
+                    foreach (var b in GroCongTac.Buoc)
+                        ed.WriteMessage("\n  " + b.Key.PadRight(10) + GroCongTac.TenCheDo(DocCheDo(b.Key)).PadRight(6) + b.Value);
+                    var po = new PromptStringOptions("\nTen buoc can doi (Enter = thoat, TAT = tat het ve lisp): ") { AllowSpaces = false };
+                    PromptResult r = ed.GetString(po);
+                    if (r.Status != PromptStatus.OK || string.IsNullOrWhiteSpace(r.StringResult)) return;
+                    string ma = GroCongTac.ChuanMa(r.StringResult);
+                    if (ma == "tat")
+                    {
+                        foreach (var b in GroCongTac.Buoc) GhiCheDo(b.Key, CheDoBuoc.Lisp);
+                        ed.WriteMessage("\nDa dua MOI buoc ve lisp.");
+                        continue;
+                    }
+                    if (!GroCongTac.LaBuoc(ma)) { ed.WriteMessage("\nKhong co buoc \"" + ma + "\"."); continue; }
+                    var pk = new PromptKeywordOptions("\nChe do cho " + ma + " [Lisp/Ab/Cs]: ");
+                    pk.Keywords.Add("Lisp");
+                    pk.Keywords.Add("Ab");
+                    pk.Keywords.Add("Cs");
+                    pk.Keywords.Default = GroCongTac.TenCheDo(DocCheDo(ma)) == "ab" ? "Ab" :
+                                          GroCongTac.TenCheDo(DocCheDo(ma)) == "cs" ? "Cs" : "Lisp";
+                    PromptResult k = ed.GetKeywords(pk);
+                    if (k.Status != PromptStatus.OK) return;
+                    GhiCheDo(ma, GroCongTac.DocCheDo(k.StringResult));
+                    ed.WriteMessage("\nDa dat " + ma + " = " + GroCongTac.TenCheDo(DocCheDo(ma)) + ".");
                 }
-                if (!GroCongTac.LaBuoc(ma)) { ed.WriteMessage("\nKhong co buoc \"" + ma + "\"."); continue; }
-                var pk = new PromptKeywordOptions("\nChe do cho " + ma + " [Lisp/Ab/Cs]: ");
-                pk.Keywords.Add("Lisp");
-                pk.Keywords.Add("Ab");
-                pk.Keywords.Add("Cs");
-                pk.Keywords.Default = GroCongTac.TenCheDo(DocCheDo(ma)) == "ab" ? "Ab" :
-                                      GroCongTac.TenCheDo(DocCheDo(ma)) == "cs" ? "Cs" : "Lisp";
-                PromptResult k = ed.GetKeywords(pk);
-                if (k.Status != PromptStatus.OK) return;
-                GhiCheDo(ma, GroCongTac.DocCheDo(k.StringResult));
-                ed.WriteMessage("\nDa dat " + ma + " = " + GroCongTac.TenCheDo(DocCheDo(ma)) + ".");
-            }
+            });
         }
     }
 }

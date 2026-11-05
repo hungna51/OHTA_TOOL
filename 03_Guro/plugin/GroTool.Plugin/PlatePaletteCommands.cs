@@ -213,16 +213,19 @@ namespace ZwCadPlugin
         [CommandMethod("NOTE_SETTING")]
         public static void ShowNoteSettingCommand()
         {
-            var doc = Application.DocumentManager.MdiActiveDocument;
-            try
+            OhtaBugBridge.Run("GROSETTING", () =>
             {
-                var dlg = new Views.NoteDictionaryWindow();
-                Application.ShowModalWindow(dlg);
-            }
-            catch (System.Exception ex)
-            {
-                doc?.Editor?.WriteMessage($"\n[GROSETTING] Loi mo cai dat ghi chu: {ex.Message}");
-            }
+                var doc = Application.DocumentManager.MdiActiveDocument;
+                try
+                {
+                    var dlg = new Views.NoteDictionaryWindow();
+                    Application.ShowModalWindow(dlg);
+                }
+                catch (System.Exception ex)
+                {
+                    doc?.Editor?.WriteMessage($"\n[GROSETTING] Loi mo cai dat ghi chu: {ex.Message}");
+                }
+            });
         }
 
         /// <summary>
@@ -234,7 +237,10 @@ namespace ZwCadPlugin
         [CommandMethod("DS")]
         public static void CmdShowDst()
         {
-            ShowPlatePalette(PlatePaletteViewModel.TabDanhSach);
+            OhtaBugBridge.Run("GROPALETTE", () =>
+            {
+                ShowPlatePalette(PlatePaletteViewModel.TabDanhSach);
+            });
         }
 
         /// <summary>
@@ -392,21 +398,24 @@ namespace ZwCadPlugin
         [CommandMethod("GROTHONGTIN")]
         public static void CmdThongTin()
         {
-            string baoCao = null;
-            string f = FileThongTin();
-            try
+            OhtaBugBridge.Run("GROTHONGTIN", () =>
             {
-                if (System.IO.File.Exists(f))
+                string baoCao = null;
+                string f = FileThongTin();
+                try
                 {
-                    baoCao = System.IO.File.ReadAllText(f, System.Text.Encoding.UTF8).TrimEnd('\r', '\n');
-                    System.IO.File.Delete(f);
+                    if (System.IO.File.Exists(f))
+                    {
+                        baoCao = System.IO.File.ReadAllText(f, System.Text.Encoding.UTF8).TrimEnd('\r', '\n');
+                        System.IO.File.Delete(f);
+                    }
                 }
-            }
-            catch
-            {
-                // Khong doc duoc file -> van mo bang (khong co bao cao moi)
-            }
-            ShowPlatePalette(baoCao != null ? PlatePaletteViewModel.TabThongTin : PlatePaletteViewModel.TabDanhSach, baoCao);
+                catch
+                {
+                    // Khong doc duoc file -> van mo bang (khong co bao cao moi)
+                }
+                ShowPlatePalette(baoCao != null ? PlatePaletteViewModel.TabThongTin : PlatePaletteViewModel.TabDanhSach, baoCao);
+            });
         }
 
         private const int WM_MOUSEWHEEL = 0x020A;
@@ -455,26 +464,29 @@ namespace ZwCadPlugin
         [CommandMethod("DSTON")]
         public static void TogglePalette()
         {
-            if (_paletteSet == null)
+            OhtaBugBridge.Run("DSTON", () =>
             {
-                ShowPlatePalette();
-            }
-            else
-            {
-                _paletteSet.Visible = !_paletteSet.Visible;
-                if (_paletteSet.Visible)
+                if (_paletteSet == null)
                 {
-                    try
-                    {
-                        if (_paletteSet.Size.Width < 490)
-                        {
-                            _paletteSet.Size = new Size(490, Math.Max(680, _paletteSet.Size.Height));
-                        }
-                    }
-                    catch { }
-                    _viewModel?.RefreshFromDrawing();
+                    ShowPlatePalette();
                 }
-            }
+                else
+                {
+                    _paletteSet.Visible = !_paletteSet.Visible;
+                    if (_paletteSet.Visible)
+                    {
+                        try
+                        {
+                            if (_paletteSet.Size.Width < 490)
+                            {
+                                _paletteSet.Size = new Size(490, Math.Max(680, _paletteSet.Size.Height));
+                            }
+                        }
+                        catch { }
+                        _viewModel?.RefreshFromDrawing();
+                    }
+                }
+            });
         }
     }
 }

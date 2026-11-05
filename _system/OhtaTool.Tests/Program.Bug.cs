@@ -41,6 +41,50 @@ namespace OhtaTool.Tests
             TestBugLog();
             TestBugAttachmentsAndQueue();
             TestBugSheet();
+            TestBugGuard();
+        }
+
+        private static void TestBugGuard()
+        {
+            string oldLog = BugLog.Directory;
+            BugLog.Directory = Path.Combine(Path.GetTempPath(), "ohta_bugguard_" + Guid.NewGuid().ToString("N"));
+            BugDedup.ResetForTest();
+            int hoi = 0, form = 0, chup = 0;
+            BugGuard.Capture = () => { chup++; return null; };
+            BugGuard.ShowForm = (n, l, st, anh) => form++;
+            BugGuard.AskUser = (n, l) => { hoi++; return false; };
+            BugGuard.Run("TEST", () => throw new InvalidOperationException("no"));
+            Check("Guard: khong nem ra ngoai + hoi 1 lan", hoi == 1);
+            Check("Guard: chup anh luc loi", chup == 1);
+            Check("Guard: tra loi Khong -> khong mo form", form == 0);
+            BugGuard.Run("TEST", () => throw new InvalidOperationException("no"));
+            Check("Guard: cung loi khong hoi lai", hoi == 1);
+            Check("Guard: loi da vao nhat ky", BugLog.Tail(80).Any(l => l.Contains("[TEST]") && l.Contains("InvalidOperationException")));
+            BugGuard.AskUser = (n, l) => { hoi++; return true; };
+            BugGuard.ReportLispError("GRO", "bad argument type: consp nil (buoc: chia net)");
+            Check("Guard: lisp loi -> hoi + mo form", hoi == 2 && form == 1);
+            BugDedup.InReport = true;
+            BugGuard.ReportLispError("GRO", "loi khac han");
+            Check("Guard: khong hoi long", hoi == 2);
+            BugDedup.InReport = false;
+            BugGuard.AskUser = (n, l) => throw new Exception("UI hong");
+            BugGuard.ReportLispError("GRO", "loi thu ba");
+            Check("Guard: loi trong luong bao loi khong nem", true);
+            bool ran = false;
+            BugGuard.Run("TEST", () => ran = true);
+            Check("Guard: than lenh chay binh thuong", ran);
+            Check("Guard: UserBreak nhan theo ten", BugGuard.IsUserCancel(new FakeCadException("UserBreak")));
+            Check("Guard: loi CAD khac khong phai huy", !BugGuard.IsUserCancel(new FakeCadException("eInvalidInput")));
+            BugGuard.Capture = null; BugGuard.ShowForm = null; BugGuard.AskUser = null;
+            BugDedup.ResetForTest();
+            BugLog.Directory = oldLog;
+        }
+
+        // Giả lập Runtime.Exception của CAD: có thuộc tính ErrorStatus
+        private sealed class FakeCadException : Exception
+        {
+            public FakeCadException(string status) : base(status) { ErrorStatus = status; }
+            public string ErrorStatus { get; }
         }
 
         private static void TestBugSheet()

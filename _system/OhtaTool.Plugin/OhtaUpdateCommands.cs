@@ -86,8 +86,11 @@ namespace OhtaTool.Plugin
         [CommandMethod("OHTA_UPDATE")]
         public static void CmdUpdateNow()
         {
-            CadCompat.WriteMessage("\n[OHTA TOOL] Đang kiểm tra bản mới trên GitHub...\n");
-            StartCheck(manual: true);
+            BugGuard.Run("OHTAUPDATE", () =>
+            {
+                CadCompat.WriteMessage("\n[OHTA TOOL] Đang kiểm tra bản mới trên GitHub...\n");
+                StartCheck(manual: true);
+            });
         }
 
         [LispFunction("OHTA_NET_UPDATE")]
@@ -101,52 +104,55 @@ namespace OhtaTool.Plugin
         [CommandMethod("OHTA_ROLLBACK")]
         public static void CmdRollback()
         {
-            string root = CadCompat.GetRootDirectory();
-            string backup = Directory.Exists(BackupDir)
-                ? Directory.GetFiles(BackupDir, "OHTA_TOOL_v*.zip").OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault()
-                : null;
-            if (string.IsNullOrEmpty(root) || backup == null)
+            BugGuard.Run("OHTAROLLBACK", () =>
             {
-                MessageBox.Show("Chưa có bản sao lưu nào (chỉ có sau lần tự cập nhật đầu tiên).", Caption,
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            string backupVersion = UpdateInstaller.ReadBackupVersion(backup) ?? "?";
-            if (MessageBox.Show(
-                    $"Quay về OHTA TOOL v{backupVersion} (đang dùng v{UpdateVersion.ReadInstalled(root)})?\n\n" +
-                    "Lisp / nút bạn tự thêm vẫn giữ nguyên. Xong cần khởi động lại CAD.",
-                    Caption, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-                return;
-
-            if (Interlocked.Exchange(ref _installing, 1) == 1)
-                return;
-            Task.Run(() =>
-            {
-                try
+                string root = CadCompat.GetRootDirectory();
+                string backup = Directory.Exists(BackupDir)
+                    ? Directory.GetFiles(BackupDir, "OHTA_TOOL_v*.zip").OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault()
+                    : null;
+                if (string.IsNullOrEmpty(root) || backup == null)
                 {
-                    UpdateReport rep;
-                    using (var mutex = new Mutex(false, MutexName))
+                    MessageBox.Show("Chưa có bản sao lưu nào (chỉ có sau lần tự cập nhật đầu tiên).", Caption,
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                string backupVersion = UpdateInstaller.ReadBackupVersion(backup) ?? "?";
+                if (MessageBox.Show(
+                        $"Quay về OHTA TOOL v{backupVersion} (đang dùng v{UpdateVersion.ReadInstalled(root)})?\n\n" +
+                        "Lisp / nút bạn tự thêm vẫn giữ nguyên. Xong cần khởi động lại CAD.",
+                        Caption, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                    return;
+
+                if (Interlocked.Exchange(ref _installing, 1) == 1)
+                    return;
+                Task.Run(() =>
+                {
+                    try
                     {
-                        if (!mutex.WaitOne(0))
-                            throw new InvalidOperationException("Một cửa sổ CAD khác đang cập nhật OHTA TOOL. Hãy thử lại sau.");
-                        try { rep = UpdateInstaller.Rollback(root, backup); }
-                        finally { mutex.ReleaseMutex(); }
+                        UpdateReport rep;
+                        using (var mutex = new Mutex(false, MutexName))
+                        {
+                            if (!mutex.WaitOne(0))
+                                throw new InvalidOperationException("Một cửa sổ CAD khác đang cập nhật OHTA TOOL. Hãy thử lại sau.");
+                            try { rep = UpdateInstaller.Rollback(root, backup); }
+                            finally { mutex.ReleaseMutex(); }
+                        }
+                        // Quay lại rồi thì bản trên GitHub lại "mới" -> nhắc lại theo quy tắc bình thường
+                        PostToUi(() => MessageBox.Show(
+                            $"Đã quay về OHTA TOOL v{backupVersion} ({rep.Written} file).\n\nHãy khởi động lại CAD để dùng bản này.",
+                            Caption, MessageBoxButton.OK, MessageBoxImage.Information));
                     }
-                    // Quay lại rồi thì bản trên GitHub lại "mới" -> nhắc lại theo quy tắc bình thường
-                    PostToUi(() => MessageBox.Show(
-                        $"Đã quay về OHTA TOOL v{backupVersion} ({rep.Written} file).\n\nHãy khởi động lại CAD để dùng bản này.",
-                        Caption, MessageBoxButton.OK, MessageBoxImage.Information));
-                }
-                catch (Exception ex)
-                {
-                    PostToUi(() => MessageBox.Show("Không quay lại được:\n" + ex.GetBaseException().Message, Caption,
-                        MessageBoxButton.OK, MessageBoxImage.Warning));
-                }
-                finally
-                {
-                    Interlocked.Exchange(ref _installing, 0);
-                }
+                    catch (Exception ex)
+                    {
+                        PostToUi(() => MessageBox.Show("Không quay lại được:\n" + ex.GetBaseException().Message, Caption,
+                            MessageBoxButton.OK, MessageBoxImage.Warning));
+                    }
+                    finally
+                    {
+                        Interlocked.Exchange(ref _installing, 0);
+                    }
+                });
             });
         }
 

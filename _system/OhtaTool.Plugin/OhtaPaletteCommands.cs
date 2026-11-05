@@ -36,6 +36,7 @@ namespace OhtaTool.Plugin
         {
             try
             {
+                BugCommands.WireGuard();
                 OhtaUpdateCommands.OnInitialize();
                 CadCompat.WriteMessage(
                     $"\n[OHTA TOOL] Đã nạp OHTATOOL.dll v{OhtaUpdateCommands.LoadedVersion} cho {CadCompat.PlatformName}. Gõ lệnh OHTA để mở Tool Palettes.\n");
@@ -77,7 +78,10 @@ namespace OhtaTool.Plugin
         [CommandMethod("OHTAPALETTE")]
         public static void CmdOpenOhtaPalette()
         {
-            ShowOrBuildPalette(forceRebuild: false);
+            BugGuard.Run("OHTA", () =>
+            {
+                ShowOrBuildPalette(forceRebuild: false);
+            });
         }
 
         [LispFunction("OHTA_NET_OPEN")]
@@ -93,14 +97,20 @@ namespace OhtaTool.Plugin
         [CommandMethod("FN")]
         public static void CmdOpenFnameTab()
         {
-            ActivateModuleTab("fname");
+            BugGuard.Run("FN", () =>
+            {
+                ActivateModuleTab("fname");
+            });
         }
 
         /// <summary>OI v2.0: mở bảng OHTA và chuyển sang tab PRINT (thay lisp OI cũ).</summary>
         [CommandMethod("OI")]
         public static void CmdOpenPrintTab()
         {
-            ActivateModuleTab("print");
+            BugGuard.Run("OI", () =>
+            {
+                ActivateModuleTab("print");
+            });
         }
 
         /// <summary>
@@ -157,7 +167,10 @@ namespace OhtaTool.Plugin
         [CommandMethod("OHTA_RELOAD")]
         public static void CmdReloadOhtaPalette()
         {
-            ShowOrBuildPalette(forceRebuild: true);
+            BugGuard.Run("OHTARELOAD", () =>
+            {
+                ShowOrBuildPalette(forceRebuild: true);
+            });
         }
 
         [LispFunction("OHTA_NET_RELOAD")]
@@ -170,15 +183,18 @@ namespace OhtaTool.Plugin
         [CommandMethod("OHTA_CLOSE")]
         public static void CmdToggleClosePalette()
         {
-            if (_paletteSet == null)
+            BugGuard.Run("OHTACLOSE", () =>
             {
-                ShowOrBuildPalette(forceRebuild: false);
-                return;
-            }
+                if (_paletteSet == null)
+                {
+                    ShowOrBuildPalette(forceRebuild: false);
+                    return;
+                }
 
-            _paletteSet.Visible = !_paletteSet.Visible;
-            if (_paletteSet.Visible)
-                UnrollIfAutoHidden();
+                _paletteSet.Visible = !_paletteSet.Visible;
+                if (_paletteSet.Visible)
+                    UnrollIfAutoHidden();
+            });
         }
 
         [LispFunction("OHTA_NET_CLOSE")]
@@ -192,24 +208,27 @@ namespace OhtaTool.Plugin
         [CommandMethod("OHTA_INFO")]
         public static void CmdShowInfo()
         {
-            string root = CadCompat.GetRootDirectory() ?? "(Không tìm thấy)";
-            List<ModuleManifest> modules = Directory.Exists(root)
-                ? ModuleDiscovery.DiscoverModules(root)
-                : new List<ModuleManifest>();
-
-            CadCompat.WriteMessage("\n================ OHTA TOOL INFO ================\n");
-            CadCompat.WriteMessage($"  Nhà phát triển: {ToolInfoCore.Developer}\n");
-            CadCompat.WriteMessage($"  Phiên bản    : v{OhtaUpdateCommands.LoadedVersion} (OHTAUPDATE: kiểm tra bản mới)\n");
-            CadCompat.WriteMessage($"  Nền tảng CAD : {CadCompat.PlatformName}\n");
-            CadCompat.WriteMessage($"  Thư mục gốc  : {root}\n");
-            CadCompat.WriteMessage($"  Số Tab nhóm  : {modules.Count}\n");
-            for (int i = 0; i < modules.Count; i++)
+            BugGuard.Run("OHTAINFO", () =>
             {
-                ModuleManifest m = modules[i];
-                string version = m.VersionLabel.Length == 0 ? "" : " " + m.VersionLabel;
-                CadCompat.WriteMessage($"    [{i + 1}] {m.TabTitle}{version} ({m.FolderName}) -> {ToolInfoCore.DescribeContents(m)}\n");
-            }
-            CadCompat.WriteMessage("================================================\n");
+                string root = CadCompat.GetRootDirectory() ?? "(Không tìm thấy)";
+                List<ModuleManifest> modules = Directory.Exists(root)
+                    ? ModuleDiscovery.DiscoverModules(root)
+                    : new List<ModuleManifest>();
+
+                CadCompat.WriteMessage("\n================ OHTA TOOL INFO ================\n");
+                CadCompat.WriteMessage($"  Nhà phát triển: {ToolInfoCore.Developer}\n");
+                CadCompat.WriteMessage($"  Phiên bản    : v{OhtaUpdateCommands.LoadedVersion} (OHTAUPDATE: kiểm tra bản mới)\n");
+                CadCompat.WriteMessage($"  Nền tảng CAD : {CadCompat.PlatformName}\n");
+                CadCompat.WriteMessage($"  Thư mục gốc  : {root}\n");
+                CadCompat.WriteMessage($"  Số Tab nhóm  : {modules.Count}\n");
+                for (int i = 0; i < modules.Count; i++)
+                {
+                    ModuleManifest m = modules[i];
+                    string version = m.VersionLabel.Length == 0 ? "" : " " + m.VersionLabel;
+                    CadCompat.WriteMessage($"    [{i + 1}] {m.TabTitle}{version} ({m.FolderName}) -> {ToolInfoCore.DescribeContents(m)}\n");
+                }
+                CadCompat.WriteMessage("================================================\n");
+            });
         }
 
         [LispFunction("OHTA_NET_INFO")]
