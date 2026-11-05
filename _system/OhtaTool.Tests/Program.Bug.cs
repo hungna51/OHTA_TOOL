@@ -37,6 +37,32 @@ namespace OhtaTool.Tests
             Check("Bug: khong hoi long khi dang bao loi", !BugDedup.ShouldAsk("OHTA", "loi moi"));
             BugDedup.InReport = false;
             BugDedup.ResetForTest();
+
+            TestBugLog();
+        }
+
+        private static void TestBugLog()
+        {
+            string old = BugLog.Directory;
+            BugLog.Directory = Path.Combine(Path.GetTempPath(), "ohta_buglog_" + Guid.NewGuid().ToString("N"));
+            for (int i = 0; i < 300; i++) BugLog.Write("GRO", "dong " + i);
+            var tail = BugLog.Tail(200);
+            Check("BugLog: tail 200 dong", tail.Count == 200, tail.Count.ToString());
+            Check("BugLog: dong cuoi dung", tail.Count == 200 && tail[199].EndsWith("[GRO] dong 299"), tail.LastOrDefault());
+            BugLog.Write("X", new string('a', 600_000)); BugLog.Write("X", new string('b', 600_000));
+            BugLog.Write("X", "sau xoay");
+            Check("BugLog: da xoay", File.Exists(Path.Combine(BugLog.Directory, "ohta.1.log")));
+            for (int k = 0; k < 6; k++) BugLog.Write("X", new string('c', 600_000));
+            Check("BugLog: toi da 3 file", Directory.GetFiles(BugLog.Directory, "ohta*.log").Length <= 3,
+                Directory.GetFiles(BugLog.Directory, "ohta*.log").Length.ToString());
+            BugLog.Write("X", "moi");
+            Check("BugLog: tail qua ranh gioi file", BugLog.Tail(3).Count == 3);
+            BugLog.Write("X", new InvalidOperationException("no tung"));
+            Check("BugLog: ghi exception", BugLog.Tail(20).Any(l => l.Contains("InvalidOperationException") && l.Contains("no tung")));
+            using (new FileStream(Path.Combine(BugLog.Directory, "ohta.log"), FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                BugLog.Write("X", "file dang khoa"); // khong duoc nem
+            Check("BugLog: ghi khi file khoa khong nem", true);
+            BugLog.Directory = old;
         }
     }
 }
