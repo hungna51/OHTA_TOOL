@@ -120,6 +120,22 @@ namespace OhtaTool.Plugin
             return !string.IsNullOrWhiteSpace(id) && ActivateModuleTab(id.Trim()) ? (object)true : null;
         }
 
+        /// <summary>Tiêu đề tab đang hiện trên bảng OHTA (cho báo lỗi); null nếu bảng chưa mở / đang ẩn.</summary>
+        public static string CurrentTabTitle()
+        {
+            try
+            {
+                if (_paletteSet == null || !_paletteSet.Visible)
+                    return null;
+                HostedModuleTab tab = _hostedTabs.Find(t => t.Host != null && t.Host.Visible);
+                return tab == null ? null : tab.Manifest?.TabTitle ?? ToolInfoCore.InfoTabTitle;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         /// <summary>Mở palette (giữ nguyên tab đã nạp) rồi kích hoạt tab có module.Id tương ứng.</summary>
         public static bool ActivateModuleTab(string moduleId)
         {
@@ -251,6 +267,7 @@ namespace OhtaTool.Plugin
                 if (_paletteSet.Name != PaletteTitle)
                     _paletteSet.Name = PaletteTitle;
                 UnrollIfAutoHidden();
+                BugCommands.ResendQueuedInBackground();
 
                 if (forceRebuild)
                 {
@@ -349,7 +366,8 @@ namespace OhtaTool.Plugin
                     rootDir,
                     OhtaUpdateCommands.DescribeStatus,
                     OhtaUpdateCommands.CmdUpdateNow,
-                    OhtaUpdateCommands.CmdRollback);
+                    OhtaUpdateCommands.CmdRollback,
+                    () => BugCommands.OpenForm(ToolInfoCore.InfoTabTitle));
 
                 var host = new ElementHost { Dock = DockStyle.Fill, Child = view };
                 _paletteSet.Add(ToolInfoCore.InfoTabTitle, host);

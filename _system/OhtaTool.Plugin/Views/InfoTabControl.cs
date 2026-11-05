@@ -25,6 +25,8 @@ namespace OhtaTool.Plugin.Views
         private readonly ScrollViewer _scroller;
         private readonly TextBlock _updateStatus;
         private readonly Func<string> _getUpdateStatus;
+        private readonly StackPanel _bugPanel;
+        private readonly WrapPanel _bugButtons;
 
         /// <param name="modules">Các tab đang nạp (không gồm tab Info).</param>
         /// <param name="loadedVersion">Phiên bản DLL đang chạy trong phiên CAD.</param>
@@ -37,7 +39,8 @@ namespace OhtaTool.Plugin.Views
             string rootDir,
             Func<string> getUpdateStatus,
             Action checkUpdate,
-            Action rollback)
+            Action rollback,
+            Action reportBug = null)
         {
             _getUpdateStatus = getUpdateStatus;
             Background = Hex("#F5F7FA");
@@ -111,6 +114,16 @@ namespace OhtaTool.Plugin.Views
             buttons.Children.Add(back);
             update.Children.Add(buttons);
             stack.Children.Add(Card("CẬP NHẬT", update));
+
+            // 4b. Báo lỗi (ADR 0007) — máy admin có thêm nút xem danh sách (Task 7)
+            _bugPanel = new StackPanel();
+            _bugPanel.Children.Add(Text("Gặp lỗi khi dùng tool? Gửi mô tả + ảnh cửa sổ CAD + nhật ký cho admin (cũng gõ được lệnh OHTABUG).", sub: true));
+            _bugButtons = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+            Button bug = MakeButton("🐞  Báo lỗi", primary: true);
+            bug.Click += (s, e) => reportBug?.Invoke();
+            _bugButtons.Children.Add(bug);
+            _bugPanel.Children.Add(_bugButtons);
+            stack.Children.Add(Card("BÁO LỖI", _bugPanel));
 
             // 5. Có gì mới (mục đầu CHANGELOG.md)
             string notes = ToolInfoCore.ReadLatestChangelogEntry(rootDir, out string notesVersion);
