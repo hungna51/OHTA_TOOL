@@ -224,20 +224,62 @@
                         <Border Background="#FFFFFF" BorderBrush="#DCE3EA" BorderThickness="1" CornerRadius="7" Padding="14,12" Margin="0,0,0,10">
                             <StackPanel>
                                 <TextBlock Text="BỔ SUNG DỮ LIỆU" Style="{StaticResource CardTitle}"/>
-                                <WrapPanel>
-                                    <Button x:Name="BtnAddMaterial" Style="{StaticResource DialogPrimaryBtnStyle}"
-                                            Content="➕  Bổ sung vật liệu" Click="OnAddMaterialClick" Margin="0,0,8,4"/>
-                                    <Button x:Name="BtnAddTrialBend" Style="{StaticResource DialogPrimaryBtnStyle}"
-                                            Content="➕  Bổ sung góc bẻ thử" Click="OnAddTrialBendClick" Margin="0,0,8,4"
-                                            ToolTip="Số liệu bẻ thử thực tế (Loại, T, Góc, Dao, Denta, Mã tấm) — dùng khi bảng TraV không tính được góc"/>
-                                    <Button Style="{StaticResource DialogSecondaryBtnStyle}"
-                                            Content="📋  Danh sách góc bẻ thử" Click="OnTrialListClick" Margin="0,0,8,4"
-                                            ToolTip="Xem các góc bẻ thử / nội suy / ngoại suy đã có (lọc theo loại, T, dao, mã tấm)"/>
-                                    <Button Style="{StaticResource DialogPrimaryBtnStyle}"
-                                            Content="➕  Bổ sung thông số tấm" Click="OnAddTamClick" Margin="0,0,0,4"
-                                            ToolTip="T thực của tấm chưa có trong dữ liệu (vd SUS SIMA 6.0) — kèm người xác nhận, ghi chú và ảnh bằng chứng"/>
-                                </WrapPanel>
-                                <TextBlock x:Name="TxtWriteConfig" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                                <TextBlock Style="{StaticResource CardHint}" Margin="0,0,0,8"
+                                           Text="Gửi lên Google Sheet chờ admin duyệt. Máy này dùng được ngay sau khi gửi."/>
+
+                                <!-- 1. Vật liệu -->
+                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,0,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
+                                            <TextBlock Text="1. Vật liệu" FontSize="12" FontWeight="SemiBold" Foreground="#1E293B"/>
+                                            <TextBlock Style="{StaticResource CardHint}" Text="Mác M= chưa có, hoặc thêm độ dày T= cho mác đã có."/>
+                                        </StackPanel>
+                                        <Button x:Name="BtnAddMaterial" Grid.Column="1" Style="{StaticResource DialogPrimaryBtnStyle}"
+                                                Content="➕  Bổ sung" Click="OnAddMaterialClick" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+
+                                <!-- 2. Góc bẻ thử -->
+                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,0,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
+                                            <TextBlock Text="2. Góc bẻ thử" FontSize="12" FontWeight="SemiBold" Foreground="#1E293B"/>
+                                            <TextBlock Style="{StaticResource CardHint}" Text="Số liệu bẻ thực tế (dao, denta, mã tấm) khi bảng TraV không tính được góc."/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button Style="{StaticResource DialogSecondaryBtnStyle}" Content="📋  Danh sách" Click="OnTrialListClick"
+                                                    Margin="0,0,6,0" ToolTip="Xem các góc bẻ thử / nội suy / ngoại suy đã có"/>
+                                            <Button x:Name="BtnAddTrialBend" Style="{StaticResource DialogPrimaryBtnStyle}"
+                                                    Content="➕  Bổ sung" Click="OnAddTrialBendClick"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <!-- 3. Thông số tấm -->
+                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="10,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
+                                            <TextBlock Text="3. T thực của tấm" FontSize="12" FontWeight="SemiBold" Foreground="#1E293B"/>
+                                            <TextBlock Style="{StaticResource CardHint}" Text="Tấm chưa có T thực (vd SUS SIMA 6.0). Cần người xác nhận, ghi chú và ảnh."/>
+                                        </StackPanel>
+                                        <Button Grid.Column="1" Style="{StaticResource DialogPrimaryBtnStyle}"
+                                                Content="➕  Bổ sung" Click="OnAddTamClick" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+
+                                <TextBlock x:Name="TxtWriteConfig" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
