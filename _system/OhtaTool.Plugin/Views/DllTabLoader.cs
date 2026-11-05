@@ -32,19 +32,12 @@ namespace OhtaTool.Plugin.Views
             "AutoCAD";
 #endif
 
-        /// <param name="dangKyVoiCad">
-        /// true: chưa nạp thì nạp bằng ExtensionLoader (CAD đăng ký luôn lệnh + hàm lisp).
-        /// false (GROTOOL — mục 207 GURO): chỉ Assembly.LoadFrom để dựng giao diện; việc đăng ký
-        /// để NETLOAD của lisp làm. Trên ZWCAD, ExtensionLoader.Load trước làm NETLOAD sau của
-        /// lisp bỏ qua, các hàm gro_net_* báo "undefined function".
-        /// </param>
-        public static FrameworkElement TaoGiaoDien(ModuleManifest manifest, string tenDll, string tenLop, string tenTab,
-                                                   bool dangKyVoiCad = true)
+        public static FrameworkElement TaoGiaoDien(ModuleManifest manifest, string tenDll, string tenLop, string tenTab)
         {
             try
             {
                 string dll = Path.Combine(manifest.DirectoryPath, "bin", ThuMucNenTang, tenDll + ".dll");
-                Assembly asm = TimHoacNap(dll, tenDll, tenTab, dangKyVoiCad);
+                Assembly asm = TimHoacNap(dll, tenDll, tenTab);
                 if (asm == null)
                     return null;
 
@@ -75,7 +68,7 @@ namespace OhtaTool.Plugin.Views
         /// DLL có thể đã được NETLOAD trước (vd. lisp GRO nạp GROTOOL.dll) -> dùng lại bản đó.
         /// Chưa có thì nạp bằng ExtensionLoader (như NETLOAD) để CAD đăng ký luôn lệnh và hàm lisp của nó.
         /// </summary>
-        private static Assembly TimHoacNap(string dll, string tenDll, string tenTab, bool dangKyVoiCad)
+        private static Assembly TimHoacNap(string dll, string tenDll, string tenTab)
         {
             Assembly daNap = AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(a => string.Equals(a.GetName().Name, tenDll, StringComparison.OrdinalIgnoreCase));
@@ -87,9 +80,6 @@ namespace OhtaTool.Plugin.Views
                 CadCompat.WriteMessage("\n[OHTA TOOL] Khong thay " + dll + " -> tab " + tenTab + " dung danh sach nut.\n");
                 return null;
             }
-
-            if (!dangKyVoiCad)
-                return Assembly.LoadFrom(dll);
 
             CadExtensionLoader.Load(dll);
             return AppDomain.CurrentDomain.GetAssemblies()

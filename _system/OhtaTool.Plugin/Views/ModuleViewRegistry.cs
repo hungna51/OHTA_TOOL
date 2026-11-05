@@ -40,7 +40,7 @@ namespace OhtaTool.Plugin.Views
 
             // Tab Guro: giao diện nằm trong GROTOOL.dll (ADR 0003); không nạp được thì dùng danh sách nút
             Func<ModuleManifest, Action, FrameworkElement> guroFactory = (manifest, reloadCallback) =>
-                DllTabLoader.TaoGiaoDien(manifest, "GROTOOL", "ZwCadPlugin.GuroOhtaTab", "Guro", dangKyVoiCad: false) ??
+                DllTabLoader.TaoGiaoDien(manifest, "GROTOOL", "ZwCadPlugin.GuroOhtaTab", "Guro") ??
                 new ModuleTabControl(new ModuleTabViewModel(manifest, reloadCallback));
 
             Register("guro", guroFactory);

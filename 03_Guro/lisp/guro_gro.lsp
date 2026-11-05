@@ -159,10 +159,11 @@
      ;; bg--uni-them de lan sau khong hoi lai va de bg--uni-cp932 doi nguoc duoc.
      (if (and (null r) (> b2 0) (vl-symbol-value 'gro_net_cp932))
        (progn
+         ;; Muc 208: C# tra (ma) - danh sach 1 phan tu (khong tra so tran: ZWCAD hong cau noi)
          (setq r (vl-catch-all-apply 'gro_net_cp932 (list b1 b2)))
-         (if (and r (not (vl-catch-all-error-p r)) (numberp r) (> r 127))
-           (setq bg--uni-them (cons (list (fix r) b1 b2) bg--uni-them)
-                 r            (fix r)
+         (if (and r (not (vl-catch-all-error-p r)) (listp r) (numberp (car r)) (> (car r) 127))
+           (setq bg--uni-them (cons (list (fix (car r)) b1 b2) bg--uni-them)
+                 r            (fix (car r))
            )
            (setq r nil)
          )
@@ -11535,11 +11536,13 @@
 ;;; Muc 207: ham .NET co GOI DUOC that khong (khong chi co ten). Tren ZWCAD, neu GROTOOL.dll
 ;;; da duoc nap theo duong khac (bang OHTA truoc muc 207 nap bang ExtensionLoader) thi ten
 ;;; gro_net_* van con nhung goi bao "undefined function" -> phai NETLOAD lai.
-;;; Goi thu gro_net_cp932 (vo hai); DLL cu chua co ham do thi xet nhu truoc (gro_net_dsn).
+;;; Muc 208: goi thu gro_net_cong_tac (ham cu, chi doc registry, tra chuoi - da chay on tren
+;;; ZWCAD). KHONG thu bang gro_net_cp932: ban dau ham do tra so tran va lam hong cau noi.
+;;; DLL cu chua co ham do thi xet nhu truoc (gro_net_dsn).
 (defun gro--net-san-sang-p ()
   (cond
-    ((vl-symbol-value 'gro_net_cp932)
-     (not (vl-catch-all-error-p (vl-catch-all-apply 'gro_net_cp932 (list 65 0))))
+    ((vl-symbol-value 'gro_net_cong_tac)
+     (not (vl-catch-all-error-p (vl-catch-all-apply 'gro_net_cong_tac (list "x"))))
     )
     ((vl-symbol-value 'gro_net_dsn) T)
   )
@@ -11566,7 +11569,7 @@
             ((or (vl-symbol-value 'gro_net_dsn) (vl-symbol-value 'gro_net_dst))
              ;; Muc 207: co ten ham nhung van khong goi duoc -> chi con cach mo lai CAD
              (princ (strcat "\n[GRO] Da NETLOAD " dll " nhung ham .NET van khong goi duoc."
-                            "\n      Hay DONG ZWCAD roi mo lai, chay GRO truoc khi mo bang OHTA."))
+                            "\n      Hay DONG ZWCAD roi mo lai."))
             )
             (t (princ (strcat "\n[GRO] Khong nap duoc " dll " - dung hop thoai / bang DCL.")))
           )

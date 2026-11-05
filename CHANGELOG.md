@@ -4,7 +4,7 @@ Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_oh
 
 ## v1.2.3
 
-- Tab **Guro v1.5.3** — sửa lỗi ZWCAD: bấm **Chạy GRO** báo "buoc nhannet (C#) loi: undefined function" và dừng (xảy ra khi bảng OHTA mở trước khi chạy GRO). Nếu vẫn gặp thông báo yêu cầu, đóng ZWCAD rồi mở lại.
+- Tab **Guro v1.5.3** — sửa lỗi ZWCAD (từ v1.2.2): bấm **Chạy GRO** báo "buoc nhannet (C#) loi: undefined function" và dừng, nhất là với bản vẽ có chữ Nhật. Sau khi cập nhật, đóng ZWCAD rồi mở lại.
 
 ## v1.2.2
 
