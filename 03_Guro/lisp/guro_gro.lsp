@@ -885,20 +885,28 @@
 ;;; Bang so luong thi theo ten. Tra ve 11 gia tri theo thu tu (nth 0..10 dlg) cua
 ;;; c:grochay - (nth 7) mau Dim luon nil: muc 194 bo nhan Dim theo mau thu cong.
 (defun gro--tham-so-chay (/ dem kq-k lays-k lays-v lays-x chon lk lv lx)
-  (setq dem    (gro--dem-khung-layer)
-        kq-k   (gro--layer-khung-ds dem T)
-        lays-k (if (nth 2 kq-k) (gro--khung-it-truoc dem) (car kq-k))
-        lays-v (car (gro--layer-khung-ds dem nil))
-        lays-x (car (gro--layer-xln-ds))
-        chon   (if (vl-symbol-value 'gro_net_layer_ban_ve)
-                 (vl-catch-all-apply 'gro_net_layer_ban_ve nil)
-               )
+  ;; Muc 200: ten buoc con - loi o may ZWCAD khac chi bao "khoi dong", khong biet dong nao.
+  (setq gro--buoc "khoi dong: dem khung bao / vung"
+        dem       (gro--dem-khung-layer)
+        kq-k      (gro--layer-khung-ds dem T)
+        lays-k    (if (nth 2 kq-k) (gro--khung-it-truoc dem) (car kq-k))
+        lays-v    (car (gro--layer-khung-ds dem nil))
+        gro--buoc "khoi dong: dem doi tuong layer goc"
+        lays-x    (car (gro--layer-xln-ds))
+        gro--buoc "khoi dong: layer chon tren tab Guro"
+        chon      (if (vl-symbol-value 'gro_net_layer_ban_ve)
+                    (vl-catch-all-apply 'gro_net_layer_ban_ve '())
+                  )
   )
-  (if (vl-catch-all-error-p chon) (setq chon nil))
+  ;; Chi nhan dung danh sach 3 phan tu (chuoi / nil); khac di thi coi nhu chua chon.
+  (if (not (and (listp chon) (vl-list-length chon) (= (vl-list-length chon) 3)))
+    (setq chon nil)
+  )
   (if (null lays-x) (setq lays-x (list "0")))
-  (setq lk (gro--layer-chon (nth 0 chon) lays-k)
-        lv (gro--layer-chon (nth 1 chon) lays-v)
-        lx (gro--layer-chon (nth 2 chon) lays-x)
+  (setq lk        (gro--layer-chon (nth 0 chon) lays-k)
+        lv        (gro--layer-chon (nth 1 chon) lays-v)
+        lx        (gro--layer-chon (nth 2 chon) lays-x)
+        gro--buoc "khoi dong: in tom tat"
   )
   (princ
     (strcat "\nGRO: khung bao=" (if lk lk "?")
@@ -924,21 +932,25 @@
 
 ;;; Layer da chon neu con trong danh sach, khong thi layer dung dau.
 (defun gro--layer-chon (ten ds)
-  (if (and ten (member ten ds)) ten (car ds))
+  (if (and (= (type ten) 'STR) (listp ds) (member ten ds)) ten (if (listp ds) (car ds)))
 )
 
 ;;; Layer khung bao (kin, dung 4 dinh), IT khung nhat truoc, bang nhau theo ten.
 ;;; dem = ket qua gro--dem-khung-layer: ((layer n4 n3) ...).
 (defun gro--khung-it-truoc (dem / loc c)
   (foreach c dem
-    (if (> (nth 1 c) 0) (setq loc (cons (cons (car c) (nth 1 c)) loc)))
+    (if (and (listp c) (numberp (nth 1 c)) (> (nth 1 c) 0))
+      (setq loc (cons (cons (car c) (nth 1 c)) loc))
+    )
   )
-  (mapcar 'car
+  (if loc
+   (mapcar 'car
           (vl-sort loc
                    '(lambda (a b)
                       (if (= (cdr a) (cdr b)) (< (car a) (car b)) (< (cdr a) (cdr b)))
                     )
           )
+   )
   )
 )
 
@@ -13771,6 +13783,7 @@
   ;; --- 1. duong dan CSV + thu quyen ghi -------------------------------------
   ;; Lam TRUOC hop thoai: kiem tra nay im lang va tuc thi, hong thi bao ngay
   ;; chu khong de nguoi dung dien xong hop thoai roi moi bao.
+  (setq gro--buoc "khoi dong: mo thu file CSV")
   (setq don         (vl-string-right-trim "- S A s a . d f x g w" 
                                           (getvar "DWGNAME")
                     )
@@ -13809,7 +13822,8 @@
   ;; --- 2. THIET LAP: doc lai registry MOI LAN chay (muc 192) ---------------
   ;; Tab Guro tren bang OHTA ghi registry ngay khi nguoi dung doi thiet lap, nen
   ;; khong duoc giu gia tri cu trong bien toan cuc nhu truoc.
-  (setq gro--use-in-pdf    (gro--reg-read-bool "use_in_pdf" nil)
+  (setq gro--buoc         "khoi dong: doc cai dat (registry)"
+        gro--use-in-pdf    (gro--reg-read-bool "use_in_pdf" nil)
         gro--use-tao-khung (gro--reg-read-bool "use_tao_khung" T)
         gro--use-vung      (gro--reg-read-bool "use_vung" nil)
         gro--use-xln       (gro--reg-read-bool "use_xln" T)
@@ -13818,6 +13832,7 @@
         gro--use-dat-mk    (gro--reg-read-bool "use_dat_mk" T)
   )
   ;; Tu nap ban .NET (muc 86): layer chon tren tab (gro_net_layer_ban_ve) va cac buoc C#.
+  (setq gro--buoc "khoi dong: nap GROTOOL.dll")
   (gro--nap-net)
   ;; Muc 192/194: khong hop thoai - layer theo ban ve tren tab Guro, cai dat chung o registry.
   (setq dlg (gro--tham-so-chay))
