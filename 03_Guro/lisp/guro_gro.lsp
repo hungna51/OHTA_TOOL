@@ -13736,6 +13736,18 @@
   )
 
   (gro--moc-bat-dau)
+  ;; Muc 199: ban ve moi chua luu (Drawing1) -> DWGPREFIX la thu muc tam, CSV / PDF
+  ;; se ghi lung tung ma khong bao. Chan ngay, chua dong vao ban ve.
+  (if (= 0 (getvar "DWGTITLED"))
+    (progn
+      (setq msg (strcat "BAN VE CHUA LUU\n\n"
+                        "GRO ghi file CSV / PDF canh file ban ve, nen can luu ban ve truoc.\n"
+                        "Hay luu ban ve (Ctrl+S) roi chay lai GRO."))
+      (princ (strcat "\n" msg))
+      (alert msg)
+      (exit)
+    )
+  )
   (setq old-cmdecho (getvar "CMDECHO")
         gro--buoc   "khoi dong"
         dst         '(0.6 0.8 1.0 1.2 1.6 2.3 3.2 4.5 6.0 9.0 12.0 16.0 19.0)

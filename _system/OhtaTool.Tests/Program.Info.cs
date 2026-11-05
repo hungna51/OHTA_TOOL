@@ -57,7 +57,9 @@ namespace OhtaTool.Tests
                 modules.All(x => !System.Text.RegularExpressions.Regex.IsMatch(x.Title ?? "", @"\bv\d")),
                 string.Join(", ", modules.Select(x => x.Title)));
             ModuleManifest guro = modules.FirstOrDefault(x => x.Id == "guro");
-            Check("Info: tab Guro hien GURO · v1.5", guro != null && guro.DisplayTitle == "GURO · v1.5", guro?.DisplayTitle);
+            Check("Info: tab Guro hien GURO · v<version>",
+                guro != null && !string.IsNullOrWhiteSpace(guro.Version) && guro.DisplayTitle == "GURO · v" + guro.Version,
+                guro?.DisplayTitle);
 
             Check("Info: chua kiem tra lan nao",
                 ToolInfoCore.DescribeUpdateStatus(new UpdateState(), "1.1.1") == "Chưa kiểm tra bản mới lần nào.");
