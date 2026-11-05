@@ -99,3 +99,16 @@
 5. **Đo góc trực tiếp từ bản vẽ (`OHTA_FN_PICK_ANGLE`)**:
    - Khi người dùng ấn biểu tượng thước đo `📐`, CAD bật lệnh chọn Dimension góc trên bản vẽ (`Dimension.Measurement`), tự động quy đổi radian sang độ và điền vào ô góc trên bảng.
 
+
+---
+
+## 5. Bố Cục & Liên Kết Các Bảng Dữ Liệu Sheet Fname
+
+1. **Khoá liên kết là giá trị tự nhiên**, không dùng mã ID: `catalog.Loai` → `trav_90.Mat`; `trav_90` = Mat + T + V; `tam` = Loai + T; `trav_thu` = Loai + T + Goc + Dao.
+2. **Thông số theo tấm nằm ở tab `tam`, thông số theo dao nằm ở `trav_90`.** `tam.T_hienthi` = T thực người dùng xem (nhãn "T thực:"); `trav_90.T_thuc` = số dùng trong công thức denta góc tù — **2 đại lượng khác nhau**, không gộp, không sửa `T_thuc` khi đụng tới `tam`.
+3. **SIMA trong `tam` ghi 1 dòng chung** (`SS SIMA`, không kèm chiều) — `TamData.BaseLoai` bỏ đuôi `Trong` / `Ngoài` khi so khớp, cùng quy tắc `tamBaseLoai_` trong Apps Script. Các bảng khác vẫn ghi tên loại kèm chiều (`SS SIMA Ngoài`).
+4. **Đọc theo tên cột** cho `catalog`, `trav_90` (`TraVCalculator.ParseTable90`), `tam`, `trav_thu`, `cau_hinh`. Riêng `trav_nho90` / `trav_nho90r` giữ dạng lưới (đọc theo vị trí). Không có dòng tiêu đề: `trav_90` hiểu theo thứ tự cột cũ, `tam` bỏ qua.
+5. **`T thực` trên bảng**: `TraVCalculator.GetRealThickness` lấy `tam` trước; cột `T_hienthi` cũ của `trav_90` (nếu Sheet chưa chuyển) rồi `T_thuc` chỉ là dự phòng.
+6. **`cau_hinh.phien_ban_toi_thieu`**: bản đang chạy (`OhtaUpdateCommands.LoadedVersion`) thấp hơn → `FnameSheetWriter.Post` chặn mọi action ghi (`submit_request`, `approve_request`, `reject_request`), đọc vẫn cho; bảng Fname hiện dải đỏ.
+7. **Kiểm tra liên kết** (`FnameDataCheck`) sau mỗi lần tải: Loai của catalog không có trong `trav_90`, dòng `tam` trùng khoá hoặc Loai lạ → cảnh báo trong Cài đặt → Dữ liệu, không chặn.
+8. Đổi cấu trúc tab trên Sheet: cập nhật tab `README` đầu Sheet + bảng mục 3 của README nhóm.

@@ -19,5 +19,6 @@
     <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\FnameLocalAdditions.cs" Link="Shared\FnameLocalAdditions.cs" />
     <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\TraVCore.cs" Link="Shared\TraVCore.cs" />
     <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\TraVThuCore.cs" Link="Shared\TraVThuCore.cs" />
+    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\TamCore.cs" Link="Shared\TamCore.cs" />
   </ItemGroup>
 </Project>

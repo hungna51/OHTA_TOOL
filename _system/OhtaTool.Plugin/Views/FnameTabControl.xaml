@@ -926,17 +926,27 @@
             </StackPanel>
         </Border>
 
-        <!-- 3. Thanh phản hồi trạng thái dưới chân Tab -->
-        <Border Grid.Row="3"
-                Background="{Binding FeedbackBgBrush}"
-                BorderBrush="#CFD8DC"
-                BorderThickness="0,1,0,0"
-                Padding="10,5">
-            <TextBlock Text="{Binding FeedbackMessage}"
-                       Foreground="{Binding FeedbackBrush}"
-                       FontSize="11"
-                       FontWeight="Medium"
-                       TextWrapping="Wrap"/>
-        </Border>
+        <!-- 3. Thanh phản hồi trạng thái dưới chân Tab (+ dải đỏ khi bản đang chạy thấp hơn phien_ban_toi_thieu trên Sheet) -->
+        <StackPanel Grid.Row="3">
+            <Border Visibility="{Binding UpdateRequiredVisibility}"
+                    Background="#DC2626"
+                    Padding="10,5">
+                <TextBlock Text="{Binding UpdateRequiredText}"
+                           Foreground="#FFFFFF"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap"/>
+            </Border>
+            <Border Background="{Binding FeedbackBgBrush}"
+                    BorderBrush="#CFD8DC"
+                    BorderThickness="0,1,0,0"
+                    Padding="10,5">
+                <TextBlock Text="{Binding FeedbackMessage}"
+                           Foreground="{Binding FeedbackBrush}"
+                           FontSize="11"
+                           FontWeight="Medium"
+                           TextWrapping="Wrap"/>
+            </Border>
+        </StackPanel>
     </Grid>
 </UserControl>

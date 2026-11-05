@@ -215,6 +215,8 @@
                                             ToolTip="Thư mục chứa CSV mẫu, google_sheet.ini và google_sheet_apps_script.gs"/>
                                 </WrapPanel>
                                 <TextBlock x:Name="TxtUpdateStatus" FontSize="11" Foreground="#334155" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                                <TextBlock x:Name="TxtDataWarnings" FontSize="11" Foreground="#B45309" TextWrapping="Wrap" Margin="0,6,0,0"
+                                           Visibility="Collapsed"/>
                             </StackPanel>
                         </Border>
 

@@ -39,6 +39,8 @@ namespace OhtaTool.Plugin.Core
         private static TraVNho90Table TableNho90 = new TraVNho90Table();
         private static TraVNho90RTable TableNho90R = new TraVNho90RTable();
         private static List<TraVThuRecord> TableThu = new List<TraVThuRecord>();
+        private static List<TamRecord> TableTam = new List<TamRecord>();
+        private static Dictionary<string, string> SheetConfig = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         public static List<TraVCandidate> GetBendOptionsForFname(string fnameM, string fnameT, double angle)
         {
@@ -75,6 +77,15 @@ namespace OhtaTool.Plugin.Core
                 return string.Empty;
 
             List<string> matKeys = GetTraVMaterialKeys(fnameM);
+
+            // Bảng tam (Loai + T) là nơi chính; cột T_hienthi cũ của trav_90 chỉ còn dùng khi Sheet chưa chuyển xong
+            foreach (string matKey in matKeys)
+            {
+                TamRecord tam = TamData.Find(TableTam, matKey, targetT);
+                if (tam != null)
+                    return tam.THienThi;
+            }
+
             foreach (string matKey in matKeys)
             {
                 var row = Table90.FirstOrDefault(r => string.Equals(r.Mat, matKey, StringComparison.OrdinalIgnoreCase) &&
@@ -852,37 +863,77 @@ namespace OhtaTool.Plugin.Core
             foreach (TraVThuRecord r in TraVThuLocalAdditions.Load(cacheDirectory))
                 TraVThuData.Upsert(thu, r);
             TableThu = thu;
+
+            TableTam = TamData.Parse(FnameDataStore.ReadLines(moduleDirectory, "tam", cacheDirectory));
+            SheetConfig = FnameSheetConfig.Parse(FnameDataStore.ReadLines(moduleDirectory, "cau_hinh", cacheDirectory));
         }
 
+        /// <summary>Cấu hình tab cau_hinh trên Sheet (vd phien_ban_toi_thieu).</summary>
+        public static IDictionary<string, string> GetSheetConfig() => SheetConfig;
+
+        /// <summary>Cảnh báo liên kết giữa catalog / trav_90 / tam (hiện trong Cài đặt).</summary>
+        public static List<string> GetDataWarnings(FnameCatalogData catalog) =>
+            FnameDataCheck.Check(catalog, Table90.Select(r => r.Mat), TableTam);
+
+        // Tên cột trav_90 trên Sheet (đã bỏ dấu, viết hoa, bỏ "_") -> vị trí mặc định khi file không có dòng tiêu đề
+        private static readonly string[] Table90Columns =
+        {
+            "MAT", "T", "TTHUC", "V", "HIKISHIRO90", "DENTA90", "RI", "SAICHOU", "LSAITEI", "ZSAITEI",
+            "JITSUNAIR", "NAIR", "GAIR", "REND", "THIENTHI"
+        };
+
+        /// <summary>
+        /// Đọc trav_90 theo tên cột (dòng tiêu đề), nên thêm / bớt / đổi thứ tự cột trên Sheet không làm đọc lệch.
+        /// Không có dòng tiêu đề thì hiểu theo thứ tự Table90Columns. Thiếu cột T_hienthi (đã chuyển sang tab tam) vẫn đọc được.
+        /// </summary>
         internal static List<TraV90Row> ParseTable90(string[] rawLines)
         {
             var list = new List<TraV90Row>();
+            var idx = new Dictionary<string, int>();
+            for (int i = 0; i < Table90Columns.Length; i++)
+                idx[Table90Columns[i]] = i;
+
             foreach (string line in rawLines)
             {
                 string[] p = line.Split(',');
-                if (p.Length < 7) continue;
-                if (!double.TryParse(p[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double t))
-                    continue; // dòng tiêu đề
+                if (p.Length < 2) continue;
 
-                var row = new TraV90Row
+                // dòng tiêu đề (có cột Mat và T): lấy vị trí theo tên cột
+                var head = p.Select(h => TraVThuData.Fold(h).Replace("_", string.Empty).Replace(" ", string.Empty)).ToList();
+                if (head.Contains("MAT") && head.Contains("T"))
                 {
-                    Mat = p[0].Trim(),
+                    idx.Clear();
+                    for (int i = 0; i < head.Count; i++)
+                        if (!idx.ContainsKey(head[i]))
+                            idx[head[i]] = i;
+                    continue;
+                }
+
+                string Cell(string name) => idx.TryGetValue(name, out int i) && i < p.Length ? p[i].Trim() : string.Empty;
+                double Num(string name) => double.TryParse(Cell(name), NumberStyles.Float, CultureInfo.InvariantCulture, out double v) ? v : 0.0;
+                if (!double.TryParse(Cell("T"), NumberStyles.Float, CultureInfo.InvariantCulture, out double t))
+                    continue; // dòng tiêu đề lạ / dòng rỗng
+                if (Cell("MAT").Length == 0 || Cell("V").Length == 0)
+                    continue;
+
+                list.Add(new TraV90Row
+                {
+                    Mat = Cell("MAT"),
                     T = t,
-                    Tthuc = double.TryParse(p[2].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double tt) ? tt : 0.0,
-                    V = p[3].Trim(),
-                    V2 = p[4].Trim(),
-                    Denta90 = double.TryParse(p[5].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double d90) ? d90 : 0.0,
-                    Ri = double.TryParse(p[6].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double ri) ? ri : 0.0,
-                    C8 = p.Length > 7 ? p[7].Trim() : "",
-                    C9 = p.Length > 8 ? p[8].Trim() : "",
-                    C10 = p.Length > 9 ? p[9].Trim() : "",
-                    C11 = p.Length > 10 ? p[10].Trim() : "",
-                    C12 = p.Length > 11 ? p[11].Trim() : "",
-                    C13 = p.Length > 12 ? p[12].Trim() : "",
-                    C14 = p.Length > 13 ? p[13].Trim() : "",
-                    C15 = p.Length > 14 ? p[14].Trim() : ""
-                };
-                list.Add(row);
+                    Tthuc = Num("TTHUC"),
+                    V = Cell("V"),
+                    V2 = Cell("HIKISHIRO90"),
+                    Denta90 = Num("DENTA90"),
+                    Ri = Num("RI"),
+                    C8 = Cell("SAICHOU"),
+                    C9 = Cell("LSAITEI"),
+                    C10 = Cell("ZSAITEI"),
+                    C11 = Cell("JITSUNAIR"),
+                    C12 = Cell("NAIR"),
+                    C13 = Cell("GAIR"),
+                    C14 = Cell("REND"),
+                    C15 = Cell("THIENTHI")
+                });
             }
 
             return list;

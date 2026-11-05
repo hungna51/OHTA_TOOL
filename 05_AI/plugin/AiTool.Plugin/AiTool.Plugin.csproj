@@ -86,6 +86,7 @@
     <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\FnameLocalAdditions.cs" Link="Shared\FnameLocalAdditions.cs" />
     <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\TraVCore.cs" Link="Shared\TraVCore.cs" />
     <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\TraVThuCore.cs" Link="Shared\TraVThuCore.cs" />
+    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\TamCore.cs" Link="Shared\TamCore.cs" />
   </ItemGroup>
 
   <!-- Xuat DLL ra 05_AI/bin/ZwCAD va 05_AI/bin/AutoCAD (build_ohta.ps1 tat buoc nay va tu chep) -->

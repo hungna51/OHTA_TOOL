@@ -145,6 +145,14 @@ namespace OhtaTool.Plugin.ViewModels
 
         public Visibility PendingBadgeVisibility => _isApprovalAdmin && _pendingCount > 0 ? Visibility.Visible : Visibility.Collapsed;
 
+        /// <summary>Dải đỏ khi bản đang chạy thấp hơn phien_ban_toi_thieu (tab cau_hinh) — mọi lệnh ghi lên Sheet bị khoá.</summary>
+        public Visibility UpdateRequiredVisibility => FnameSheetWriter.IsUpdateRequired() ? Visibility.Visible : Visibility.Collapsed;
+
+        public string UpdateRequiredText => FnameSheetWriter.IsUpdateRequired() ? "⚠ " + FnameSheetWriter.UpdateRequiredMessage() : string.Empty;
+
+        /// <summary>Cảnh báo liên kết dữ liệu (catalog / trav_90 / tam) của lần tải gần nhất — hiện trong Cài đặt.</summary>
+        public List<string> DataWarnings { get; private set; } = new List<string>();
+
         public Visibility ApprovalTabVisibility => _isApprovalAdmin ? Visibility.Visible : Visibility.Collapsed;
 
         /// <summary>Tải danh sách yêu cầu chờ duyệt ở luồng nền, cập nhật số đỏ. Trả về dòng trạng thái.</summary>
@@ -236,6 +244,10 @@ namespace OhtaTool.Plugin.ViewModels
             ZOptions.Clear();
             foreach (string z in _catalog.GetDistinctZList())
                 ZOptions.Add(z);
+
+            DataWarnings = TraVCalculator.GetDataWarnings(_catalog);
+            OnPropertyChanged(nameof(UpdateRequiredVisibility));
+            OnPropertyChanged(nameof(UpdateRequiredText));
         }
 
         /// <summary>
@@ -1104,6 +1116,7 @@ namespace OhtaTool.Plugin.ViewModels
         {
             var dlg = new FnameSettingsWindow(_lockZInput, _autoIncrementN, Path.Combine(_manifest.DirectoryPath, "data"), UpdateDataFromSheetAsync);
             dlg.SetDataInfo(FnameSheetWriter.IsConfigured(_manifest.DirectoryPath), FnameDataStore.DefaultCacheDirectory, FnameDataSync.LastSyncDate());
+            dlg.SetDataWarnings(DataWarnings);
             dlg.AttachApprovals(this);
             dlg.OpenMaterialEditor = owner =>
             {

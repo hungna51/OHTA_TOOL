@@ -6,15 +6,15 @@ using System.Text;
 namespace OhtaTool.Plugin.Core
 {
     /// <summary>
-    /// Nơi đọc các bảng dữ liệu Fname (catalog, trav_90, trav_nho90, trav_nho90r, trav_thu) dạng CSV.
+    /// Nơi đọc các bảng dữ liệu Fname (catalog, trav_90, trav_nho90, trav_nho90r, trav_thu, tam, cau_hinh) dạng CSV.
     /// Ưu tiên bản tải từ Google Sheet trong cache máy, không có thì dùng bản mẫu 01_Fname/data/.
     /// </summary>
     public static class FnameDataStore
     {
-        public static readonly string[] TableNames = { "catalog", "trav_90", "trav_nho90", "trav_nho90r", "trav_thu" };
+        public static readonly string[] TableNames = { "catalog", "trav_90", "trav_nho90", "trav_nho90r", "trav_thu", "tam", "cau_hinh" };
 
         /// <summary>Bảng chưa khai gid trong google_sheet.ini thì bỏ qua khi tải (giữ cache cũ / CSV mẫu) thay vì báo lỗi.</summary>
-        public static bool IsOptionalTable(string table) => table == "trav_thu";
+        public static bool IsOptionalTable(string table) => table == "trav_thu" || table == "tam" || table == "cau_hinh";
 
         public static string DefaultCacheDirectory =>
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OHTA_TOOL", "fname_data");
@@ -67,7 +67,9 @@ namespace OhtaTool.Plugin.Core
                 {
                     case "catalog": ok = FnameCatalogData.Parse(lines).Materials.Count > 0; break;
                     case "trav_90": ok = TraVCalculator.ParseTable90(lines).Count > 0; break;
-                    case "trav_thu": ok = TraVThuData.HasHeader(lines); break; // góc bẻ thử: chưa có dòng nào vẫn hợp lệ
+                    case "trav_thu": ok = TraVThuData.HasHeader(lines); break;
+                    case "tam": ok = TamData.HasHeader(lines); break;
+                    case "cau_hinh": ok = FnameSheetConfig.HasHeader(lines); break; // góc bẻ thử: chưa có dòng nào vẫn hợp lệ
                     default: ok = TraVCalculator.ParseGridRowCount(lines) > 0; break;
                 }
                 if (!ok)

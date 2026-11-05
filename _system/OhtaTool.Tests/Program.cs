@@ -35,6 +35,7 @@ namespace OhtaTool.Tests
             TestFnameComputeDraggedTextHeight();
             TestTraVCalculations();
             TestTrialBendLookup();
+            TestTamTableAndConfig();
             TestPressOneTimeFormatAndParsing();
             TestFnameRecordBendAndPressOrdering();
             TestFnameParserWithBendAndPress();
@@ -518,6 +519,53 @@ namespace OhtaTool.Tests
             Check("T thuc SS400 T=14.0 (khong co trong bang TraV) tra ra rong ''", TraVCalculator.GetRealThickness("SS400", "14.0") == "");
             Check("T thuc SUS304 2B T=0.1 (khong co trong bang TraV) tra ra rong ''", TraVCalculator.GetRealThickness("SUS304 2B", "0.1") == "");
             Check("T thuc SUS SIMA T=4.0 (dong trong bang khong co T_thuc) tra ra rong ''", TraVCalculator.GetRealThickness("SUS304 縞板", "4.0") == "");
+        }
+
+        private static void TestTamTableAndConfig()
+        {
+            // trav_90 doc theo ten cot: dao thu tu cot + bo T_hienthi van doc dung
+            var t90 = TraVCalculator.ParseTable90(new[]
+            {
+                "V,Mat,Ri,T,Denta90,T_thuc,HikiShiro_90",
+                "16,SS,2,3.2,2.6,3,2.6"
+            });
+            Check("trav_90 doc theo ten cot (dao thu tu, khong co T_hienthi)",
+                t90.Count == 1 && t90[0].Mat == "SS" && t90[0].V == "16" && Math.Abs(t90[0].Tthuc - 3) < 1e-9 && t90[0].V2 == "2.6" && t90[0].C15 == "");
+            Check("trav_90 khong co dong tieu de -> doc theo thu tu mac dinh",
+                TraVCalculator.ParseTable90(new[] { "SS,3.2,3,16,2.6,2.6,2" }).Single().V == "16");
+
+            // Bang tam: SIMA 1 dong chung cho ca Trong / Ngoai
+            Check("BaseLoai bo chieu SIMA, giu loai thuong",
+                TamData.BaseLoai("SUS SIMA Ngoài") == "SUS SIMA" && TamData.BaseLoai("sus sima trong") == "SUS SIMA" && TamData.BaseLoai("SS") == "SS");
+            var tam = TamData.Parse(new[] { "T,Loai,T_hienthi,Nguon", "6.0,SUS SIMA,7.3,Bổ sung", "3.2,SS,3,OFT" });
+            Check("Tam: SUS SIMA 6.0 dung cho ca Trong va Ngoai",
+                TamData.Find(tam, "SUS SIMA Trong", 6)?.THienThi == "7.3" && TamData.Find(tam, "SUS SIMA Ngoài", 6.0)?.Nguon == "Bổ sung"
+                && TamData.Find(tam, "SUS", 6) == null);
+            Check("Tam: khong co dong tieu de -> khong doan cot", TamData.Parse(new[] { "SS,3.2,3" }).Count == 0);
+
+            // File mau: T thuc lay tu tam.csv
+            Check("CSV mau tam.csv co du SIMA gop 1 dong",
+                TamData.Parse(FnameDataStore.ReadLines(FnameDir, "tam", NoCache)).Count(r => r.Loai == "SS SIMA") == 5);
+            Check("T thuc SUS SIMA 3.0 lay tu tam = 4.5", TraVCalculator.GetRealThickness("SUS304 縞板", "3.0") == "4.5");
+
+            // Phien ban toi thieu (tab cau_hinh)
+            var cfg = FnameSheetConfig.Parse(new[] { "Khoa,Gia_tri,Ghi_chu", "phien_ban_toi_thieu,1.3.0,x" });
+            Check("cau_hinh: 1.2.0 < 1.3.0 -> phai cap nhat; 1.3.0 / 1.4 -> khong",
+                FnameVersionGate.IsOutdated("1.2.0", cfg) && !FnameVersionGate.IsOutdated("1.3.0", cfg) && !FnameVersionGate.IsOutdated("1.4", cfg));
+            Check("cau_hinh: trong / sai -> khong chan",
+                !FnameVersionGate.IsOutdated("1.0", new Dictionary<string, string>()) &&
+                !FnameVersionGate.IsOutdated("1.0", FnameSheetConfig.Parse(new[] { "Khoa,Gia_tri", "phien_ban_toi_thieu,abc" })));
+            Check("cau_hinh: kiem tra tieu de", FnameSheetConfig.HasHeader(new[] { "Khoa,Gia_tri" }) && !FnameSheetConfig.HasHeader(new[] { "a,b" }));
+
+            // Kiem tra lien ket
+            var cat = FnameCatalogData.Parse(new[] { "M,Loai,Z,T_list", "SS400,SS,SS400,3.2", "XX1,ZZZ,,1.0", "XX 縞板,SUS,,3.0" });
+            var warn = FnameDataCheck.Check(cat, new[] { "SS", "SUS", "SUS SIMA Trong" },
+                TamData.Parse(new[] { "Loai,T,T_hienthi", "SUS SIMA,3,4.5", "SUS SIMA,3.0,4.6", "QQ,1,1" }));
+            Check("Kiem tra lien ket: bao Loai ZZZ, trung dong SUS SIMA 3, tam QQ; khong bao SS / SUS",
+                warn.Count == 3 && warn.Any(w => w.Contains("ZZZ")) && warn.Any(w => w.Contains("trùng")) && warn.Any(w => w.Contains("\"QQ\"")),
+                string.Join(" | ", warn));
+            Check("File mau hien tai khong co canh bao lien ket", TraVCalculator.GetDataWarnings(FnameCatalogData.LoadFromModuleDirectory(FnameDir, NoCache)).Count == 0,
+                string.Join(" | ", TraVCalculator.GetDataWarnings(FnameCatalogData.LoadFromModuleDirectory(FnameDir, NoCache))));
         }
 
         private static void TestTrialBendLookup()

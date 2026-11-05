@@ -63,6 +63,22 @@ namespace OhtaTool.Plugin.Views
         public Action<Window> OpenMaterialEditor { get; set; }
 
         /// <summary>Điền tab Dữ liệu / Thông tin: trạng thái cấu hình ghi Sheet, đường dẫn cache, lần đồng bộ cuối.</summary>
+        /// <summary>Cảnh báo liên kết giữa các bảng (catalog / trav_90 / tam) của lần tải dữ liệu gần nhất.</summary>
+        public void SetDataWarnings(System.Collections.Generic.IList<string> warnings)
+        {
+            if (warnings == null || warnings.Count == 0)
+            {
+                TxtDataWarnings.Visibility = Visibility.Collapsed;
+                return;
+            }
+            const int max = 8;
+            string text = "⚠ Dữ liệu Sheet có " + warnings.Count + " chỗ cần xem lại:\n• "
+                + string.Join("\n• ", System.Linq.Enumerable.Take(warnings, max))
+                + (warnings.Count > max ? $"\n… và {warnings.Count - max} chỗ khác." : string.Empty);
+            TxtDataWarnings.Text = text;
+            TxtDataWarnings.Visibility = Visibility.Visible;
+        }
+
         public void SetDataInfo(bool writeConfigured, string cacheFolder, string lastSync)
         {
             TxtWriteConfig.Text = writeConfigured

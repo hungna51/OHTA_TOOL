@@ -313,3 +313,115 @@ function mergeT_(oldList, newList) {
 function reply_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
+
+// ---------- Chuyển dữ liệu 1 lần: T_hienthi của trav_90 -> tab "tam" (chạy tay trong trình chỉnh sửa) ----------
+//
+// Bước 1: chuyenDoiTam_Buoc1()  — tạo tab tam / cau_hinh / README, KHÔNG sửa trav_90. Xem kết quả ở Nhật ký thực thi.
+// Bước 2: chuyenDoiTam_Buoc2_XoaCotTHienThi() — chỉ chạy khi đã kiểm tra tab tam đúng; xoá cột T_hienthi khỏi trav_90.
+// Cột T_thuc của trav_90 (dùng tính denta góc tù) giữ nguyên, không đụng tới.
+
+var TAM_SHEET_NAME = 'tam';
+var TAM_HEADER = ['Loai', 'T', 'T_hienthi', 'Nguon', 'Nguoi_xac_nhan', 'Ghi_chu', 'Anh', 'Ngay'];
+var CAU_HINH_SHEET_NAME = 'cau_hinh';
+var README_SHEET_NAME = 'README';
+
+function chuyenDoiTam_Buoc1() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById(SPREADSHEET_ID);
+  if (ss.getSheetByName(TAM_SHEET_NAME)) throw new Error('Tab "tam" đã có — không chạy lại bước 1 (xoá tab tam nếu muốn làm lại).');
+  var t90 = ss.getSheetByName('trav_90');
+  if (!t90) throw new Error('Không thấy tab trav_90.');
+
+  var vals = t90.getDataRange().getDisplayValues();
+  var head = vals[0].map(function (h) { return fold_(h).replace(/[_\s]/g, ''); });
+  var iM = head.indexOf('MAT'), iT = head.indexOf('T'), iH = head.indexOf('THIENTHI');
+  if (iM < 0 || iT < 0 || iH < 0) throw new Error('trav_90 thiếu cột Mat / T / T_hienthi (có thể đã chuyển rồi).');
+
+  var map = {}, order = [], conflicts = [];
+  for (var r = 1; r < vals.length; r++) {
+    var v = String(vals[r][iH]).trim();
+    if (!v) continue;
+    var b = tamBaseLoai_(vals[r][iM]);
+    var key = b.key + '|' + parseFloat(vals[r][iT]);
+    if (map[key]) {
+      if (parseFloat(map[key].v) !== parseFloat(v))
+        conflicts.push(vals[r][iM] + ' T=' + vals[r][iT] + ': ' + map[key].v + ' / ' + v);
+      continue;
+    }
+    map[key] = { loai: b.display, t: String(vals[r][iT]).trim(), v: v, sortKey: b.key, tNum: parseFloat(vals[r][iT]) };
+    order.push(key);
+  }
+  if (conflicts.length) throw new Error('Dừng: SIMA Trong / Ngoài khác số, cần quyết định trước:\n' + conflicts.join('\n'));
+
+  var rows = order.map(function (k) { return map[k]; })
+    .sort(function (a, b) { return a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : a.tNum - b.tNum; })
+    .map(function (x) { return [x.loai, x.t, x.v, 'OFT', '', '', '', '']; });
+
+  var sh = ss.insertSheet(TAM_SHEET_NAME);
+  sh.getRange(1, 1, 1, TAM_HEADER.length).setValues([TAM_HEADER]).setFontWeight('bold');
+  if (rows.length) sh.getRange(2, 1, rows.length, TAM_HEADER.length).setNumberFormat('@').setValues(rows);
+  sh.setFrozenRows(1);
+
+  var created = ['tam (' + rows.length + ' dòng)'];
+  if (!ss.getSheetByName(CAU_HINH_SHEET_NAME)) {
+    var ch = ss.insertSheet(CAU_HINH_SHEET_NAME);
+    ch.getRange(1, 1, 2, 3).setNumberFormat('@').setValues([
+      ['Khoa', 'Gia_tri', 'Ghi_chu'],
+      ['phien_ban_toi_thieu', '1.2.0', 'Máy chạy bản thấp hơn bị khoá các nút gửi lên Sheet (bản 1.3 trở lên mới kiểm tra)']
+    ]);
+    ch.getRange(1, 1, 1, 3).setFontWeight('bold');
+    created.push('cau_hinh');
+  }
+  if (!ss.getSheetByName(README_SHEET_NAME)) {
+    taoReadme_(ss);
+    created.push('README');
+  }
+  var msg = 'Bước 1 xong: đã tạo ' + created.join(', ') + '. gid tab tam = ' + sh.getSheetId() +
+    (ss.getSheetByName(CAU_HINH_SHEET_NAME) ? ', gid cau_hinh = ' + ss.getSheetByName(CAU_HINH_SHEET_NAME).getSheetId() : '') +
+    '. trav_90 chưa bị sửa.';
+  Logger.log(msg);
+  return msg;
+}
+
+function chuyenDoiTam_Buoc2_XoaCotTHienThi() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById(SPREADSHEET_ID);
+  var tam = ss.getSheetByName(TAM_SHEET_NAME);
+  if (!tam || tam.getLastRow() < 2) throw new Error('Tab tam chưa có dữ liệu — chạy bước 1 trước.');
+  var t90 = ss.getSheetByName('trav_90');
+  var head = t90.getRange(1, 1, 1, t90.getLastColumn()).getDisplayValues()[0].map(function (h) { return fold_(h).replace(/[_\s]/g, ''); });
+  var iH = head.indexOf('THIENTHI');
+  if (iH < 0) { Logger.log('trav_90 không còn cột T_hienthi — không làm gì.'); return 'Không còn cột T_hienthi.'; }
+  t90.deleteColumn(iH + 1);
+  var msg = 'Bước 2 xong: đã xoá cột T_hienthi khỏi trav_90 (cột T_thuc giữ nguyên).';
+  Logger.log(msg);
+  return msg;
+}
+
+// "SUS SIMA Ngoài" -> { key: 'SUS SIMA', display: 'SUS SIMA' }; loại thường giữ nguyên (cùng TamData.BaseLoai phía C#)
+function tamBaseLoai_(loai) {
+  var raw = String(loai).trim();
+  var key = fold_(raw).replace(/\s+/g, ' ');
+  if (key.indexOf(' SIMA ') >= 0 && /( TRONG| NGOAI)$/.test(key))
+    return { key: key.substring(0, key.lastIndexOf(' ')), display: raw.substring(0, raw.lastIndexOf(' ')) };
+  return { key: key, display: raw };
+}
+
+function taoReadme_(ss) {
+  var sh = ss.insertSheet(README_SHEET_NAME, 0);
+  var rows = [
+    ['Tab', 'Nội dung', 'Khoá liên kết', 'Ai sửa'],
+    ['catalog', 'Mác vật liệu M=: loại vật liệu, mã phôi Z=, danh sách độ dày T=', 'M; cột Loai trỏ tới Mat của trav_90', 'Sửa tay / tool ghi khi admin duyệt'],
+    ['trav_90', 'TraV góc 90° theo dao: T_thuc (tính denta góc tù), 引代, denta, Ri, 最長, L/Z最低, R...', 'Mat + T + V', 'Sửa tay (bảng chuẩn OFT)'],
+    ['tam', 'Thông số theo tấm: T_hienthi = T thực để xem / tính toán. SIMA ghi 1 dòng chung (SS SIMA)', 'Loai + T', 'Sửa tay (Nguon = OFT) / tool ghi khi admin duyệt (Nguon = Bổ sung, kèm ảnh + người xác nhận)'],
+    ['trav_nho90', 'Denta góc nhọn < 90° (dạng lưới: 3 dòng đầu = vật liệu / dao / độ dày theo cột)', 'vị trí cột', 'Sửa tay'],
+    ['trav_nho90r', 'R ngoài góc nhọn (cùng bố cục trav_nho90)', 'vị trí cột', 'Sửa tay'],
+    ['trav_thu', 'Góc bẻ thử thực tế / nội suy / ngoại suy kèm mã tấm', 'Loai + T + Goc + Dao', 'Tool ghi khi admin duyệt'],
+    ['update', 'Hàng chờ duyệt (tool tự tạo)', 'ID', 'Tool'],
+    ['admin', 'Tên máy được duyệt (cột A)', '—', 'Chủ Sheet'],
+    ['cau_hinh', 'Cấu hình chung, vd phien_ban_toi_thieu', 'Khoa', 'Chủ Sheet'],
+    ['Lưu ý', 'Tool đọc theo TÊN CỘT (trừ trav_nho90 / trav_nho90r): đổi tên cột sẽ làm tool bỏ qua cột đó. Locale Sheet = United States.', '', '']
+  ];
+  sh.getRange(1, 1, rows.length, 4).setValues(rows).setWrap(true).setVerticalAlignment('top');
+  sh.getRange(1, 1, 1, 4).setFontWeight('bold');
+  sh.setColumnWidth(1, 110); sh.setColumnWidth(2, 460); sh.setColumnWidth(3, 200); sh.setColumnWidth(4, 260);
+  sh.setFrozenRows(1);
+}

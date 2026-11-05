@@ -14,7 +14,7 @@ Khi bấm vào Tab **`Fname`** trên bảng `OHTA`, giao diện bố trí trực
   - **Cột trái - Khối Thông Tin F-NAME** (5 hàng độc lập, căn thẳng lề trái):
     - **Hàng 1**: **`N=`** *(Part Name)* (kèm nút `+1` tăng nhanh số thứ tự).
     - **Hàng 2**: **`M=`** *(Material)*: Mác vật liệu tiêu chuẩn hoặc nhập tự do.
-    - **Hàng 3**: **`T=`** *(Thickness)*: Chiều dày danh nghĩa, kèm nhãn hiển thị ngay bên cạnh **`T thực:`** (tự động tra cứu độ dày thực tế khi chấn bẻ từ bảng chuẩn OFT).
+    - **Hàng 3**: **`T=`** *(Thickness)*: Chiều dày danh nghĩa, kèm nhãn hiển thị ngay bên cạnh **`T thực:`** (lấy cột `T_hienthi` của tab `tam` theo Loại + T).
     - **Hàng 4**: **`Q=`** *(Quantity)*: Số lượng sản xuất của chi tiết (kèm 2 nút `−` và `+`).
     - **Hàng 5**: **`Z=`** *(Base Material)*: Mã phôi quản lý (tự động cố định theo `M=`, có thể mở khóa trong Cài đặt).
 - **Quy tắc đặc thù tấm SIMA (縞板 - Tôn gân / tôn nhám)**: Với tất cả các mác vật liệu SIMA (`SS400 縞板`, `ムキ 縞板`, `SUS304 縞板`, hoặc `Z=*-SIMA`), ngay dưới dòng `Z=` luôn luôn tự động có dòng ghi chú **`裏から見た図`** (Nhìn từ mặt sau/mặt đáy).
@@ -56,12 +56,14 @@ Các khối xem trước & mở rộng:
 
 ## 3. Dữ Liệu Tra Cứu Trên Google Sheet (`data/`)
 
-4 bảng dữ liệu được quản lý trên **1 Google Sheet** (mỗi bảng 1 tab), mọi máy tự tải về:
+Các bảng dữ liệu được quản lý trên **1 Google Sheet** (mỗi bảng 1 tab; tab `README` đầu Sheet mô tả từng tab), mọi máy tự tải về. Tool đọc theo **tên cột** (trừ 2 bảng lưới góc nhọn), nên thứ tự cột trên Sheet tùy ý:
 
 | Tab / file CSV | Nội dung |
 |---|---|
 | `catalog` | `M,Loai,Z,T_list` — mác vật liệu, **loại vật liệu** (`SS`, `SUS`, `AL`, `BON`… = mã cột `Mat` của bảng `trav_90`), mã phôi Z=, danh sách độ dày (cách nhau dấu cách). Cột đọc theo tên tiêu đề nên thứ tự cột tùy ý |
-| `trav_90` | Bảng TraV 90° (155 dòng): T thực, dao V, 引代, denta, Ri, 最長, L/Z最低, 内R/外R... |
+| `trav_90` | Bảng TraV 90° theo dao (khoá Mat + T + V): `T_thuc` (**chỉ dùng tính denta góc tù**), dao V, 引代, denta, Ri, 最長, L/Z最低, 内R/外R... |
+| `tam` *(tùy chọn)* | `Loai,T,T_hienthi,Nguon,Nguoi_xac_nhan,Ghi_chu,Anh,Ngay` — thông số theo **tấm** (khoá Loai + T). `T_hienthi` = T thực để người dùng xem / tính toán (số trên nhãn "T thực:"). SIMA ghi **1 dòng chung** (`SS SIMA`) cho cả Trong lẫn Ngoài. `Nguon` = `OFT` hoặc `Bổ sung` (kèm ảnh + người xác nhận) |
+| `cau_hinh` *(tùy chọn)* | `Khoa,Gia_tri,Ghi_chu` — `phien_ban_toi_thieu`: máy chạy bản thấp hơn hiện dải đỏ "Cần cập nhật" và bị khoá mọi lệnh ghi lên Sheet (vẫn đặt / sửa Fname được) |
 | `trav_nho90` | Bảng độ dãn góc nhọn < 90° (3 dòng đầu: vật liệu / dao / độ dày theo cột) |
 | `trav_nho90r` | Bảng R ngoài góc nhọn (cùng bố cục với `trav_nho90`) |
 | `trav_thu` *(tùy chọn)* | `Loai,T,Goc,Dao,Denta,Ma_tam,Dinh_danh` — **góc bẻ thử** đo thực tế (`Dinh_danh = Bẻ thử`) và góc tool nội suy đã được duyệt (`Nội suy`). Chỉ dùng khi bảng TraV không tính được góc. Chưa điền `trav_thu=<gid>` trong `google_sheet.ini` thì bỏ qua bảng này khi tải |

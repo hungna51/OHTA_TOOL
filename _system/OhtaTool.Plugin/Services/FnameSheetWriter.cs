@@ -176,11 +176,28 @@ namespace OhtaTool.Plugin.Services
             }
         }
 
+        /// <summary>Máy đang chạy bản thấp hơn phien_ban_toi_thieu trên tab cau_hinh của Sheet.</summary>
+        public static bool IsUpdateRequired() =>
+            FnameVersionGate.IsOutdated(OhtaUpdateCommands.LoadedVersion, TraVCalculator.GetSheetConfig());
+
+        public static string UpdateRequiredMessage()
+        {
+            TraVCalculator.GetSheetConfig().TryGetValue(FnameSheetConfig.MinVersionKey, out string min);
+            return $"Cần cập nhật OHTA TOOL: máy đang chạy v{OhtaUpdateCommands.LoadedVersion}, dữ liệu Fname yêu cầu từ v{min} trở lên "
+                + "(gõ OHTAUPDATE). Trong lúc chờ vẫn đặt / sửa Fname được, chỉ khoá gửi dữ liệu lên Google Sheet.";
+        }
+
         // ---------- Gọi Apps Script ----------
 
         private static FnameSheetReply Post(string moduleDirectory, string action, Dictionary<string, string> fields, out string error)
         {
             error = null;
+            // Bản thấp hơn phien_ban_toi_thieu (tab cau_hinh) không được ghi lên Sheet; đọc vẫn được
+            if (action != "list_requests" && action != "my_requests" && IsUpdateRequired())
+            {
+                error = UpdateRequiredMessage();
+                return null;
+            }
             Dictionary<string, string> cfg = FnameDataSync.ReadConfig(moduleDirectory);
             string url = cfg.Get("write_url");
             string key = cfg.Get("write_key");
