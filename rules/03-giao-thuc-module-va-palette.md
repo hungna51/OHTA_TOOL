@@ -46,13 +46,26 @@ Mỗi thư mục con trong `OHTA_TOOL/` tương ứng với một **Tab sườn 
 | `order` | Tùy chọn | Số thứ tự ưu tiên hiển thị Tab từ trên xuống dưới (nhỏ xếp trước, mặc định `1000`). |
 | `tabTitle` | Khuyến nghị | Nhãn ngắn gọn hiển thị trực tiếp trên **dải Tab dọc** của CAD PaletteSet (nên dài từ 6–20 ký tự để dễ đọc). |
 | `title` | Tùy chọn | Tiêu đề đầy đủ hiển thị trên phần Header bên trong Tab. **Không ghi phiên bản vào đây** — dùng `version`. |
-| `version` | Khuyến nghị | Phiên bản riêng của tab (chuỗi, vd `"1.5"`). Header tự hiện `title · v1.5`; tab **Info** liệt kê phiên bản mọi tab. **Sửa tab nào thì tăng `version` của tab đó** trong cùng commit. Bản phát hành luôn thắng khi gộp `module.json` (không thuộc `HeaderKeys`). |
+| `version` | Khuyến nghị | Phiên bản riêng của tab (chuỗi, vd `"1.5"`). Header tự hiện `title · v1.5`; tab **Info** liệt kê phiên bản mọi tab. **Sửa tab nào thì tăng `version` của tab đó** trong cùng commit. Cách tăng: xem *Quy tắc đánh số phiên bản* ngay dưới bảng. Bản phát hành luôn thắng khi gộp `module.json` (không thuộc `HeaderKeys`). |
 | `stage` | Tùy chọn | Giai đoạn hiện sau phiên bản, vd `"beta"` → `v1.1 (beta)`. Bỏ trường khi tab ổn định. |
 | `description` | Tùy chọn | Dòng mô tả nhiệm vụ của nhóm nằm dưới tiêu đề Header. |
 | `accentColor` | Tùy chọn | Mã màu Hex (`#RRGGBB`, ví dụ `#1E88E5`, `#2E7D32`, `#EF6C00`, `#6A1B9A`) làm màu nhận diện Header & Icon Badge của nhóm. |
 | `startupLisp` | Tùy chọn | Danh sách đường dẫn tương đối (tính từ thư mục mục con) của các file `.lsp` muốn tự nạp sẵn khi mở bảng `OHTA`. |
 | `tools` | Tùy chọn | Danh sách các nút công cụ hiển thị trong Tab. Để mảng rỗng `[]` khi nhóm đang trong giai đoạn thiết kế ban đầu. |
 | `groups` | Tùy chọn | Thứ tự các nhóm lệnh (tên nhóm = `category` của nút). Nhóm chưa khai báo xếp sau; nút không có `category` vào nhóm "Khác" cuối tab. Do cửa sổ ⚙ ghi (ADR 0002). |
+
+
+### Quy tắc đánh số phiên bản
+
+Áp dụng cho `version` của từng tab và cho `VERSION` của cả Tool:
+
+| Loại thay đổi | Tăng số nào | Ví dụ |
+|---|---|---|
+| **Sửa lỗi** (không thêm tính năng, không đổi cách dùng) | Số cuối — thêm/tăng số thứ 3 | `1.5` → `1.5.1` → `1.5.2` |
+| **Thay đổi lớn**: bổ sung tính năng, hoặc thay đổi cơ chế vận hành | Số giữa, bỏ số sửa lỗi | `1.5.2` → `1.6` |
+
+- Chỉ sửa chữ, tài liệu, README không ảnh hưởng người dùng → không cần tăng.
+- Một lần phát hành vừa có sửa lỗi vừa có tính năng mới → tính là thay đổi lớn (tăng số giữa).
 
 ### Giải thích các trường của từng phần tử trong `tools`
 
