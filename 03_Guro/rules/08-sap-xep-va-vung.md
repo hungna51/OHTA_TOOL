@@ -749,4 +749,4 @@
    - **Ghi nhật ký:** hàm mới `gro--tt-in` — 3 dòng `[TACH TAM CAD]` (phát hiện + cắt tại X, `KHONG cat ... (muc 186b)`, text thiếu hình cạnh hình gộp) vừa in dòng lệnh vừa ghi `ohta.log` qua `ohta_net_log` (1 dòng, `\n` → ` | `). Lần sau đọc thẳng lý do ở `%LOCALAPPDATA%\OHTA_TOOL\logs\ohta.log`.
    - Mô phỏng `sim210b.py` 5/5 (số thật 67: gốc + 210a không cắt, 210b cắt; 92 ảnh trước vẫn cắt). Lisp: +1 hàm, ngoặc cân bằng, CRLF, ASCII.
 
-   > **Chưa chạy trong CAD.** Nghiệm thu: mở lại CAD, GROCHAY trên bản vẽ cụm 67-69 → `ohta.log` có `[TACH TAM CAD] Phat hien Tam #.. bi gop ... Duong chia cat tai X = 9867.6mm ...`; 67 hình 390, 68 hình 840, 69 hình 725. Bản vẽ `570 | 240` (89/92) cũng phải cắt.
+   > **ĐÃ CHẠY (05/11 17:57, cụm 67-69):** `ohta.log` ghi 24 dòng `Phat hien Tam ... bi gop`, **0 dòng `KHONG cat`**, 0 dòng text thiếu hình. Cụm 67-69: `Tam #233 bi gop trong Tam #231 (2005) ... X = 10707.6` rồi `Tam #235 bi gop trong Tam #233 (1230) ... X = 9867.6` (vạch chia nối 2 đầu). Dump `gro_dat_mk_dump.txt`: bango 67 rộng **390**, 68 rộng **840**, 69 rộng 775 (như lần trước). Các hàng `570 | 240` khác cũng ra tấm 570 và 240.
