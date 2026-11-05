@@ -743,4 +743,10 @@
    - Mô phỏng `sim210.py` 3/3: ca ảnh (text 330 lấn 30 mm) → cắt (cũ: không cắt); text gọn trên đoạn 240 → cắt; text đặt đúng giữa vạch → không cắt.
    - Lisp: không thêm hàm, ngoặc cân bằng, CRLF, ASCII.
 
-   > **Chưa chạy trong CAD.** Nghiệm thu: chạy GROCHAY trên bản vẽ đó → có `[TACH TAM CAD] Phat hien Tam #.. bi gop trong Tam #.. ... Duong chia cat tai X = ...` đúng chỗ nối `570 | 240`; 89 và 92 mỗi tấm một hình. Nếu vẫn không cắt, gửi dòng `KHONG cat Tam #.. cho Text #..: ... (muc 186b)` trên dòng lệnh.
+   ### 210b — ngưỡng 1/4 vẫn chặn (chạy thật 17:47, cụm 67-68-69, thanh `390 | 840 | 725`)
+   - Số liệu từ dump `%TEMP%\gro_xepcum_dump.txt` / `gro_dat_mk_dump.txt` (log dòng lệnh chưa ghi vào nhật ký): hình 68 = X 9477.6 → 10707.6 (**1230 = 390 + 840**, chưa cắt); 69 đã cắt đúng (cách 20). Vạch chia thật: LINE `0-KAKOU` X **9867.6** cao hết thanh 90. Ghi chú 67 rộng **555** (X 9487.3 → 10042.3) trên đoạn **390**, tâm 9764.8; khe xuống cả 2 đoạn = 52.3 → `d1 = d2`; tâm cách vạch 102.8 < 1/4 × 555 = 138.8 → `text vat qua vach chia` → không cắt.
+   - **Người dùng chốt:** bỏ ngưỡng. `d1 = d2` → **cắt**; phía của text đã quyết bằng tâm text (`p-t` chọn theo `t-cx`). Chỉ bỏ khi `d1 > d2` (+0.5). Bảo vệ chống nét thừa 186b còn: vạch chia thật, cùng `t=`, đoạn ≥ 200, khe ≤ 800, vạch nằm giữa tâm 2 ghi chú (±10).
+   - **Ghi nhật ký:** hàm mới `gro--tt-in` — 3 dòng `[TACH TAM CAD]` (phát hiện + cắt tại X, `KHONG cat ... (muc 186b)`, text thiếu hình cạnh hình gộp) vừa in dòng lệnh vừa ghi `ohta.log` qua `ohta_net_log` (1 dòng, `\n` → ` | `). Lần sau đọc thẳng lý do ở `%LOCALAPPDATA%\OHTA_TOOL\logs\ohta.log`.
+   - Mô phỏng `sim210b.py` 5/5 (số thật 67: gốc + 210a không cắt, 210b cắt; 92 ảnh trước vẫn cắt). Lisp: +1 hàm, ngoặc cân bằng, CRLF, ASCII.
+
+   > **Chưa chạy trong CAD.** Nghiệm thu: mở lại CAD, GROCHAY trên bản vẽ cụm 67-69 → `ohta.log` có `[TACH TAM CAD] Phat hien Tam #.. bi gop ... Duong chia cat tai X = 9867.6mm ...`; 67 hình 390, 68 hình 840, 69 hình 725. Bản vẽ `570 | 240` (89/92) cũng phải cắt.

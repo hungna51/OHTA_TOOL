@@ -9222,20 +9222,27 @@
        ((> d1 800.0)
         (strcat "text cach doan hinh cua no " (rtos d1 2 0) "mm (> 800 - ghep hinh se khong nhan)")
        )
+       ;; muc 210: ghi chu DAI HON doan ngan (vd 555 tren doan 390) lan qua vach -> d1 = d2.
+       ;; Truoc day doi d1 < d2 nen khong bao gio cat. Nay chi bo khi XA HON han; bang nhau
+       ;; thi phia cua text da quyet bang TAM text (p-t chon theo t-cx o tren).
        ((> d1 (+ d2 0.5))
         (strcat "text khong gan doan hinh cua no hon doan con lai (" (rtos d1 2 0) " / " (rtos d2 2 0) "mm)")
-       )
-       ;; muc 210: hop text LAN qua vach (text dai hon doan 240) -> d1 = d2 ma truoc day
-       ;; doi d1 < d2 nen khong cat. Nay bang nhau van cat neu >= 3/4 text nam ve phia doan cua no.
-       ((and (<= (abs (- d1 d2)) 0.5)
-             (< (abs (- t-cx xd)) (* 0.25 (- (caddr t-bb) (car t-bb))))
-        )
-        (strcat "text vat qua vach chia tai X = " (rtos xd 2 1) " (tam text cach vach "
-                (rtos (abs (- t-cx xd)) 2 0) "mm < 1/4 be rong text)")
        )
      )
     )
   )
+)
+
+;;; Muc 210: in dong chan doan cat tam gop ra dong lenh VA ghi vao nhat ky ohta.log
+;;; (ohta_net_log; khong co OHTATOOL.dll thi chi in). Nhat ky ghi 1 dong: "\n" -> " | ".
+(defun gro--tt-in (s / g i)
+  (princ s)
+  (setq g s)
+  (while (setq i (vl-string-search "\n" g))
+    (setq g (strcat (substr g 1 i) (if (= i 0) "" " | ") (substr g (+ i 2))))
+  )
+  (vl-catch-all-apply 'ohta_net_log (list "GRO" g))
+  (princ)
 )
 
 ;;; Quy trinh tuan tu cat va doi thuc the CAD cho cac tam gop (ho tro ca 2 doan va 3 doan)
@@ -9442,7 +9449,7 @@
         ;; Muc 186: chan doan - text thieu hinh nam canh mot hinh gop rong ma KHONG cat duoc
         (if (null host-match)
           (foreach u (reverse ds-tu-choi)
-            (princ (strcat "\n[TACH TAM CAD] KHONG cat Tam #" (itoa (cadr u)) " cho Text #" (itoa (car u))
+            (gro--tt-in (strcat "\n[TACH TAM CAD] KHONG cat Tam #" (itoa (cadr u)) " cho Text #" (itoa (car u))
                            ": " (caddr u) " (muc 186b)."))
           )
         )
@@ -9458,7 +9465,7 @@
                        (gro--text-ke-hinh-p (nth 2 tr) h-bb)
                        (or (null co-vung) (equal (nth 4 tr) (nth 4 h-s)))
                   )
-                (princ (strcat "\n[TACH TAM CAD] Text #" (itoa (nth 0 tr)) " THIEU HINH, canh hinh gop cua Tam #"
+                (gro--tt-in (strcat "\n[TACH TAM CAD] Text #" (itoa (nth 0 tr)) " THIEU HINH, canh hinh gop cua Tam #"
                                (itoa (car pair)) " (X" (rtos (car h-bb) 2 0) ".." (rtos (caddr h-bb) 2 0)
                                " Y" (rtos (cadr h-bb) 2 0) ".." (rtos (cadddr h-bb) 2 0) ") nhung KHONG cat:"
                                "\n  -> lech hang Y voi text chu va khong co vach chia noi giua 2 text (muc 186)."))
@@ -9504,7 +9511,7 @@
                   other-notes  (vl-remove-if '(lambda (n) (or (= (gro--it-stt n) tid) (= (gro--it-stt n) h-tid))) notes)
                   gap          (gro--tim-khoang-cach-doi-an-toan bb-right other-shapes other-notes)
             )
-            (princ (strcat "\n[TACH TAM CAD] Phat hien Tam #" (itoa tid) 
+            (gro--tt-in (strcat "\n[TACH TAM CAD] Phat hien Tam #" (itoa tid) 
                            " bi gop trong Tam #" (itoa h-tid) 
                            " (Rong " (rtos (- (caddr h-bb) (car h-bb)) 2 1) "mm)." 
                            ;; muc 131: chan doan - text thieu hinh hay DA co hinh khac
