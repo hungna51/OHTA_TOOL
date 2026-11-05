@@ -4,7 +4,7 @@
   "order": 30,
   "tabTitle": "Guro",
   "title": "GURO",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "Đánh số tấm, mã khắc, F-name, CSV, in PDF.",
   "accentColor": "#323639",
   "tools": [

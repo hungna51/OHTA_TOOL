@@ -2,6 +2,15 @@
 
 Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_ohta.ps1` lấy nội dung mục đó làm ghi chú Release trên GitHub, và hộp thoại "Có bản mới" trên máy đội cũng hiện đúng nội dung này — viết ngắn, cho người dùng xưởng đọc.
 
+## v1.2.2
+
+- Tab **Guro v1.5.2** — sửa lỗi:
+  - ZWCAD bấm **Chạy GRO** báo lỗi "consp nil" và dừng.
+  - Chữ Nhật trong ghi chú hiện thành dấu "?".
+  - Tab **Nét Chưa Đổi** (bảng DST) liệt kê nhầm bango, tên bản vẽ, khung bao.
+  - Tab **Thông Tin** chỉ ghi "xem chi tiết ở dòng lệnh" — nay hiện rõ từng cảnh báo (dòng số lượng không ghép được kèm vị trí, ghi chú không đọc được số lượng…).
+  - Bấm nút trên tab Guro không còn in 2 dòng nạp lisp lên dòng lệnh.
+
 ## v1.2.1
 
 - Tab **Guro v1.5.1**: chạy GRO trên bản vẽ mới chưa lưu giờ báo "Bản vẽ chưa lưu" và dừng, không ghi CSV / PDF vào thư mục tạm nữa. Lưu bản vẽ (Ctrl+S) rồi chạy lại.
