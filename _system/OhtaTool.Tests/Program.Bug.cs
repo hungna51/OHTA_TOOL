@@ -40,6 +40,21 @@ namespace OhtaTool.Tests
 
             TestBugLog();
             TestBugAttachmentsAndQueue();
+            TestBugSheet();
+        }
+
+        private static void TestBugSheet()
+        {
+            Check("Sheet: submit_bug khong bi chan ban cu", !SheetActions.RequiresVersionGate("submit_bug"));
+            Check("Sheet: list_bugs khong bi chan", !SheetActions.RequiresVersionGate("list_bugs"));
+            Check("Sheet: resolve_bug khong bi chan", !SheetActions.RequiresVersionGate("resolve_bug"));
+            Check("Sheet: list_requests khong bi chan", !SheetActions.RequiresVersionGate("list_requests"));
+            Check("Sheet: submit_request van bi chan", SheetActions.RequiresVersionGate("submit_request"));
+            var list = BugAdminItem.ParseList("{\"ok\":true,\"isAdmin\":true,\"bugs\":[{\"ID\":\"abc\",\"Muc_do\":\"Nhỏ\",\"Mo_ta\":\"x\",\"Anh\":\"\"}]}");
+            Check("Sheet: parse bugs", list.Count == 1 && list[0].Id == "abc" && list[0].MucDo == "Nhỏ" && list[0].Anh == "");
+            Check("Sheet: parse rong", BugAdminItem.ParseList("{\"ok\":true,\"bugs\":[]}").Count == 0);
+            Check("Sheet: parse json hong", BugAdminItem.ParseList("<html>").Count == 0);
+            Check("Sheet: parse null", BugAdminItem.ParseList(null).Count == 0);
         }
 
         private static void TestBugAttachmentsAndQueue()

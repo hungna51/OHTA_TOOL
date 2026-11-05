@@ -227,26 +227,6 @@ namespace OhtaTool.Plugin.Services
             }
         }
 
-        /// <summary>Uri.EscapeDataString theo từng đoạn (bản .NET Framework giới hạn ~65k ký tự mỗi lần gọi).</summary>
-        private static string EscapeLong(string value)
-        {
-            const int chunk = 30000;
-            if (value.Length <= chunk)
-                return Uri.EscapeDataString(value);
-            var sb = new StringBuilder(value.Length + value.Length / 4);
-            int i = 0;
-            while (i < value.Length)
-            {
-                int len = Math.Min(chunk, value.Length - i);
-                // không cắt giữa cặp surrogate (ký tự 4 byte)
-                if (i + len < value.Length && char.IsHighSurrogate(value[i + len - 1]))
-                    len--;
-                sb.Append(Uri.EscapeDataString(value.Substring(i, len)));
-                i += len;
-            }
-            return sb.ToString();
-        }
-
         /// <summary>Máy đang chạy bản thấp hơn phien_ban_toi_thieu trên tab cau_hinh của Sheet.</summary>
         public static bool IsUpdateRequired() =>
             FnameVersionGate.IsOutdated(OhtaUpdateCommands.LoadedVersion, TraVCalculator.GetSheetConfig());
@@ -262,53 +242,8 @@ namespace OhtaTool.Plugin.Services
 
         private static FnameSheetReply Post(string moduleDirectory, string action, Dictionary<string, string> fields, out string error)
         {
-            error = null;
-            // Bản thấp hơn phien_ban_toi_thieu (tab cau_hinh) không được ghi lên Sheet; đọc vẫn được
-            if (action != "list_requests" && action != "my_requests" && IsUpdateRequired())
-            {
-                error = UpdateRequiredMessage();
-                return null;
-            }
-            Dictionary<string, string> cfg = FnameDataSync.ReadConfig(moduleDirectory);
-            string url = cfg.Get("write_url");
-            string key = cfg.Get("write_key");
-            if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(key))
-            {
-                error = "Chưa cấu hình ghi lên Google Sheet: cần write_url trong " + FnameDataSync.ConfigPath(moduleDirectory)
-                    + " và write_key trong " + FnameDataSync.KeyPath(moduleDirectory) + " (hướng dẫn ở đầu file google_sheet_apps_script.gs).";
-                return null;
-            }
-
-            fields["key"] = key;
-            fields["action"] = action;
-            fields["gid"] = cfg.Get("catalog") ?? string.Empty;
-            fields["machine"] = Environment.MachineName;
-            try
-            {
-#if NETFRAMEWORK
-                System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;
-#endif
-                // Apps Script trả 302 sang link kết quả; HttpClient tự đi theo (đổi sang GET) để lấy JSON.
-                // Có ảnh bằng chứng (base64 vài trăm KB) -> cho thêm thời gian
-                using (var http = new HttpClient { Timeout = TimeSpan.FromSeconds(fields.ContainsKey("anh_1") ? 120 : 30) })
-                {
-                    // Tự mã hoá form thay FormUrlEncodedContent: bản .NET Framework báo "Uri string is too long" khi giá trị > ~65k ký tự (ảnh base64)
-                    string form = string.Join("&", fields.Select(kv => Uri.EscapeDataString(kv.Key) + "=" + EscapeLong(kv.Value ?? string.Empty)));
-                    var content = new StringContent(form, Encoding.UTF8, "application/x-www-form-urlencoded");
-                    HttpResponseMessage resp = http.PostAsync(url, content).GetAwaiter().GetResult();
-                    string body = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                    FnameSheetReply reply = FnameSheetReply.Parse(body);
-                    if (reply == null)
-                        error = "Apps Script không trả về kết quả hợp lệ (HTTP " + (int)resp.StatusCode
-                            + "). Kiểm tra write_url, đã triển khai phiên bản mới và chọn \"Người có quyền truy cập: Bất kỳ ai\".";
-                    return reply;
-                }
-            }
-            catch (Exception ex)
-            {
-                error = "Không kết nối được Google Sheet (" + ex.GetBaseException().Message + ").";
-                return null;
-            }
+            // Có ảnh bằng chứng (base64 vài trăm KB) -> cho thêm thời gian
+            return SheetWebApp.Post(moduleDirectory, action, fields, fields.ContainsKey("anh_1") ? 120 : 30, out _, out error);
         }
     }
 }

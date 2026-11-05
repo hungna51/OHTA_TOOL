@@ -89,6 +89,10 @@ function doPost(e) {
       case 'my_requests': return reply_(myRequests_(ctx));
       case 'approve_request': return reply_(resolveRequest_(p.id, true, ctx));
       case 'reject_request': return reply_(resolveRequest_(p.id, false, ctx));
+      // Báo lỗi (ADR 0007) — tab bug_report / bug_done, file trong thư mục Drive "OHTA Bug Report"
+      case 'submit_bug': return reply_(submitBug_(p, ctx));
+      case 'list_bugs': return reply_(listBugs_(ctx));
+      case 'resolve_bug': return reply_(resolveBug_(p, ctx));
       default: return reply_({ ok: false, message: 'Hành động không hỗ trợ: ' + p.action });
     }
   } catch (err) {
@@ -387,6 +391,133 @@ function trashAnh_(anh) {
 function capQuyenDrive() {
   var f = bangChungFolder_();
   Logger.log('Thư mục bằng chứng: ' + f.getName() + ' — ' + f.getUrl());
+  return f.getUrl();
+}
+
+// ---------- Báo lỗi (ADR 0007) ----------
+//
+// Máy người dùng gửi submit_bug -> 1 dòng tab bug_report + file trên Drive + email tới chủ script.
+// Máy admin (tab admin) list_bugs xem, resolve_bug chuyển dòng sang bug_done và bỏ zip đính kèm vào Thùng rác.
+// Lần đầu cập nhật phần này: chạy hàm capQuyenBaoLoi trong trình chỉnh sửa, bấm Cho phép (Drive + Gmail).
+
+var BUG_SHEET_NAME = 'bug_report';
+var BUG_DONE_SHEET_NAME = 'bug_done';
+var BUG_FOLDER_NAME = 'OHTA Bug Report';
+var BUG_HEADER = ['ID', 'Thoi_gian', 'May_gui', 'Nguoi_gui', 'Muc_do', 'Tab_lenh', 'Mo_ta', 'Phien_ban', 'Loi', 'Anh', 'Chi_tiet', 'Dinh_kem'];
+var BUG_DONE_HEADER = BUG_HEADER.concat(['Ngay_xu_ly', 'Ban_sua']);
+var BUG_MUC_DO = ['Chặn việc', 'Phiền', 'Nhỏ'];
+
+function submitBug_(p, ctx) {
+  var id = clean_(p.id).replace(/[^\w-]/g, '');
+  if (!id) return { ok: false, message: 'Thiếu ID báo lỗi.' };
+  if (!ctx.machine) return { ok: false, message: 'Thiếu tên máy gửi.' };
+  if (!String(p.mo_ta || '').trim()) return { ok: false, message: 'Thiếu mô tả lỗi.' };
+  // Gửi lại từ hàng chờ (lần trước Apps Script đã nhận nhưng máy không nhận được trả lời) -> không ghi trùng
+  if (bugRowIndex_(bugSheet_(ctx.ss, BUG_SHEET_NAME, BUG_HEADER), id) > 0
+      || bugRowIndex_(bugSheet_(ctx.ss, BUG_DONE_SHEET_NAME, BUG_DONE_HEADER), id) > 0)
+    return { ok: true, message: 'Admin đã nhận báo lỗi này trước đó.' };
+
+  var folder = bugFolder_();
+  var anh = '', chiTiet = '', dinhKem = '';
+  if (p.anh) {
+    var fa = folder.createFile(Utilities.newBlob(Utilities.base64Decode(String(p.anh)), 'image/jpeg', id + '.jpg'));
+    fa.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    anh = fa.getUrl();
+  }
+  if (p.chi_tiet) {
+    var ft = folder.createFile(Utilities.newBlob(String(p.chi_tiet), 'text/plain', id + '_chi_tiet.txt'));
+    ft.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    chiTiet = ft.getUrl();
+  }
+  if (p.dinh_kem) {
+    // Bản vẽ / CSV của khách: KHÔNG chia sẻ, chỉ chủ Drive mở được
+    var name = id + '_' + String(p.dinh_kem_ten || 'dinh_kem.zip').replace(/[\\\/:*?"<>|]/g, '_');
+    dinhKem = folder.createFile(Utilities.newBlob(Utilities.base64Decode(String(p.dinh_kem)), 'application/zip', name)).getUrl();
+  }
+
+  var mucDo = BUG_MUC_DO.indexOf(String(p.muc_do)) >= 0 ? String(p.muc_do) : 'Phiền';
+  var row = [id, String(p.thoi_gian || ''), ctx.machine, String(p.nguoi_gui || ''), mucDo, String(p.tab_lenh || ''),
+             String(p.mo_ta || ''), String(p.phien_ban || ''), String(p.loi || '').substring(0, 1000), anh, chiTiet, dinhKem];
+  var sh = bugSheet_(ctx.ss, BUG_SHEET_NAME, BUG_HEADER);
+  // Chữ dạng '@': chặn người dùng gõ "=..." thành công thức
+  sh.getRange(sh.getLastRow() + 1, 1, 1, row.length).setNumberFormat('@').setValues([row]);
+
+  try {
+    MailApp.sendEmail(Session.getEffectiveUser().getEmail(),
+      '[OHTA Bug][' + mucDo + '] ' + (p.tab_lenh || '') + ' - ' + ctx.machine,
+      String(p.mo_ta || '') + '\n\nLỗi: ' + String(p.loi || '') + '\nMáy: ' + (p.nguoi_gui || ctx.machine)
+      + '\nPhiên bản: ' + String(p.phien_ban || '') + '\nẢnh: ' + anh + '\nChi tiết: ' + chiTiet + '\nSheet: ' + ctx.ss.getUrl());
+  } catch (x) {
+    // chưa cấp quyền Gmail / hết hạn mức: vẫn ghi báo lỗi
+  }
+  return { ok: true, message: 'Đã gửi báo lỗi cho admin.' };
+}
+
+function listBugs_(ctx) {
+  if (!isAdmin_(ctx)) return { ok: true, isAdmin: false, bugs: [] };
+  var sh = bugSheet_(ctx.ss, BUG_SHEET_NAME, BUG_HEADER);
+  var list = [];
+  var n = sh.getLastRow() - 1;
+  if (n > 0) {
+    var vals = sh.getRange(2, 1, n, BUG_HEADER.length).getDisplayValues();
+    for (var i = vals.length - 1; i >= 0; i--) {
+      if (!vals[i][0]) continue;
+      var o = {};
+      BUG_HEADER.forEach(function (h, k) { o[h] = vals[i][k]; });
+      list.push(o);
+    }
+  }
+  return { ok: true, isAdmin: true, bugs: list };
+}
+
+function resolveBug_(p, ctx) {
+  if (!isAdmin_(ctx)) return { ok: false, message: 'Máy "' + ctx.machine + '" không có quyền (không có trong tab admin).' };
+  var sh = bugSheet_(ctx.ss, BUG_SHEET_NAME, BUG_HEADER);
+  var r = bugRowIndex_(sh, String(p.id || ''));
+  if (r <= 0) return { ok: false, message: 'Không tìm thấy báo lỗi (có thể đã xử lý trên máy khác).' };
+  var vals = sh.getRange(r, 1, 1, BUG_HEADER.length).getDisplayValues()[0];
+  trashAnh_(vals[BUG_HEADER.indexOf('Dinh_kem')]); // chỉ bỏ zip; giữ ảnh + nhật ký để tra lại lỗi cũ
+  var done = bugSheet_(ctx.ss, BUG_DONE_SHEET_NAME, BUG_DONE_HEADER);
+  var row = vals.concat([Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'), String(p.ban_sua || '')]);
+  done.getRange(done.getLastRow() + 1, 1, 1, row.length).setNumberFormat('@').setValues([row]);
+  sh.deleteRow(r);
+  return { ok: true, message: 'Đã chuyển báo lỗi ' + vals[0] + ' sang bug_done.' };
+}
+
+function bugSheet_(ss, name, header) {
+  var sh = ss.getSheetByName(name);
+  if (!sh) {
+    sh = ss.insertSheet(name);
+    sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+// Số dòng (từ 2) có ID ở cột A; 0 nếu không có
+function bugRowIndex_(sh, id) {
+  var n = sh.getLastRow() - 1;
+  if (n <= 0 || !id) return 0;
+  var ids = sh.getRange(2, 1, n, 1).getDisplayValues();
+  for (var i = 0; i < ids.length; i++) if (ids[i][0] === id) return i + 2;
+  return 0;
+}
+
+function bugFolder_() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty('BUG_FOLDER_ID');
+  if (id) { try { return DriveApp.getFolderById(id); } catch (x) {} }
+  var it = DriveApp.getFoldersByName(BUG_FOLDER_NAME);
+  var folder = it.hasNext() ? it.next() : DriveApp.createFolder(BUG_FOLDER_NAME);
+  props.setProperty('BUG_FOLDER_ID', folder.getId());
+  return folder;
+}
+
+// Chạy tay 1 lần trong trình chỉnh sửa để cấp quyền Drive + Gmail cho báo lỗi
+function capQuyenBaoLoi() {
+  var f = bugFolder_();
+  MailApp.sendEmail(Session.getEffectiveUser().getEmail(), '[OHTA Bug] Thử quyền gửi mail', 'Thư mục báo lỗi: ' + f.getUrl());
+  Logger.log('Thư mục báo lỗi: ' + f.getUrl() + ' — đã gửi mail thử, còn ' + MailApp.getRemainingDailyQuota() + ' mail hôm nay.');
   return f.getUrl();
 }
 
