@@ -53,6 +53,7 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 | 199 | **GRO chạy trên bản vẽ mới chưa lưu (Drawing1) mà không báo** — CSV / PDF ghi vào thư mục tạm. `c:grochay` kiểm tra `DWGTITLED = 0` ngay đầu lệnh: alert "Bản vẽ chưa lưu" rồi dừng, chưa đụng vào bản vẽ | [../lisp/guro_gro.lsp](../lisp/guro_gro.lsp) |
 | 200 | **ZWCAD máy khác: GROCHAY báo "invalid argument type: consp nil (dang o buoc: khoi dong)"** — chưa tái hiện được tại máy này. Gia cố `gro--tham-so-chay` (kết quả `gro_net_layer_ban_ve` phải là danh sách 3 phần tử, tên layer phải là chuỗi, `gro--khung-it-truoc` không `vl-sort` danh sách rỗng) và chia bước "khoi dong" thành bước con (mở thử CSV, đọc registry, nạp DLL, đếm khung, đếm layer gốc, layer tab, in tóm tắt) để lần lỗi sau biết đúng chỗ. **Chưa xác nhận đã hết lỗi** | [14-can-kiem-tra-lai.md](14-can-kiem-tra-lai.md) |
 | 201 | Mục 200 chỉ ra chỗ lỗi `consp nil` trên ZWCAD: bước "layer chon tren tab Guro" (gọi `gro_net_layer_ban_ve`). Sửa: gọi **có 1 tham số giả** `(list 0)` thay vì danh sách rỗng; C# trả **chuỗi rỗng** thay `nil` trong danh sách; kiểm kết quả bằng `length` thay `vl-list-length`. **Chưa xác nhận trên ZWCAD máy đó** | [14-can-kiem-tra-lai.md](14-can-kiem-tra-lai.md) |
+| 202 | `consp nil` vẫn còn ở bước "layer chon tren tab Guro" (cả máy phát triển, ZWCAD). Bọc **cả bước** vào `gro--layer-tab` gọi qua `vl-catch-all-apply`: hỏng thì GRO vẫn chạy với layer mặc định và in câu lỗi gốc `[GRO] Khong doc duoc layer chon tren tab Guro (...)`. Lưu ý thử: `guro_gro.lsp` chỉ nạp 1 lần mỗi bản vẽ — nạp lại `autoload.lsp` **không** thay code cũ; phải mở lại CAD hoặc `(load ".../guro_gro.lsp")` | [14-can-kiem-tra-lai.md](14-can-kiem-tra-lai.md) |
 | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) | Hộp thoại DCL + **bản .NET** (dialog `gro`, bảng DST), **tab Guro** | 18, 19, 20, 52, 55, 56, 64, 86, 192, 193, 194, 195, 196, 197 |
 | [06-encoding-chuoi.md](06-encoding-chuoi.md) | Encoding và xử lý chuỗi (CP932 / Unicode) | 2, 9, 15, 16, 50, 57 |
 | [07-tach-du-lieu.md](07-tach-du-lieu.md) | Tách độ dày, số lượng, mã khắc, **ghép dòng số lượng** | 10, 11, 17, 23, 24, 32, 43, 54, 168 |
@@ -68,14 +69,14 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 
 ## Mục lục mục lỗi
 
-1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–201 tại đây.
+1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–202 tại đây.
 
 > ### ⚠ SỐ MỤC LÀ CỐ ĐỊNH, KHÔNG ĐƯỢC ĐÁNH SỐ LẠI
 > Mã nguồn `.lsp` tham chiếu tới chúng ở **17 chỗ** (`CLAUDE.md muc 13`, `muc 29`, `muc 85`, `muc 86`, …) và các file rule tham chiếu chéo nhau ở **59 chỗ**. Đổi số là hỏng cả 59 chỗ đó cùng lúc.
 >
 > Thêm mục mới thì **nối tiếp số lớn nhất hiện có + 1**, bỏ vào file theo chủ đề, rồi cập nhật bảng dưới.
 >
-> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **201**.
+> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **202**.
 
 > ### Lệnh chẩn đoán cũ
 > `grosort` / `grodbg` / `growp` / `grostyle` / `bgdbg` thuộc bản đầy đủ cũ `guro ZWCAD(BG MK FN).lsp`, không có trong `guro_gro.lsp`. Các mục bên dưới nhắc tới chúng là ghi chép lịch sử. Lịch sử thay đổi lisp nay nằm trong git của OHTA_TOOL.

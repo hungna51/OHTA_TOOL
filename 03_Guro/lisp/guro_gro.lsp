@@ -884,7 +884,7 @@
 ;;;   layer goc : layer nhieu doi tuong nhat (muc 75)
 ;;; Bang so luong thi theo ten. Tra ve 11 gia tri theo thu tu (nth 0..10 dlg) cua
 ;;; c:grochay - (nth 7) mau Dim luon nil: muc 194 bo nhan Dim theo mau thu cong.
-(defun gro--tham-so-chay (/ dem kq-k lays-k lays-v lays-x chon lk lv lx)
+(defun gro--tham-so-chay (/ dem kq-k lays-k lays-v lays-x kq lk lv lx)
   ;; Muc 200: ten buoc con - loi o may ZWCAD khac chi bao "khoi dong", khong biet dong nao.
   (setq gro--buoc "khoi dong: dem khung bao / vung"
         dem       (gro--dem-khung-layer)
@@ -893,21 +893,26 @@
         lays-v    (car (gro--layer-khung-ds dem nil))
         gro--buoc "khoi dong: dem doi tuong layer goc"
         lays-x    (car (gro--layer-xln-ds))
-        gro--buoc "khoi dong: layer chon tren tab Guro"
-        ;; Muc 201: ZWCAD bao "consp nil" o day -> goi CO 1 tham so gia (khong goi voi
-        ;; danh sach rong), C# tra chuoi "" thay nil, kiem bang length (khong vl-list-length).
-        chon      (if (vl-symbol-value 'gro_net_layer_ban_ve)
-                    (vl-catch-all-apply 'gro_net_layer_ban_ve (list 0))
-                  )
-  )
-  ;; Chi nhan dung danh sach 3 phan tu; khac di (loi, DLL cu) thi coi nhu chua chon.
-  (if (not (and chon (= (type chon) 'LIST) (= (length chon) 3)))
-    (setq chon nil)
   )
   (if (null lays-x) (setq lays-x (list "0")))
-  (setq lk        (gro--layer-chon (nth 0 chon) lays-k)
-        lv        (gro--layer-chon (nth 1 chon) lays-v)
-        lx        (gro--layer-chon (nth 2 chon) lays-x)
+  ;; Muc 202: ZWCAD van bao "consp nil" o buoc nay du da sua (muc 201) -> boc CA buoc
+  ;; trong bay loi: hong thi dung layer mac dinh va in loi goc de tim nguyen nhan.
+  (setq gro--buoc "khoi dong: layer chon tren tab Guro"
+        kq        (vl-catch-all-apply 'gro--layer-tab (list lays-k lays-v lays-x))
+  )
+  (if (or (vl-catch-all-error-p kq) (not (and kq (= (type kq) 'LIST) (= (length kq) 3))))
+    (progn
+      (princ (strcat "\n[GRO] Khong doc duoc layer chon tren tab Guro ("
+                     (if (vl-catch-all-error-p kq) (vl-catch-all-error-message kq) "ket qua khong hop le")
+                     ") -> dung layer mac dinh."
+             )
+      )
+      (setq kq (list (car lays-k) (car lays-v) (car lays-x)))
+    )
+  )
+  (setq lk        (nth 0 kq)
+        lv        (nth 1 kq)
+        lx        (nth 2 kq)
         gro--buoc "khoi dong: in tom tat"
   )
   (princ
@@ -929,6 +934,20 @@
   )
   (list gro--use-vung lv lk gro--use-in-pdf gro--use-xln lx gro--xln-auto-dim
         nil gro--use-tao-khung gro--use-xep-cum gro--use-dat-mk
+  )
+)
+
+;;; Layer chon tren tab Guro cho ban ve dang mo (gro_net_layer_ban_ve -> 3 chuoi, "" = chua
+;;; chon), roi chon theo danh sach. Tra (khung vung goc). Goi qua vl-catch-all-apply (muc 202).
+;;; Muc 201: goi CO tham so gia; C# tra "" thay nil; kiem bang length.
+(defun gro--layer-tab (lays-k lays-v lays-x / chon)
+  (setq chon (if (vl-symbol-value 'gro_net_layer_ban_ve) (gro_net_layer_ban_ve 0)))
+  (if (not (and chon (= (type chon) 'LIST) (= (length chon) 3)))
+    (setq chon nil)
+  )
+  (list (gro--layer-chon (nth 0 chon) lays-k)
+        (gro--layer-chon (nth 1 chon) lays-v)
+        (gro--layer-chon (nth 2 chon) lays-x)
   )
 )
 
