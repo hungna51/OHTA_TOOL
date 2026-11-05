@@ -56,6 +56,7 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 | 202 | `consp nil` vẫn còn ở bước "layer chon tren tab Guro" (cả máy phát triển, ZWCAD). Bọc **cả bước** vào `gro--layer-tab` gọi qua `vl-catch-all-apply`: hỏng thì GRO vẫn chạy với layer mặc định và in câu lỗi gốc `[GRO] Khong doc duoc layer chon tren tab Guro (...)`. Lưu ý thử: `guro_gro.lsp` chỉ nạp 1 lần mỗi bản vẽ — nạp lại `autoload.lsp` **không** thay code cũ; phải mở lại CAD hoặc `(load ".../guro_gro.lsp")` | [14-can-kiem-tra-lai.md](14-can-kiem-tra-lai.md) |
 | 203 | **Chữ Nhật thành "?"** trên ZWCAD kiểu byte ("co ky tu CP932 khong co trong bang bg--uni-tbl"): bảng lisp chỉ ~60 ký tự. Nay `bg--cp932-uni` ngoài bảng thì hỏi GROTOOL.dll `(gro_net_cp932 b1 b2)` (bảng mã 932 đầy đủ của .NET, `GroText.Cp932SangUnicode`), nhớ vào `bg--uni-them` để không hỏi lại và để `bg--uni-cp932` đổi ngược được | [06-encoding-chuoi.md](06-encoding-chuoi.md) |
 | 204 | **Tab "Nét Chưa Đổi" của DST liệt kê bango / tên bản vẽ / khung bao**: tab đọc layer gốc từ registry `layer_xln`, từ mục 194 GRO không ghi nữa → tự chọn layer đông nhất (thường là "0"). Nay: ưu tiên layer chọn trên tab Guro cho bản vẽ, rồi `layer_xln` (lisp ghi lại layer gốc vừa xử lý); `LineScanner.QuetNetChuaDoi` bỏ qua đối tượng có XData `GRO_CHUP_COPY` / `GRO_METADATA` / `GRO_DAU_RA` — lisp gắn `GRO_DAU_RA` lên polyline khung bao đã chọn và chữ tên bản vẽ (`gro--gan-dau-ra`) | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) |
+| 205 | **Tab Thông Tin chỉ ghi "Có cảnh báo — xem chi tiết ở dòng lệnh"**: 3 nhóm cảnh báo bắt buộc (TH4 không đọc được số lượng, dòng số lượng mồ côi kèm toạ độ, chữ có t/T bị bỏ qua) nay đưa thẳng vào báo cáo thành khối `!!!` + chi tiết; bỏ câu chung. Chữ Nhật gửi dạng ASCII `\U+XXXX` (`gro--bao-cao-chu`), C# `ThongTinGro.GiaiEscape` đổi lại — không phụ thuộc bảng mã khi chuỗi đi lisp → .NET | [12-chan-doan-bao-loi.md](12-chan-doan-bao-loi.md) |
 | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) | Hộp thoại DCL + **bản .NET** (dialog `gro`, bảng DST), **tab Guro** | 18, 19, 20, 52, 55, 56, 64, 86, 192, 193, 194, 195, 196, 197 |
 | [06-encoding-chuoi.md](06-encoding-chuoi.md) | Encoding và xử lý chuỗi (CP932 / Unicode) | 2, 9, 15, 16, 50, 57 |
 | [07-tach-du-lieu.md](07-tach-du-lieu.md) | Tách độ dày, số lượng, mã khắc, **ghép dòng số lượng** | 10, 11, 17, 23, 24, 32, 43, 54, 168 |
@@ -71,14 +72,14 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 
 ## Mục lục mục lỗi
 
-1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–204 tại đây.
+1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–205 tại đây.
 
 > ### ⚠ SỐ MỤC LÀ CỐ ĐỊNH, KHÔNG ĐƯỢC ĐÁNH SỐ LẠI
 > Mã nguồn `.lsp` tham chiếu tới chúng ở **17 chỗ** (`CLAUDE.md muc 13`, `muc 29`, `muc 85`, `muc 86`, …) và các file rule tham chiếu chéo nhau ở **59 chỗ**. Đổi số là hỏng cả 59 chỗ đó cùng lúc.
 >
 > Thêm mục mới thì **nối tiếp số lớn nhất hiện có + 1**, bỏ vào file theo chủ đề, rồi cập nhật bảng dưới.
 >
-> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **204**.
+> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **205**.
 
 > ### Lệnh chẩn đoán cũ
 > `grosort` / `grodbg` / `growp` / `grostyle` / `bgdbg` thuộc bản đầy đủ cũ `guro ZWCAD(BG MK FN).lsp`, không có trong `guro_gro.lsp`. Các mục bên dưới nhắc tới chúng là ghi chép lịch sử. Lịch sử thay đổi lisp nay nằm trong git của OHTA_TOOL.
