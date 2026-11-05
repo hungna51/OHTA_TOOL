@@ -54,7 +54,9 @@ namespace OhtaTool.Plugin.Views
             _anh = MakeButton("🖼  Mở ảnh", () => OpenUrl(Selected?.Anh));
             _nhatKy = MakeButton("📄  Mở nhật ký", () => OpenUrl(Selected?.ChiTiet));
             _dinhKem = MakeButton("📦  Mở file đính kèm", () => OpenUrl(Selected?.DinhKem));
-            _dinhKem.ToolTip = "File bản vẽ / CSV không chia sẻ công khai: cần đăng nhập Google của chủ Drive.";
+            // File báo lỗi không chia sẻ công khai (ảnh có bản vẽ của khách) - ADR 0007
+            foreach (Button b in new[] { _anh, _nhatKy, _dinhKem })
+                b.ToolTip = "Không chia sẻ công khai: mở bằng tài khoản Google chủ script, hoặc nhờ chủ script chia sẻ thư mục \"OHTA Bug Report\" cho email của bạn.";
             _xong = MakeButton("✓  Đã xử lý", ResolveAsync);
             _refresh = MakeButton("⟳  Làm mới", LoadAsync);
             foreach (Button b in new[] { _anh, _nhatKy, _dinhKem, _xong, _refresh })

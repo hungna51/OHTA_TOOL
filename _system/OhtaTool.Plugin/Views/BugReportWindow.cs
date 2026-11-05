@@ -28,6 +28,7 @@ namespace OhtaTool.Plugin.Views
         private readonly string _dwgPath, _csvPath, _thongTinPath;
         private readonly TextBlock _status;
         private readonly Button _send;
+        private bool _sending;
 
         /// <summary>Mở form (modal với cửa sổ CAD). anh = ảnh đã chụp trước, null nếu không chụp được.</summary>
         public static void Show(string tabLenh, string loi, string stackTrace, byte[] anh)
@@ -121,7 +122,25 @@ namespace OhtaTool.Plugin.Views
 
             var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 10, 0, 0) };
             _send = new Button { Content = "🐞  Gửi báo lỗi", Padding = new Thickness(14, 5, 14, 5), IsDefault = false };
-            _send.Click += async (s, e) => await SendAsync();
+            // async void: exception lọt ra làm sập CAD -> bắt hết
+            _send.Click += async (s, e) =>
+            {
+                try { await SendAsync(); }
+                catch (Exception ex)
+                {
+                    BugLog.Write("BUG", ex);
+                    try { _send.IsEnabled = true; ShowStatus("Lỗi: " + ex.Message, error: true); } catch { }
+                }
+            };
+            // Đang gửi (zip tới 300 s) thì không cho đóng form: đóng giữa chừng rồi MessageBox/Close trên form đã đóng sẽ ném
+            Closing += (s, e) =>
+            {
+                if (_sending)
+                {
+                    e.Cancel = true;
+                    ShowStatus("Đang gửi, chờ một chút…", error: false);
+                }
+            };
             var cancel = new Button { Content = "Huỷ", Padding = new Thickness(14, 5, 14, 5), Margin = new Thickness(8, 0, 0, 0), IsCancel = true };
             buttons.Children.Add(_send);
             buttons.Children.Add(cancel);
@@ -150,20 +169,22 @@ namespace OhtaTool.Plugin.Views
             if (_thongTin.IsChecked == true) files.Add(_thongTinPath);
 
             bool guiAnh = _guiAnh.IsChecked == true;
+            // Đọc CAD (bản vẽ, ACADVER) trên luồng CAD — API CAD không an toàn khi gọi từ luồng nền
+            (string phienBan, string info) = BugContext.Describe();
             _send.IsEnabled = false;
+            _sending = true;
             ShowStatus("Đang gửi…", error: false);
-            (bool ok, string message) res;
+            (bool ok, bool queued, string message) res;
             try
             {
                 res = await Task.Run(() =>
                 {
                     (byte[] zip, string zipError) = BugAttachments.Zip(files);
                     if (zipError != null)
-                        return (false, zipError);
+                        return (false, false, zipError);
                     _report.DinhKemZip = zip;
                     _report.DinhKemTen = zip == null ? null : "dinh_kem.zip";
                     _report.AnhJpeg = guiAnh ? _anh : null;
-                    (string phienBan, string info) = BugContext.Describe();
                     _report.PhienBan = phienBan;
                     _report.ChiTiet = BuildChiTiet(info);
                     return BugReportService.Submit(_report);
@@ -172,19 +193,18 @@ namespace OhtaTool.Plugin.Views
             catch (Exception ex)
             {
                 BugLog.Write("BUG", ex);
-                res = (false, "Lỗi khi gửi: " + ex.Message);
+                res = (false, false, "Lỗi khi gửi: " + ex.Message);
+            }
+            finally
+            {
+                _sending = false;
             }
 
-            if (res.ok)
+            // Gửi xong, hoặc đã lưu hàng chờ (sẽ tự gửi lại) = xong; lỗi khác (đính kèm quá lớn...) để người dùng sửa rồi gửi lại
+            if (res.ok || res.queued)
             {
-                MessageBox.Show(this, res.message, "OHTA TOOL", MessageBoxButton.OK, MessageBoxImage.Information);
-                Close();
-                return;
-            }
-            // Đã lưu hàng chờ = coi như xong (sẽ tự gửi lại); lỗi đính kèm thì để người dùng bỏ tick rồi gửi lại
-            if (res.message.Contains("sẽ tự gửi lại"))
-            {
-                MessageBox.Show(this, res.message, "OHTA TOOL", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(this, res.message, "OHTA TOOL", MessageBoxButton.OK,
+                    res.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
                 Close();
                 return;
             }

@@ -15,15 +15,23 @@ namespace OhtaTool.Plugin.Services
 
         private static readonly object ResendGate = new object();
 
-        /// <summary>Gửi 1 báo lỗi. Không gửi được thì lưu hàng chờ để lần mở bảng OHTA sau gửi lại.</summary>
-        public static (bool ok, string message) Submit(BugReport r)
+        /// <summary>
+        /// Gửi 1 báo lỗi. Lỗi mạng -> lưu hàng chờ (queued = true), lần mở bảng OHTA sau gửi lại.
+        /// Apps Script từ chối (ok:false) -> không lưu: gửi lại cũng vậy, người dùng xem thông báo.
+        /// </summary>
+        public static (bool ok, bool queued, string message) Submit(BugReport r)
         {
-            (bool ok, string message) res = TrySend(r);
-            if (res.ok)
+            BugSendResult res = TrySend(r);
+            if (res.Ok)
             {
                 BugQueue.Remove(r.Id);
                 BugLog.Write("BUG", "da gui bao loi " + r.Id);
-                return (true, "Đã gửi báo lỗi cho admin. Cảm ơn bạn!");
+                return (true, false, "Đã gửi báo lỗi cho admin. Cảm ơn bạn!");
+            }
+            if (res.RejectedByServer)
+            {
+                BugLog.Write("BUG", "may chu tu choi " + r.Id + ": " + res.Message);
+                return (false, false, "Admin chưa nhận được báo lỗi: " + res.Message);
             }
             try
             {
@@ -32,25 +40,22 @@ namespace OhtaTool.Plugin.Services
             catch (Exception ex)
             {
                 BugLog.Write("BUG", ex);
-                return (false, "Chưa gửi được (" + res.message + ") và không lưu được hàng chờ: " + ex.Message);
+                return (false, false, "Chưa gửi được (" + res.Message + ") và không lưu được hàng chờ: " + ex.Message);
             }
-            BugLog.Write("BUG", "chua gui duoc " + r.Id + ": " + res.message);
-            return (false, "Chưa gửi được (" + res.message + "). Báo lỗi đã lưu, sẽ tự gửi lại lần mở bảng OHTA sau.");
+            BugLog.Write("BUG", "chua gui duoc " + r.Id + ": " + res.Message);
+            return (false, true, "Chưa gửi được (" + res.Message + "). Báo lỗi đã lưu, sẽ tự gửi lại lần mở bảng OHTA sau.");
         }
 
-        private static (bool ok, string message) TrySend(BugReport r)
+        private static BugSendResult TrySend(BugReport r)
         {
             int timeout = r.DinhKemZip != null ? 300 : r.AnhJpeg != null ? 60 : 30;
             FnameSheetReply reply = SheetWebApp.Post(FnameDir, "submit_bug", r.ToFields(), timeout, out _, out string error);
-            if (reply == null)
-                return (false, error);
-            return (reply.Ok, reply.Message ?? "");
+            return BugSendResult.FromReply(reply, error);
         }
 
         /// <summary>Gửi lại các báo lỗi trong hàng chờ; trả số đã gửi được. Không ném.</summary>
         public static int ResendQueued()
         {
-            int sent = 0;
             try
             {
                 // Mở bảng OHTA 2 lần liền nhau không được gửi song song 2 lượt
@@ -58,13 +63,7 @@ namespace OhtaTool.Plugin.Services
                     return 0;
                 try
                 {
-                    foreach (BugReport r in BugQueue.Pending())
-                    {
-                        if (!TrySend(r).ok)
-                            break; // vẫn mất mạng: để lần sau
-                        BugQueue.Remove(r.Id);
-                        sent++;
-                    }
+                    return BugResender.Run(TrySend);
                 }
                 finally
                 {
@@ -74,8 +73,8 @@ namespace OhtaTool.Plugin.Services
             catch (Exception ex)
             {
                 BugLog.Write("BUG", ex);
+                return 0;
             }
-            return sent;
         }
 
         public static (bool ok, bool isAdmin, List<BugAdminItem> bugs, string message) ListBugs()

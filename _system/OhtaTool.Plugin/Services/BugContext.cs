@@ -28,13 +28,21 @@ namespace OhtaTool.Plugin.Services
             }
             string tool = "OHTA v" + OhtaUpdateCommands.LoadedVersion;
             sb.AppendLine("Phien ban   : " + tool);
-            sb.AppendLine("Nen tang CAD: " + CadCompat.PlatformName);
+            string cad = CadCompat.PlatformName + " " + CadVersion();
+            sb.AppendLine("Nen tang CAD: " + cad);
             sb.AppendLine("Thu muc goc : " + (root ?? "(khong tim thay)"));
             sb.AppendLine("May / user  : " + Environment.MachineName + " / " + Environment.UserName);
             sb.AppendLine("Windows     : " + Environment.OSVersion);
             sb.AppendLine("Ban ve      : " + SafeDocName());
             sb.AppendLine("Cac tab     : " + string.Join(", ", tabs));
-            return (tool + " | " + CadCompat.PlatformName + " | " + string.Join(", ", tabs), sb.ToString());
+            return (tool + " | " + cad + " | " + string.Join(", ", tabs), sb.ToString());
+        }
+
+        /// <summary>Bản CAD thật (sysvar ACADVER, vd "25.0s (LMS Tech)") — chỉ gọi trên luồng CAD.</summary>
+        private static string CadVersion()
+        {
+            try { return "ACADVER " + CadApp.GetSystemVariable("ACADVER"); }
+            catch { return ""; }
         }
 
         private static string SafeDocName()

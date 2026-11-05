@@ -13786,6 +13786,32 @@
   kq
 )
 
+;;; Muc 209 (ADR 0007): bao loi GRO cho admin qua OHTATOOL.dll.
+;;; Goi thang ohta_net_bug_auto; ban ve mo SAU khi NETLOAD co the khong co ham .NET
+;;; (giong muc 114) -> ghi %TEMP%\ohta_bug_auto.txt (dong 1 = nguon, sau = loi, UTF-8 vi
+;;; loi co the co chu Nhat) roi gui lenh .NET OHTABUGAUTO (lenh dung chung moi ban ve).
+;;; PHAI khop BugCommands.AutoFile ben C#. Moi buoc boc vl-catch-all-apply: khong lam hong *error*.
+(defun gro--bao-loi-admin (loi / kq d f)
+  (setq kq (vl-catch-all-apply 'ohta_net_bug_auto (list "GRO" loi)))
+  (if (vl-catch-all-error-p kq)
+    (progn
+      (setq d (getenv "TEMP"))
+      (if (and d (/= d ""))
+        (progn
+          (setq f (strcat (vl-string-right-trim "\\/" d) "\\ohta_bug_auto.txt"))
+          (setq kq (vl-catch-all-apply 'gro--csv-ghi-de (list f (list "GRO" loi))))
+          (if (not (vl-catch-all-error-p kq))
+            (vl-catch-all-apply 'vla-sendcommand
+              (list (vla-get-activedocument (vlax-get-acad-object)) "OHTABUGAUTO ")
+            )
+          )
+        )
+      )
+    )
+  )
+  (princ)
+)
+
 (defun c:grochay (/ *error* ss ss-xln nss e codes fld dlg mk-code element pt h T= Q= M= 
               V= vT Tt Mf Zf p-bango ename-mk fn-dong fn-ok dg j n-sel n-text n-mtxt 
               n-bo bo-vd don default-don filecsv csv-line csv-loi csv-cu old-cmdecho 
@@ -13840,12 +13866,9 @@
                   ")"
           )
         )
-        ;; Muc 209: hoi gui bao loi cho admin (OHTATOOL.dll). vl-catch-all-apply:
-        ;; DLL chua nap / ham khong co thi bo qua, khong lam hong *error*.
-        (vl-catch-all-apply 'ohta_net_bug_auto
-          (list "GRO"
-                (strcat m " (buoc: " (cond ((eq (type gro--buoc) 'STR) gro--buoc) ("?")) ")")
-          )
+        ;; Muc 209: hoi gui bao loi cho admin (OHTATOOL.dll)
+        (gro--bao-loi-admin
+          (strcat m " (buoc: " (cond ((eq (type gro--buoc) 'STR) gro--buoc) ("?")) ")")
         )
       )
     )

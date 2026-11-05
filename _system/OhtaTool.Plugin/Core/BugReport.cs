@@ -57,19 +57,30 @@ namespace OhtaTool.Plugin.Core
         }
 
         /// <summary>Các trường gửi cho Apps Script (action submit_bug).</summary>
+        /// <summary>Ô Sheet tối đa 50.000 ký tự: mô tả dài hơn (người dùng dán cả stack trace) thì cắt, bản đầy đủ vào chi_tiet.</summary>
+        public const int MaxMoTa = 20000;
+        private const int MaxShort = 200;
+
         public Dictionary<string, string> ToFields()
         {
+            string moTa = MoTa ?? string.Empty;
+            string chiTiet = ChiTiet ?? string.Empty;
+            if (moTa.Length > MaxMoTa)
+            {
+                chiTiet = "--- MO TA DAY DU ---" + Environment.NewLine + moTa + Environment.NewLine + Environment.NewLine + chiTiet;
+                moTa = moTa.Substring(0, MaxMoTa - 40) + " … (bản đầy đủ trong file chi tiết)";
+            }
             var f = new Dictionary<string, string>
             {
                 ["id"] = Id ?? string.Empty,
                 ["thoi_gian"] = ThoiGian.ToString(TimeFormat, CultureInfo.InvariantCulture),
-                ["nguoi_gui"] = NguoiGui ?? string.Empty,
+                ["nguoi_gui"] = Cut(NguoiGui, MaxShort),
                 ["muc_do"] = MucDo ?? string.Empty,
-                ["tab_lenh"] = TabLenh ?? string.Empty,
-                ["mo_ta"] = MoTa ?? string.Empty,
-                ["phien_ban"] = PhienBan ?? string.Empty,
+                ["tab_lenh"] = Cut(TabLenh, MaxShort),
+                ["mo_ta"] = moTa,
+                ["phien_ban"] = Cut(PhienBan, 2000),
                 ["loi"] = ShortError(Loi),
-                ["chi_tiet"] = ChiTiet ?? string.Empty,
+                ["chi_tiet"] = chiTiet,
             };
             if (AnhJpeg != null && AnhJpeg.Length > 0)
                 f["anh"] = Convert.ToBase64String(AnhJpeg);
@@ -80,6 +91,9 @@ namespace OhtaTool.Plugin.Core
             }
             return f;
         }
+
+        private static string Cut(string s, int max) =>
+            string.IsNullOrEmpty(s) ? string.Empty : s.Length > max ? s.Substring(0, max) : s;
 
         public string ToJson()
         {

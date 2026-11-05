@@ -83,6 +83,19 @@ namespace OhtaTool.Plugin.Core
             File.WriteAllText(PathOf(r.Id), r.ToJson(), System.Text.Encoding.UTF8);
         }
 
+        /// <summary>Có file chờ không — chỉ liệt kê tên, không đọc (gọi được trên luồng CAD).</summary>
+        public static bool HasPending()
+        {
+            try
+            {
+                return System.IO.Directory.Exists(Directory) && System.IO.Directory.EnumerateFiles(Directory, "*.json").GetEnumerator().MoveNext();
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public static List<BugReport> Pending()
         {
             var list = new List<BugReport>();

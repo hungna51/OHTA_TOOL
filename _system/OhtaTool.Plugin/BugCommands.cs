@@ -13,6 +13,36 @@ namespace OhtaTool.Plugin
     public sealed class BugCommands
     {
         private static int _resent;
+        private static DateTime _lastResend = DateTime.MinValue;
+
+        /// <summary>File lisp ghi khi bản vẽ không gọi được ohta_net_bug_auto (giống cách GROTHONGTIN, mục 114 GURO).</summary>
+        public static string AutoFile =>
+            System.IO.Path.Combine(Environment.GetEnvironmentVariable("TEMP") ?? System.IO.Path.GetTempPath(), "ohta_bug_auto.txt");
+
+        /// <summary>
+        /// Lệnh nội bộ: *error* của GRO gửi qua (vla-sendcommand "OHTABUGAUTO ") khi hàm lisp .NET không có
+        /// trong bản vẽ này. Đọc %TEMP%\ohta_bug_auto.txt (dòng 1 = nguồn, phần còn lại = lỗi), xoá file, hỏi gửi báo lỗi.
+        /// </summary>
+        [CommandMethod("OHTABUGAUTO")]
+        public static void CmdBugAuto()
+        {
+            try
+            {
+                string path = AutoFile;
+                if (!System.IO.File.Exists(path))
+                    return;
+                string text = System.IO.File.ReadAllText(path, System.Text.Encoding.UTF8); // ADODB UTF-8 có BOM: ReadAllText tự bỏ
+                System.IO.File.Delete(path);
+                int nl = text.IndexOf('\n');
+                string nguon = (nl > 0 ? text.Substring(0, nl) : "LISP").Trim();
+                string loi = (nl > 0 ? text.Substring(nl + 1) : text).Trim();
+                BugGuard.ReportLispError(nguon.Length == 0 ? "LISP" : nguon, loi);
+            }
+            catch (Exception ex)
+            {
+                BugLog.Write("BUG", ex);
+            }
+        }
 
         /// <summary>Mở form báo lỗi. Chụp cửa sổ CAD TRƯỚC khi form hiện để ảnh không bị form che.</summary>
         [CommandMethod("OHTABUG")]
@@ -35,6 +65,7 @@ namespace OhtaTool.Plugin
                 "OHTA TOOL — Gặp lỗi", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
                 == System.Windows.MessageBoxResult.Yes;
             BugGuard.ShowForm = BugReportWindow.Show;
+            BugGuard.Notify = CadCompat.WriteMessage;
         }
 
         /// <summary>
@@ -63,15 +94,20 @@ namespace OhtaTool.Plugin
         {
             try
             {
-                if (BugQueue.Pending().Count == 0)
+                // Bảng OHTA mở rất thường xuyên (OHTA, FN, OI, mỗi lần GRO): chỉ thử lại tối đa 10 phút/lần,
+                // và trên luồng CAD chỉ xem có file chờ không (không đọc file — zip base64 có thể ~33 MB)
+                if (DateTime.Now - _lastResend < TimeSpan.FromMinutes(10) || !BugQueue.HasPending())
                     return;
+                _lastResend = DateTime.Now;
+                System.Windows.Threading.Dispatcher cadThread = System.Windows.Threading.Dispatcher.CurrentDispatcher;
                 Task.Run(() =>
                 {
                     int n = BugReportService.ResendQueued();
                     if (n <= 0)
                         return;
                     _resent = n;
-                    CadApp.Idle += OnIdleReportResent;
+                    // Đăng ký Idle / ghi dòng lệnh phải ở luồng CAD
+                    cadThread.BeginInvoke(new Action(() => CadApp.Idle += OnIdleReportResent));
                 });
             }
             catch (Exception ex)

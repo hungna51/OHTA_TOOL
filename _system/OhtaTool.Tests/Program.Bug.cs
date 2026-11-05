@@ -42,6 +42,70 @@ namespace OhtaTool.Tests
             TestBugAttachmentsAndQueue();
             TestBugSheet();
             TestBugGuard();
+            TestBugReviewFixes();
+        }
+
+        // Sua sau review toan nhanh (ledger "Final: fixed ...")
+        private static void TestBugReviewFixes()
+        {
+            // #2: mo ta dan ca stack trace -> o Sheet <= 20000 ky tu, phan con lai vao chi_tiet
+            var r = BugReport.Create(); r.MoTa = new string('m', 60_000); r.ChiTiet = "ct";
+            var f = r.ToFields();
+            Check("Fix: mo_ta cat <= 20000", f["mo_ta"].Length <= BugReport.MaxMoTa, f["mo_ta"].Length.ToString());
+            Check("Fix: mo ta day du vao chi_tiet", f["chi_tiet"].Contains(new string('m', 60_000)));
+            Check("Fix: tab_lenh/nguoi_gui cat", BugReport.Create().ToFields()["nguoi_gui"].Length <= 200);
+
+            // #2: gui lai hang cho - loi mang thi giu, may chu tu choi thi bo, khong dung lai o muc hong
+            string d = Path.Combine(Path.GetTempPath(), "ohta_resend_" + Guid.NewGuid().ToString("N"));
+            string oldQ = BugQueue.Directory; BugQueue.Directory = d;
+            Check("Fix: HasPending rong", !BugQueue.HasPending());
+            var a = BugReport.Create(); a.MoTa = "a"; a.ThoiGian = DateTime.Now.AddMinutes(-3);
+            var b = BugReport.Create(); b.MoTa = "b"; b.ThoiGian = DateTime.Now.AddMinutes(-2);
+            var c = BugReport.Create(); c.MoTa = "c"; c.ThoiGian = DateTime.Now.AddMinutes(-1);
+            BugQueue.Enqueue(a); BugQueue.Enqueue(b); BugQueue.Enqueue(c);
+            Check("Fix: HasPending co", BugQueue.HasPending());
+            var sentIds = new List<string>();
+            int n = BugResender.Run(x =>
+            {
+                if (x.Id == a.Id) return BugSendResult.Rejected("Thiếu mô tả");
+                if (x.Id == b.Id) return BugSendResult.NetworkError("mat mang");
+                sentIds.Add(x.Id); return BugSendResult.Sent();
+            });
+            Check("Fix: khong dung lai o muc hong, gui duoc c", n == 1 && sentIds.Contains(c.Id));
+            var left = BugQueue.Pending().Select(x => x.Id).ToList();
+            Check("Fix: may chu tu choi -> bo khoi hang cho", !left.Contains(a.Id));
+            Check("Fix: loi mang -> giu lai", left.Contains(b.Id) && left.Count == 1);
+            BugQueue.Directory = oldQ;
+
+            // Loi tam cua Apps Script (retry) khong duoc xoa khoi hang cho
+            var rRetry = BugSendResult.FromReply(FnameSheetReply.Parse("{\"ok\":false,\"retry\":true,\"message\":\"Lỗi Apps Script: lock\"}"), null);
+            Check("Fix: retry -> loi tam, giu hang cho", !rRetry.Ok && !rRetry.RejectedByServer);
+            var rRej = BugSendResult.FromReply(FnameSheetReply.Parse("{\"ok\":false,\"message\":\"Thiếu mô tả lỗi.\"}"), null);
+            Check("Fix: ok false khong retry -> tu choi", rRej.RejectedByServer && rRej.Message == "Thiếu mô tả lỗi.");
+            var rNet = BugSendResult.FromReply(null, "mat mang");
+            Check("Fix: khong co tra loi -> loi mang", !rNet.Ok && !rNet.RejectedByServer && rNet.Message == "mat mang");
+            Check("Fix: ok true -> da gui", BugSendResult.FromReply(FnameSheetReply.Parse("{\"ok\":true}"), null).Ok);
+
+            // #8 + #10: hop hoi dang mo thi khong hoi long; loi luon in ra dong lenh
+            BugDedup.ResetForTest();
+            var notes = new List<string>(); int hoi = 0;
+            BugGuard.Notify = s => notes.Add(s);
+            BugGuard.Capture = () => null;
+            BugGuard.ShowForm = (x1, x2, x3, x4) => { };
+            BugGuard.AskUser = (nguon, loi) =>
+            {
+                hoi++;
+                Check("Fix: InReport bat khi hop hoi dang mo", BugDedup.InReport);
+                BugGuard.ReportLispError("GRO", "loi long trong luc hoi");
+                return false;
+            };
+            BugGuard.Run("X", () => throw new InvalidOperationException("mot"));
+            Check("Fix: khong hoi long", hoi == 1);
+            Check("Fix: InReport tat sau hop hoi", !BugDedup.InReport);
+            BugGuard.Run("X", () => throw new InvalidOperationException("mot"));
+            Check("Fix: lan 2 cung loi van in dong lenh", notes.Count(s => s.Contains("mot")) == 2, string.Join(" | ", notes));
+            BugGuard.Notify = null; BugGuard.Capture = null; BugGuard.ShowForm = null; BugGuard.AskUser = null;
+            BugDedup.ResetForTest();
         }
 
         private static void TestBugGuard()

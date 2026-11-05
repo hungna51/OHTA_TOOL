@@ -147,6 +147,8 @@ namespace OhtaTool.Plugin.Core
         [DataMember(Name = "requests")] public List<FnameUpdateRequest> Requests { get; set; }
         /// <summary>submit_request loại tam: link ảnh bằng chứng Apps Script vừa lưu lên Drive (cách nhau dấu cách).</summary>
         [DataMember(Name = "anh")] public string Anh { get; set; }
+        /// <summary>Lỗi tạm phía Apps Script (exception trong doPost): gửi lại sau được.</summary>
+        [DataMember(Name = "retry")] public bool Retry { get; set; }
 
         /// <summary>Đọc JSON trả về; không phải JSON hợp lệ (trang HTML lỗi, rỗng...) thì trả null.</summary>
         public static FnameSheetReply Parse(string body)

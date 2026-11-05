@@ -234,7 +234,9 @@
    `(vl-catch-all-apply 'ohta_net_bug_auto (list "GRO" "<loi> (buoc: <gro--buoc>)"))` — OHTATOOL.dll chụp
    cửa sổ CAD, hỏi "Gửi báo lỗi?" và mở form điền sẵn lỗi + bước. Esc/Cancel đã bị lọc trước đó
    (`*BREAK,*CANCEL*,*EXIT*`) nên không hỏi. `vl-catch-all-apply` để bản vẽ chưa nạp OHTATOOL.dll
-   không làm hỏng `*error*`. Đầu và cuối lệnh ghi `ohta_net_log` ("GROCHAY bat dau" / "GROCHAY xong")
+   không làm hỏng `*error*`. Gọi không được (bản vẽ mở sau NETLOAD không có hàm .NET — mục 114) thì
+   `gro--bao-loi-admin` ghi `%TEMP%\ohta_bug_auto.txt` (UTF-8, dòng 1 = nguồn) rồi `vla-sendcommand "OHTABUGAUTO "`
+   — lệnh .NET dùng chung mọi bản vẽ, đọc file rồi hỏi. Đầu và cuối lệnh ghi `ohta_net_log` ("GROCHAY bat dau" / "GROCHAY xong")
    vào nhật ký `%LOCALAPPDATA%\OHTA_TOOL\logs\ohta.log` — báo lỗi gửi kèm 200 dòng cuối.
    Lệnh C# của GROTOOL người dùng gõ (`DST`, `GROCS`, `GROSETTING`, `GROTHONGTIN`, `DSTON`) bọc
    `OhtaBugBridge.Run`, gọi `OhtaTool.Plugin.Core.BugGuard.ReportException` bằng phản chiếu.

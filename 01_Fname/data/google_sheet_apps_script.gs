@@ -70,11 +70,15 @@ var HANDLERS = {
 var TRAV_THU_SHEET_NAME = 'trav_thu';
 var TRAV_THU_HEADER = ['Loai', 'T', 'Goc', 'Dao', 'Denta', 'Ma_tam', 'Dinh_danh'];
 
+// Action chỉ đọc + submit_bug (tự khoá đúng đoạn ghi dòng) không giữ khoá chung: 1 báo lỗi kèm zip 25 MB
+// tải lên mất cả chục giây, giữ khoá thì máy khác ghi Fname / gửi báo lỗi bị "Lỗi Apps Script" (hết 20 s chờ).
+var NO_LOCK_ACTIONS = { list_requests: true, my_requests: true, list_bugs: true, submit_bug: true };
+
 function doPost(e) {
   var lock = LockService.getScriptLock();
   try {
-    lock.waitLock(20000);
     var p = (e && e.parameter) || {};
+    if (!NO_LOCK_ACTIONS[p.action]) lock.waitLock(20000);
     if (!WRITE_KEY)
       return reply_({ ok: false, message: 'Apps Script chưa đặt WRITE_KEY trong Thuộc tính tập lệnh (Cài đặt dự án).' });
     if (String(p.key || '') !== WRITE_KEY)
@@ -96,7 +100,8 @@ function doPost(e) {
       default: return reply_({ ok: false, message: 'Hành động không hỗ trợ: ' + p.action });
     }
   } catch (err) {
-    return reply_({ ok: false, message: 'Lỗi Apps Script: ' + err });
+    // retry: lỗi tạm (hết thời gian chờ khoá, Drive bận...) - máy gửi giữ báo lỗi trong hàng chờ để gửi lại
+    return reply_({ ok: false, retry: true, message: 'Lỗi Apps Script: ' + err });
   } finally {
     try { lock.releaseLock(); } catch (x) {}
   }
@@ -397,8 +402,12 @@ function capQuyenDrive() {
 // ---------- Báo lỗi (ADR 0007) ----------
 //
 // Máy người dùng gửi submit_bug -> 1 dòng tab bug_report + file trên Drive + email tới chủ script.
-// Máy admin (tab admin) list_bugs xem, resolve_bug chuyển dòng sang bug_done và bỏ zip đính kèm vào Thùng rác.
-// Lần đầu cập nhật phần này: chạy hàm capQuyenBaoLoi trong trình chỉnh sửa, bấm Cho phép (Drive + Gmail).
+// Máy admin (tab admin của Sheet Fname) list_bugs xem, resolve_bug chuyển dòng sang bug_done, bỏ zip vào Thùng rác.
+// RIÊNG TƯ: báo lỗi KHÔNG nằm trong Sheet Fname (Sheet đó mở "ai có link xem" để tool tải dữ liệu, và ID của nó
+// có trong repo public). Script tự tạo Sheet riêng "OHTA Bug Report" (chỉ chủ script xem) trong thư mục Drive
+// cùng tên, lưu ID vào Thuộc tính tập lệnh BUG_SPREADSHEET_ID. Ảnh / nhật ký / zip đều KHÔNG chia sẻ: admin
+// mở link bằng tài khoản Google chủ script, hoặc chủ script chia sẻ thư mục "OHTA Bug Report" cho email từng admin.
+// Lần đầu cập nhật phần này: chạy hàm capQuyenBaoLoi trong trình chỉnh sửa, bấm Cho phép (Drive + Sheets + Gmail).
 
 var BUG_SHEET_NAME = 'bug_report';
 var BUG_DONE_SHEET_NAME = 'bug_done';
@@ -406,56 +415,88 @@ var BUG_FOLDER_NAME = 'OHTA Bug Report';
 var BUG_HEADER = ['ID', 'Thoi_gian', 'May_gui', 'Nguoi_gui', 'Muc_do', 'Tab_lenh', 'Mo_ta', 'Phien_ban', 'Loi', 'Anh', 'Chi_tiet', 'Dinh_kem'];
 var BUG_DONE_HEADER = BUG_HEADER.concat(['Ngay_xu_ly', 'Ban_sua']);
 var BUG_MUC_DO = ['Chặn việc', 'Phiền', 'Nhỏ'];
+var BUG_CELL_MAX = 45000; // 1 ô Sheet tối đa 50.000 ký tự
 
 function submitBug_(p, ctx) {
   var id = clean_(p.id).replace(/[^\w-]/g, '');
   if (!id) return { ok: false, message: 'Thiếu ID báo lỗi.' };
   if (!ctx.machine) return { ok: false, message: 'Thiếu tên máy gửi.' };
   if (!String(p.mo_ta || '').trim()) return { ok: false, message: 'Thiếu mô tả lỗi.' };
-  // Gửi lại từ hàng chờ (lần trước Apps Script đã nhận nhưng máy không nhận được trả lời) -> không ghi trùng
-  if (bugRowIndex_(bugSheet_(ctx.ss, BUG_SHEET_NAME, BUG_HEADER), id) > 0
-      || bugRowIndex_(bugSheet_(ctx.ss, BUG_DONE_SHEET_NAME, BUG_DONE_HEADER), id) > 0)
-    return { ok: true, message: 'Admin đã nhận báo lỗi này trước đó.' };
+  var bss = bugSs_();
+  // Gửi lại từ hàng chờ khi admin đã nhận -> trả ok luôn, khỏi tải file lên lần nữa
+  if (bugIdExists_(bss, id)) return { ok: true, message: 'Admin đã nhận báo lỗi này trước đó.' };
 
+  // Tải file lên NGOÀI khoá (có thể lâu); file chỉ chủ Drive xem được
   var folder = bugFolder_();
+  var files = [];
   var anh = '', chiTiet = '', dinhKem = '';
   if (p.anh) {
     var fa = folder.createFile(Utilities.newBlob(Utilities.base64Decode(String(p.anh)), 'image/jpeg', id + '.jpg'));
-    fa.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    anh = fa.getUrl();
+    files.push(fa); anh = fa.getUrl();
   }
   if (p.chi_tiet) {
     var ft = folder.createFile(Utilities.newBlob(String(p.chi_tiet), 'text/plain', id + '_chi_tiet.txt'));
-    ft.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    chiTiet = ft.getUrl();
+    files.push(ft); chiTiet = ft.getUrl();
   }
   if (p.dinh_kem) {
-    // Bản vẽ / CSV của khách: KHÔNG chia sẻ, chỉ chủ Drive mở được
     var name = id + '_' + String(p.dinh_kem_ten || 'dinh_kem.zip').replace(/[\\\/:*?"<>|]/g, '_');
-    dinhKem = folder.createFile(Utilities.newBlob(Utilities.base64Decode(String(p.dinh_kem)), 'application/zip', name)).getUrl();
+    var fz = folder.createFile(Utilities.newBlob(Utilities.base64Decode(String(p.dinh_kem)), 'application/zip', name));
+    files.push(fz); dinhKem = fz.getUrl();
   }
 
   var mucDo = BUG_MUC_DO.indexOf(String(p.muc_do)) >= 0 ? String(p.muc_do) : 'Phiền';
-  var row = [id, String(p.thoi_gian || ''), ctx.machine, String(p.nguoi_gui || ''), mucDo, String(p.tab_lenh || ''),
-             String(p.mo_ta || ''), String(p.phien_ban || ''), String(p.loi || '').substring(0, 1000), anh, chiTiet, dinhKem];
-  var sh = bugSheet_(ctx.ss, BUG_SHEET_NAME, BUG_HEADER);
-  // Chữ dạng '@': chặn người dùng gõ "=..." thành công thức
-  sh.getRange(sh.getLastRow() + 1, 1, 1, row.length).setNumberFormat('@').setValues([row]);
+  var cut = function (v, n) { return String(v || '').substring(0, n || BUG_CELL_MAX); };
+  var row = [id, cut(p.thoi_gian, 40), ctx.machine, cut(p.nguoi_gui, 200), mucDo, cut(p.tab_lenh, 200),
+             cut(p.mo_ta), cut(p.phien_ban, 2000), cut(p.loi, 1000), anh, chiTiet, dinhKem];
+
+  // Chỉ khoá đoạn kiểm trùng + ghi dòng (2 lần gửi cùng ID chạy song song không ra 2 dòng)
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    if (bugIdExists_(bss, id)) {
+      files.forEach(function (f) { try { f.setTrashed(true); } catch (x) {} });
+      return { ok: true, message: 'Admin đã nhận báo lỗi này trước đó.' };
+    }
+    var sh = bugSheet_(bss, BUG_SHEET_NAME, BUG_HEADER);
+    // Chữ dạng '@': chặn người dùng gõ "=..." thành công thức
+    sh.getRange(sh.getLastRow() + 1, 1, 1, row.length).setNumberFormat('@').setValues([row]);
+  } catch (err) {
+    files.forEach(function (f) { try { f.setTrashed(true); } catch (x) {} }); // không để file mồ côi
+    throw err;
+  } finally {
+    lock.releaseLock();
+  }
 
   try {
     MailApp.sendEmail(Session.getEffectiveUser().getEmail(),
-      '[OHTA Bug][' + mucDo + '] ' + (p.tab_lenh || '') + ' - ' + ctx.machine,
-      String(p.mo_ta || '') + '\n\nLỗi: ' + String(p.loi || '') + '\nMáy: ' + (p.nguoi_gui || ctx.machine)
-      + '\nPhiên bản: ' + String(p.phien_ban || '') + '\nẢnh: ' + anh + '\nChi tiết: ' + chiTiet + '\nSheet: ' + ctx.ss.getUrl());
+      '[OHTA Bug][' + mucDo + '] ' + cut(p.tab_lenh, 100) + ' - ' + ctx.machine,
+      cut(p.mo_ta, 5000) + '\n\nLỗi: ' + cut(p.loi, 1000) + '\nMáy: ' + (p.nguoi_gui || ctx.machine)
+      + '\nPhiên bản: ' + cut(p.phien_ban, 2000) + '\nẢnh: ' + anh + '\nChi tiết: ' + chiTiet + '\nSheet báo lỗi: ' + bss.getUrl());
   } catch (x) {
     // chưa cấp quyền Gmail / hết hạn mức: vẫn ghi báo lỗi
   }
   return { ok: true, message: 'Đã gửi báo lỗi cho admin.' };
 }
 
+function bugIdExists_(bss, id) {
+  return bugRowIndex_(bugSheet_(bss, BUG_SHEET_NAME, BUG_HEADER), id) > 0
+      || bugRowIndex_(bugSheet_(bss, BUG_DONE_SHEET_NAME, BUG_DONE_HEADER), id) > 0;
+}
+
+// Sheet báo lỗi riêng, chỉ chủ script xem (KHÔNG phải Sheet Fname công khai)
+function bugSs_() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty('BUG_SPREADSHEET_ID');
+  if (id) { try { return SpreadsheetApp.openById(id); } catch (x) {} }
+  var ss = SpreadsheetApp.create('OHTA Bug Report');
+  try { DriveApp.getFileById(ss.getId()).moveTo(bugFolder_()); } catch (x) {}
+  props.setProperty('BUG_SPREADSHEET_ID', ss.getId());
+  return ss;
+}
+
 function listBugs_(ctx) {
   if (!isAdmin_(ctx)) return { ok: true, isAdmin: false, bugs: [] };
-  var sh = bugSheet_(ctx.ss, BUG_SHEET_NAME, BUG_HEADER);
+  var sh = bugSheet_(bugSs_(), BUG_SHEET_NAME, BUG_HEADER);
   var list = [];
   var n = sh.getLastRow() - 1;
   if (n > 0) {
@@ -472,12 +513,13 @@ function listBugs_(ctx) {
 
 function resolveBug_(p, ctx) {
   if (!isAdmin_(ctx)) return { ok: false, message: 'Máy "' + ctx.machine + '" không có quyền (không có trong tab admin).' };
-  var sh = bugSheet_(ctx.ss, BUG_SHEET_NAME, BUG_HEADER);
+  var bss = bugSs_();
+  var sh = bugSheet_(bss, BUG_SHEET_NAME, BUG_HEADER);
   var r = bugRowIndex_(sh, String(p.id || ''));
   if (r <= 0) return { ok: false, message: 'Không tìm thấy báo lỗi (có thể đã xử lý trên máy khác).' };
   var vals = sh.getRange(r, 1, 1, BUG_HEADER.length).getDisplayValues()[0];
   trashAnh_(vals[BUG_HEADER.indexOf('Dinh_kem')]); // chỉ bỏ zip; giữ ảnh + nhật ký để tra lại lỗi cũ
-  var done = bugSheet_(ctx.ss, BUG_DONE_SHEET_NAME, BUG_DONE_HEADER);
+  var done = bugSheet_(bss, BUG_DONE_SHEET_NAME, BUG_DONE_HEADER);
   var row = vals.concat([Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'), String(p.ban_sua || '')]);
   done.getRange(done.getLastRow() + 1, 1, 1, row.length).setNumberFormat('@').setValues([row]);
   sh.deleteRow(r);
@@ -516,6 +558,7 @@ function bugFolder_() {
 // Chạy tay 1 lần trong trình chỉnh sửa để cấp quyền Drive + Gmail cho báo lỗi
 function capQuyenBaoLoi() {
   var f = bugFolder_();
+  Logger.log('Sheet báo lỗi (riêng tư): ' + bugSs_().getUrl());
   MailApp.sendEmail(Session.getEffectiveUser().getEmail(), '[OHTA Bug] Thử quyền gửi mail', 'Thư mục báo lỗi: ' + f.getUrl());
   Logger.log('Thư mục báo lỗi: ' + f.getUrl() + ' — đã gửi mail thử, còn ' + MailApp.getRemainingDailyQuota() + ' mail hôm nay.');
   return f.getUrl();
