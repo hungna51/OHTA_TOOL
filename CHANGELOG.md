@@ -2,6 +2,10 @@
 
 Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_ohta.ps1` lấy nội dung mục đó làm ghi chú Release trên GitHub, và hộp thoại "Có bản mới" trên máy đội cũng hiện đúng nội dung này — viết ngắn, cho người dùng xưởng đọc.
 
+## v1.2.3
+
+- Tab **Guro v1.5.3** — sửa lỗi ZWCAD: bấm **Chạy GRO** báo "buoc nhannet (C#) loi: undefined function" và dừng (xảy ra khi bảng OHTA mở trước khi chạy GRO). Nếu vẫn gặp thông báo yêu cầu, đóng ZWCAD rồi mở lại.
+
 ## v1.2.2
 
 - Tab **Guro v1.5.2** — sửa lỗi:
