@@ -89,23 +89,6 @@ namespace OhtaTool.Plugin.Core
         /// <summary>Dòng tam đang có (Sheet hoặc chờ duyệt) của Loai + T; null nếu chưa có T hiển thị.</summary>
         public static TamRecord FindTam(string loai, double t) => TamData.Find(TableTam, loai, t);
 
-        /// <summary>Loại vật liệu cho bảng tam: loại của trav_90 với SIMA gộp 1 tên chung ("SS SIMA"), cộng loại đã có trong tam.</summary>
-        public static List<string> GetTamLoaiOptions()
-        {
-            var result = new List<string>();
-            foreach (string mat in Table90.Select(r => r.Mat?.Trim()).Concat(TableTam.Select(r => r.Loai)))
-            {
-                if (string.IsNullOrEmpty(mat))
-                    continue;
-                string display = mat;
-                string folded = TraVThuData.NormalizeLoai(mat);
-                if (folded.Contains(" SIMA ") && folded != TamData.BaseLoai(mat))
-                    display = mat.Substring(0, mat.TrimEnd().LastIndexOf(' ')).Trim();
-                if (!result.Any(x => TamData.SameLoai(x, display)))
-                    result.Add(display);
-            }
-            return result;
-        }
 
         public static string GetRealThickness(string fnameM, string fnameT)
         {

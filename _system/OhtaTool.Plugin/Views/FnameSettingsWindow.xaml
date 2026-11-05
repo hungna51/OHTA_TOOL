@@ -236,7 +236,7 @@
                                         </Grid.ColumnDefinitions>
                                         <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
                                             <TextBlock Text="1. Vật liệu" FontSize="12" FontWeight="SemiBold" Foreground="#1E293B"/>
-                                            <TextBlock Style="{StaticResource CardHint}" Text="Mác M= chưa có, hoặc thêm độ dày T= cho mác đã có."/>
+                                            <TextBlock Style="{StaticResource CardHint}" Text="Mác M= / độ dày T= chưa có, và T thực của tấm (kèm người xác nhận + ảnh)."/>
                                         </StackPanel>
                                         <Button x:Name="BtnAddMaterial" Grid.Column="1" Style="{StaticResource DialogPrimaryBtnStyle}"
                                                 Content="➕  Bổ sung" Click="OnAddMaterialClick" VerticalAlignment="Center"/>
@@ -244,7 +244,7 @@
                                 </Border>
 
                                 <!-- 2. Góc bẻ thử -->
-                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,0,6">
+                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="10,8">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -260,22 +260,6 @@
                                             <Button x:Name="BtnAddTrialBend" Style="{StaticResource DialogPrimaryBtnStyle}"
                                                     Content="➕  Bổ sung" Click="OnAddTrialBendClick"/>
                                         </StackPanel>
-                                    </Grid>
-                                </Border>
-
-                                <!-- 3. Thông số tấm -->
-                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="10,8">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
-                                            <TextBlock Text="3. T thực của tấm" FontSize="12" FontWeight="SemiBold" Foreground="#1E293B"/>
-                                            <TextBlock Style="{StaticResource CardHint}" Text="Tấm chưa có T thực (vd SUS SIMA 6.0). Cần người xác nhận, ghi chú và ảnh."/>
-                                        </StackPanel>
-                                        <Button Grid.Column="1" Style="{StaticResource DialogPrimaryBtnStyle}"
-                                                Content="➕  Bổ sung" Click="OnAddTamClick" VerticalAlignment="Center"/>
                                     </Grid>
                                 </Border>
 

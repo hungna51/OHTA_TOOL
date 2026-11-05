@@ -964,7 +964,7 @@ namespace OhtaTool.Plugin.ViewModels
 
         public void OpenMaterialEditorDirectly(Window owner = null)
         {
-            var editor = new FnameMaterialWindow(() => _catalog, TraVCalculator.GetMaterialTypeOptions(), _valM, _valT, SubmitMaterialAsync);
+            var editor = new FnameMaterialWindow(() => _catalog, TraVCalculator.GetMaterialTypeOptions(), _valM, _valT, SubmitMaterialAsync, SubmitTamAsync);
             if (owner != null)
             {
                 editor.Owner = owner;
@@ -1196,7 +1196,7 @@ namespace OhtaTool.Plugin.ViewModels
             dlg.AttachApprovals(this);
             dlg.OpenMaterialEditor = owner =>
             {
-                var editor = new FnameMaterialWindow(() => _catalog, TraVCalculator.GetMaterialTypeOptions(), _valM, _valT, SubmitMaterialAsync)
+                var editor = new FnameMaterialWindow(() => _catalog, TraVCalculator.GetMaterialTypeOptions(), _valM, _valT, SubmitMaterialAsync, SubmitTamAsync)
                 {
                     Owner = owner
                 };
@@ -1211,11 +1211,6 @@ namespace OhtaTool.Plugin.ViewModels
                 editor.ShowDialog();
             };
             dlg.OpenTrialEditor = openTrialEditor;
-            dlg.OpenTamEditor = owner =>
-            {
-                var editor = new FnameTamWindow(_valM, _valT, SubmitTamAsync) { Owner = owner };
-                editor.ShowDialog();
-            };
             dlg.OpenTrialList = owner =>
             {
                 // Lọc sẵn theo loại vật liệu + T đang nhập trên bảng
