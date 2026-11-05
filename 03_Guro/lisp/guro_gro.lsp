@@ -150,9 +150,22 @@
     (t
      ;; Duyet tay thay vi vl-remove-if-not (khong chac co tren ZWCAD).
      (setq r nil)
-     (foreach x (bg--uni-tbl) 
+     (foreach x (append (bg--uni-tbl) bg--uni-them) 
        (if (and (null r) (= (cadr x) b1) (= (caddr x) b2)) 
          (setq r (car x))
+       )
+     )
+     ;; Muc 203: ngoai bang -> hoi GROTOOL.dll (bang ma 932 day du cua .NET), nho vao
+     ;; bg--uni-them de lan sau khong hoi lai va de bg--uni-cp932 doi nguoc duoc.
+     (if (and (null r) (> b2 0) (vl-symbol-value 'gro_net_cp932))
+       (progn
+         (setq r (vl-catch-all-apply 'gro_net_cp932 (list b1 b2)))
+         (if (and r (not (vl-catch-all-error-p r)) (numberp r) (> r 127))
+           (setq bg--uni-them (cons (list (fix r) b1 b2) bg--uni-them)
+                 r            (fix r)
+           )
+           (setq r nil)
+         )
        )
      )
      r
@@ -166,7 +179,9 @@
     ((<= u 127) (list u))
     ((and (>= u 65377) (<= u 65439)) (list (- u 65216)))
     ((and (>= u 65296) (<= u 65305)) (list 130 (+ 79 (- u 65296))))
-    (t (cdr (assoc u (bg--uni-tbl))))
+    ((cdr (assoc u (bg--uni-tbl))))
+    ;; Muc 203: ky tu da giai bang GROTOOL.dll (bg--cp932-uni) -> doi nguoc lai duoc
+    (t (cdr (assoc u bg--uni-them)))
   )
 )
 
@@ -4196,6 +4211,20 @@
 ;;; chieu rong chu phu thuoc so ky tu va font, uoc luong thi sai.
 ;;;
 ;;; Tra ve: (so-dat-duoc  so-phai-dung-goc-tren-trai)
+;;; Muc 204: dau XData "GRO_DAU_RA" len doi tuong GRO tao ra / dung lam khung bao (ten ban
+;;; ve, polyline khung bao) -> tab "Net Chua Doi" cua bang DST bo qua chung, ke ca khi layer
+;;; goc cua ban ve chinh la "0" (cung layer voi bango / ten ban ve / khung bao).
+(defun gro--gan-dau-ra (e / ed)
+  (if (and e (= (type e) 'ENAME) (setq ed (entget e)))
+    (progn
+      (regapp "GRO_DAU_RA")
+      (vl-catch-all-apply 'entmod
+                          (list (append ed (list (list -3 (list "GRO_DAU_RA" (cons 1000 "GRO"))))))
+      )
+    )
+  )
+)
+
 (defun gro--dat-ten-bv (khungs ten hmax style / cao k kb e tbb ds d chon dem made ep ents) 
   (setq cao  (gro--ten-bv-cao hmax)
         made 0
@@ -13725,7 +13754,7 @@
               lx-k lx-g lx-t lx-0 lx-ds lx-st cum-khois-map vungs-tk raw-tam-list
               ss-goc-info gro--danh-sach-bango-ents gro--danh-sach-ten-bv-ents bb-tong-bv dx-chup dy-chup ssv-left kq-chup
               xep-cum all-codes-cum fld-all-cum v-cum nhom-cum bb-goc-xep kq-xep msg-xep-cum
-              tids-da-xep kq-tg msg-tach-gian kq-mir msg-mir msg-mk msg-kc ds-sht msg-sht gro--ds-text-khac n-khung0 gro--ds-cat vung-truoc gro--dich-tach gro--bango-dich gro--ds-khung-bo gro--hop-khung-bo
+              tids-da-xep kq-tg msg-tach-gian kq-mir msg-mir msg-mk msg-kc ds-sht msg-sht gro--ds-text-khac n-khung0 gro--ds-cat vung-truoc gro--dich-tach gro--bango-dich gro--ds-khung-bo gro--hop-khung-bo i-dr
              )
   ;; LUU Y ve danh sach local o tren: sl p c v u la BIEN VONG foreach, khai bao
   ;; de chung KHONG ro ra pham vi toan cuc. Trong AutoLISP, (foreach x ...) dat
@@ -13895,6 +13924,12 @@
       )
       ;; Muc 194: KHONG ghi registry - layer chon theo tung ban ve tren tab Guro,
       ;; cai dat chung chi doi trong cua so cai dat cua tab.
+      ;; Muc 204: rieng layer goc vua xu ly thi ghi lai - tab "Net Chua Doi" cua bang
+      ;; DST doc layer_xln; khong co thi no tu chon layer dong nhat (thuong la "0", noi
+      ;; chua bango / ten ban ve / khung bao) va liet ke nham chung la net chua doi.
+      (if (and gro--use-xln gro--layer-xln)
+        (gro--reg-write-str "layer_xln" gro--layer-xln)
+      )
 
       ;; --- 3. chon doi tuong -----------------------------------------------
       (gro--moc "chon doi tuong")
@@ -13969,6 +14004,12 @@
           )
           (setq khungs     (gro--sap-vung khungs 1.0)
                 khungs-goc khungs
+          )
+          ;; Muc 204: danh dau polyline khung bao da chon (tab Net Chua Doi bo qua)
+          (setq i-dr 0)
+          (while (< i-dr (sslength ssv))
+            (gro--gan-dau-ra (ssname ssv i-dr))
+            (setq i-dr (1+ i-dr))
           )
           ;; ZOOM TRUOC KHI QUET (muc 63). Tu khi quet bang ssget "_CP", pham vi
           ;; quet phu thuoc tam nhin - nen buoc zoom phai dung o DAY, khong phai
@@ -14934,6 +14975,7 @@
           (setq kq-ten (gro--dat-ten-bv khungs-ten don hmax style-bg)
                 gro--danh-sach-ten-bv-ents (nth 2 kq-ten)
           )
+          (foreach e gro--danh-sach-ten-bv-ents (gro--gan-dau-ra e)) ; muc 204
           (princ 
             (strcat "\nTen ban ve: dat " 
                     (itoa (nth 0 kq-ten))

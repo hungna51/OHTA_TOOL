@@ -42,6 +42,25 @@ namespace ZwCadPlugin
                 kq.Add(new TypedValue((int)LispDataType.Text, t ?? ""));
             return kq;
         }
+
+        /// <summary>
+        /// Mục 203: (gro_net_cp932 b1 b2) -> mã Unicode của 1 ký tự CP932, nil nếu không giải được.
+        /// Lisp kiểu byte (ZWCAD) gọi cho chữ Nhật không có trong bảng bg--uni-tbl.
+        /// </summary>
+        [LispFunction("GRO_NET_CP932")]
+        public static object Cp932(ResultBuffer rb)
+        {
+            int[] b = new int[2];
+            int i = 0;
+            if (rb != null)
+                foreach (TypedValue tv in rb)
+                {
+                    if (i >= 2) break;
+                    try { b[i++] = Convert.ToInt32(tv.Value); } catch { return null; }
+                }
+            int u = ZwCadPlugin.Core.GroText.Cp932SangUnicode(b[0], b[1]);
+            return u < 0 ? null : (object)u;
+        }
     }
 
     /// <summary>

@@ -94,7 +94,7 @@ namespace ZwCadPlugin.ViewModels
             Database db = doc.Database;
 
             // Đọc layer gốc bản vẽ đã chọn trước đó (Registry layer_xln từ lệnh GRO/XLN)
-            string tenLayerUuTien = DocLayerGocMacDinh();
+            string tenLayerUuTien = DocLayerGocMacDinh(doc);
 
             // Nếu Registry chưa có hoặc layer không tồn tại trong bản vẽ, tự động lấy layer đông nét nhất
             if (string.IsNullOrWhiteSpace(tenLayerUuTien) || !LayerTonTai(db, tenLayerUuTien))
@@ -133,8 +133,18 @@ namespace ZwCadPlugin.ViewModels
             }
         }
 
-        private static string DocLayerGocMacDinh()
+        /// <summary>
+        /// Layer gốc: chọn trên tab Guro cho bản vẽ này (mục 194), không có thì layer gốc lần
+        /// GRO chạy gần nhất (registry layer_xln — lisp ghi lại từ mục 204).
+        /// </summary>
+        private static string DocLayerGocMacDinh(Document doc)
         {
+            try
+            {
+                string tab = LayerTheoBanVe.Lay(doc)[LayerTheoBanVe.Goc];
+                if (!string.IsNullOrWhiteSpace(tab)) return tab;
+            }
+            catch { }
             try
             {
                 using (var k = WinReg.Registry.CurrentUser.OpenSubKey(@"Software\OFT_Lisp\GRO"))

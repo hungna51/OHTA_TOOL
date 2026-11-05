@@ -920,6 +920,14 @@ namespace ZwCadPlugin.Tests
             TestGuroTabLayer();
 
             Console.WriteLine();
+            Console.WriteLine("=== Giai ma CP932 cho lisp kieu byte (muc 203) ===");
+            Kiem("82 C6 -> to (U+3068)", GroText.Cp932SangUnicode(0x82, 0xC6), 0x3068);
+            Kiem("8E D4 -> kanji xe (U+8ECA)", GroText.Cp932SangUnicode(0x8E, 0xD4), 0x8ECA);
+            Kiem("81 41 -> dau phay Nhat (U+3001)", GroText.Cp932SangUnicode(0x81, 0x41), 0x3001);
+            Kiem("98 5A -> kanji (U+516D)", GroText.Cp932SangUnicode(0x98, 0x5A), 0x516D);
+            Kiem("1 byte A ascii", GroText.Cp932SangUnicode(0x41, 0), 0x41);
+            Kiem("cap byte khong hop le -> -1", GroText.Cp932SangUnicode(0x85, 0x20), -1);
+            Console.WriteLine();
             Console.WriteLine("=== Tu cap nhat tu dien ghi chu moi ngay (muc 197) ===");
             JapanNoteTranslator.GhiNgayCapNhat(new DateTime(2026, 11, 2));
             Kiem("doc lai ngay cap nhat", JapanNoteTranslator.NgayCapNhat(), "2026-11-02");

@@ -110,11 +110,9 @@ namespace ZwCadPlugin.CadServices
                     var ent = tr.GetObject(id, OpenMode.ForRead) as Entity;
                     if (ent == null) continue;
                     if (ent.Layer != null && ent.Layer.EndsWith("_CHUP", StringComparison.OrdinalIgnoreCase)) continue;
-                    try
-                    {
-                        if (ent.GetXDataForApplication("GRO_CHUP_COPY") != null) continue;
-                    }
-                    catch { }
+                    // Đầu ra của GRO không phải nét chưa đổi: bản chụp, bango (GRO_METADATA), tên bản
+                    // vẽ + khung bao đã dùng (GRO_DAU_RA, mục 204) — layer gốc có thể chính là "0".
+                    if (LaDauRaGro(ent)) continue;
                     if (!string.Equals(ent.Layer, layerGoc, StringComparison.OrdinalIgnoreCase)) continue;
 
                     // Xác định linetype thực tế
@@ -169,6 +167,22 @@ namespace ZwCadPlugin.CadServices
             }
 
             return res;
+        }
+
+        private static readonly string[] AppDauRa = { "GRO_CHUP_COPY", "GRO_METADATA", "GRO_DAU_RA" };
+
+        private static bool LaDauRaGro(Entity ent)
+        {
+            foreach (string app in AppDauRa)
+            {
+                try
+                {
+                    using (ResultBuffer rb = ent.GetXDataForApplication(app))
+                        if (rb != null) return true;
+                }
+                catch { }
+            }
+            return false;
         }
 
         /// <summary>

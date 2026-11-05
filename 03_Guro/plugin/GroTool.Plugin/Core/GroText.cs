@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace ZwCadPlugin.Core
@@ -62,6 +63,35 @@ namespace ZwCadPlugin.Core
         }
 
         /// <summary>Tên màu ACI — giống hệt gro--ten-mau để hai bản hiển thị như nhau.</summary>
+        private static Encoding _cp932;
+
+        /// <summary>
+        /// Mục 203: 1 ký tự CP932 (1 hoặc 2 byte; b2 = 0 là 1 byte) -> mã Unicode, -1 nếu không
+        /// giải được. Lisp trên máy ZWCAD kiểu byte chỉ có bảng ~60 ký tự (bg--uni-tbl), chữ Nhật
+        /// ngoài bảng thành "?"; .NET có đủ bảng mã 932 nên lisp hỏi sang đây (gro_net_cp932).
+        /// </summary>
+        public static int Cp932SangUnicode(int b1, int b2)
+        {
+            try
+            {
+                if (_cp932 == null)
+                {
+#if !NETFRAMEWORK
+                    Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+#endif
+                    _cp932 = Encoding.GetEncoding(932, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
+                }
+                if (b1 < 0 || b1 > 255 || b2 < 0 || b2 > 255) return -1;
+                byte[] by = b2 > 0 ? new[] { (byte)b1, (byte)b2 } : new[] { (byte)b1 };
+                string s = _cp932.GetString(by);
+                return s.Length == 1 ? s[0] : -1;
+            }
+            catch
+            {
+                return -1;
+            }
+        }
+
         public static string TenMau(int c)
         {
             if (c <= 0) return "Khong xac dinh";
