@@ -728,3 +728,19 @@
    Lượt 2 (lệch hàng + vạch chia nối chặt) giữ nguyên, dùng cùng ngưỡng mới. Lisp: không thêm hàm, ngoặc cân bằng, CRLF.
 
    > **ĐÃ CHẠY (29/10, bản vẽ `test`, bản 186 + 186b + 186c + tăng tốc):** vẫn cắt đúng 6 tấm gộp (#215, #221, #233, #247, #271, #292), cả 6 vạch chia loại "nối 2 đầu"; 83/83 text có hình, 0 hình cô đơn, mã khắc 101/101. **Tốc độ:** tổng các bước `4d` 45 s → **1.42 s** (Hungarian 0.35, tìm tấm gộp 0.34, cắt + dời 0.44); cả GRO **14.8 s** (2.76 s là thao tác chọn). Chưa có log bản vẽ thử nét thừa (186b).
+
+210. **Tấm gộp không cắt khi ghi chú dài hơn đoạn ngắn** (người dùng báo kèm ảnh, 05/11/2026).
+
+   ### Triệu chứng
+   Thanh dài vẽ liền `570 | 240` (cao 22.4), ghi chú 89 trên đoạn 570, ghi chú 92 trên đoạn 240, cùng hàng. GRO: khung 89 ôm cả 810, khung 92 không có hình (92 thành text thiếu hình).
+
+   ### Nguyên nhân (đọc code, chưa có log)
+   Phép kiểm 186b số 4 trong `gro--ly-do-khong-cat` đòi hộp text thiếu hình **gần hẳn** đoạn của nó: `d1 < d2`. Ghi chú 92 (`ｹｶﾞｷ線 t=6mm` rộng ~330 mm) dài hơn đoạn 240 nên **lấn qua vạch chia** sang đoạn 570 vài chục mm; text nằm trên cả hai đoạn → `d1 = d2` (cùng khe đứng) → báo `text khong gan doan hinh cua no hon doan con lai (x / x mm) (muc 186b)` và không cắt. Tâm text vẫn nằm rõ trên đoạn 240.
+
+   ### Sửa (lisp, ASCII)
+   - `d1 > d2` (+0.5) → vẫn bỏ như cũ.
+   - `d1 = d2` (±0.5, text vắt qua vạch) → **cho cắt** khi tâm text cách vạch **≥ 1/4 bề rộng text** (≥ 3/4 text nằm phía đoạn của nó); gần vạch hơn → lý do mới `text vat qua vach chia tai X = ... (muc 186b)`.
+   - Mô phỏng `sim210.py` 3/3: ca ảnh (text 330 lấn 30 mm) → cắt (cũ: không cắt); text gọn trên đoạn 240 → cắt; text đặt đúng giữa vạch → không cắt.
+   - Lisp: không thêm hàm, ngoặc cân bằng, CRLF, ASCII.
+
+   > **Chưa chạy trong CAD.** Nghiệm thu: chạy GROCHAY trên bản vẽ đó → có `[TACH TAM CAD] Phat hien Tam #.. bi gop trong Tam #.. ... Duong chia cat tai X = ...` đúng chỗ nối `570 | 240`; 89 và 92 mỗi tấm một hình. Nếu vẫn không cắt, gửi dòng `KHONG cat Tam #.. cho Text #..: ... (muc 186b)` trên dòng lệnh.

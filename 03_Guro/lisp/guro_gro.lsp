@@ -9222,8 +9222,16 @@
        ((> d1 800.0)
         (strcat "text cach doan hinh cua no " (rtos d1 2 0) "mm (> 800 - ghep hinh se khong nhan)")
        )
-       ((not (< d1 d2))
+       ((> d1 (+ d2 0.5))
         (strcat "text khong gan doan hinh cua no hon doan con lai (" (rtos d1 2 0) " / " (rtos d2 2 0) "mm)")
+       )
+       ;; muc 210: hop text LAN qua vach (text dai hon doan 240) -> d1 = d2 ma truoc day
+       ;; doi d1 < d2 nen khong cat. Nay bang nhau van cat neu >= 3/4 text nam ve phia doan cua no.
+       ((and (<= (abs (- d1 d2)) 0.5)
+             (< (abs (- t-cx xd)) (* 0.25 (- (caddr t-bb) (car t-bb))))
+        )
+        (strcat "text vat qua vach chia tai X = " (rtos xd 2 1) " (tam text cach vach "
+                (rtos (abs (- t-cx xd)) 2 0) "mm < 1/4 be rong text)")
        )
      )
     )

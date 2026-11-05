@@ -61,10 +61,11 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 | 207 | **ZWCAD: "buoc nhannet (C#) loi: undefined function - nil"** — tên hàm `gro_net_*` có nhưng gọi không được. Nghi do bảng OHTA nạp GROTOOL.dll trước bằng `ExtensionLoader.Load` (mục 192) → `NETLOAD` của lisp sau đó bị ZWCAD bỏ qua, hàm lisp không đăng ký cho bản vẽ. Sửa: `DllTabLoader` nạp GROTOOL chỉ bằng `Assembly.LoadFrom` (`dangKyVoiCad: false`), đăng ký để `NETLOAD` của lisp làm; `gro--nap-net` kiểm hàm **gọi được thật** (`gro--net-san-sang-p` gọi thử `gro_net_cp932`), không được thì `NETLOAD` lại, vẫn không được thì báo mở lại ZWCAD. **Giả thuyết SAI — xem mục 208** (phần `DllTabLoader` đã gỡ, quay về `ExtensionLoader`) | [14-can-kiem-tra-lai.md](14-can-kiem-tra-lai.md) |
 | 208 | **Nguyên nhân thật của mục 207**: chẩn đoán trên ZWCAD (1 bản vẽ, NETLOAD lại vô ích) cho thấy MỌI hàm `gro_net_*` đều "undefined function - nil" dù `(type …)` = `SUBR`. Thủ phạm nghi là `gro_net_cp932` (mục 203) **trả số nguyên trần** (`object` boxed `int`) — mọi hàm khác trả chuỗi / T / nil / `ResultBuffer`; từ lần gọi đầu (GRO đọc chữ Nhật trước bước xử lý nét) cầu nối lisp ↔ .NET của ZWCAD hỏng cả phiên. Sửa: `gro_net_cp932` trả **danh sách 1 phần tử** `(ma)` (ListBegin + Int32 + ListEnd), lisp đọc `(car r)`; phép thử "gọi được" dùng `gro_net_cong_tac` (hàm cũ, trả chuỗi). **Luật: hàm `[LispFunction]` chỉ trả chuỗi, T/nil hoặc `ResultBuffer` — số đặt trong danh sách.** **Đã xác nhận trên ZWCAD 05/11/2026** (mở lại ZWCAD, GRO chạy được) — phát hành v1.2.3 / Guro 1.5.3 | [14-can-kiem-tra-lai.md](14-can-kiem-tra-lai.md) |
 | 209 | **Báo lỗi cho admin** (ADR 0007, Guro 1.6): `*error*` của `c:grochay` gặp lỗi thật (không phải Esc/Cancel) gọi `(vl-catch-all-apply 'ohta_net_bug_auto (list "GRO" "<loi> (buoc: <gro--buoc>)"))` — OHTATOOL.dll hỏi "Gửi báo lỗi?" (mỗi lỗi 1 lần/phiên). Đầu/cuối lệnh ghi `ohta_net_log` vào nhật ký `%LOCALAPPDATA%\OHTA_TOOL\logs`. Lệnh C# của GROTOOL (`DST`, `GROCS`, `GROSETTING`, `GROTHONGTIN`, `DSTON`) bọc `OhtaBugBridge.Run` → `OhtaTool.Plugin.Core.BugGuard.ReportException` bằng phản chiếu. **Chưa kiểm trên CAD.** | [12-chan-doan-bao-loi.md](12-chan-doan-bao-loi.md) |
+| 210 | **Tấm gộp không cắt khi ghi chú dài hơn đoạn ngắn** (`570 \| 240`, ghi chú 92 lấn qua vạch chia): phép kiểm 186b số 4 đòi `d1 < d2`, text vắt qua vạch cho `d1 = d2` → không cắt. Nay bằng nhau vẫn cắt khi tâm text cách vạch ≥ 1/4 bề rộng text. **Chưa chạy trong CAD.** | [08-sap-xep-va-vung.md](08-sap-xep-va-vung.md) |
 | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) | Hộp thoại DCL + **bản .NET** (dialog `gro`, bảng DST), **tab Guro** | 18, 19, 20, 52, 55, 56, 64, 86, 192, 193, 194, 195, 196, 197 |
 | [06-encoding-chuoi.md](06-encoding-chuoi.md) | Encoding và xử lý chuỗi (CP932 / Unicode) | 2, 9, 15, 16, 50, 57 |
 | [07-tach-du-lieu.md](07-tach-du-lieu.md) | Tách độ dày, số lượng, mã khắc, **ghép dòng số lượng** | 10, 11, 17, 23, 24, 32, 43, 54, 168 |
-| [08-sap-xep-va-vung.md](08-sap-xep-va-vung.md) | Sắp xếp, gom hàng, chế độ vùng polyline | 22, 25, 28, 49, 51, 53, 58, 61, 62, 63, 65, 182, 186 |
+| [08-sap-xep-va-vung.md](08-sap-xep-va-vung.md) | Sắp xếp, gom hàng, chế độ vùng polyline | 22, 25, 28, 49, 51, 53, 58, 61, 62, 63, 65, 182, 186, 210 |
 | [09-vi-tri-dau-ra.md](09-vi-tri-dau-ra.md) | Vị trí và hình thức đầu ra trên bản vẽ, **đặt mã khắc vào hình (C#)** | 26, 33, 34, 35, 37, 38, 39, 40, 41, 42, 44, 45, 46, 47, 59, 60, 170, 187, 188, 189, 190 |
 | [10-csv.md](10-csv.md) | Ghi file CSV | 7, 8, 27, 30, 31 |
 | [11-api-zwcad.md](11-api-zwcad.md) | Hàm/API ZWCAD khác AutoCAD | 1, 3, 4, 13 |
@@ -76,7 +77,7 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 
 ## Mục lục mục lỗi
 
-1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–209 tại đây.
+1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–210 tại đây.
 
 > ### ⚠ SỐ MỤC LÀ CỐ ĐỊNH, KHÔNG ĐƯỢC ĐÁNH SỐ LẠI
 > Mã nguồn `.lsp` tham chiếu tới chúng ở **17 chỗ** (`CLAUDE.md muc 13`, `muc 29`, `muc 85`, `muc 86`, …) và các file rule tham chiếu chéo nhau ở **59 chỗ**. Đổi số là hỏng cả 59 chỗ đó cùng lúc.
