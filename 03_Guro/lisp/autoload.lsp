@@ -7,14 +7,21 @@
 ;; moi nap guro_gro.lsp (~650 KB), sau do lenh that thay the lenh moi.
 ;; ============================================================================
 
-;; Thu muc 03_Guro: lay tu duong dan file nay (OHTA_Loader / nut bam deu nap bang duong dan day du)
-(defun ohta-guro--thu-muc ( / f )
+;; Thu muc 03_Guro. Muc 198: may khac khong dat OHTA_TOOL trong Support Path -> *ohta-root-dir*
+;; co the rong; do them registry RootDir (OHTA_Loader ghi khi tim duoc thu muc goc).
+;; Nut tren tab Guro dat san *gro-module-dir* truoc khi nap file nay.
+(defun ohta-guro--thu-muc ( / f reg )
   (cond
     ((and *gro-module-dir* (findfile (strcat *gro-module-dir* "\\lisp\\guro_gro.lsp")))
       *gro-module-dir*
     )
     ((and *ohta-root-dir* (findfile (strcat *ohta-root-dir* "\\03_Guro\\lisp\\guro_gro.lsp")))
       (strcat *ohta-root-dir* "\\03_Guro")
+    )
+    ((and (setq reg (vl-registry-read "HKEY_CURRENT_USER\\Software\\OFT_Lisp\\OhtaTool" "RootDir"))
+          (findfile (strcat reg "\\03_Guro\\lisp\\guro_gro.lsp"))
+     )
+      (strcat reg "\\03_Guro")
     )
     ((setq f (findfile "guro_gro.lsp"))
       (vl-filename-directory (vl-filename-directory f))

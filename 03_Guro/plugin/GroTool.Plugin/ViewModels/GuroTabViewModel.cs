@@ -264,7 +264,10 @@ namespace ZwCadPlugin.ViewModels
             if (!string.IsNullOrEmpty(_thuMucModule))
             {
                 string f = Path.Combine(_thuMucModule, "lisp", "autoload.lsp").Replace('\\', '/');
-                nap = "(if (findfile \"" + f + "\") (load \"" + f + "\")) ";
+                // Mục 198: báo sẵn thư mục 03_Guro cho autoload.lsp — máy khác có thể không đặt
+                // OHTA_TOOL trong Support Path nên lisp không tự dò ra.
+                string d = _thuMucModule.TrimEnd('\\', '/').Replace("\\", "\\\\");
+                nap = "(setq *gro-module-dir* \"" + d + "\") (if (findfile \"" + f + "\") (load \"" + f + "\")) ";
             }
             doc.SendStringToExecute("\x03\x03" + nap + lenh + "\n", true, false, true);
         }

@@ -363,6 +363,11 @@
                )
              )
   )
+  ;; Muc 198 GURO: lay duoc thu muc goc tu registry (OHTA_TOOL khong nam trong Support Path)
+  ;; thi ghi lai *ohta-root-dir* - lenh moi cua muc con (03_Guro) dua vao bien nay de tim file.
+  (if (and root (not *ohta-root-dir*))
+    (setq *ohta-root-dir* root)
+  )
   (if root
     (foreach d (vl-directory-files root nil -1)
       (if (and (not (wcmatch d "_*,.*"))
