@@ -2,6 +2,10 @@
 
 Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_ohta.ps1` lấy nội dung mục đó làm ghi chú Release trên GitHub, và hộp thoại "Có bản mới" trên máy đội cũng hiện đúng nội dung này — viết ngắn, cho người dùng xưởng đọc.
 
+## v1.2.1
+
+- Tab **Guro v1.5.1**: chạy GRO trên bản vẽ mới chưa lưu giờ báo "Bản vẽ chưa lưu" và dừng, không ghi CSV / PDF vào thư mục tạm nữa. Lưu bản vẽ (Ctrl+S) rồi chạy lại.
+
 ## v1.2.0
 
 - Tab **Print** mới (lệnh `OI` v2.0, thay lisp OI cũ): in khung `Khung_IN` / vùng quét / extents ra PDF, gộp 1 file, không cần Ghostscript.
