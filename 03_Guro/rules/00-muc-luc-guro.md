@@ -60,6 +60,7 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 | 206 | Nút trên tab Guro gửi `(setq *gro-module-dir* …)` + `(load ".../autoload.lsp")` **trước mỗi lệnh**, hiện đầy dòng lệnh. Nay chỉ gửi **1 lần mỗi bản vẽ** (cờ `GRO_DA_NAP_AUTOLOAD` trong `Document.UserData`) và gửi với `echoCommand = false` + `(princ)` nên không hiện; lệnh (GROCHAY / GI / DST) gửi riêng, vẫn hiện | [../README.md](../README.md) |
 | 207 | **ZWCAD: "buoc nhannet (C#) loi: undefined function - nil"** — tên hàm `gro_net_*` có nhưng gọi không được. Nghi do bảng OHTA nạp GROTOOL.dll trước bằng `ExtensionLoader.Load` (mục 192) → `NETLOAD` của lisp sau đó bị ZWCAD bỏ qua, hàm lisp không đăng ký cho bản vẽ. Sửa: `DllTabLoader` nạp GROTOOL chỉ bằng `Assembly.LoadFrom` (`dangKyVoiCad: false`), đăng ký để `NETLOAD` của lisp làm; `gro--nap-net` kiểm hàm **gọi được thật** (`gro--net-san-sang-p` gọi thử `gro_net_cp932`), không được thì `NETLOAD` lại, vẫn không được thì báo mở lại ZWCAD. **Giả thuyết SAI — xem mục 208** (phần `DllTabLoader` đã gỡ, quay về `ExtensionLoader`) | [14-can-kiem-tra-lai.md](14-can-kiem-tra-lai.md) |
 | 208 | **Nguyên nhân thật của mục 207**: chẩn đoán trên ZWCAD (1 bản vẽ, NETLOAD lại vô ích) cho thấy MỌI hàm `gro_net_*` đều "undefined function - nil" dù `(type …)` = `SUBR`. Thủ phạm nghi là `gro_net_cp932` (mục 203) **trả số nguyên trần** (`object` boxed `int`) — mọi hàm khác trả chuỗi / T / nil / `ResultBuffer`; từ lần gọi đầu (GRO đọc chữ Nhật trước bước xử lý nét) cầu nối lisp ↔ .NET của ZWCAD hỏng cả phiên. Sửa: `gro_net_cp932` trả **danh sách 1 phần tử** `(ma)` (ListBegin + Int32 + ListEnd), lisp đọc `(car r)`; phép thử "gọi được" dùng `gro_net_cong_tac` (hàm cũ, trả chuỗi). **Luật: hàm `[LispFunction]` chỉ trả chuỗi, T/nil hoặc `ResultBuffer` — số đặt trong danh sách.** **Đã xác nhận trên ZWCAD 05/11/2026** (mở lại ZWCAD, GRO chạy được) — phát hành v1.2.3 / Guro 1.5.3 | [14-can-kiem-tra-lai.md](14-can-kiem-tra-lai.md) |
+| 209 | **Báo lỗi cho admin** (ADR 0007, Guro 1.6): `*error*` của `c:grochay` gặp lỗi thật (không phải Esc/Cancel) gọi `(vl-catch-all-apply 'ohta_net_bug_auto (list "GRO" "<loi> (buoc: <gro--buoc>)"))` — OHTATOOL.dll hỏi "Gửi báo lỗi?" (mỗi lỗi 1 lần/phiên). Đầu/cuối lệnh ghi `ohta_net_log` vào nhật ký `%LOCALAPPDATA%\OHTA_TOOL\logs`. Lệnh C# của GROTOOL (`DST`, `GROCS`, `GROSETTING`, `GROTHONGTIN`, `DSTON`) bọc `OhtaBugBridge.Run` → `OhtaTool.Plugin.Core.BugGuard.ReportException` bằng phản chiếu. **Chưa kiểm trên CAD.** | [12-chan-doan-bao-loi.md](12-chan-doan-bao-loi.md) |
 | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) | Hộp thoại DCL + **bản .NET** (dialog `gro`, bảng DST), **tab Guro** | 18, 19, 20, 52, 55, 56, 64, 86, 192, 193, 194, 195, 196, 197 |
 | [06-encoding-chuoi.md](06-encoding-chuoi.md) | Encoding và xử lý chuỗi (CP932 / Unicode) | 2, 9, 15, 16, 50, 57 |
 | [07-tach-du-lieu.md](07-tach-du-lieu.md) | Tách độ dày, số lượng, mã khắc, **ghép dòng số lượng** | 10, 11, 17, 23, 24, 32, 43, 54, 168 |
@@ -75,14 +76,14 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 
 ## Mục lục mục lỗi
 
-1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–208 tại đây.
+1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–209 tại đây.
 
 > ### ⚠ SỐ MỤC LÀ CỐ ĐỊNH, KHÔNG ĐƯỢC ĐÁNH SỐ LẠI
 > Mã nguồn `.lsp` tham chiếu tới chúng ở **17 chỗ** (`CLAUDE.md muc 13`, `muc 29`, `muc 85`, `muc 86`, …) và các file rule tham chiếu chéo nhau ở **59 chỗ**. Đổi số là hỏng cả 59 chỗ đó cùng lúc.
 >
 > Thêm mục mới thì **nối tiếp số lớn nhất hiện có + 1**, bỏ vào file theo chủ đề, rồi cập nhật bảng dưới.
 >
-> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **208**.
+> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **209**.
 
 > ### Lệnh chẩn đoán cũ
 > `grosort` / `grodbg` / `growp` / `grostyle` / `bgdbg` thuộc bản đầy đủ cũ `guro ZWCAD(BG MK FN).lsp`, không có trong `guro_gro.lsp`. Các mục bên dưới nhắc tới chúng là ghi chép lịch sử. Lịch sử thay đổi lisp nay nằm trong git của OHTA_TOOL.

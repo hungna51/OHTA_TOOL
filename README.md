@@ -45,6 +45,7 @@ OHTA_TOOL/
 - `OHTAINFO` : Kiểm tra phiên bản, đường dẫn gốc, nền tảng CAD và danh sách các Tab đã nhận diện.
 - `OHTAUPDATE` : Kiểm tra ngay bản mới trên GitHub. Bình thường không cần gõ: khi mở bản vẽ mà có bản mới, CAD tự hỏi **Cập nhật ngay / Để sau**. Cập nhật xong đóng và mở lại CAD.
 - `OHTAROLLBACK` : Quay về bản trước lần cập nhật gần nhất.
+- `OHTABUG` : Gửi báo lỗi cho admin (mô tả + ảnh cửa sổ CAD + nhật ký) — giống nút 🐞 Báo lỗi trên tab Info.
 
 > Muốn tự cập nhật, `OHTA_Loader.lsp` phải nằm trong **Startup Suite** của `APPLOAD`. Lisp / nút bạn tự thêm bằng nút ＋ được giữ nguyên khi cập nhật.
 

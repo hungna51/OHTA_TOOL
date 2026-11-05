@@ -228,3 +228,15 @@
    > ("`さん` → `入`") — vì không đọc lại mục lục trước khi đánh số, và còn ghi đè tiêu đề
    > "84 mục" thành "68 mục". Đã đổi về **85**. Luật: **luôn lấy số lớn nhất hiện có trong
    > mục lục + 1**, không suy từ trí nhớ — người khác có thể đã thêm mục giữa hai phiên.
+
+209. **Báo lỗi cho admin từ GRO** (05/11/2026, ADR 0007, Guro 1.6). `*error*` của `c:grochay`, trong
+   nhánh lỗi thật (sau dòng "dang o buoc"), gọi
+   `(vl-catch-all-apply 'ohta_net_bug_auto (list "GRO" "<loi> (buoc: <gro--buoc>)"))` — OHTATOOL.dll chụp
+   cửa sổ CAD, hỏi "Gửi báo lỗi?" và mở form điền sẵn lỗi + bước. Esc/Cancel đã bị lọc trước đó
+   (`*BREAK,*CANCEL*,*EXIT*`) nên không hỏi. `vl-catch-all-apply` để bản vẽ chưa nạp OHTATOOL.dll
+   không làm hỏng `*error*`. Đầu và cuối lệnh ghi `ohta_net_log` ("GROCHAY bat dau" / "GROCHAY xong")
+   vào nhật ký `%LOCALAPPDATA%\OHTA_TOOL\logs\ohta.log` — báo lỗi gửi kèm 200 dòng cuối.
+   Lệnh C# của GROTOOL người dùng gõ (`DST`, `GROCS`, `GROSETTING`, `GROTHONGTIN`, `DSTON`) bọc
+   `OhtaBugBridge.Run`, gọi `OhtaTool.Plugin.Core.BugGuard.ReportException` bằng phản chiếu.
+   Hàm `gro_net_*` không bọc: lỗi của chúng rơi về `*error*` lisp ở trên (mất stack trace C#).
+   **Chưa kiểm trên CAD.**

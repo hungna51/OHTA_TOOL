@@ -2,6 +2,13 @@
 
 Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_ohta.ps1` lấy nội dung mục đó làm ghi chú Release trên GitHub, và hộp thoại "Có bản mới" trên máy đội cũng hiện đúng nội dung này — viết ngắn, cho người dùng xưởng đọc.
 
+## v1.3.0
+
+- **Báo lỗi cho admin**: nút **🐞 Báo lỗi** trên tab Info (hoặc gõ lệnh `OHTABUG`). Viết mô tả, chọn mức độ, tool tự gửi kèm ảnh cửa sổ CAD, phiên bản và nhật ký; tuỳ chọn gửi kèm bản vẽ / CSV.
+- Khi một lệnh (hoặc **Chạy GRO**) gặp lỗi, tool hỏi "Gửi báo lỗi cho admin?" — bấm Có là form điền sẵn lỗi. Bấm Esc huỷ lệnh thì không hỏi.
+- Mất mạng lúc gửi: báo lỗi được lưu lại và tự gửi ở lần mở bảng OHTA sau.
+- Tab **Guro v1.6**: GRO ghi nhật ký và nối vào báo lỗi.
+
 ## v1.2.3
 
 - Tab **Guro v1.5.3** — sửa lỗi ZWCAD (từ v1.2.2): bấm **Chạy GRO** báo "buoc nhannet (C#) loi: undefined function" và dừng, nhất là với bản vẽ có chữ Nhật. Sau khi cập nhật, đóng ZWCAD rồi mở lại.
