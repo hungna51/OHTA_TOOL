@@ -309,6 +309,7 @@ namespace ZwCadPlugin.ViewModels
             }
             catch (Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/PlatePaletteViewModel", ex);
                 MessageBox.Show("Không mở được file:\n" + duong + "\n\n" + ex.Message, "Thông tin GRO",
                                 MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -386,6 +387,7 @@ namespace ZwCadPlugin.ViewModels
             }
             catch (Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/PlatePaletteViewModel", ex);
                 MessageBox.Show("Không mở được Từ điển ghi chú:\n" + ex.Message, "Thông tin GRO", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -829,6 +831,7 @@ namespace ZwCadPlugin.ViewModels
                 }
                 catch (Exception ex)
                 {
+                    ZwCadPlugin.OhtaBugBridge.Log("GRO/PlatePaletteViewModel", ex);
                     fs?.Dispose();
                     MessageBox.Show("CHƯA LƯU — không mở được file CSV để ghi:\n" + duongCsv + "\n\n" +
                                     "Thường là do file đang mở trong Excel. Đóng file đó rồi bấm Lưu lại.\n" +
@@ -859,6 +862,7 @@ namespace ZwCadPlugin.ViewModels
                     }
                     catch (Exception ex)
                     {
+                        ZwCadPlugin.OhtaBugBridge.Log("GRO/PlatePaletteViewModel", ex);
                         csvLoi = true;
                         canhBao.Add("Bản vẽ ĐÃ lưu nhưng ghi CSV THẤT BẠI: " + ex.Message +
                                     " — CSV đang lệch bản vẽ. Sửa tay CSV, hoặc UNDO bản vẽ rồi lưu lại.");

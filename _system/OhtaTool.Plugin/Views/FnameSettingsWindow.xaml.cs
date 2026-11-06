@@ -166,6 +166,7 @@ namespace OhtaTool.Plugin.Views
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameSettingsWindow.xaml", ex);
                 RefreshApprovalLabels("Lỗi: " + ex.GetBaseException().Message);
             }
             finally
@@ -182,6 +183,7 @@ namespace OhtaTool.Plugin.Views
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameSettingsWindow.xaml", ex);
                 MessageBox.Show(this, "Không mở được cửa sổ vật liệu: " + ex.GetBaseException().Message,
                     "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -198,6 +200,7 @@ namespace OhtaTool.Plugin.Views
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameSettingsWindow.xaml", ex);
                 MessageBox.Show(this, "Không mở được cửa sổ góc bẻ thử: " + ex.GetBaseException().Message,
                     "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -226,6 +229,7 @@ namespace OhtaTool.Plugin.Views
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameSettingsWindow.xaml", ex);
                 MessageBox.Show(this, "Không mở được danh sách góc bẻ thử: " + ex.GetBaseException().Message,
                     "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
             }

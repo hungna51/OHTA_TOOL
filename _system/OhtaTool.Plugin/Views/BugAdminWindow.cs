@@ -179,7 +179,7 @@ namespace OhtaTool.Plugin.Views
             if (string.IsNullOrEmpty(url))
                 return;
             try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
-            catch (Exception ex) { _status.Text = "Không mở được link: " + ex.Message; }
+            catch (Exception ex) { OhtaTool.Plugin.Core.BugLog.Write("OHTA/BugAdminWindow", ex); _status.Text = "Không mở được link: " + ex.Message; }
         }
 
         private string Prompt(string question)

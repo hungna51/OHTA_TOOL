@@ -49,6 +49,7 @@ namespace ZwCadPlugin.CadServices
             }
             catch (Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/CsvService", ex);
                 loi = "không đọc được CSV (" + ex.Message + ")";
                 return null;
             }

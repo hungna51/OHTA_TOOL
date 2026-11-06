@@ -56,6 +56,7 @@ namespace OhtaTool.Plugin.Services
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/CadPrintService", ex);
                 CadCompat.WriteMessage("\n[OI] Không đọc được danh sách máy in: " + ex.Message + "\n");
             }
         }

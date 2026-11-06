@@ -103,6 +103,7 @@ namespace ZwCadPlugin.CadServices
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/CadEntityUpdater", ex);
                 canhBao.Add("Lỗi khi ghi bản vẽ: " + ex.Message + " (không có thay đổi nào được ghi).");
                 ed.WriteMessage($"\n[DST] Loi ghi ban ve: {ex.Message}\n");
                 count = 0;

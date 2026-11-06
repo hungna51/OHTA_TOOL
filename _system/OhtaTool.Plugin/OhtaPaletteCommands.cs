@@ -298,6 +298,7 @@ namespace OhtaTool.Plugin
             }
             catch (System.Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/OhtaPaletteCommands", ex);
                 CadCompat.WriteMessage($"\n[OHTA TOOL] Lỗi mở Tool Palettes: {ex.Message}\n{ex.StackTrace}\n");
                 CadApp.ShowAlertDialog("Lỗi khi mở OHTA TOOL Palette:\n" + ex.Message);
                 return false;
@@ -407,6 +408,7 @@ namespace OhtaTool.Plugin
             }
             catch (System.Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/OhtaPaletteCommands", ex);
                 CadCompat.WriteMessage("\n[OHTA TOOL] Khong dung duoc tab Info: " + ex.Message + "\n");
             }
         }

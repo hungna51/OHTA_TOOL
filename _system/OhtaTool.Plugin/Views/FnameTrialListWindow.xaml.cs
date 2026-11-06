@@ -102,6 +102,7 @@ namespace OhtaTool.Plugin.Views
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameTrialListWindow.xaml", ex);
                 MessageBox.Show(this, "Không mở được cửa sổ góc bẻ thử: " + ex.GetBaseException().Message,
                     "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
             }

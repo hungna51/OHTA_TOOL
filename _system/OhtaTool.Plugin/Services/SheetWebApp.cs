@@ -51,19 +51,25 @@ namespace OhtaTool.Plugin.Services
                 {
                     // Tự mã hoá form thay FormUrlEncodedContent: bản .NET Framework báo "Uri string is too long" khi giá trị > ~65k ký tự (ảnh base64)
                     string form = string.Join("&", fields.Select(kv => Uri.EscapeDataString(kv.Key) + "=" + EscapeLong(kv.Value ?? string.Empty)));
-                    var content = new ProgressContent(Encoding.UTF8.GetBytes(form), "application/x-www-form-urlencoded", progress, ct);
+                    byte[] bytes = Encoding.UTF8.GetBytes(form);
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    var content = new ProgressContent(bytes, "application/x-www-form-urlencoded", progress, ct);
                     HttpResponseMessage resp = http.PostAsync(url, content, ct).GetAwaiter().GetResult();
                     body = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                     FnameSheetReply reply = FnameSheetReply.Parse(body);
                     if (reply == null)
                         error = "Apps Script không trả về kết quả hợp lệ (HTTP " + (int)resp.StatusCode
                             + "). Kiểm tra write_url, đã triển khai phiên bản mới và chọn \"Người có quyền truy cập: Bất kỳ ai\".";
+                    // Chỉ ghi action / dung lượng / kết quả — KHÔNG ghi form (có write_key)
+                    BugLog.Write("SHEET", action + " " + bytes.Length / 1024 + " KB, " + sw.ElapsedMilliseconds + " ms, HTTP " + (int)resp.StatusCode
+                        + (reply == null ? ", khong doc duoc JSON" : ", ok=" + reply.Ok + (string.IsNullOrEmpty(reply.Message) ? "" : ": " + reply.Message)));
                     return reply;
                 }
             }
             catch (Exception ex)
             {
                 error = "Không kết nối được Google Sheet (" + ex.GetBaseException().Message + ").";
+                BugLog.Write("SHEET", action + " LOI: " + ex.GetBaseException().Message);
                 return null;
             }
         }

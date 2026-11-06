@@ -36,6 +36,7 @@ namespace ZwCadPlugin.Views
             }
             catch (Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GoogleSheetSyncSetupWindow.xaml", ex);
                 MessageBox.Show(this, "Không thể mở trình duyệt: " + ex.Message, "Thông báo", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
@@ -49,6 +50,7 @@ namespace ZwCadPlugin.Views
             }
             catch (Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GoogleSheetSyncSetupWindow.xaml", ex);
                 MessageBox.Show(this, "Không thể sao chép vào Clipboard: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -86,6 +88,7 @@ namespace ZwCadPlugin.Views
             }
             catch (Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GoogleSheetSyncSetupWindow.xaml", ex);
                 string loi = "Lỗi khi gửi dữ liệu: " + ex.Message;
                 LblStatus.Text = loi;
                 MessageBox.Show(this, loi, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -117,6 +120,7 @@ namespace ZwCadPlugin.Views
             }
             catch (Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GoogleSheetSyncSetupWindow.xaml", ex);
                 MessageBox.Show(this, "Lỗi: " + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }

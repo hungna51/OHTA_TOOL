@@ -31,6 +31,7 @@ namespace OhtaTool.Plugin.Services
             {
                 http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
                 HttpResponseMessage resp = http.GetAsync(LatestApiUrl).GetAwaiter().GetResult();
+                OhtaTool.Plugin.Core.BugLog.Write("UPDATE", "kiem tra ban moi GitHub: HTTP " + (int)resp.StatusCode);
                 if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
                     return null;
                 resp.EnsureSuccessStatusCode();
@@ -53,6 +54,7 @@ namespace OhtaTool.Plugin.Services
             using (Stream s = http.GetStreamAsync(release.AssetUrl).GetAwaiter().GetResult())
             using (FileStream fs = File.Create(zipPath))
                 s.CopyTo(fs);
+            OhtaTool.Plugin.Core.BugLog.Write("UPDATE", "da tai " + release.AssetUrl + " (" + new FileInfo(zipPath).Length / 1024 + " KB)");
 
             if (!string.IsNullOrEmpty(release.AssetSha256) &&
                 !string.Equals(ReleaseManifest.Sha256OfFile(zipPath), release.AssetSha256, StringComparison.OrdinalIgnoreCase))

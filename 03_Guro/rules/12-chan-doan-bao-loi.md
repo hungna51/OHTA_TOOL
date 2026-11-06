@@ -239,7 +239,11 @@
    — lệnh .NET dùng chung mọi bản vẽ, đọc file rồi hỏi. Đầu và cuối lệnh ghi `ohta_net_log` ("GROCHAY bat dau" / "GROCHAY xong")
    vào nhật ký `%LOCALAPPDATA%\OHTA_TOOL\logs\ohta.log` — báo lỗi gửi kèm 200 dòng cuối. `gro--moc` ghi
    "buoc: …" mỗi khi sang **nhóm** bước mới (không ghi từng bango), `gro--gui-thong-tin` ghi nguyên báo cáo
-   cuối lệnh. Phía C#, `CommandLog` ghi mọi lệnh CAD / lisp người dùng chạy (bắt đầu, huỷ, lỗi) kèm tên bản vẽ.
+   cuối lệnh, `gro--cs-goi` ghi mỗi lần gọi C# (tên hàm, bước, số giây, ok/LOI). Phía C#, `CommandLog` ghi mọi
+   lệnh CAD / lisp người dùng chạy (bắt đầu, huỷ, lỗi) kèm tên bản vẽ; mỗi `catch (Exception ex)` ngoài `Core/`,
+   `Models/` ghi exception qua `OhtaBugBridge.Log` (GROTOOL) / `BugLog.Write` (OHTATOOL); đầu phiên ghi phiên bản +
+   đường dẫn DLL đang nạp; mọi lần gọi Google Sheet / GitHub ghi action, dung lượng, thời gian, kết quả (không ghi
+   khoá). Dòng giống hệt liên tiếp gộp thành "lap lai N lan"; báo lỗi gửi kèm 500 dòng cuối.
    Lệnh C# của GROTOOL người dùng gõ (`DST`, `GROCS`, `GROSETTING`, `GROTHONGTIN`, `DSTON`) bọc
    `OhtaBugBridge.Run`, gọi `OhtaTool.Plugin.Core.BugGuard.ReportException` bằng phản chiếu.
    Hàm `gro_net_*` không bọc: lỗi của chúng rơi về `*error*` lisp ở trên (mất stack trace C#).

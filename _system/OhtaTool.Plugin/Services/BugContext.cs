@@ -35,6 +35,19 @@ namespace OhtaTool.Plugin.Services
             sb.AppendLine("Windows     : " + Environment.OSVersion);
             sb.AppendLine("Ban ve      : " + SafeDocName());
             sb.AppendLine("Cac tab     : " + string.Join(", ", tabs));
+            // DLL thật đang nạp (máy chạy DLL cũ / nạp nhầm thư mục là nguyên nhân hay gặp của "máy khác không chạy")
+            foreach (System.Reflection.Assembly a in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                string n = a.GetName().Name;
+                if (n == "OHTATOOL" || n == "GROTOOL" || n == "AITOOL")
+                {
+                    string loc;
+                    try { loc = a.Location; } catch { loc = "?"; }
+                    string time;
+                    try { time = File.GetLastWriteTime(loc).ToString("yyyy-MM-dd HH:mm"); } catch { time = "?"; }
+                    sb.AppendLine("DLL " + n.PadRight(8) + ": " + loc + " (" + time + ")");
+                }
+            }
             return (tool + " | " + cad + " | " + string.Join(", ", tabs), sb.ToString());
         }
 

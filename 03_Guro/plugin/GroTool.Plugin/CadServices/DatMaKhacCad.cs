@@ -131,7 +131,7 @@ namespace ZwCadPlugin.CadServices
                         Extents3d e = ent.GeometricExtents;
                         bb = new Hop(e.MinPoint.X, e.MinPoint.Y, e.MaxPoint.X, e.MaxPoint.Y);
                     }
-                    catch (System.Exception ex) { loiExt = ex.Message; }
+                    catch (System.Exception ex) { ZwCadPlugin.OhtaBugBridge.Log("GRO/DatMaKhacCad", ex); loiExt = ex.Message; }
 
                     var cv = ent as Curve;
                     string lay = (ent.Layer ?? "").ToUpperInvariant();
@@ -155,8 +155,9 @@ namespace ZwCadPlugin.CadServices
                         try { pts = LayMau(cv, out kin); }
                         catch (System.Exception ex)
                         {
+                            ZwCadPlugin.OhtaBugBridge.Log("GRO/DatMaKhacCad", ex);
                             try { pts = LayMauTheoDai(cv, out kin); }
-                            catch (System.Exception ex2) { if (lydo == null) lydo = "lay mau loi: " + ex.Message + " / " + ex2.Message; }
+                            catch (System.Exception ex2) { ZwCadPlugin.OhtaBugBridge.Log("GRO/DatMaKhacCad", ex2); if (lydo == null) lydo = "lay mau loi: " + ex.Message + " / " + ex2.Message; }
                         }
                         if (pts != null && pts.Count > 1)
                         {

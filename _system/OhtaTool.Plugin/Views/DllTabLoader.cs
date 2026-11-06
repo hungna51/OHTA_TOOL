@@ -57,6 +57,7 @@ namespace OhtaTool.Plugin.Views
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/DllTabLoader", ex);
                 Exception goc = ex is TargetInvocationException tie && tie.InnerException != null ? tie.InnerException : ex;
                 CadCompat.WriteMessage("\n[OHTA TOOL] Khong dung duoc tab " + tenTab + " tu " + tenDll + ".dll: " + goc.Message +
                                        " -> dung danh sach nut.\n");

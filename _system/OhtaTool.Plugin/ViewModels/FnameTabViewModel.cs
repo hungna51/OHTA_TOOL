@@ -269,6 +269,7 @@ namespace OhtaTool.Plugin.ViewModels
                 }
                 catch (Exception ex)
                 {
+                    OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameTabViewModel", ex);
                     return (true, r.message + " (Chưa lưu được trên máy: " + ex.GetBaseException().Message + ")");
                 }
             }).ConfigureAwait(false);
@@ -668,6 +669,7 @@ namespace OhtaTool.Plugin.ViewModels
                 }
                 catch (Exception ex)
                 {
+                    OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameTabViewModel", ex);
                     return (true, r.message + " (Chưa lưu được trên máy: " + ex.GetBaseException().Message + ")");
                 }
             }).ConfigureAwait(false);
@@ -1048,6 +1050,7 @@ namespace OhtaTool.Plugin.ViewModels
                 }
                 catch (Exception ex)
                 {
+                    OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameTabViewModel", ex);
                     return (true, r.message + " (Chưa lưu được trên máy: " + ex.GetBaseException().Message + ")");
                 }
             }).ConfigureAwait(false);

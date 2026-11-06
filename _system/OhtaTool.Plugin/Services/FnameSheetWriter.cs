@@ -100,6 +100,7 @@ namespace OhtaTool.Plugin.Services
                 }
                 catch (Exception ex)
                 {
+                    OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameSheetWriter", ex);
                     note = " (Chưa cập nhật được dữ liệu trên máy: " + ex.GetBaseException().Message + " — bấm Cập nhật từ Google Sheet.)";
                 }
             }
@@ -111,6 +112,7 @@ namespace OhtaTool.Plugin.Services
                 }
                 catch (Exception ex)
                 {
+                    OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameSheetWriter", ex);
                     note = " (Chưa cập nhật được dữ liệu trên máy: " + ex.GetBaseException().Message + " — bấm Cập nhật từ Google Sheet.)";
                 }
             }
@@ -124,6 +126,7 @@ namespace OhtaTool.Plugin.Services
                 }
                 catch (Exception ex)
                 {
+                    OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameSheetWriter", ex);
                     note = " (Chưa cập nhật được dữ liệu trên máy: " + ex.GetBaseException().Message + " — bấm Cập nhật từ Google Sheet.)";
                 }
             }

@@ -275,6 +275,7 @@ namespace OhtaTool.Plugin.Views
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameMaterialWindow.xaml", ex);
                 ShowStatus("Không đọc được ảnh trong clipboard: " + ex.GetBaseException().Message, false);
             }
         }
@@ -293,6 +294,7 @@ namespace OhtaTool.Plugin.Views
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameMaterialWindow.xaml", ex);
                 ShowStatus($"Không mở được ảnh \"{Path.GetFileName(path)}\": " + ex.GetBaseException().Message, false);
             }
         }

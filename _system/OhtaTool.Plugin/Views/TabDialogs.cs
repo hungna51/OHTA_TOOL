@@ -285,6 +285,7 @@ namespace OhtaTool.Plugin.Views
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/TabDialogs", ex);
                 DialogKit.ShowErrors(_error, new[] { "Không đọc được file: " + ex.Message });
                 return;
             }

@@ -107,6 +107,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GroBuocCommands", ex);
                 ed?.WriteMessage("\n[AB] Loi so sanh: " + ex.Message);
                 return null;
             }
@@ -130,6 +131,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GroBuocCommands", ex);
                 doc.Editor?.WriteMessage("\n[GRO .NET] Loi quet hinh: " + ex.Message + " -> dung ban lisp.");
                 return null;
             }
@@ -165,6 +167,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GroBuocCommands", ex);
                 doc.Editor?.WriteMessage("\n[GRO .NET] Loi phan loai net: " + ex.Message + " -> dung ban lisp.");
                 return null;
             }
@@ -189,6 +192,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GroBuocCommands", ex);
                 doc.Editor?.WriteMessage("\n[GRO .NET] Loi khop Dim dai: " + ex.Message + " -> dung ban lisp.");
                 return null;
             }
@@ -212,6 +216,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GroBuocCommands", ex);
                 doc.Editor?.WriteMessage("\n[GRO .NET] Loi khop Dim dai 3b: " + ex.Message + " -> dung ban lisp.");
                 return null;
             }
@@ -235,6 +240,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GroBuocCommands", ex);
                 doc.Editor?.WriteMessage("\n[GRO .NET] Loi loc net Dim: " + ex.Message + " -> dung ban lisp.");
                 return null;
             }
@@ -258,6 +264,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GroBuocCommands", ex);
                 doc.Editor?.WriteMessage("\n[GRO .NET] Loi do vong kin: " + ex.Message + " -> dung ban lisp.");
                 return null;
             }
@@ -285,6 +292,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GroBuocCommands", ex);
                 doc.Editor?.WriteMessage("\n[GRO .NET] Loi xep cum: " + ex.Message + " -> dung ban lisp.");
                 return null;
             }
@@ -309,6 +317,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GroBuocCommands", ex);
                 doc.Editor?.WriteMessage("\n[GRO .NET] Loi tach va cham khung in: " + ex.Message + " -> dung ban lisp.");
                 return null;
             }
@@ -332,6 +341,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GroBuocCommands", ex);
                 doc.Editor?.WriteMessage("\n[GRO .NET] Loi danh sach chi tiet: " + ex.Message + " -> dung ban lisp.");
                 return null;
             }
@@ -354,6 +364,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GroBuocCommands", ex);
                 doc.Editor?.WriteMessage("\n[GRO .NET] Loi dong khung: " + ex.Message + " -> dung ban lisp.");
                 return null;
             }

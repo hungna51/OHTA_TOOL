@@ -115,6 +115,7 @@ namespace OhtaTool.Plugin
             }
             catch (System.Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/CadCompat", ex);
                 WriteMessage("\n[OHTA TOOL] Lỗi gửi lệnh CAD: " + ex.Message + "\n");
             }
         }

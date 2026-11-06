@@ -22,29 +22,53 @@ namespace OhtaTool.Plugin.Core
         private static string FilePath(int index) =>
             Path.Combine(Directory, index == 0 ? "ohta.log" : "ohta." + index + ".log");
 
+        /// <summary>Số dòng cuối gửi kèm báo lỗi.</summary>
+        public const int TailLines = 500;
+
+        // Gộp dòng giống hệt liên tiếp (catch trong vòng lặp duyệt đối tượng): ghi 1 lần + "lap lai N lan"
+        private static string _lastKey;
+        private static string _lastNguon;
+        private static int _repeat;
+
         public static void Write(string nguon, string message)
         {
             try
             {
-                string line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)
-                    + " [" + (nguon ?? "") + "] " + (message ?? "") + Environment.NewLine;
+                string key = (nguon ?? "") + "|" + (message ?? "");
                 lock (Gate)
                 {
-                    System.IO.Directory.CreateDirectory(Directory);
-                    string cur = FilePath(0);
-                    var info = new FileInfo(cur);
-                    if (info.Exists && info.Length > 0 && info.Length + line.Length > MaxBytes)
-                        Rotate();
-                    using (var fs = new FileStream(cur, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
+                    if (key == _lastKey)
                     {
-                        byte[] bytes = Encoding.UTF8.GetBytes(line);
-                        fs.Write(bytes, 0, bytes.Length);
+                        _repeat++;
+                        return;
                     }
+                    if (_repeat > 0)
+                        Append(_lastNguon, "(dong tren lap lai " + _repeat + " lan)");
+                    _lastKey = key;
+                    _lastNguon = nguon;
+                    _repeat = 0;
+                    Append(nguon, message);
                 }
             }
             catch
             {
                 // nhật ký là phụ: không ghi được (đĩa đầy, file bị khoá) thì bỏ qua
+            }
+        }
+
+        private static void Append(string nguon, string message)
+        {
+            string line = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)
+                + " [" + (nguon ?? "") + "] " + (message ?? "") + Environment.NewLine;
+            System.IO.Directory.CreateDirectory(Directory);
+            string cur = FilePath(0);
+            var info = new FileInfo(cur);
+            if (info.Exists && info.Length > 0 && info.Length + line.Length > MaxBytes)
+                Rotate();
+            using (var fs = new FileStream(cur, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
+            {
+                byte[] bytes = Encoding.UTF8.GetBytes(line);
+                fs.Write(bytes, 0, bytes.Length);
             }
         }
 

@@ -118,6 +118,7 @@ namespace OhtaTool.Plugin
                 }
                 catch (System.Exception ex)
                 {
+                    OhtaTool.Plugin.Core.BugLog.Write("OHTA/PrintCommands", ex);
                     PrintRunner.Report("Lỗi khi in: " + ex.Message);
                 }
                 finally
@@ -223,7 +224,7 @@ namespace OhtaTool.Plugin
             if (p.OpenAfter ?? true)
             {
                 try { Process.Start(new ProcessStartInfo(shown) { UseShellExecute = true }); }
-                catch (System.Exception ex) { CadCompat.WriteMessage("\n[OI] Không mở được: " + ex.Message + "\n"); }
+                catch (System.Exception ex) { OhtaTool.Plugin.Core.BugLog.Write("OHTA/PrintCommands", ex); CadCompat.WriteMessage("\n[OI] Không mở được: " + ex.Message + "\n"); }
             }
         }
 

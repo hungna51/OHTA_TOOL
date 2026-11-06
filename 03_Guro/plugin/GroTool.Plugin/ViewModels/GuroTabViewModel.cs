@@ -144,7 +144,7 @@ namespace ZwCadPlugin.ViewModels
                 _caiDat.UseVung = value;
                 Bao();
                 try { GroRegistry.Ghi("use_vung", value); }
-                catch (Exception ex) { TrangThai = "Không lưu được: " + ex.Message; }
+                catch (Exception ex) { ZwCadPlugin.OhtaBugBridge.Log("GRO/GuroTabViewModel", ex); TrangThai = "Không lưu được: " + ex.Message; }
             }
         }
 
@@ -177,7 +177,7 @@ namespace ZwCadPlugin.ViewModels
         public void LamMoi()
         {
             try { _caiDat = GroRegistry.Doc(); }
-            catch (Exception ex) { TrangThai = "Không đọc được cài đặt: " + ex.Message; }
+            catch (Exception ex) { ZwCadPlugin.OhtaBugBridge.Log("GRO/GuroTabViewModel", ex); TrangThai = "Không đọc được cài đặt: " + ex.Message; }
             Bao(nameof(UseVung));
             Bao(nameof(UseXln));
             Bao(nameof(TomTat));
@@ -213,6 +213,7 @@ namespace ZwCadPlugin.ViewModels
                 }
                 catch (Exception ex)
                 {
+                    ZwCadPlugin.OhtaBugBridge.Log("GRO/GuroTabViewModel", ex);
                     TrangThai = "Không đọc được layer: " + ex.Message;
                 }
             }
@@ -246,6 +247,7 @@ namespace ZwCadPlugin.ViewModels
             }
             catch (Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GuroTabViewModel", ex);
                 TrangThai = "Không mở được cài đặt: " + ex.Message;
             }
         }

@@ -74,6 +74,7 @@ namespace OhtaTool.Plugin.Services
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/PrintSettingsStore", ex);
                 CadCompat.WriteMessage("\n[OI] Không ghi được cài đặt in: " + ex.Message + "\n");
             }
         }

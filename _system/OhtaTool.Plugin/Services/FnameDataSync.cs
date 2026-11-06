@@ -53,6 +53,14 @@ namespace OhtaTool.Plugin.Services
         /// </summary>
         public static (bool ok, string message) Run(string moduleDirectory)
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            (bool ok, string message) r = RunCore(moduleDirectory);
+            BugLog.Write("FNAME", "tai du lieu Google Sheet " + (r.ok ? "OK" : "LOI") + " (" + sw.ElapsedMilliseconds + " ms): " + r.message);
+            return r;
+        }
+
+        private static (bool ok, string message) RunCore(string moduleDirectory)
+        {
             Dictionary<string, string> cfg = ReadConfig(moduleDirectory);
             string id = cfg.Get("spreadsheet_id");
             if (string.IsNullOrEmpty(id))
@@ -85,6 +93,7 @@ namespace OhtaTool.Plugin.Services
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameDataSync", ex);
                 return (false, "Không tải được Google Sheet (" + ex.GetBaseException().Message + "). Giữ nguyên dữ liệu cũ.");
             }
 
@@ -116,6 +125,7 @@ namespace OhtaTool.Plugin.Services
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameDataSync", ex);
                 return (false, "Không lưu được dữ liệu vào " + FnameDataStore.DefaultCacheDirectory
                     + " (" + ex.GetBaseException().Message + "). Đóng Excel nếu đang mở file CSV rồi thử lại.");
             }

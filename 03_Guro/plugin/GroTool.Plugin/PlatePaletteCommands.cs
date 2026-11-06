@@ -91,6 +91,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/PlatePaletteCommands", ex);
                 var doc = Application.DocumentManager.MdiActiveDocument;
                 doc?.Editor?.WriteMessage($"\n[LispFunction] Loi mo Palette DST: {ex.Message}");
                 return null;
@@ -119,6 +120,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/PlatePaletteCommands", ex);
                 var doc = Application.DocumentManager.MdiActiveDocument;
                 doc?.Editor?.WriteMessage($"\n[LispFunction] Loi dua bao cao vao tab Thong Tin: {ex.Message}");
                 return null;
@@ -147,6 +149,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/PlatePaletteCommands", ex);
                 var doc = Application.DocumentManager.MdiActiveDocument;
                 doc?.Editor?.WriteMessage($"\n[LispFunction] Loi kiem tra ghi chu khac chu: {ex.Message}");
                 return null;
@@ -174,6 +177,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/PlatePaletteCommands", ex);
                 var doc = Application.DocumentManager.MdiActiveDocument;
                 doc?.Editor?.WriteMessage($"\n[LispFunction] Loi kiem tra ghi chu xu ly SHT: {ex.Message}");
                 return null;
@@ -194,6 +198,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/PlatePaletteCommands", ex);
                 var doc = Application.DocumentManager.MdiActiveDocument;
                 doc?.Editor?.WriteMessage($"\n[LispFunction] Loi mo Palette DSN: {ex.Message}");
                 return null;
@@ -223,6 +228,7 @@ namespace ZwCadPlugin
                 }
                 catch (System.Exception ex)
                 {
+                    ZwCadPlugin.OhtaBugBridge.Log("GRO/PlatePaletteCommands", ex);
                     doc?.Editor?.WriteMessage($"\n[GROSETTING] Loi mo cai dat ghi chu: {ex.Message}");
                 }
             });
@@ -342,6 +348,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/PlatePaletteCommands", ex);
                 ed?.WriteMessage($"\n[Palette] LOI KHI MO PALETTE: {ex.Message}\n{ex.StackTrace}\n");
                 Application.ShowAlertDialog("Lỗi khi mở Palette: " + ex.Message + "\n\n" + ex.StackTrace);
                 return false;
@@ -382,6 +389,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/PlatePaletteCommands", ex);
                 e?.Document?.Editor?.WriteMessage($"\n[Palette] Loi cap nhat khi doi ban ve: {ex.Message}\n");
             }
         }

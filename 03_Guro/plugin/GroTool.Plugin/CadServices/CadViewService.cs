@@ -108,6 +108,7 @@ namespace ZwCadPlugin.CadServices
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/CadViewService", ex);
                 ed.WriteMessage($"\n[DST] Loi zoom bang khung nhin: {ex.Message} -> dung lenh ZOOM.");
             }
 
@@ -133,6 +134,7 @@ namespace ZwCadPlugin.CadServices
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/CadViewService", ex);
                 doc.Editor.WriteMessage($"\n[DST] Khong zoom duoc: {ex.Message}");
             }
         }
@@ -176,6 +178,7 @@ namespace ZwCadPlugin.CadServices
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/CadViewService", ex);
                 GhiDongLenh("[DST] Loi tim doi tuong theo handle: " + ex.Message);
                 return 0;
             }

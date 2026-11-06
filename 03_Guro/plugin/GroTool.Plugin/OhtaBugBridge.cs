@@ -18,6 +18,29 @@ namespace ZwCadPlugin
     internal static class OhtaBugBridge
     {
         private static MethodInfo _report;
+        private static MethodInfo _log;
+
+        /// <summary>
+        /// Ghi exception vào nhật ký báo lỗi của OHTATOOL (OhtaTool.Plugin.Core.BugLog.Write(string, Exception)).
+        /// Các catch của GROTOOL gọi hàm này; OHTATOOL chưa nạp thì bỏ qua. Không bao giờ ném.
+        /// </summary>
+        public static void Log(string nguon, System.Exception ex)
+        {
+            try
+            {
+                if (_log == null)
+                {
+                    Assembly ohta = AppDomain.CurrentDomain.GetAssemblies()
+                        .FirstOrDefault(a => string.Equals(a.GetName().Name, "OHTATOOL", StringComparison.OrdinalIgnoreCase));
+                    _log = ohta?.GetType("OhtaTool.Plugin.Core.BugLog")
+                        ?.GetMethod("Write", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(string), typeof(System.Exception) }, null);
+                }
+                _log?.Invoke(null, new object[] { nguon, ex });
+            }
+            catch
+            {
+            }
+        }
 
         public static void Run(string lenh, Action body)
         {

@@ -331,6 +331,7 @@ namespace OhtaTool.Plugin.Services
             }
             catch (System.Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/CadFnameService", ex);
                 CadCompat.WriteMessage($"\n[OHTA Fname] Lỗi đo góc: {ex.Message}\n");
             }
             finally
@@ -458,6 +459,7 @@ namespace OhtaTool.Plugin.Services
             }
             catch (System.Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/CadFnameService", ex);
                 vm.SetFeedback("Lỗi khi ghi Fname: " + ex.Message, isWarning: true);
                 CadCompat.WriteMessage($"\n[OHTA Fname] Lỗi ghi Fname: {ex.Message}\n");
             }
@@ -507,6 +509,7 @@ namespace OhtaTool.Plugin.Services
             }
             catch (System.Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/CadFnameService", ex);
                 vm.SetFeedback("Lỗi hút Fname: " + ex.Message, isWarning: true);
                 CadCompat.WriteMessage($"\n[OHTA Fname] Lỗi hút Fname: {ex.Message}\n");
             }
@@ -555,6 +558,7 @@ namespace OhtaTool.Plugin.Services
             }
             catch (System.Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/CadFnameService", ex);
                 vm.SetFeedback("Lỗi cập nhật Fname: " + ex.Message, isWarning: true);
             }
         }
@@ -660,6 +664,7 @@ namespace OhtaTool.Plugin.Services
             }
             catch (System.Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/CadFnameService", ex);
                 vm.SetFeedback("Lỗi cập nhật Fname: " + ex.Message, isWarning: true);
                 CadCompat.WriteMessage($"\n[OHTA Fname] Lỗi cập nhật Fname: {ex.Message}\n");
                 return false;

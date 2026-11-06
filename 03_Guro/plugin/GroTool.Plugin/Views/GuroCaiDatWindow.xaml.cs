@@ -50,6 +50,7 @@ namespace ZwCadPlugin.Views
             }
             catch (Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GuroCaiDatWindow.xaml", ex);
                 MessageBox.Show(this, "Không lưu được cài đặt:\n" + ex.Message, Title,
                                 MessageBoxButton.OK, MessageBoxImage.Error);
             }

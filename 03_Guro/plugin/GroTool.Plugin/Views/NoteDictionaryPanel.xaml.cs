@@ -136,6 +136,7 @@ namespace ZwCadPlugin.Views
             }
             catch (Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/NoteDictionaryPanel.xaml", ex);
                 string loi = "Lỗi khi tải lên: " + ex.Message;
                 LblStatus.Text = loi;
                 if (hienThongBao)
@@ -189,6 +190,7 @@ namespace ZwCadPlugin.Views
             }
             catch (Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/NoteDictionaryPanel.xaml", ex);
                 string loi = $"Lỗi kết nối Google Sheet: {ex.Message}";
                 LblStatus.Text = loi;
                 if (hienThongBao)

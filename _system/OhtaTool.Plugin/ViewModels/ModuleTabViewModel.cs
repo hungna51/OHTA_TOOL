@@ -349,6 +349,7 @@ namespace OhtaTool.Plugin.ViewModels
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/ModuleTabViewModel", ex);
                 ShowError("Không thêm được lisp", ex);
             }
         }
@@ -434,6 +435,7 @@ namespace OhtaTool.Plugin.ViewModels
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/ModuleTabViewModel", ex);
                 ShowError("Không chép được ảnh", ex);
                 return;
             }
@@ -509,6 +511,7 @@ namespace OhtaTool.Plugin.ViewModels
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/ModuleTabViewModel", ex);
                 ShowError(errorTitle, ex);
             }
         }
@@ -559,6 +562,7 @@ namespace OhtaTool.Plugin.ViewModels
             }
             catch (System.Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/ModuleTabViewModel", ex);
                 CadCompat.WriteMessage($"\n[OHTA TOOL] Không mở được '{targetPath}': {ex.Message}\n");
             }
         }

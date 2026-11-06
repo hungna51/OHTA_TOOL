@@ -87,6 +87,15 @@ namespace OhtaTool.Tests
             try { new ProgressContent(data, "x/y", null, cts.Token).CopyToAsync(new MemoryStream()).GetAwaiter().GetResult(); }
             catch (OperationCanceledException) { huy = true; }
             Check("Progress: huy giua chung", huy);
+
+            // Nhat ky: dong giong het lien tiep (catch trong vong lap) gop thanh "lap lai N lan"
+            for (int k = 0; k < 1000; k++) BugLog.Write("SCAN", new InvalidOperationException("doi tuong hong"));
+            BugLog.Write("GRO", "buoc: xong");
+            var t = BugLog.Tail(500);
+            Check("Log: loi lap chi ghi 1 lan", t.Count(l => l.Contains("[SCAN] System.InvalidOperationException")) == 1);
+            Check("Log: ghi so lan lap", t.Any(l => l.Contains("[SCAN]") && l.Contains("lap lai 999 lan")), string.Join(" | ", t.Where(l => l.Contains("SCAN"))));
+            Check("Log: dong khac van ghi", t.Last().Contains("[GRO] buoc: xong"));
+            Check("Log: bao loi gui 500 dong", BugLog.TailLines == 500);
         }
 
         // Sua sau review toan nhanh (ledger "Final: fixed ...")

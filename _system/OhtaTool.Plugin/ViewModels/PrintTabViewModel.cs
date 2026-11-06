@@ -186,6 +186,7 @@ namespace OhtaTool.Plugin.ViewModels
             }
             catch (Exception ex)
             {
+                OhtaTool.Plugin.Core.BugLog.Write("OHTA/PrintTabViewModel", ex);
                 _suppress = false;
                 StatusText = "Lỗi đọc bản vẽ: " + ex.Message;
             }

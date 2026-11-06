@@ -13799,11 +13799,24 @@
 )
 
 ;;; Muc 184: goi ham C# 'ham voi ("cs" . args). n = so phan tu bat buoc cua ket qua (nil = khong kiem).
-(defun gro--cs-goi (buoc ham args n / kq)
+(defun gro--cs-goi (buoc ham args n / kq t0)
   (if (null (vl-symbol-value ham))
     (gro--cs-dung buoc (strcat "GROTOOL.dll chua co ham " (vl-symbol-name ham) " (cap nhat DLL)"))
   )
+  (setq t0 (gro--moc-giay))
   (setq kq (vl-catch-all-apply ham (cons "cs" args)))
+  ;; Muc 209: nhat ky moi lan goi C# (ten ham, thoi gian, ket qua) cho nguoi debug
+  (vl-catch-all-apply 'ohta_net_log
+    (list "GRO"
+          (strcat "C# " (vl-symbol-name ham) " (" buoc "): "
+                  (rtos (- (gro--moc-giay) t0) 2 2) " s, "
+                  (cond ((vl-catch-all-error-p kq) (strcat "LOI " (vl-catch-all-error-message kq)))
+                        ((null kq) "tra nil")
+                        ((listp kq) (strcat "ok, " (itoa (length kq)) " phan tu"))
+                        ("ok"))
+          )
+    )
+  )
   (cond
     ((vl-catch-all-error-p kq) (gro--cs-dung buoc (vl-catch-all-error-message kq)))
     ((null kq) (gro--cs-dung buoc "C# tra nil (xem dong lenh phia tren)"))

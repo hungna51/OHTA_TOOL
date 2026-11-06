@@ -40,6 +40,7 @@ namespace ZwCadPlugin
             }
             catch (System.Exception ex)
             {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/DatMaKhacCommands", ex);
                 doc.Editor?.WriteMessage("\n[GRO .NET] Loi dat ma khac vao hinh: " + ex.Message);
                 return "!!! Loi dat ma khac vao hinh (.NET): " + ex.Message + " - move thu cong.";
             }

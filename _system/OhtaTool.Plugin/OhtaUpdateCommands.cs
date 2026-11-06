@@ -145,6 +145,7 @@ namespace OhtaTool.Plugin
                     }
                     catch (Exception ex)
                     {
+                        OhtaTool.Plugin.Core.BugLog.Write("OHTA/OhtaUpdateCommands", ex);
                         PostToUi(() => MessageBox.Show("Không quay lại được:\n" + ex.GetBaseException().Message, Caption,
                             MessageBoxButton.OK, MessageBoxImage.Warning));
                     }
@@ -224,6 +225,7 @@ namespace OhtaTool.Plugin
                 }
                 catch (Exception ex)
                 {
+                    OhtaTool.Plugin.Core.BugLog.Write("OHTA/OhtaUpdateCommands", ex);
                     string msg = ex.GetBaseException().Message;
                     if (manual)
                         PostToUi(() => MessageBox.Show("Không kiểm tra được bản mới (mạng / GitHub):\n" + msg, Caption,
@@ -321,6 +323,7 @@ namespace OhtaTool.Plugin
                             string extracted = GitHubReleaseClient.DownloadAndExtract(latest, work);
                             string backup = Path.Combine(BackupDir, "OHTA_TOOL_v" + current + ".zip");
                             rep = UpdateInstaller.Install(root, extracted, backup, UpdateInstaller.BaseStoreDirectory(UpdateState.DefaultDirectory));
+                            BugLog.Write("UPDATE", "da cai v" + current + " -> ban moi tai " + root);
 
                             // Chỉ giữ 1 bản sao lưu gần nhất
                             foreach (string f in Directory.GetFiles(BackupDir, "OHTA_TOOL_v*.zip"))
@@ -346,6 +349,7 @@ namespace OhtaTool.Plugin
                 }
                 catch (Exception ex)
                 {
+                    OhtaTool.Plugin.Core.BugLog.Write("OHTA/OhtaUpdateCommands", ex);
                     string msg = ex.GetBaseException().Message;
                     PostToUi(() => MessageBox.Show(
                         "Cập nhật không thành công, OHTA TOOL vẫn giữ bản đang dùng:\n" + msg, Caption,

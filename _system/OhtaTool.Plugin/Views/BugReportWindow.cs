@@ -113,7 +113,7 @@ namespace OhtaTool.Plugin.Views
             root.Children.Add(_thongTin);
             root.Children.Add(new TextBlock
             {
-                Text = "Luôn gửi kèm: phiên bản Tool / từng tab, nền tảng CAD, 200 dòng nhật ký gần nhất" + (string.IsNullOrEmpty(stackTrace) ? "." : ", chi tiết lỗi."),
+                Text = "Luôn gửi kèm: phiên bản Tool / từng tab, nền tảng CAD, " + BugLog.TailLines + " dòng nhật ký gần nhất" + (string.IsNullOrEmpty(stackTrace) ? "." : ", chi tiết lỗi."),
                 Foreground = Brushes.Gray, FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0)
             });
 
@@ -224,8 +224,8 @@ namespace OhtaTool.Plugin.Views
                 sb.AppendLine(_stackTrace);
             }
             sb.AppendLine();
-            sb.AppendLine("--- NHAT KY (200 dong cuoi) ---");
-            foreach (string l in BugLog.Tail(200))
+            sb.AppendLine("--- NHAT KY (" + BugLog.TailLines + " dong cuoi) ---");
+            foreach (string l in BugLog.Tail(BugLog.TailLines))
                 sb.AppendLine(l);
             return sb.ToString();
         }
