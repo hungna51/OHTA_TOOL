@@ -244,6 +244,10 @@
    `Models/` ghi exception qua `OhtaBugBridge.Log` (GROTOOL) / `BugLog.Write` (OHTATOOL); đầu phiên ghi phiên bản +
    đường dẫn DLL đang nạp; mọi lần gọi Google Sheet / GitHub ghi action, dung lượng, thời gian, kết quả (không ghi
    khoá). Dòng giống hệt liên tiếp gộp thành "lap lai N lan"; báo lỗi gửi kèm 500 dòng cuối.
+   Thêm: mọi `princ` 1 tham số trong `guro_gro.lsp` thành `gro--princ` (in + ghi nhật ký), mọi `alert` thành
+   `gro--alert` — 2 hàm này PHẢI nằm đầu file (lệnh chạy lúc nạp file gọi trước thì hỏng nạp). `gro--layer-tab`
+   ghi layer thật dùng + layer chọn trên tab; mỗi lần GROCHAY chạy ghi toàn bộ registry `OFT_Lisp\GRO`.
+   OHTATOOL/GROTOOL build `DebugType=embedded` → stack trace có số dòng. Báo lỗi bật từ lỗi GRO tick sẵn dwg.
    Lệnh C# của GROTOOL người dùng gõ (`DST`, `GROCS`, `GROSETTING`, `GROTHONGTIN`, `DSTON`) bọc
    `OhtaBugBridge.Run`, gọi `OhtaTool.Plugin.Core.BugGuard.ReportException` bằng phản chiếu.
    Hàm `gro_net_*` không bọc: lỗi của chúng rơi về `*error*` lisp ở trên (mất stack trace C#).

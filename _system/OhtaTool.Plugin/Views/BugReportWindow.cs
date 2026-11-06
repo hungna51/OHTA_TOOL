@@ -106,6 +106,9 @@ namespace OhtaTool.Plugin.Views
             _csvPath = RecentCsv(_dwgPath);
             _thongTinPath = Path.Combine(Environment.GetEnvironmentVariable("TEMP") ?? Path.GetTempPath(), "gro_thong_tin.txt");
             _dwg = Attach("Bản vẽ đang mở (.dwg — bản đã lưu gần nhất)", _dwgPath);
+            // Lỗi GRO: admin cần đúng bản vẽ để chạy lại (nhật ký không cho biết vì sao kết quả sai) -> tick sẵn, người dùng bỏ được
+            if (!string.IsNullOrEmpty(loi) && (tabLenh ?? "").StartsWith("GRO", StringComparison.OrdinalIgnoreCase) && _dwgPath != null)
+                _dwg.IsChecked = true;
             _csv = Attach("CSV vừa xuất" + (_csvPath == null ? "" : " (" + Path.GetFileName(_csvPath) + ")"), _csvPath);
             _thongTin = Attach("Báo cáo GRO (gro_thong_tin.txt)", File.Exists(_thongTinPath) ? _thongTinPath : null);
             root.Children.Add(_dwg);

@@ -16,6 +16,8 @@
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
     <AssemblyName>OHTATOOL</AssemblyName>
+    <!-- pdb nhung trong DLL: stack trace trong nhat ky bao loi co so dong (ban phat hanh khong kem file .pdb) -->
+    <DebugType>embedded</DebugType>
     <RootNamespace>OhtaTool.Plugin</RootNamespace>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>

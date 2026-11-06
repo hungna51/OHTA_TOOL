@@ -1,3 +1,19 @@
+;;; Muc 209: moi dong GRO in ra dong lenh cung ghi vao nhat ky bao loi (so doi tuong, bo qua,
+;;; canh bao...) - nguoi debug doc duoc nhu dang nhin dong lenh. Thay cho princ 1 tham so trong
+;;; file nay; tra ve dung gia tri nhu princ. Bo dau xuong dong 2 dau, dong rong thi khong ghi.
+(defun gro--princ (x / s)
+  (setq s (vl-string-trim " \t\r\n" (vl-princ-to-string x)))
+  (if (/= s "") (vl-catch-all-apply 'ohta_net_log (list "GRO" s)))
+  (princ x)
+)
+
+;;; Muc 209: moi hop thong bao cua GRO deu ghi vao nhat ky bao loi (vd "ban ve chua luu")
+;;; truoc khi hien - nguoi debug doc nhat ky biet GRO da bao gi. Thay cho alert trong file nay.
+(defun gro--alert (msg)
+  (vl-catch-all-apply 'ohta_net_log (list "GRO" (strcat "thong bao: " (vl-princ-to-string msg))))
+  (alert msg)
+)
+
 (vl-load-com)
 ;;; ===========================================================================
 ;;; GURO - lenh GRO (danh so bango, ma khac, F-name, CSV, in PDF, chuyen layer net)
@@ -918,7 +934,7 @@
   )
   (if (or (vl-catch-all-error-p kq) (not (and kq (= (type kq) 'LIST) (= (length kq) 3))))
     (progn
-      (princ (strcat "\n[GRO] Khong doc duoc layer chon tren tab Guro ("
+      (gro--princ (strcat "\n[GRO] Khong doc duoc layer chon tren tab Guro ("
                      (if (vl-catch-all-error-p kq) (vl-catch-all-error-message kq) "ket qua khong hop le")
                      ") -> dung layer mac dinh."
              )
@@ -931,7 +947,7 @@
         lx        (nth 2 kq)
         gro--buoc "khoi dong: in tom tat"
   )
-  (princ
+  (gro--princ
     (strcat "\nGRO: khung bao=" (if lk lk "?")
             ", vung=" (if gro--use-vung (if lv lv "?") "khong")
             ", khung tam=" (if gro--use-tao-khung (gro--layer-khung-tam) "khong")
@@ -956,15 +972,22 @@
 ;;; Layer chon tren tab Guro cho ban ve dang mo (gro_net_layer_ban_ve -> 3 chuoi, "" = chua
 ;;; chon), roi chon theo danh sach. Tra (khung vung goc). Goi qua vl-catch-all-apply (muc 202).
 ;;; Muc 201: goi CO tham so gia; C# tra "" thay nil; kiem bang length.
-(defun gro--layer-tab (lays-k lays-v lays-x / chon)
+(defun gro--layer-tab (lays-k lays-v lays-x / chon kq)
   (setq chon (if (vl-symbol-value 'gro_net_layer_ban_ve) (gro_net_layer_ban_ve 0)))
   (if (not (and chon (= (type chon) 'LIST) (= (length chon) 3)))
     (setq chon nil)
   )
-  (list (gro--layer-chon (nth 0 chon) lays-k)
-        (gro--layer-chon (nth 1 chon) lays-v)
-        (gro--layer-chon (nth 2 chon) lays-x)
+  (setq kq (list (gro--layer-chon (nth 0 chon) lays-k)
+                 (gro--layer-chon (nth 1 chon) lays-v)
+                 (gro--layer-chon (nth 2 chon) lays-x)
+           )
   )
+  ;; Muc 209: nhat ky - layer that GRO dung (khung vung goc), layer chon tren tab, danh sach ung vien
+  (vl-catch-all-apply 'ohta_net_log
+    (list "GRO" (strcat "layer dung (khung vung goc) = " (vl-princ-to-string kq)
+                        ", chon tren tab = " (vl-princ-to-string chon)
+                        ", ung vien khung = " (vl-princ-to-string lays-k))))
+  kq
 )
 
 ;;; Layer da chon neu con trong danh sach, khong thi layer dung dau.
@@ -999,8 +1022,8 @@
            (not (vl-catch-all-error-p (setq kq (vl-catch-all-apply 'ohta_net_tab '("guro")))))
            kq
       )
-    (princ "\nGRO: chon layer va cai dat tren tab Guro, bam \"Chay GRO\" de danh so.")
-    (princ
+    (gro--princ "\nGRO: chon layer va cai dat tren tab Guro, bam \"Chay GRO\" de danh so.")
+    (gro--princ
       (strcat "\nLoi: khong mo duoc tab Guro tren bang OHTA (chua nap OHTATOOL.dll hoac"
               "\n     thieu tab Guro). Go OHTA de mo bang roi bam \"Chay GRO\"."
       )
@@ -1755,14 +1778,14 @@
           (foreach it u (setq bang (cons (cons sl it) bang)))
           (cond
             ((member k day)
-             (princ (strcat "\n[GHEP SL] Dong so luong [" (bg--codes-str (gro--it-codes (car u)))
+             (gro--princ (strcat "\n[GHEP SL] Dong so luong [" (bg--codes-str (gro--it-codes (car u)))
                             "] -> ghi chu #" (itoa sl)
                             " (ghi chu gan hon da du " (itoa (gro--sl-toi-da)) " dong, muc 168)."
                     )
              )
             )
             ((> (gro--dem-ung-vien pairs k) 1)
-             (princ (strcat "\n[GHEP SL] Dong so luong [" (bg--codes-str (gro--it-codes (car u)))
+             (gro--princ (strcat "\n[GHEP SL] Dong so luong [" (bg--codes-str (gro--it-codes (car u)))
                             "] hop le voi " (itoa (gro--dem-ung-vien pairs k))
                             " ghi chu -> chon ghi chu GAN HON #" (itoa sl)
                             " (d=" (rtos (car c) 2 1) ", muc 168)."
@@ -1951,7 +1974,7 @@
               bang  (cons (cons ps gya) bang)
               notes (vl-remove-if '(lambda (x) (= (gro--it-stt x) sstt)) notes)
         )
-        (princ (strcat "\n[DOI XUNG] Gop 2 dong t= Honzu #" (itoa ps) " + Gyakuzu #" (itoa sstt)
+        (gro--princ (strcat "\n[DOI XUNG] Gop 2 dong t= Honzu #" (itoa ps) " + Gyakuzu #" (itoa sstt)
                        " thanh 1 text thong tin (muc 130)."
                )
         )
@@ -2436,18 +2459,18 @@
           )
         )
       )
-      (princ (strcat "\n[GRO] Tam khac chu (ghi chu dich ra \"khac chu\"): " (itoa (length ds-tam)) " tam - doi "
+      (gro--princ (strcat "\n[GRO] Tam khac chu (ghi chu dich ra \"khac chu\"): " (itoa (length ds-tam)) " tam - doi "
                      (itoa n) " text trong hinh sang 3-KEGAKI (muc 156)."))
       ;; muc 189: canh bao tung chu can kiem tra
       (foreach x (reverse ds-canh)
-        (princ (strcat "\n  !!! Khac chu bango " (car x) ": text [" (cadr x) "] " (caddr x)
+        (gro--princ (strcat "\n  !!! Khac chu bango " (car x) ": text [" (cadr x) "] " (caddr x)
                        " - da doi sang 3-KEGAKI, KIEM TRA LAI vi tri chu (muc 189)."))
       )
     )
   )
   (if (equal ds-bg (list "KHONG_NET"))
     (progn
-      (princ "\n[GRO] Bo qua doi text khac chu: GROTOOL.dll chua co ham gro_net_khac_chu (cap nhat DLL).")
+      (gro--princ "\n[GRO] Bo qua doi text khac chu: GROTOOL.dll chua co ham gro_net_khac_chu (cap nhat DLL).")
       (setq ds-bg nil)
     )
   )
@@ -2519,24 +2542,24 @@
   (if (and errs (> (length errs) 0))
     (progn
       ;; 1. In ra dong lenh CAD
-      (princ "\n===========================================================================")
-      (princ (strcat "\n*** CANH BAO: Phat hien " (itoa (length errs)) " cum text co tu 2 so luong tro len cung loai!"))
+      (gro--princ "\n===========================================================================")
+      (gro--princ (strcat "\n*** CANH BAO: Phat hien " (itoa (length errs)) " cum text co tu 2 so luong tro len cung loai!"))
       (foreach it errs
         (setq n    (nth 0 it)
               dp   (nth 1 it)
               loai (nth 2 it)
               cnt  (nth 3 it)
         )
-        (princ (strcat "\n  [!] Ghi chu: [" (bg--codes-str (gro--it-codes n)) "] tai ("
+        (gro--princ (strcat "\n  [!] Ghi chu: [" (bg--codes-str (gro--it-codes n)) "] tai ("
                        (rtos (gro--it-x n) 2 1) ", " (rtos (gro--it-y n) 2 1) ")"
                        " -> Co " (itoa cnt) " dong " loai ":"
                )
         )
         (foreach d dp
-          (princ (strcat "\n      + [" (bg--codes-str (gro--it-codes d)) "]"))
+          (gro--princ (strcat "\n      + [" (bg--codes-str (gro--it-codes d)) "]"))
         )
       )
-      (princ "\n===========================================================================\n")
+      (gro--princ "\n===========================================================================\n")
 
       ;; 2. Bat popup hop thoai alert
       (setq msg (strcat "CANH BAO XUNG DOT SO LUONG:\n\n"
@@ -2866,7 +2889,7 @@
 ;;; quet chon 13 khung ma lenh chi nhan 11 thi phai biet 2 cai kia sai o dau.
 (defun gro--in-pl-bo (lydo chi-4) 
   (if (> (apply '+ lydo) 0) 
-    (princ 
+    (gro--princ 
       (strcat "\n   (bo qua: " 
               (itoa (nth 0 lydo))
               " polyline KHONG KIN, "
@@ -3740,7 +3763,7 @@
 ;; Bat bang lenh GROVTDBG, hoac go (setq gro--dbg-vc 5) truoc khi chay GRO.
 ;; Moi ung vien in: canh, so vat can, va tung vat can (loai, layer, noi dung).
 (defun gro--dbg-in-ung-vien (q bb lst / e d s) 
-  (princ 
+  (gro--princ 
     (strcat "\n    [" 
             (if (cdr q) (gro--ten-canh (cdr q)) "?")
             "] "
@@ -3764,7 +3787,7 @@
               ""
             )
     )
-    (princ (strcat "\n        " (cdr (assoc 0 d)) " layer=" (cdr (assoc 8 d)) s))
+    (gro--princ (strcat "\n        " (cdr (assoc 0 d)) " layer=" (cdr (assoc 8 d)) s))
   )
 )
 
@@ -3935,7 +3958,7 @@
                )
       )
       (if dbg 
-        (princ 
+        (gro--princ 
           (strcat "\n  -- DBG vi tri: cum X " 
                   (rtos (nth 0 cum) 2 1)
                   ".."
@@ -3989,7 +4012,7 @@
       (if (null chon) (setq chon best))
       (if dbg 
         (progn 
-          (princ 
+          (gro--princ 
             (strcat "\n  -- DBG chon: " 
                     (if (and chon (cdr chon)) (gro--ten-canh (cdr chon)) "?")
                     (if sach " (SACH)" " (it vuong nhat)")
@@ -4419,7 +4442,7 @@
     (cond 
       ((or (null s) (= s "")) (setq r mac-dinh))
       ((member (strcase s) (mapcar 'strcase lst)) (setq r (strcase s)))
-      (t (princ (strcat "\n  \"" s "\" khong co trong danh sach - go lai.")))
+      (t (gro--princ (strcat "\n  \"" s "\" khong co trong danh sach - go lai.")))
     )
   )
   r
@@ -4475,7 +4498,7 @@
   (setq tb (tblsearch "STYLE" ten))
   (cond 
     ((null tb)
-     (princ 
+     (gro--princ 
        (strcat "\n*** KHONG tao duoc kieu chu \"" 
                ten
                "\" (ca entmake lan ActiveX deu hong)."
@@ -4488,7 +4511,7 @@
     )
     (t
      (if duong 
-       (princ 
+       (gro--princ 
          (strcat "\nDa tao kieu chu \"" 
                  ten
                  "\" bang "
@@ -4501,7 +4524,7 @@
      )
      (setq hc (cdr (assoc 40 tb)))
      (if (and hc (> hc 0.0)) 
-       (princ 
+       (gro--princ 
          (strcat "\n*** CANH BAO: kieu chu \"" 
                  ten
                  "\" co Height CO DINH = "
@@ -4628,10 +4651,10 @@
   )
   (if co 
     (progn 
-      (princ "\nGom hang trong vung (chi liet ke vung >1 hang hoac bi chan tran):")
+      (gro--princ "\nGom hang trong vung (chi liet ke vung >1 hang hoac bi chan tran):")
       (foreach v tin 
         (if (or (> (nth 2 v) 1) (vl-string-search "/chan" (nth 4 v))) 
-          (princ 
+          (gro--princ 
             (strcat "\n   vung " 
                     (itoa (1+ (nth 0 v)))
                     ": "
@@ -5213,7 +5236,7 @@
                        lines-cont)
                  2))
       (foreach c (cadr kq)
-        (princ (strcat "\n[Xu ly net] Dim \"" (nth 1 (nth (car c) texts-lin)) "\": duong dim chinh ghep tu "
+        (gro--princ (strcat "\n[Xu ly net] Dim \"" (nth 1 (nth (car c) texts-lin)) "\": duong dim chinh ghep tu "
                        (itoa (cadr c)) " LINE thang hang (muc 169)."))
       )
       (car kq)
@@ -5542,7 +5565,7 @@
         arcs-cont  (nth 2 kq-vk)
   )
   (if vk-geo
-    (princ (strcat "\n[Xu ly net] Bao ve " (itoa (length vk-geo))
+    (gro--princ (strcat "\n[Xu ly net] Bao ve " (itoa (length vk-geo))
                    " net bien dang (vong kin) - khong dung lam net Dim."))
   )
 
@@ -5578,7 +5601,7 @@
                                    arcs-cont)
       )
       (if (< (length arcs-dim) (length arcs-cont))
-        (princ (strcat "\n[Xu ly net] Bo qua " (itoa (- (length arcs-cont) (length arcs-dim)))
+        (gro--princ (strcat "\n[Xu ly net] Bo qua " (itoa (- (length arcs-cont) (length arcs-dim)))
                        " cung bo goc bien dang (noi tiep tuyen) khi khop dim goc."))
       )
     )
@@ -6271,7 +6294,7 @@
   (if (or (null ds) (= 0 (length ds))) 
     (progn 
       (setq msg "Khong con net nao chua doi!\n(Toan bo cac doi tuong da duoc chuyen sang layer tieu chuan hoac da xoa).")
-      (princ (strcat "\n[Xu ly net] " msg))
+      (gro--princ (strcat "\n[Xu ly net] " msg))
       (gro--alert msg)
       nil
     )
@@ -6320,7 +6343,7 @@
                   (progn 
                     ;; Select truc tiep tat ca cac doi tuong trong nhom (hien grips va pickset de nguoi dung xu ly)
                     (sssetfirst ss-grp ss-grp)
-                    (princ 
+                    (gro--princ 
                       (strcat "\nDa SELECT (chon) " 
                               (itoa (sslength ss-grp))
                               " doi tuong thuoc nhom net \""
@@ -6331,7 +6354,7 @@
                     )
                     (setq res T)
                   )
-                  (princ "\nCac doi tuong trong nhom da khong con tren ban ve.")
+                  (gro--princ "\nCac doi tuong trong nhom da khong con tren ban ve.")
                 )
               )
             )
@@ -6349,7 +6372,7 @@
                        grp-tbl found item msg msg-con vong-kin ds-cong
                       ) 
   (if (or (null lay-goc) (= lay-goc "") (null (tblsearch "LAYER" lay-goc))) 
-    (princ 
+    (gro--princ 
       (strcat "\n[Xu ly net] Layer goc khong hop le: \"" 
               (if lay-goc lay-goc "")
               "\""
@@ -6368,7 +6391,7 @@
                     )
                 gro--xln-danh-sach-chua-doi nil
           )
-          (princ (strcat "\n[Xu ly net] " msg))
+          (gro--princ (strcat "\n[Xu ly net] " msg))
           (gro--alert msg)
         )
         (progn 
@@ -6382,25 +6405,25 @@
               (gro--moc "3b dim: phan loai net")
               (setq dim-geom-set (gro--detect-geom-dims lay-goc ss))
               (if (and dim-geom-set (> (length dim-geom-set) 0))
-                (princ (strcat "\n[Xu ly net] Nhan dien theo hinh hoc: Tim thay " 
+                (gro--princ (strcat "\n[Xu ly net] Nhan dien theo hinh hoc: Tim thay " 
                                (itoa (length dim-geom-set)) 
                                " net Dim (Dai, Phi/Lo, Goc)."
                         )
                 )
-                (princ "\n[Xu ly net] Khong phat hien net Dim theo hinh hoc.")
+                (gro--princ "\n[Xu ly net] Khong phat hien net Dim theo hinh hoc.")
               )
               ;; muc 144: KHONG doan mau Dim nua - mau Dim co the TRUNG mau bien dang ngoai
               ;; (muc 143: bien dang cyan bi doi het sang 1-SUNPOU). Che do tu dong chi nhan Dim
               ;; theo HINH HOC; doi theo mau chi con o che do chon mau THU CONG.
               (setq mau-dim-chot nil)
               (if mau-dim-chot 
-                (princ 
+                (gro--princ 
                   (strcat "\n[Xu ly net] Mau net Dim bo tro: " 
                           (gro--ten-mau mau-dim-chot)
                   )
                 )
                 (if (null dim-geom-set)
-                  (princ "\n[Xu ly net] Khong co mau net Dim rieng biet (toan bo net Continuous duoc giu lam net cat 0-KAKOU).")
+                  (gro--princ "\n[Xu ly net] Khong co mau net Dim rieng biet (toan bo net Continuous duoc giu lam net cat 0-KAKOU).")
                 )
               )
             )
@@ -6410,7 +6433,7 @@
               (setq dim-geom-set nil
                     mau-dim-chot mau-dim
               )
-              (princ
+              (gro--princ
                 (if mau-dim-chot
                   (strcat "\n[Xu ly net] Dung mau net Dim thu cong: " (gro--ten-mau mau-dim-chot))
                   "\n[Xu ly net] Khong xu ly net Dim (tat tu nhan dien)."
@@ -6431,7 +6454,7 @@
               )
               (setq vong-kin (gro--es-vong-kin ds-cong))
               (if vong-kin
-                (princ (strcat "\n[Xu ly net] Giu " (itoa (length vong-kin))
+                (gro--princ (strcat "\n[Xu ly net] Giu " (itoa (length vong-kin))
                                " net ghep thanh vong kin (bien dang) - khong doi theo mau Dim."))
               )
             )
@@ -6556,7 +6579,7 @@
             )
           )
 
-          (princ 
+          (gro--princ 
             (strcat "\n[Xu ly net] Hoan tat chuyen doi layer:" 
                     "\n  + "
                     (itoa cnt-k)
@@ -6596,7 +6619,7 @@
                                 "Layer goc khong con doi tuong nao."
                         )
               )
-              (princ 
+              (gro--princ 
                 (strcat "\n[Xu ly net] Da doi het! Khong con doi tuong nao tren layer goc \"" 
                         lay-goc
                         "\"."
@@ -6623,7 +6646,7 @@
                               )
                 )
               )
-              (princ msg-con)
+              (gro--princ msg-con)
               (if (null im-lang) 
                 (progn 
                   (gro--alert 
@@ -6654,7 +6677,7 @@
                     (gro--hien-dialog-xln gro--xln-danh-sach-chua-doi)
                   )
                 )
-                (princ "\n  -> Go lenh DST de mo bang quan ly kiem tra nhom net (Tab 2: Net Chua Doi).")
+                (gro--princ "\n  -> Go lenh DST de mo bang quan ly kiem tra nhom net (Tab 2: Net Chua Doi).")
               )
             )
           )
@@ -6673,11 +6696,11 @@
 (defun c:xln (/ *error* ent lay ss opt-pick auto-dim mau-dim) 
   (defun *error* (m) 
     (if (and m (not (wcmatch (strcase m) "*BREAK,*CANCEL*,*EXIT*"))) 
-      (princ (strcat "\nLoi: " m))
+      (gro--princ (strcat "\nLoi: " m))
     )
     (princ)
   )
-  (princ "\n=== CHUONG TRINH XU LY NET & CHUYEN LAYER ===")
+  (gro--princ "\n=== CHUONG TRINH XU LY NET & CHUYEN LAYER ===")
   ;; Reset danh sach net chua doi truoc khi chay luot moi
   (setq gro--xln-danh-sach-chua-doi nil
         gro--xln-ket-qua            nil
@@ -6708,13 +6731,13 @@
     )
   )
   (if (or (null lay) (= lay "") (null (tblsearch "LAYER" lay))) 
-    (princ 
+    (gro--princ 
       (strcat "\nLayer \"" (if lay lay "") "\" khong hop le hoac khong ton tai.")
     )
     (progn 
       (setq gro--layer-xln lay)
       (gro--reg-write-str "layer_xln" gro--layer-xln)
-      (princ (strcat "\nLayer goc da chon: " lay))
+      (gro--princ (strcat "\nLayer goc da chon: " lay))
       (setq opt-pick (entsel "\nChon 1 net Dim mau (LINE / PLINE / ARC) <hoac ENTER de tu dong nhan dien>: "))
       (if opt-pick 
         (setq auto-dim nil
@@ -6727,7 +6750,7 @@
                        )
         )
       )
-      (princ "\nQuet chon cac net can chuyen (hoac bam ENTER de xu ly TOAN BO layer nay): ")
+      (gro--princ "\nQuet chon cac net can chuyen (hoac bam ENTER de xu ly TOAN BO layer nay): ")
       (setq ss (ssget (list (cons 8 lay))))
       (gro--xu-ly-net lay ss nil auto-dim mau-dim)
     )
@@ -6740,7 +6763,7 @@
 ;; Lenh DSN duoc hop nhat vao lenh DST (Tab 2 cua Palette).
 ;; Nguoi dung chi can go DST, hoac go DSN se tu dong goi DST.
 (defun c:dsn () 
-  (princ "\n[DST] Mo bang quan ly tam va net (DST)...")
+  (gro--princ "\n[DST] Mo bang quan ly tam va net (DST)...")
   (c:dst)
   (princ)
 )
@@ -7029,7 +7052,7 @@
       (foreach s gro--hinh-loi-khung
         (setq e-bb (cadr s))
         (gro--ve-khung-rect e-bb "CANH_BAO_KHUNG_CAT" 6)
-        (princ (strcat "\n*** CANH BAO: Phat hien KHUNG CAT CHUA NHIEU GHI CHU tai (X="
+        (gro--princ (strcat "\n*** CANH BAO: Phat hien KHUNG CAT CHUA NHIEU GHI CHU tai (X="
                        (rtos (car e-bb) 2 1) ", Y=" (rtos (cadr e-bb) 2 1) ") - da khoanh tim."))
       )
       (gro--alert (strcat "Phat hien " (itoa (length gro--hinh-loi-khung))
@@ -7905,7 +7928,7 @@
                         (vl-remove-if '(lambda (x) (= (nth 0 x) (nth 0 s-c))) pending-shapes)
                   )
                   (if (not gro--im-chieu) ; muc 151: im lang khi goi tu buoc tach tam gop
-                    (princ 
+                    (gro--princ 
                     (strcat "\n  [HUNGARIAN 1-1] Da ghep Hinh chieu/Mat cat #" 
                             (itoa (nth 0 s-c)) 
                             " vao Tam #" 
@@ -8815,7 +8838,7 @@
         )
       )
       (if (> n-dim-cat 0)
-        (princ (strcat "\n  -> Cat " (itoa n-dim-cat) " net dim bang qua duong chia."))
+        (gro--princ (strcat "\n  -> Cat " (itoa n-dim-cat) " net dim bang qua duong chia."))
       )
     )
   )
@@ -9236,7 +9259,7 @@
 ;;; Muc 210: in dong chan doan cat tam gop ra dong lenh VA ghi vao nhat ky ohta.log
 ;;; (ohta_net_log; khong co OHTATOOL.dll thi chi in). Nhat ky ghi 1 dong: "\n" -> " | ".
 (defun gro--tt-in (s / g i)
-  (princ s)
+  (gro--princ s)
   (setq g s)
   (while (setq i (vl-string-search "\n" g))
     (setq g (strcat (substr g 1 i) (if (= i 0) "" " | ") (substr g (+ i 2))))
@@ -9549,7 +9572,7 @@
                   )
                 (progn
                   (setq div-phu (gro--tim-duong-chia-cat-kem-ename o (- x-div 30.0) (+ x-div 30.0) lay-cat))
-                  (princ (strcat "\n  -> Cat them hinh chieu cung cum X" (rtos (car ob) 2 0) ".." (rtos (caddr ob) 2 0)
+                  (gro--princ (strcat "\n  -> Cat them hinh chieu cung cum X" (rtos (car ob) 2 0) ".." (rtos (caddr ob) 2 0)
                                  " Y" (rtos (cadr ob) 2 0) ".." (rtos (cadddr ob) 2 0)
                                  " tai X = " (rtos (if div-phu (car div-phu) x-div) 2 1) " (muc 151)."))
                   (gro--cat-hinh-phu o (if div-phu (car div-phu) x-div) (if div-phu (cadr div-phu) nil) gap lay-cat)
@@ -9700,7 +9723,7 @@
                 (setq bang (cons (cons prim-stt gyakuzu-note) bang))
                 ;; Xoa gyakuzu-note khoi notes
                 (setq notes (vl-remove-if '(lambda (x) (= (gro--it-stt x) sec-stt)) notes))
-                (princ (strcat "\n[DOI XUNG] Da ghep cap text doi xung: Honzu #"
+                (gro--princ (strcat "\n[DOI XUNG] Da ghep cap text doi xung: Honzu #"
                                (itoa prim-stt) " va Gyakuzu #" (itoa sec-stt)
                                " thanh 1 cum dung chung hinh!"
                        )
@@ -9724,19 +9747,19 @@
   (setq unmatched-notes (reverse unmatched-notes))
   (if unmatched-notes
     (progn
-      (princ (strcat "\n*** CANH BAO: Phat hien " (itoa (length unmatched-notes))
+      (gro--princ (strcat "\n*** CANH BAO: Phat hien " (itoa (length unmatched-notes))
                      " text ghi chu KHONG TIM THAY HINH VE CAT GIA CONG:"
              )
       )
       (foreach it unmatched-notes
-        (princ (strcat "\n    -> Text #" (itoa (gro--it-stt it))
+        (gro--princ (strcat "\n    -> Text #" (itoa (gro--it-stt it))
                        " [" (bg--codes-str (gro--it-codes it)) "]"
                        " tai toa do (X=" (rtos (car (gro--it-pt it)) 2 1)
                        ", Y=" (rtos (cadr (gro--it-pt it)) 2 1) ")"
                )
         )
       )
-      (princ "\n    (Vui long kiem tra lai layer net cat hoac hinh ve tuong ung!)")
+      (gro--princ "\n    (Vui long kiem tra lai layer net cat hoac hinh ve tuong ung!)")
     )
   )
   (list notes bang unmatched-notes)
@@ -10390,7 +10413,7 @@
         )
       )
 
-      (princ
+      (gro--princ
         (strcat "\n[DIM NHAN HINH] Da gan "
                 (itoa (length dim-units)) " cum Dim vao cac Hinh (Chieu tia Linear="
                 (itoa cnt-lin) ", Chieu tia Goc=" (itoa cnt-ang)
@@ -10488,7 +10511,7 @@
                 )
   )
   (if co-vung 
-    (princ 
+    (gro--princ 
       (strcat "\n[GRO VUNG] Che do danh so theo Vung DANG BAT (" 
               (itoa (length khungs-pham-vi))
               " vung). Cac doi tuong chi tinh toan noi bo cung vung; ngoai vung -> hinh co don."
@@ -10530,7 +10553,7 @@
   (setq shapes (gro--quet-hinh lay-cat khungs-pham-vi notes))
   (if (null shapes) 
     (progn 
-      (princ "\n[GRO] Khong tim thay bat ky net ve chi tiet nao de tao khung.")
+      (gro--princ "\n[GRO] Khong tim thay bat ky net ve chi tiet nao de tao khung.")
       nil
     )
     (progn 
@@ -10647,7 +10670,7 @@
                     bent-clusters
                   )
             )
-            (princ 
+            (gro--princ 
               (strcat "\n  [CHIEU TIA] Da ghep Hinh chieu/Mat cat #" 
                       (itoa (nth 0 b-shape))
                       " vao Tam #"
@@ -10662,7 +10685,7 @@
         )
       )
 
-      (princ 
+      (gro--princ 
         (strcat "\n=======================================================" 
                 "\n[PHAN TACH HINH CHIEU & TAM DON] Ket qua phan tich:"
                 "\n- Tong so hinh ve tim thay: "
@@ -10678,7 +10701,7 @@
       ;; BUOC 4: CANH BAO HINH CO DON (CAC HINH CON LAI KHONG THUOC TEXT NAO HOAC NAM NGOAI VUNG)
       (if (and pending-shapes (> (length pending-shapes) 0)) 
         (progn 
-          (princ 
+          (gro--princ 
             (strcat "\n*** CANH BAO: Phat hien " 
                     (itoa (length pending-shapes))
                     " HINH CO DON (khong thuoc bat ky text hay tam be nao)!"
@@ -10690,7 +10713,7 @@
                      (setq o-bb  (nth 2 o) 
                            o-vid (nth 4 o)
                      )
-                     (princ 
+                     (gro--princ 
                        (strcat "\n    -> Hinh co don #" 
                                (itoa (nth 0 o)) 
                                " tai toa do (X=" 
@@ -10713,9 +10736,9 @@
                   pending-shapes
                 )
           )
-          (princ "\n    (Da ve khung chu nhat mau DO tren layer \"CANH_BAO_CO_DON\")")
+          (gro--princ "\n    (Da ve khung chu nhat mau DO tren layer \"CANH_BAO_CO_DON\")")
         )
-        (princ "\n- Khong co hinh co don nao (100% hinh ve deu co text hoac da ghep vao tam be).")
+        (gro--princ "\n- Khong co hinh co don nao (100% hinh ve deu co text hoac da ghep vao tam be).")
       )
 
       ;; BUOC 5: DONG KHUNG CHUAN: MOI CUM TEXT THONG TIN TAO DUNG 1 KHUNG RIENG (1-TO-1)
@@ -10777,7 +10800,7 @@
               new-khungs (cons (list poly-4 bb-final tid pl-kin kind s-list dim-es) new-khungs)
         )
         (setq i-dk (1+ i-dk))
-        (princ 
+        (gro--princ 
           (strcat "\n  [Khung " 
                   (itoa (length new-khungs))
                   "] "
@@ -10788,13 +10811,13 @@
         )
       )
       (setq new-khungs (reverse new-khungs))
-      (princ 
+      (gro--princ 
         (strcat "\nDa tao thanh cong " 
                 (itoa (length new-khungs))
                 " khung chu nhat tren layer \"" (gro--layer-khung-tam) "\"."
         )
       )
-      (princ "\n=======================================================")
+      (gro--princ "\n=======================================================")
       (vl-catch-all-apply 
         (function 
           (lambda () 
@@ -10814,7 +10837,7 @@
   (defun *error* (m) 
     (if old-cmd (setvar "CMDECHO" old-cmd))
     (if (and m (not (wcmatch (strcase m) "*BREAK,*CANCEL*,*EXIT*"))) 
-      (princ (strcat "\nLoi grokhung: " m))
+      (gro--princ (strcat "\nLoi grokhung: " m))
     )
     (princ)
   )
@@ -10833,13 +10856,13 @@
       )
     )
   )
-  (princ "\n[GROKHUNG] Chon cac text ghi chu (hoac bam ENTER de quet toan bo ban ve): ")
+  (gro--princ "\n[GROKHUNG] Chon cac text ghi chu (hoac bam ENTER de quet toan bo ban ve): ")
   (setq ss (ssget '((-4 . "<OR") (0 . "TEXT") (0 . "MTEXT") (-4 . "OR>"))))
   (if (null ss) 
     (setq ss (ssget "X" '((-4 . "<OR") (0 . "TEXT") (0 . "MTEXT") (-4 . "OR>"))))
   )
   (if (null ss) 
-    (progn (princ "\nKhong tim thay text ghi chu nao.") (exit))
+    (progn (gro--princ "\nKhong tim thay text ghi chu nao.") (exit))
   )
   (setq notes nil
         cands nil
@@ -10871,7 +10894,7 @@
         cands (reverse cands)
   )
   (if (null notes) 
-    (progn (princ "\nKhong tim thay ghi chu nao co mau \"t=\".") (exit))
+    (progn (gro--princ "\nKhong tim thay ghi chu nao co mau \"t=\".") (exit))
   )
   (setq ghep (gro--ghep-sl notes cands hmax nil)
         bang (nth 0 ghep)
@@ -11455,7 +11478,7 @@
                   (if (> (sslength ss-item) 0) 
                     (sssetfirst ss-item ss-item)
                   )
-                  (princ (strcat "\n[DST] Da ZOOM & CHON: " 
+                  (gro--princ (strcat "\n[DST] Da ZOOM & CHON: " 
                                  (vl-princ-to-string (nth 1 cur-item)) 
                                  " | " 
                                  (vl-princ-to-string (nth 5 cur-item))
@@ -11467,7 +11490,7 @@
           )
           (progn 
             (if (> dch 0) (unload_dialog dch))
-            (princ (strcat "\n[DST] Khong the nap hop thoai DCL tu file: " dcl))
+            (gro--princ (strcat "\n[DST] Khong the nap hop thoai DCL tu file: " dcl))
             (setq act 0)
           )
         )
@@ -11501,7 +11524,7 @@
 (defun c:fixfd () 
   (setvar "FILEDIA" 1)
   (setvar "CMDECHO" 1)
-  (princ "\n[FIXFD] Da dat lai FILEDIA = 1 va CMDECHO = 1 thanh cong!")
+  (gro--princ "\n[FIXFD] Da dat lai FILEDIA = 1 va CMDECHO = 1 thanh cong!")
   (princ)
 )
 
@@ -11579,14 +11602,14 @@
           (setvar "CMDECHO" old-ce)
           (cond
             ((gro--net-san-sang-p)
-             (princ (strcat "\n[GRO] Da nap ban .NET: " dll))
+             (gro--princ (strcat "\n[GRO] Da nap ban .NET: " dll))
             )
             ((or (vl-symbol-value 'gro_net_dsn) (vl-symbol-value 'gro_net_dst))
              ;; Muc 207: co ten ham nhung van khong goi duoc -> chi con cach mo lai CAD
-             (princ (strcat "\n[GRO] Da NETLOAD " dll " nhung ham .NET van khong goi duoc."
+             (gro--princ (strcat "\n[GRO] Da NETLOAD " dll " nhung ham .NET van khong goi duoc."
                             "\n      Hay DONG ZWCAD roi mo lai."))
             )
-            (t (princ (strcat "\n[GRO] Khong nap duoc " dll " - dung hop thoai / bang DCL.")))
+            (t (gro--princ (strcat "\n[GRO] Khong nap duoc " dll " - dung hop thoai / bang DCL.")))
           )
         )
       )
@@ -11613,13 +11636,13 @@
       (vl-catch-all-apply 'vl-cmdf (list "NETLOAD" (vl-string-translate "/" "\\" dll)))
       (setvar "FILEDIA" old-fd)
       (setvar "CMDECHO" old-ce)
-      (princ (strcat "\n[NETRELOAD] Da thuc hien NETLOAD: " dll))
+      (gro--princ (strcat "\n[NETRELOAD] Da thuc hien NETLOAD: " dll))
       (if (vl-symbol-value 'gro_net_dsn)
-        (princ "\n[NETRELOAD] Da nhan dien day du 2 Tab DST va DSN.")
-        (princ "\n[NETRELOAD] Luu y: Neu ZWCAD dang giu DLL cu trong RAM, hay khoi dong lai ZWCAD de cap nhat.")
+        (gro--princ "\n[NETRELOAD] Da nhan dien day du 2 Tab DST va DSN.")
+        (gro--princ "\n[NETRELOAD] Luu y: Neu ZWCAD dang giu DLL cu trong RAM, hay khoi dong lai ZWCAD de cap nhat.")
       )
     )
-    (princ "\n[NETRELOAD] Khong tim thay file DLL.")
+    (gro--princ "\n[NETRELOAD] Khong tim thay file DLL.")
   )
   (princ)
 )
@@ -11630,11 +11653,11 @@
   (setvar "FILEDIA" 1)
   (if (gro--nap-net)
     (progn
-      (princ "\n[NETDST] Dang mo Palette .NET...")
+      (gro--princ "\n[NETDST] Dang mo Palette .NET...")
       (gro_net_dst)
     )
     (progn
-      (princ "\n[NETDST] Khong co ban .NET (khong tim thay / khong nap duoc DLL). Mo bang DCL...")
+      (gro--princ "\n[NETDST] Khong co ban .NET (khong tim thay / khong nap duoc DLL). Mo bang DCL...")
       (c:dst)
     )
   )
@@ -11841,7 +11864,7 @@
         )
         (vl-catch-all-apply 'entdel (list e))
       )
-      (princ (strcat "\n[GRO] Da xoa " (itoa (sslength ss)) " doi tuong ban copy chup cu."))
+      (gro--princ (strcat "\n[GRO] Da xoa " (itoa (sslength ss)) " doi tuong ban copy chup cu."))
     )
   )
   (setq ss (ssget "X" '((8 . "*_CHUP"))))
@@ -11854,7 +11877,7 @@
         )
         (vl-catch-all-apply 'entdel (list e))
       )
-      (princ (strcat "\n[GRO] Da don dep " (itoa (sslength ss)) " doi tuong tren cac layer *_CHUP."))
+      (gro--princ (strcat "\n[GRO] Da don dep " (itoa (sslength ss)) " doi tuong tren cac layer *_CHUP."))
     )
   )
 )
@@ -11953,7 +11976,7 @@
         n-copy      0
         left-frames nil
   )
-  (princ (strcat "\n[GRO] Dang tao ban copy chup ben trai (DX = " (rtos dx 2 1) " mm, Gap = 2000 mm)..."))
+  (gro--princ (strcat "\n[GRO] Dang tao ban copy chup ben trai (DX = " (rtos dx 2 1) " mm, Gap = 2000 mm)..."))
 
   ;; 1. Chi copy cac khung bao goc do nguoi dung chon (khungs-goc / ssv)
   ;; TUYET DOI KHONG copy cac khung in phan tach tung tam (kq-tk)
@@ -11992,7 +12015,7 @@
       (ssadd ce ssv-left)
     )
   )
-  (princ (strcat "\n[GRO] Da copy " (itoa n-copy) " doi tuong goc sang ban chup."))
+  (gro--princ (strcat "\n[GRO] Da copy " (itoa n-copy) " doi tuong goc sang ban chup."))
   (list dx dy (if (> (sslength ssv-left) 0) ssv-left nil))
 )
 
@@ -12032,7 +12055,7 @@
     )
   )
   (if (> (+ n-bg n-ten) 0)
-    (princ (strcat "\n[GRO] Da copy " (itoa n-bg) " bango (layer 0-BANGO_CHUP) va "
+    (gro--princ (strcat "\n[GRO] Da copy " (itoa n-bg) " bango (layer 0-BANGO_CHUP) va "
                    (itoa n-ten) " ten ban ve sang ban chup ben trai."
            )
     )
@@ -12313,7 +12336,7 @@
             )
 
           (if (> n-dim-theo 0)
-            (princ (strcat "\n[GRO] Doi them " (itoa n-dim-theo) " net dim chua gan tam theo cum (muc 141)."))
+            (gro--princ (strcat "\n[GRO] Doi them " (itoa n-dim-theo) " net dim chua gan tam theo cum (muc 141)."))
           )
 
           (gro--moc "xep cum: cap nhat ds")
@@ -12398,7 +12421,7 @@
               )
             )
           )
-          (princ (strcat "\n[GRO] " msg-xep))
+          (gro--princ (strcat "\n[GRO] " msg-xep))
 
           (list (list new-kq-khungs (cadr kq-tk)) new-gro-tam msg-xep
                 ;; muc 112: (tid nhom enames new-bb s-list pl-kin) cho buoc tach cap mirror
@@ -12572,7 +12595,7 @@
       (if moi
         (progn
           (entmod (subst (cons 1 ph) (assoc 1 ed) (vl-remove-if '(lambda (p) (= (car p) 3)) ed)))
-          (princ (strcat "\n[GRO] Tach dong chung Honzu/Gyakuzu thanh 2 dong (" (itoa (length codes)) " ky tu)"))
+          (gro--princ (strcat "\n[GRO] Tach dong chung Honzu/Gyakuzu thanh 2 dong (" (itoa (length codes)) " ky tu)"))
         )
       )
       moi
@@ -12796,7 +12819,7 @@
                  )
                )
                (setq n-tach (1+ n-tach))
-               (princ (strcat "\n[GRO] Tach cap mirror " ten-bg " -> ban nghich bango "
+               (gro--princ (strcat "\n[GRO] Tach cap mirror " ten-bg " -> ban nghich bango "
                               (rtos (nth 0 tam-g) 2 0) " dat ben phai (truc X=" (rtos xa 2 1) ")"
                       )
                )
@@ -12827,7 +12850,7 @@
       )
     )
   )
-  (if msg (princ (strcat "\n[GRO] " msg)))
+  (if msg (gro--princ (strcat "\n[GRO] " msg)))
   (if msg
     (list (list khungs (if kq-tk (cadr kq-tk) nil)) msg)
     nil
@@ -13462,7 +13485,7 @@
             (setq kq (strcat "!!! Chua dat ma khac vao hinh: GROTOOL.dll chua co ham gro_net_dat_mk"
                              " (cap nhat DLL) - move thu cong."))
           )
-          (if (and kq (wcmatch kq "!!!*")) (princ (strcat "\n[GRO] " kq)))
+          (if (and kq (wcmatch kq "!!!*")) (gro--princ (strcat "\n[GRO] " kq)))
         )
       )
     )
@@ -13656,14 +13679,14 @@
                            (itoa (length tids-moved)) " tam don."
                    )
       )
-      (princ (strcat "\n[GRO] " msg-tg))
+      (gro--princ (strcat "\n[GRO] " msg-tg))
     )
   )
   (if (> con-chong 0)
     (progn
       (setq msg-tg (strcat (if msg-tg (strcat msg-tg "\n") "")
                            "!!! Con " (itoa con-chong) " cap khung in chong nhau - kiem tra va tach tay."))
-      (princ (strcat "\n[GRO] Con " (itoa con-chong) " cap khung in chong nhau."))
+      (gro--princ (strcat "\n[GRO] Con " (itoa con-chong) " cap khung in chong nhau."))
     )
   )
   (list cur-khungs msg-tg)
@@ -13770,13 +13793,13 @@
   (if (numberp gro--moc-dau)
     (progn
       (setq tong (- (gro--moc-giay) gro--moc-dau))
-      (princ (strcat "\n[GRO] Thoi gian tung buoc (tong " (rtos tong 2 1) " giay):"))
+      (gro--princ (strcat "\n[GRO] Thoi gian tung buoc (tong " (rtos tong 2 1) " giay):"))
       (foreach x gro--thoi-gian
         (if (>= (cdr x) 0.05)
           (progn
             (setq s (car x))
             (while (< (strlen s) 34) (setq s (strcat s " ")))
-            (princ (strcat "\n   " s (rtos (cdr x) 2 2) " giay"
+            (gro--princ (strcat "\n   " s (rtos (cdr x) 2 2) " giay"
                            (if (> tong 0.0) (strcat "  (" (rtos (* 100.0 (/ (cdr x) tong)) 2 0) "%)") "")))
           )
         )
@@ -13786,18 +13809,11 @@
   (princ)
 )
 
-;;; Muc 209: moi hop thong bao cua GRO deu ghi vao nhat ky bao loi (vd "ban ve chua luu")
-;;; truoc khi hien - nguoi debug doc nhat ky biet GRO da bao gi. Thay cho alert trong file nay.
-(defun gro--alert (msg)
-  (vl-catch-all-apply 'ohta_net_log (list "GRO" (strcat "thong bao: " (vl-princ-to-string msg))))
-  (alert msg)
-)
-
 ;;; Muc 184: cac buoc da chuyen C# KHONG con ban lisp du phong (da go 29/10/2026).
 ;;; C# loi / DLL thieu ham / ket qua sai dang -> in + alert roi DUNG lenh (khong chay sai im lang).
 (defun gro--cs-dung (buoc ly-do)
-  (princ (strcat "\n*** [GRO .NET] Buoc " buoc " (C#) loi: " ly-do))
-  (princ "\n*** Ban lisp du phong da go (muc 184) -> DUNG lenh. Kiem tra GROTOOL.dll (NETRELOAD) roi chay lai.")
+  (gro--princ (strcat "\n*** [GRO .NET] Buoc " buoc " (C#) loi: " ly-do))
+  (gro--princ "\n*** Ban lisp du phong da go (muc 184) -> DUNG lenh. Kiem tra GROTOOL.dll (NETRELOAD) roi chay lai.")
   (gro--alert (strcat "GRO: buoc " buoc " (C#) loi:\n" ly-do
                  "\n\nBan lisp du phong da go (muc 184).\nKiem tra GROTOOL.dll (NETRELOAD) roi chay lai."))
   ;; Muc 209: loi nay tu alert + exit, KHONG qua nhanh loi that cua *error* -> tu hoi gui bao loi
@@ -13904,10 +13920,10 @@
     )
     (if (and m (not (wcmatch (strcase m) "*BREAK,*CANCEL*,*EXIT*"))) 
       (progn 
-        (princ (strcat "\nLoi: " m))
+        (gro--princ (strcat "\nLoi: " m))
         ;; Bao BUOC dang chay. Loi runtime cua AutoLISP khong cho biet dong nao,
         ;; nen khong co dong nay thi moi lan hong lai phai doan (muc 48).
-        (princ 
+        (gro--princ 
           (strcat "\n   (dang o buoc: " 
                   (cond ((eq (type gro--buoc) 'STR) gro--buoc) ("?"))
                   ")"
@@ -13932,7 +13948,7 @@
       (setq msg (strcat "BAN VE CHUA LUU\n\n"
                         "GRO ghi file CSV / PDF canh file ban ve, nen can luu ban ve truoc.\n"
                         "Hay luu ban ve (Ctrl+S) roi chay lai GRO."))
-      (princ (strcat "\n" msg))
+      (gro--princ (strcat "\n" msg))
       (gro--alert msg)
       (exit)
     )
@@ -13988,7 +14004,7 @@
                   )
                 )
       )
-      (princ (strcat "\n" msg))
+      (gro--princ (strcat "\n" msg))
       (gro--alert msg)
       (exit)
     )
@@ -14017,8 +14033,8 @@
   (if (null dlg) 
     (progn 
       (if (and (ssgetfirst) (cadr (ssgetfirst))) 
-        (princ "\nDa SELECT nhom net tren ban ve de xu ly. Chay lai lenh GRO khi muon tiep tuc.")
-        (princ "\nKet thuc: bam Cancel hoac khong mo duoc hop thoai.")
+        (gro--princ "\nDa SELECT nhom net tren ban ve de xu ly. Chay lai lenh GRO khi muon tiep tuc.")
+        (gro--princ "\nKet thuc: bam Cancel hoac khong mo duoc hop thoai.")
       )
       (if old-cmdecho (setvar "CMDECHO" old-cmdecho))
     )
@@ -14093,12 +14109,12 @@
       ;; thay vi thanh ngo cut.
       (sssetfirst nil nil) ; Xoa sach bat ky selection nao truoc khi goi ssget
       (if gro--use-tao-khung 
-        (princ 
+        (gro--princ 
           (strcat "\n[TU DONG TAO KHUNG TAM DANG BAT] Chon cac KHUNG BAO pham vi (neu co)" 
                   "\n  hoac bam ENTER de quet chon truc tiep tren ban ve:"
           )
         )
-        (princ 
+        (gro--princ 
           (strcat "\nChon cac KHUNG BAO (polyline kin 4 dinh, layer " 
                   gro--layer-khung
                   ")" 
@@ -14124,7 +14140,7 @@
           )
           (if (null khungs) 
             (progn 
-              (princ "\nKhong nhan duoc khung bao nao: can polyline KIN co DUNG 4 dinh.")
+              (gro--princ "\nKhong nhan duoc khung bao nao: can polyline KIN co DUNG 4 dinh.")
               (gro--in-pl-bo pl-lydo T)
               (exit)
             )
@@ -14146,8 +14162,8 @@
                 da-zoom (gro--zoom-vung bb-lv)
           )
           (if da-zoom 
-            (princ "\nDa zoom cho thay het vung lam viec.")
-            (princ 
+            (gro--princ "\nDa zoom cho thay het vung lam viec.")
+            (gro--princ 
               (strcat "\n*** Khong zoom duoc cho thay het vung lam viec." 
                       "\n    Quet bang cua so man hinh nen CO THE THIEU text."
                       "\n    Tu zoom thay het roi chay lai."
@@ -14157,11 +14173,11 @@
           (setq ss (gro--quet-cp khungs))
           (if (null ss) 
             (progn 
-              (princ "\nKhong tim thay TEXT/MTEXT nao trong cac khung bao.")
+              (gro--princ "\nKhong tim thay TEXT/MTEXT nao trong cac khung bao.")
               (exit)
             )
           )
-          (princ 
+          (gro--princ 
             (strcat "\nDa nhan " 
                     (itoa (length khungs))
                     " khung bao; quet duoc "
@@ -14183,14 +14199,14 @@
           )
           (setq n-khung0 (gro--khung-ve-layer0 ssv khungs gro--layer-xln))
           (if (> n-khung0 0)
-            (princ (strcat "\nDa doi " (itoa n-khung0) " khung bao / khung net dut sang layer 0."))
+            (gro--princ (strcat "\nDa doi " (itoa n-khung0) " khung bao / khung net dut sang layer 0."))
           )
         )
         (progn 
           ;; -- khong chon khung nao -> quet chon text thu cong --
           (if gro--use-tao-khung 
-            (princ "\n[Tu dong tao khung] Quet chon cac ghi chu (hoac bam ENTER de lay tat ca tren ban ve):")
-            (princ "\nChon cac ghi chu (TEXT/MTEXT co ghi do day):")
+            (gro--princ "\n[Tu dong tao khung] Quet chon cac ghi chu (hoac bam ENTER de lay tat ca tren ban ve):")
+            (gro--princ "\nChon cac ghi chu (TEXT/MTEXT co ghi do day):")
           )
           (setq ss (ssget 
                      '((-4 . "<OR")
@@ -14205,7 +14221,7 @@
           )
           (if (null ss) 
             (progn 
-              (princ "\nKhong chon duoc TEXT/MTEXT nao.")
+              (gro--princ "\nKhong chon duoc TEXT/MTEXT nao.")
               (exit)
             )
           )
@@ -14225,7 +14241,7 @@
       ;; Chi xu ly cac doi tuong nam trong pham vi cac KHUNG BAO da chon!
       (if gro--use-xln 
         (progn 
-          (princ 
+          (gro--princ 
             (strcat "\n[Xu ly net] Dang quet chuyen layer net tren layer goc trong cac khung bao: " 
                     gro--layer-xln
                     "..."
@@ -14247,7 +14263,7 @@
                                      )
                     gro--xln-danh-sach-chua-doi nil
               )
-              (princ 
+              (gro--princ 
                 (strcat 
                   "\n[Xu ly net] Khong tim thay doi tuong nao tren layer \""
                   gro--layer-xln
@@ -14267,14 +14283,14 @@
         (progn 
           (if (not vung-truoc) (setq vungs (gro--tim-vung gro--layer-vung khungs))) ; muc 137
           (if (null vungs) 
-            (princ 
+            (gro--princ 
               (strcat "\n*** Khong tim thay VUNG nao (polyline kin tu 3 dinh tren layer " 
                       gro--layer-vung
                       (if khungs " va co cham khung bao" "")
                       ") -> danh so theo hang."
               )
             )
-            (princ 
+            (gro--princ 
               (strcat "\nTim thay " 
                       (itoa (length vungs))
                       " vung tren layer "
@@ -14286,7 +14302,7 @@
           ;; Vung bi loai vi khong cham khung bao nao. Loai lang le chinh la thu
           ;; da gay ra muc 65, nen phai dem va bao.
           (if (and gro--vung-bo (> gro--vung-bo 0)) 
-            (princ 
+            (gro--princ 
               (strcat "\n   (" 
                       (itoa gro--vung-bo)
                       " vung tren layer do bi bo vi khong cham khung bao nao)"
@@ -14429,11 +14445,11 @@
 
       (if (null notes) 
         (progn 
-          (princ "\nKhong tim thay ghi chu nao co mau \"t=\".")
+          (gro--princ "\nKhong tim thay ghi chu nao co mau \"t=\".")
           (if vd-tnghi 
             (progn 
-              (princ "\n!!! Nhung co doi tuong chua chu t/T ma khong khop mau \"t=\":")
-              (foreach v (reverse vd-tnghi) (princ (strcat "\n   [" v "]")))
+              (gro--princ "\n!!! Nhung co doi tuong chua chu t/T ma khong khop mau \"t=\":")
+              (foreach v (reverse vd-tnghi) (gro--princ (strcat "\n   [" v "]")))
             )
           )
           (exit)
@@ -14463,9 +14479,9 @@
       ;; khac sai ma cho mot nua so tam ma khong ai biet.
       (if (> (length (nth 2 kq-ma)) 1) 
         (progn 
-          (princ "\n*** DUNG: cac khung bao cho ra HAI MA KHAC NHAU:")
+          (gro--princ "\n*** DUNG: cac khung bao cho ra HAI MA KHAC NHAU:")
           (foreach p ma-ds 
-            (princ 
+            (gro--princ 
               (strcat "\n    khung " 
                       (itoa (1+ (car p)))
                       ": "
@@ -14473,8 +14489,8 @@
               )
             )
           )
-          (princ "\n    Mot lan chay chi dung duoc MOT ma khac.")
-          (princ "\n    Tach ban ve ra chay rieng, hoac sua lai dong ten khach.")
+          (gro--princ "\n    Mot lan chay chi dung duoc MOT ma khac.")
+          (gro--princ "\n    Tach ban ve ra chay rieng, hoac sua lai dong ten khach.")
           (gro--alert "Cac khung bao cho ra hai ma khac nhau - da dung lai.\nXem dong lenh de biet khung nao ra ma gi.")
           (exit)
         )
@@ -14482,22 +14498,22 @@
       ;; (b) doc duoc mot ma -> dung no, bat ke hop thoai chon gi
       (if (nth 0 kq-ma) 
         (progn 
-          (princ (strcat "\nMa khac TU NHAN DIEN: " (nth 0 kq-ma)))
+          (gro--princ (strcat "\nMa khac TU NHAN DIEN: " (nth 0 kq-ma)))
           (setq mk-code (nth 0 kq-ma))
         )
         ;; (c) khong doc duoc ma nao -> hoi nguoi dung o dong lenh
         (progn 
-          (princ "\n*** Khong nhan dien duoc ma khac: khong tim thay dong nao")
-          (princ "\n    vua co chu \"\U+5165\"/\"san\" vua co ten hang da biet.")
+          (gro--princ "\n*** Khong nhan dien duoc ma khac: khong tim thay dong nao")
+          (gro--princ "\n    vua co chu \"\U+5165\"/\"san\" vua co ten hang da biet.")
           ;; Nguyen nhan hay gap nhat tren may kieu A, va rat kho doan neu khong
           ;; duoc nhac (muc 57): ky tu Nhat khong co trong bg--uni-tbl bi doi
           ;; thanh "?" NGAY TU KHAU DOC, nen khong con gi de khop.
           (if bg--uni-thieu 
             (progn 
-              (princ "\n    CO THE do THIEU KY TU trong bg--uni-tbl: tren may ma chuoi")
-              (princ "\n    la byte CP932, ky tu khong co trong bang bi doi thanh \"?\"")
-              (princ "\n    ngay tu khau doc nen khong con khop duoc voi mau nao.")
-              (princ "\n    Xem dong \"Canh bao: co ky tu CP932...\" o cuoi bao cao.")
+              (gro--princ "\n    CO THE do THIEU KY TU trong bg--uni-tbl: tren may ma chuoi")
+              (gro--princ "\n    la byte CP932, ky tu khong co trong bang bi doi thanh \"?\"")
+              (gro--princ "\n    ngay tu khau doc nen khong con khop duoc voi mau nao.")
+              (gro--princ "\n    Xem dong \"Canh bao: co ky tu CP932...\" o cuoi bao cao.")
             )
           )
           (setq mk-code (gro--hoi-ma-khac 
@@ -14510,7 +14526,7 @@
       ;; (d) co khung thieu ma -> van chay, nhung phai bao ro
       (if (nth 1 kq-ma) 
         (progn 
-          (princ 
+          (gro--princ 
             (strcat "\n*** THIEU ma khac o " 
                     (itoa (length (nth 1 kq-ma)))
                     "/"
@@ -14519,9 +14535,9 @@
             )
           )
           (foreach p (nth 1 kq-ma) 
-            (princ (strcat " khung " (itoa (1+ p))))
+            (gro--princ (strcat " khung " (itoa (1+ p))))
           )
-          (princ 
+          (gro--princ 
             (strcat "\n    Dang dung ma \"" mk-code "\" cho TAT CA cac khung.")
           )
         )
@@ -14539,7 +14555,7 @@
       ;; muc 128: gop text ghi chu tach roi vao text thong tin (1 ghi chu -> 1 tam)
       (setq gro--gc-gan (gro--gc-gan-vao (reverse gcs) notes bang))
       (if gro--gc-gan
-        (princ (strcat "\nGop " (itoa (length gro--gc-gan)) " text ghi chu tach roi vao text thong tin."))
+        (gro--princ (strcat "\nGop " (itoa (length gro--gc-gan)) " text ghi chu tach roi vao text thong tin."))
       )
       (setq gro--loi-trung-sl (gro--kiem-tra-trung-loai-sl notes bang))
       (if gro--loi-trung-sl
@@ -14551,9 +14567,9 @@
       ;; Tinh MOT LAN o day roi dung lai o ca 3 cho ghep chuoi ma khac ben duoi.
       ;; PHAI tinh SAU buoc nhan dien, vi mk-code co the vua bi doi (muc 54).
       (setq mk-day (gro--ma-khac-dau mk-code don))
-      (princ (strcat "\nMa khac se tao: " mk-day "-<so>"))
+      (gro--princ (strcat "\nMa khac se tao: " mk-day "-<so>"))
       (if (= mk-day mk-code) 
-        (princ 
+        (gro--princ 
           (strcat "\n  Luu y: ten ban ve khong co doan so o cuoi" 
                   " -> ma khac KHONG co doan giua."
           )
@@ -14619,8 +14635,8 @@
         (setq bb-lv (gro--bbox-gop (mapcar 'gro--it-bbox (append notes cands))))
       )
       (if (gro--zoom-vung bb-lv)
-        (princ "\nDa zoom cho thay het vung lam viec (de do vat can dung).")
-        (princ
+        (gro--princ "\nDa zoom cho thay het vung lam viec (de do vat can dung).")
+        (gro--princ
           (strcat "\n*** Khong zoom duoc cho thay het vung lam viec."
                   "\n    Khau DAT bango do vat can bang cua so man hinh, nen bango"
                   "\n    co the de len hinh. Tu zoom thay het roi chay lai neu can."
@@ -14653,7 +14669,7 @@
       (if (not (eq (type style-bg) 'STR)) 
         (progn 
           (if style-bg 
-            (princ "\n*** gro--bao-dam-style tra ve gia tri KHONG phai chuoi - bo qua.")
+            (gro--princ "\n*** gro--bao-dam-style tra ve gia tri KHONG phai chuoi - bo qua.")
           )
           (setq style-bg (getvar "TEXTSTYLE"))
         )
@@ -14739,7 +14755,7 @@
         (if (> (length slist) 1) (setq n-tach (1+ n-tach)))
         ;; Nhap nhang: vua co dong phu vua co ky tu dem tren chinh dong do day.
         (if (and dongphu (gro--tim-sl codes)) 
-          (princ 
+          (gro--princ 
             (strcat "\nCanh bao: ghi chu co ca dong so luong rieng lan ky tu dem" 
                     " tren chinh no, da uu tien dong rieng -> ["
                     (bg--codes-str (gro--it-codes element))
@@ -15007,7 +15023,7 @@
         ;; luong (muc 39); 1 tam thi can giua CA CUM ghi chu (muc 44).
         (if (= (length khois) 1) (setq bb-dp cum))
         (if (and gro--dbg-vc (> gro--dbg-vc 0)) 
-          (princ 
+          (gro--princ 
             (strcat "\n== DBG bango " 
                     (rtos bango-dau 2 0)
                     ".."
@@ -15103,7 +15119,7 @@
                 gro--danh-sach-ten-bv-ents (nth 2 kq-ten)
           )
           (foreach e gro--danh-sach-ten-bv-ents (gro--gan-dau-ra e)) ; muc 204
-          (princ 
+          (gro--princ 
             (strcat "\nTen ban ve: dat " 
                     (itoa (nth 0 kq-ten))
                     "/"
@@ -15121,7 +15137,7 @@
             )
           )
         )
-        (princ "\nTen ban ve: BO QUA - khong co khung bao goc nao duoc chon.")
+        (gro--princ "\nTen ban ve: BO QUA - khong co khung bao goc nao duoc chon.")
       )
 
       ;; --- 6c. DOI SOAT KEP NHAN DIEN CUM HINH & TU DONG TAO KHUNG_IN -----------
@@ -15156,13 +15172,13 @@
             )
           )
           (if (and kq-tk (car kq-tk) (> (length (car kq-tk)) 0)) 
-            (princ 
+            (gro--princ 
               (strcat "\n>>> [GRO] DA TAO THANH CONG " 
                       (itoa (length (car kq-tk))) 
                       " KHUNG TAM (" (gro--layer-khung-tam) ") THEO CUM CHI TIET! <<<"
               )
             )
-            (princ "\n[GRO] Khong tao duoc khung tam (khong tim thay cum hinh hoc phu hop).")
+            (gro--princ "\n[GRO] Khong tao duoc khung tam (khong tim thay cum hinh hoc phu hop).")
           )
         )
       )
@@ -15297,7 +15313,7 @@
             ;; Canh bao gom cho tab Thong Tin (muc 105) - noi vao SAU bao cao tong
             msg-tt    ""
       )
-      (princ 
+      (gro--princ 
         (strcat 
           (if khungs 
             "\nTim thay trong cac khung bao "
@@ -15315,7 +15331,7 @@
           )
         )
       )
-      (princ 
+      (gro--princ 
         (strcat "\nPhan loai: " 
                 (itoa (length notes))
                 " ghi chu tam (co \"t=\"), "
@@ -15328,7 +15344,7 @@
       ;; Dau ra cua lan chay truoc - bo qua co chu y. Con so nay lon nghia la ban
       ;; ve da co ket qua cu chong len; nen UNDO/xoa het roi chay lai cho sach.
       (if (> n-daura 0) 
-        (princ 
+        (gro--princ 
           (strcat "\n           (da bo qua " 
                   (itoa n-daura)
                   " doi tuong tren layer dau ra cua chinh lenh: "
@@ -15339,7 +15355,7 @@
       ;; --- gom hang / gom vung ---
       (if nhoms 
         (progn 
-          (princ 
+          (gro--princ 
             (strcat "\nNhom: " 
                     (itoa (length khungs))
                     " khung bao + "
@@ -15366,7 +15382,7 @@
           )
           (gro--in-hang-vung tin-vung)
         )
-        (princ 
+        (gro--princ 
           (strcat "\nGom hang : " 
                   (itoa so-hang)
                   " hang"
@@ -15392,14 +15408,14 @@
           (setq dem-hang (cons (cons (car p) 1) dem-hang))
         )
       )
-      (princ 
+      (gro--princ 
         (if nhoms 
           "\n           so ghi chu moi nhom:"
           "\n           so ghi chu moi hang:"
         )
       )
       (foreach p (reverse dem-hang) 
-        (princ 
+        (gro--princ 
           (strcat " [" 
                   (if (and nhoms (= (car p) (length nhoms))) 
                     "ngoai"
@@ -15414,7 +15430,7 @@
       ;; bao ro kem toa do de nguoi dung kiem tra lai khung net dut co thieu khong.
       (if ngoai 
         (progn 
-          (princ 
+          (gro--princ 
             (strcat "\n!!! " 
                     (itoa (length ngoai))
                     " ghi chu NAM NGOAI moi vung - da danh so o CUOI cung:"
@@ -15423,7 +15439,7 @@
           (setq i 0)
           (foreach c ngoai 
             (if (< i 5) 
-              (princ 
+              (gro--princ 
                 (strcat "\n      [" 
                         (bg--codes-str (gro--it-codes c))
                         "]"
@@ -15439,7 +15455,7 @@
         )
       )
       ;; --- so tam ---
-      (princ 
+      (gro--princ 
         (strcat "\nSo tam   : " 
                 (itoa (length notes))
                 " ghi chu -> "
@@ -15452,7 +15468,7 @@
         )
       )
       ;; --- vi tri bango: thuat toan tu dong thi PHAI kiem chung duoc ---
-      (princ 
+      (gro--princ 
         (strcat "\nVi tri bango: tren=" 
                 (itoa vt-tren)
                 "  duoi="
@@ -15475,7 +15491,7 @@
       ;; Tam roi vao phuong an cuoi = DE LEN ghi chu -> nguoi dung van phai chinh tay.
       (if vd-chua-sach 
         (progn 
-          (princ 
+          (gro--princ 
             (strcat "\n!!! " 
                     (itoa vt-chua-sach)
                     " tam khong tim duoc cho hoan toan sach quanh ghi chu."
@@ -15483,20 +15499,20 @@
                     " khong de len chu) - nen xem lai bang mat:"
             )
           )
-          (foreach v (reverse vd-chua-sach) (princ (strcat "\n      " v)))
+          (foreach v (reverse vd-chua-sach) (gro--princ (strcat "\n      " v)))
         )
       )
       ;; Ti le roi vao "giua" qua cao = bo lua chon dang qua chat, chu khong phai
       ;; ban ve co van de. Chi dich danh hai ham can noi ra.
       (if (and (> n-tam 0) (> (* vt-chua-sach 5) n-tam)) 
         (progn 
-          (princ "\n    Hon 20% so tam khong tim duoc cho sach.")
-          (princ "\n    Muon noi ra thi sua: gro--so-buoc-truot (so vi tri thu moi canh,")
-          (princ "\n    dang 5), gro--ho-bango (khoang ho), hoac gro--dem-va-cham")
-          (princ "\n    (them bo loc bo qua layer duong tam / kich thuoc / hatch).")
+          (gro--princ "\n    Hon 20% so tam khong tim duoc cho sach.")
+          (gro--princ "\n    Muon noi ra thi sua: gro--so-buoc-truot (so vi tri thu moi canh,")
+          (gro--princ "\n    dang 5), gro--ho-bango (khoang ho), hoac gro--dem-va-cham")
+          (gro--princ "\n    (them bo loc bo qua layer duong tam / kich thuoc / hatch).")
         )
       )
-      (princ 
+      (gro--princ 
         (strcat "\nKieu viet so luong: TH1(dong rieng)=" 
                 (itoa th1)
                 "  TH2("
@@ -15513,7 +15529,7 @@
       )
       ;; Tam CPL (muc 43) - in ASCII, khong in chuoi Nhat ra dong lenh.
       (if (> n-cpl 0) 
-        (princ 
+        (gro--princ 
           (strcat "\nTam CPL (thep van chong truot): " 
                   (itoa n-cpl)
                   " tam -> M = MUKI SHIMAITA, Z= "
@@ -15523,21 +15539,21 @@
       )
       (if bg--saw-esc 
         (progn 
-          (princ 
+          (gro--princ 
             (strcat "\nLuu y: ban ve tra text ve duoi dang escape " 
                     (chr 92)
                     "U+XXXX (codepage he thong khong phai 932)."
             )
           )
-          (princ "\n       Da tu dong doi ve CP932 truoc khi phan tich.")
+          (gro--princ "\n       Da tu dong doi ve CP932 truoc khi phan tich.")
         )
       )
       (if bg--uni-thieu 
         (progn 
-          (princ "\nCanh bao: co ky tu CP932 khong co trong bang bg--uni-tbl, da thay bang dau hoi.")
-          (princ "\n          Ma byte (gui lai de bo sung vao bang):")
+          (gro--princ "\nCanh bao: co ky tu CP932 khong co trong bang bg--uni-tbl, da thay bang dau hoi.")
+          (gro--princ "\n          Ma byte (gui lai de bo sung vao bang):")
           (foreach u bg--uni-thieu 
-            (princ (strcat " (" (itoa (car u)) " " (itoa (cadr u)) ")"))
+            (gro--princ (strcat " (" (itoa (car u)) " " (itoa (cadr u)) ")"))
           )
         )
       )
@@ -15547,14 +15563,14 @@
       ;; (1) TH4 - co "t=" nhung khong doc duoc so luong. Tam VAN duoc tao, Q rong.
       (if vd-th4 
         (progn 
-          (princ 
+          (gro--princ 
             (strcat "\n!!! " 
                     (itoa th4)
                     " ghi chu co \"t=\" nhung KHONG nhan ra kieu viet so luong."
             )
           )
-          (princ "\n    Tam van duoc tao voi Q rong. Nguyen van (toi da 5):")
-          (foreach v (reverse vd-th4) (princ (strcat "\n      [" v "]")))
+          (gro--princ "\n    Tam van duoc tao voi Q rong. Nguyen van (toi da 5):")
+          (foreach v (reverse vd-th4) (gro--princ (strcat "\n      [" v "]")))
         )
       )
 
@@ -15563,7 +15579,7 @@
       ;;     hoac ghi chu dat lech cot qua xa. In kem toa do de tim tren ban ve.
       (if mocoi 
         (progn 
-          (princ 
+          (gro--princ 
             (strcat "\n!!! " 
                     (itoa (length mocoi))
                     " dong so luong KHONG ghep duoc vao ghi chu nao:"
@@ -15572,7 +15588,7 @@
           (setq k 0)
           (foreach c mocoi 
             (if (< k 5) 
-              (princ 
+              (gro--princ 
                 (strcat "\n      [" 
                         (bg--codes-str (gro--it-codes c))
                         "]"
@@ -15592,27 +15608,27 @@
       ;;     ghi chu tam viet kieu khac dang bi mat khong dau vet.
       (if vd-tnghi 
         (progn 
-          (princ "\n!!! Doi tuong bi bo qua nhung CO chu t/T (co the la ghi chu tam viet kieu khac):")
-          (foreach v (reverse vd-tnghi) (princ (strcat "\n      [" v "]")))
+          (gro--princ "\n!!! Doi tuong bi bo qua nhung CO chu t/T (co the la ghi chu tam viet kieu khac):")
+          (foreach v (reverse vd-tnghi) (gro--princ (strcat "\n      [" v "]")))
         )
       )
 
       ;; (4) Canh bao text khong tim thay hinh ve cat gia cong
       (if (and kq-dx (nth 2 kq-dx))
         (progn
-          (princ (strcat "\n!!! " (itoa (length (nth 2 kq-dx)))
+          (gro--princ (strcat "\n!!! " (itoa (length (nth 2 kq-dx)))
                          " ghi chu KHONG TIM THAY HINH VE CAT GIA CONG:"
                  )
           )
           (foreach it (reverse (nth 2 kq-dx))
-            (princ (strcat "\n      Text #" (itoa (gro--it-stt it))
+            (gro--princ (strcat "\n      Text #" (itoa (gro--it-stt it))
                            " [" (bg--codes-str (gro--it-codes it)) "]"
                            "  tai X=" (rtos (car (gro--it-pt it)) 2 1)
                            " Y=" (rtos (cadr (gro--it-pt it)) 2 1)
                    )
             )
           )
-          (princ "\n    Kiem tra lai net ve tren layer cat hoac vi tri dat text.")
+          (gro--princ "\n    Kiem tra lai net ve tren layer cat hoac vi tri dat text.")
           (if (gro--co-tab-thong-tin)
             ;; Tab Thong Tin (muc 105): ghi kem toa do tung text, khong phai mo dong lenh
             (progn
@@ -15642,8 +15658,8 @@
       ;; Nhom bi bo hoan toan (kich thuoc thuan so...) - binh thuong, chi in 3 vi du.
       (if bo-vd 
         (progn 
-          (princ "\nBo qua (khong co \"t=\", khong co so luong). Vi du:")
-          (foreach v (reverse bo-vd) (princ (strcat "\n   " v)))
+          (gro--princ "\nBo qua (khong co \"t=\", khong co so luong). Vi du:")
+          (foreach v (reverse bo-vd) (gro--princ (strcat "\n   " v)))
         )
       )
 
@@ -15659,7 +15675,7 @@
                             default-don
                     )
           )
-          (princ (strcat "\n" msg))
+          (gro--princ (strcat "\n" msg))
           ;; Loi BAT BUOC xu ly ngay (ban ve va CSV dang lech) -> VAN bat hop thoai,
           ;; dong thoi ghi vao tab Thong Tin (muc 105).
           (gro--alert msg)
@@ -15676,7 +15692,7 @@
       )
       (if (/= msg "")
         (progn
-          (princ (strcat "\n" msg))
+          (gro--princ (strcat "\n" msg))
           (if (gro--co-tab-thong-tin)
             (setq msg-tt (strcat msg-tt msg "\n\n"))
             (gro--alert msg)
@@ -15748,7 +15764,7 @@
                         )
                 msg     (strcat msg "\n" msg-sht)
           )
-          (princ (strcat "\n[GRO] " msg-sht))
+          (gro--princ (strcat "\n[GRO] " msg-sht))
         )
       )
       (if (< n-tam (length notes)) 
@@ -15889,7 +15905,7 @@
           )
         )
       )
-      (princ (strcat "\n" msg))
+      (gro--princ (strcat "\n" msg))
       ;; Co tab Thong Tin (muc 105): KHONG bat hop thoai - bao cao tong dat TREN, cac
       ;; canh bao gom o tren noi phia duoi; gui sang palette o cuoi lenh.
       (if (gro--co-tab-thong-tin)
@@ -15902,7 +15918,7 @@
       (if gro--use-in-pdf 
         (if ssv-left 
           (progn 
-            (princ 
+            (gro--princ 
               (strcat "\nDang tien hanh in nhanh PDF cho cac khung bao ban copy ben trai (layer \"" 
                       gro--layer-khung
                       "\")...\n"
@@ -15912,7 +15928,7 @@
           )
           (if ssv 
             (progn 
-              (princ 
+              (gro--princ 
                 (strcat "\nDang tien hanh in nhanh PDF cho cac khung bao da chon (layer \"" 
                         gro--layer-khung
                         "\")...\n"
@@ -15920,7 +15936,7 @@
               )
               (gro--in-nhanh-pdf gro--layer-khung ssv "gro.ctb")
             )
-            (princ "\nKhong co khung bao nao de in nhanh PDF.")
+            (gro--princ "\nKhong co khung bao nao de in nhanh PDF.")
           )
         )
       )
@@ -15937,7 +15953,7 @@
         ;; Muc 105: bao cao vao tab THONG TIN (dung truoc tab Danh Sach Tam).
         ;; Khong hien duoc tab thi VAN phai cho nguoi dung thay bao cao.
         ((gro--co-tab-thong-tin)
-         (princ "\n[GRO] Bao cao: xem tab Thong Tin cua bang DST.")
+         (gro--princ "\n[GRO] Bao cao: xem tab Thong Tin cua bang DST.")
          (if (not (gro--gui-thong-tin msg-tt))
            (progn
              (gro--alert msg-tt)
@@ -15946,7 +15962,7 @@
          )
         )
         ((vl-symbol-value 'gro_net_dst)
-         (princ "\n[GRO] Mo bang quan ly (DST)...")
+         (gro--princ "\n[GRO] Mo bang quan ly (DST)...")
          (vl-catch-all-apply 'gro_net_dst nil)
         )
         (T
@@ -15956,7 +15972,7 @@
                   (> (length gro--xln-danh-sach-chua-doi) 0)
              )
            (progn
-             (princ "\n[Xu ly net] Tu dong mo hop thoai kiem tra cac nhom net giu nguyen...")
+             (gro--princ "\n[Xu ly net] Tu dong mo hop thoai kiem tra cac nhom net giu nguyen...")
              (gro--hien-dialog-xln gro--xln-danh-sach-chua-doi)
            )
          )
@@ -15965,7 +15981,7 @@
                   (vl-some '(lambda (it) (eq (car it) 'CO_DON)) gro--danh-sach-tam)
              )
            (progn
-             (princ "\n[GRO] Phat hien hinh co don! Tu dong mo bang danh sach tam de zoom kiem tra...")
+             (gro--princ "\n[GRO] Phat hien hinh co don! Tu dong mo bang danh sach tam de zoom kiem tra...")
              (c:dst)
            )
          )
@@ -16029,20 +16045,20 @@
           (not (eq (strcase nguon) (strcase dich)))
           (progn (vl-file-copy nguon dich) (findfile dich))
      )
-     (princ (strcat "\nDa chep " ten " vao " (gro--thu-muc-ctb) " (tu " nguon ")"))
+     (gro--princ (strcat "\nDa chep " ten " vao " (gro--thu-muc-ctb) " (tu " nguon ")"))
      ten
     )
     (t
-     (princ (strcat "\n*** Khong tim thay bang kieu in \"" ten "\"."
+     (gro--princ (strcat "\n*** Khong tim thay bang kieu in \"" ten "\"."
                     "\n    Chep file do vao: " (gro--thu-muc-ctb)
                     "\n    (ban goc: OHTA_TOOL\\03_Guro\\plot\\" ten ")"))
      (setq mono (strcat (gro--thu-muc-ctb) "Monochrome.ctb"))
      (if (findfile mono)
        (progn
-         (princ "\n    -> Tam in bang Monochrome.ctb (mau DO cua bango / ma khac se ra DEN).")
+         (gro--princ "\n    -> Tam in bang Monochrome.ctb (mau DO cua bango / ma khac se ra DEN).")
          "Monochrome.ctb"
        )
-       (progn (princ "\n    -> Khong co ca Monochrome.ctb -> BO QUA in PDF.") nil)
+       (progn (gro--princ "\n    -> Khong co ca Monochrome.ctb -> BO QUA in PDF.") nil)
      )
     )
   )
@@ -16128,7 +16144,7 @@
     (if oldbgplot (setvar "BACKGROUNDPLOT" oldbgplot))
     (if oldcmd (setvar "CMDECHO" oldcmd))
     (if (and m (not (wcmatch (strcase m) "*BREAK,*CANCEL*,*EXIT*"))) 
-      (princ (strcat "\nLoi in PDF: " m))
+      (gro--princ (strcat "\nLoi in PDF: " m))
     )
     (princ)
   )
@@ -16157,7 +16173,7 @@
         PLine      (cond 
                      (ss-input ss-input)
                      (t
-                      (princ 
+                      (gro--princ 
                         (strcat "\nChon cac khung in tren layer [" 
                                 layer-khung
                                 "]: "
@@ -16172,8 +16188,8 @@
   (if (or (null ctb-name) (= PLine nil) (= (sslength PLine) 0))
     (progn
       (if ctb-name
-        (princ (strcat "\nKhong co khung in hop le tren layer \"" layer-khung "\"."))
-        (princ "\n*** KHONG in PDF: khong co bang kieu in (ctb) - xem dong *** phia tren.")
+        (gro--princ (strcat "\nKhong co khung in hop le tren layer \"" layer-khung "\"."))
+        (gro--princ "\n*** KHONG in PDF: khong co bang kieu in (ctb) - xem dong *** phia tren.")
       )
       (setvar "BACKGROUNDPLOT" oldbgplot)
       (setvar "CMDECHO" oldcmd)
@@ -16239,7 +16255,7 @@
       )
       (if (null list2point) 
         (progn 
-          (princ 
+          (gro--princ 
             (strcat "\nKhong tim thay khung hop le 4 dinh tren layer \"" 
                     layer-khung
                     "\" trong tap duoc chon."
@@ -16280,11 +16296,11 @@
               ;; Muc 108: lenh gro dua duong dan nay sang nut "Mo PDF" cua tab Thong Tin
               (setq gro--pdf-cuoi outpdf)
               (gro--pdf-mo outpdf)
-              (princ
+              (gro--princ
                 (strcat "\nDa in ban chup (" (itoa (length list2point)) " khung tren layer \"" layer-khung "\") ra 1 file PDF (kieu GI):\n" outpdf)
               )
             )
-            (princ (strcat "\n*** In PDF THAT BAI - khong tao duoc file:\n    " outpdf
+            (gro--princ (strcat "\n*** In PDF THAT BAI - khong tao duoc file:\n    " outpdf
                            "\n    Kiem tra may in \"" (gro--may-in-pdf) "\", kho giay A3 va bang kieu in " ctb-name "."))
           )
           (princ)
@@ -16326,9 +16342,9 @@
     (progn
       (setq gro--pdf-cuoi outpdf)
       (gro--pdf-mo outpdf)
-      (princ (strcat "\n[GI] Da in vung chon ra 1 file PDF (kieu GI):\n" outpdf))
+      (gro--princ (strcat "\n[GI] Da in vung chon ra 1 file PDF (kieu GI):\n" outpdf))
     )
-    (princ (strcat "\n[GI] Khong tao duoc file PDF - kiem tra may in " (gro--may-in-pdf) " / ctb."))
+    (gro--princ (strcat "\n[GI] Khong tao duoc file PDF - kiem tra may in " (gro--may-in-pdf) " / ctb."))
   )
   outpdf
 )
@@ -16343,7 +16359,7 @@
     (setvar "FILEDIA" oldfiledia)
     (setvar "BACKGROUNDPLOT" oldbgplot)
     (if (and m (not (wcmatch (strcase m) "*BREAK,*CANCEL*,*EXIT*")))
-      (princ (strcat "\n[GI] Loi: " m))
+      (gro--princ (strcat "\n[GI] Loi: " m))
     )
     (princ)
   )
@@ -16351,7 +16367,7 @@
   (if p1 (setq p2 (getcorner p1 "\n[GI] Chon goc doi dien: ")))
   (if (and p1 p2 (> (abs (- (car p1) (car p2))) 1e-6) (> (abs (- (cadr p1) (cadr p2))) 1e-6))
     (gro--in-pdf-vung (trans p1 1 0) (trans p2 1 0) "gro.ctb")
-    (princ "\n[GI] Chua chon du vung in - huy.")
+    (gro--princ "\n[GI] Chua chon du vung in - huy.")
   )
   (princ)
 )

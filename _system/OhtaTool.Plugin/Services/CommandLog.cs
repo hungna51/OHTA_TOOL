@@ -28,6 +28,27 @@ namespace OhtaTool.Plugin.Services
             }
         }
 
+        /// <summary>"ten=gia_tri; ..." của 1 khoá HKCU — cài đặt GRO lúc chạy (cùng bản vẽ, cài đặt khác là ra kết quả khác).</summary>
+        private static string RegistryDump(string subKey)
+        {
+            try
+            {
+                using (Microsoft.Win32.RegistryKey k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(subKey))
+                {
+                    if (k == null)
+                        return "(chua co " + subKey + ")";
+                    var parts = new List<string>();
+                    foreach (string n in k.GetValueNames())
+                        parts.Add(n + "=" + k.GetValue(n));
+                    return string.Join("; ", parts);
+                }
+            }
+            catch (Exception ex)
+            {
+                return "(khong doc duoc: " + ex.Message + ")";
+            }
+        }
+
         private static void Attach(CadDocument doc)
         {
             if (doc == null || !Hooked.Add(doc))
@@ -40,7 +61,12 @@ namespace OhtaTool.Plugin.Services
                 doc.CommandCancelled += (s, e) => BugLog.Write("CAD", "lenh " + e.GlobalCommandName + " bi huy");
                 doc.CommandFailed += (s, e) => BugLog.Write("CAD", "lenh " + e.GlobalCommandName + " LOI");
                 // Lệnh lisp (c:gro, c:xln...) không phát CommandWillStart
-                doc.LispWillStart += (s, e) => BugLog.Write("CAD", "lisp " + e.FirstLine + "  [" + ten + "]");
+                doc.LispWillStart += (s, e) =>
+                {
+                    BugLog.Write("CAD", "lisp " + e.FirstLine + "  [" + ten + "]");
+                    if ((e.FirstLine ?? "").IndexOf("GROCHAY", StringComparison.OrdinalIgnoreCase) >= 0)
+                        BugLog.Write("GRO", "cai dat " + RegistryDump(@"Software\OFT_Lisp\GRO"));
+                };
                 doc.BeginDocumentClose += (s, e) => Hooked.Remove(doc);
             }
             catch (Exception ex)
