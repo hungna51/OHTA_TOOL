@@ -42,6 +42,8 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+    <!-- PDFsharp keo Pkcs 8.0.1 (CVE-2026-84008, CVE-2026-70162 - DoS); ep ban da va -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.2" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Net.Http" />
