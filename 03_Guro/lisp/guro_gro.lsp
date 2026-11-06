@@ -13784,6 +13784,8 @@
   (princ "\n*** Ban lisp du phong da go (muc 184) -> DUNG lenh. Kiem tra GROTOOL.dll (NETRELOAD) roi chay lai.")
   (alert (strcat "GRO: buoc " buoc " (C#) loi:\n" ly-do
                  "\n\nBan lisp du phong da go (muc 184).\nKiem tra GROTOOL.dll (NETRELOAD) roi chay lai."))
+  ;; Muc 209: loi nay tu alert + exit, KHONG qua nhanh loi that cua *error* -> tu hoi gui bao loi
+  (gro--bao-loi-admin (strcat "buoc " buoc " (C#) loi: " ly-do))
   (exit)
 )
 
