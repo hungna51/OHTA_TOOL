@@ -82,6 +82,9 @@ namespace OhtaTool.Plugin.Views
                 return null;
             }
 
+            // Mục 211 GURO: ZWCAD nạp kiểu này có thể để hàm lisp gro_net_* "undefined function";
+            // OHTA_Loader.lsp đã NETLOAD GROTOOL trước, tới đây là đường dự phòng -> ghi lại để chẩn đoán
+            BugLog.Write("DLL", tenDll + " chua NETLOAD -> nap bang ExtensionLoader: " + dll);
             CadExtensionLoader.Load(dll);
             return AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(a => string.Equals(a.GetName().Name, tenDll, StringComparison.OrdinalIgnoreCase))

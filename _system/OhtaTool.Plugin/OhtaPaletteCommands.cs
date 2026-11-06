@@ -38,6 +38,9 @@ namespace OhtaTool.Plugin
             {
                 BugCommands.WireGuard();
                 OhtaUpdateCommands.OnInitialize();
+                // Sau OnInitialize: trước đó LoadedVersion chưa đọc -> nhật ký ghi "OHTA v0"
+                try { BugLog.Write("PHIEN", "===== Nap OHTATOOL.dll =====" + Environment.NewLine + Services.BugContext.Describe().info.TrimEnd()); }
+                catch (Exception ex) { BugLog.Write("PHIEN", ex); }
                 CadCompat.WriteMessage(
                     $"\n[OHTA TOOL] Đã nạp OHTATOOL.dll v{OhtaUpdateCommands.LoadedVersion} cho {CadCompat.PlatformName}. Gõ lệnh OHTA để mở Tool Palettes.\n");
             }

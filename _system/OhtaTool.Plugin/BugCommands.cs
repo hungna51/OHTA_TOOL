@@ -65,8 +65,6 @@ namespace OhtaTool.Plugin
             BugGuard.Notify = CadCompat.WriteMessage;
             BugSender.Init();
             CommandLog.Hook();
-            try { BugLog.Write("PHIEN", "===== Nap OHTATOOL.dll =====" + Environment.NewLine + BugContext.Describe().info.TrimEnd()); }
-            catch (Exception ex) { BugLog.Write("PHIEN", ex); }
         }
 
         /// <summary>

@@ -18,6 +18,22 @@ namespace OhtaTool.Plugin.Services
         {
             try
             {
+                AppDomain.CurrentDomain.AssemblyLoad += (s, e) =>
+                {
+                    try
+                    {
+                        if (e.LoadedAssembly.IsDynamic)
+                            return;
+                        string loc = e.LoadedAssembly.Location;
+                        string win = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                        if (string.IsNullOrEmpty(loc) || loc.StartsWith(win, StringComparison.OrdinalIgnoreCase))
+                            return;
+                        BugLog.Write("DLL", "nap " + e.LoadedAssembly.GetName().Name + " v" + e.LoadedAssembly.GetName().Version + ": " + loc);
+                    }
+                    catch
+                    {
+                    }
+                };
                 CadApp.DocumentManager.DocumentCreated += (s, e) => Attach(e.Document);
                 foreach (CadDocument d in CadApp.DocumentManager)
                     Attach(d);

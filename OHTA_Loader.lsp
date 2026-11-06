@@ -142,6 +142,15 @@
   )
 )
 
+;;; NETLOAD GROTOOL.dll (tab Guro) neu co va chua nap. Goi trong luc CMDECHO/FILEDIA da tat.
+(defun ohta--nap-grotool ( root / p )
+  (setq p (strcat (ohta--bo-gach-cuoi root) "\\03_Guro\\bin\\"
+                  (if (ohta--la-zwcad-p) "ZwCAD" "AutoCAD") "\\GROTOOL.dll"))
+  (if (and (findfile p) (not (vl-symbol-value 'gro_net_cong_tac)))
+    (vl-catch-all-apply 'vl-cmdf (list "NETLOAD" p))
+  )
+)
+
 (defun ohta--nap-net ( / root dll old-ce old-fd )
   (setq root (ohta--tim-root-dir))
   (if root
@@ -177,6 +186,10 @@
             (setvar "CMDECHO" 0)
             (setvar "FILEDIA" 0)
             (vl-catch-all-apply 'vl-cmdf (list "NETLOAD" (vl-string-translate "/" "\\" dll)))
+            ;; Muc 211 GURO: NETLOAD luon GROTOOL.dll ngay o day. Neu de bang OHTA nap no bang
+            ;; ExtensionLoader (khi dung tab Guro), ZWCAD co ten ham gro_net_* nhung goi bao
+            ;; "undefined function - nil" va NETLOAD lai sau do vo ich (bao loi DESKTOP-HFJESCO 06/11/2026).
+            (ohta--nap-grotool root)
             (setvar "FILEDIA" old-fd)
             (setvar "CMDECHO" old-ce)
             ;; Chi ghi co "da nap" khi NETLOAD that su thanh cong, de lan sau con thu lai
