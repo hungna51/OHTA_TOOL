@@ -2,6 +2,10 @@
 
 Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_ohta.ps1` lấy nội dung mục đó làm ghi chú Release trên GitHub, và hộp thoại "Có bản mới" trên máy đội cũng hiện đúng nội dung này — viết ngắn, cho người dùng xưởng đọc.
 
+## v1.3.1
+
+- Vá bảo mật cho bản ZWCAD: cập nhật thư viện mã hoá đi kèm tab **PRINT** (gộp PDF) lên bản đã sửa 2 lỗi có thể làm treo chương trình. Không đổi cách dùng.
+
 ## v1.3.0
 
 - **Báo lỗi cho admin**: nút **🐞 Báo lỗi** trên tab Info (hoặc gõ lệnh `OHTABUG`). Viết mô tả, chọn mức độ, tool tự gửi kèm ảnh cửa sổ CAD, phiên bản và nhật ký; tuỳ chọn gửi kèm bản vẽ / CSV.
