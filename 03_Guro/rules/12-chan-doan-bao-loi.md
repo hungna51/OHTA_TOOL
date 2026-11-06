@@ -252,3 +252,33 @@
    `OhtaBugBridge.Run`, gọi `OhtaTool.Plugin.Core.BugGuard.ReportException` bằng phản chiếu.
    Hàm `gro_net_*` không bọc: lỗi của chúng rơi về `*error*` lisp ở trên (mất stack trace C#).
    **Chưa kiểm trên CAD.**
+
+212. **ZWCAD đơ giữa chừng GRO chỉ trên MỘT máy — lisp GURO cũ trong Startup Suite** (06/11/2026,
+   máy DESKTOP-HFJESCO, bản vẽ `dq.dxf`, OHTA v1.3.2 → v1.3.3). **Đã xác nhận.**
+
+   **Triệu chứng** (nhận ra lần sau):
+   - ZWCAD "Not Responding" ở bước xử lý nét (3b), phải tắt hẳn ZWCAD. Không hộp lỗi.
+   - Nhật ký (`%LOCALAPPDATA%\OHTA_TOOL\logs\ohta.log`) dừng ở một dòng `[GRO] buoc: …` — KHÔNG có
+     dòng `C# … (…)` kết quả, KHÔNG có `GROCHAY dung` (lỗi thật / Esc đều ghi dòng đó → thiếu = treo cứng).
+   - Mỗi lần đơ một chỗ khác nhau trên CÙNG bản vẽ; **máy dev chạy cùng file thì được**.
+   - Phần `[CAD] lisp (LOAD "…")` đầu nhật ký cho thấy máy nạp lisp lạ lúc mở bản vẽ (ở ca này 9 file trong
+     `Downloads`, có bản GURO / `xuat_csv_v5.0.1 ZWCAD …` đời trước).
+
+   **Chẩn đoán đã dùng** (theo thứ tự, để lần sau đi nhanh):
+   1. Nhật ký: bước cuối + có / không dòng kết quả `C# …`.
+   2. File dump `%TEMP%\gro_<buoc>_dump.txt` (mục 171): bước C# CHẠY XONG thì dump của nó có giờ sửa = giờ chạy.
+      Ca này `gro_nhannet_dump.txt` 10:55 (xong) nhưng `gro_vongkin_dump.txt` vẫn 10:50 → đơ trước khi vòng kín xong.
+   3. Đem bản vẽ sang máy dev chạy: được → không phải dữ liệu / thuật toán, mà là MÁY.
+   4. So danh sách lisp nạp lúc khởi động giữa 2 máy → gỡ hết lisp lạ khỏi Startup Suite, chạy lại → hết đơ.
+      Thêm lại từng file để tìm đúng thủ phạm.
+
+   **Bài học:**
+   - Lisp GURO cũ (định nghĩa cùng tên hàm / biến toàn cục, có thể có reactor chạy theo mỗi thay đổi bản vẽ)
+     KHÔNG được nạp chung với GRO trong `OHTA_TOOL\03_Guro`. Máy mới cài OHTA TOOL: kiểm `APPLOAD → Startup
+     Suite`, gỡ mọi lisp GURO / xuat_csv cũ.
+   - Hai giả thuyết đầu đều SAI và đã bị loại bằng dữ liệu, không bằng suy luận: (a) ZWCAD chuyển danh sách
+     ename dài lisp → .NET chậm — loại vì v1.3.2 qua được cùng bước với cùng dữ liệu; (b) deadlock do ghi nhật ký
+     `AssemblyLoad` (thêm ở v1.3.3) — loại vì v1.3.2 (chưa có đoạn đó) cũng đơ. Đừng sửa theo hai hướng đó.
+   - Ca này đi cùng mục 211 trên cùng máy (lỗi "undefined function" che mất lỗi đơ) — sửa xong 211 mới lộ ra 212.
+   - Việc có thể làm thêm (chưa làm): GRO tự phát hiện lisp GURO cũ đang nạp và cảnh báo gỡ khỏi Startup Suite —
+     cần tên hàm / lệnh chỉ bản cũ có để nhận biết.
