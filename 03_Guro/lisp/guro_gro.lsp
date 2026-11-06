@@ -2555,7 +2555,7 @@
         )
       )
       (setq msg (strcat msg "\n(Da khoanh khung chu nhat mau DO tren layer CANH_BAO_SO_LUONG de de quan sat!)"))
-      (alert msg)
+      (gro--alert msg)
 
       ;; 3. Khoanh khung chu nhat mau do tren layer CANH_BAO_SO_LUONG
       (setvar "CLAYER" "0")
@@ -6272,7 +6272,7 @@
     (progn 
       (setq msg "Khong con net nao chua doi!\n(Toan bo cac doi tuong da duoc chuyen sang layer tieu chuan hoac da xoa).")
       (princ (strcat "\n[Xu ly net] " msg))
-      (alert msg)
+      (gro--alert msg)
       nil
     )
     (progn 
@@ -6369,7 +6369,7 @@
                 gro--xln-danh-sach-chua-doi nil
           )
           (princ (strcat "\n[Xu ly net] " msg))
-          (alert msg)
+          (gro--alert msg)
         )
         (progn 
           (gro--ensure-layer "0-KAKOU" 7 "Continuous")
@@ -6602,7 +6602,7 @@
                         "\"."
                 )
               )
-              (if (null im-lang) (alert msg))
+              (if (null im-lang) (gro--alert msg))
             )
             (progn 
               ;; Thong bao chi tiet cac loai net con lai va so luong tung loai
@@ -6626,7 +6626,7 @@
               (princ msg-con)
               (if (null im-lang) 
                 (progn 
-                  (alert 
+                  (gro--alert 
                     (strcat "THONG BAO: Layer goc \"" 
                             lay-goc
                             "\" con lai "
@@ -7021,7 +7021,7 @@
 ;;; Bao cao tap trung cac loi hinh cat tren layer 0-KAKOU o cuoi lenh
 (defun gro--bao-loi-hinh-cat (/ e-bb)
   (if gro--loi-khong-kakou
-    (alert "Khong tim thay bat ky net cat nao tren layer 0-KAKOU!\nToan bo ban ve la text khong tim duoc hinh bien dang.\nChuong trinh da bo qua phan tao Khung_IN.\n(Luu y: Hay chay lenh XLN de chuyen net sang 0-KAKOU truoc).")
+    (gro--alert "Khong tim thay bat ky net cat nao tren layer 0-KAKOU!\nToan bo ban ve la text khong tim duoc hinh bien dang.\nChuong trinh da bo qua phan tao Khung_IN.\n(Luu y: Hay chay lenh XLN de chuyen net sang 0-KAKOU truoc).")
   )
   (if gro--hinh-loi-khung
     (progn
@@ -7032,7 +7032,7 @@
         (princ (strcat "\n*** CANH BAO: Phat hien KHUNG CAT CHUA NHIEU GHI CHU tai (X="
                        (rtos (car e-bb) 2 1) ", Y=" (rtos (cadr e-bb) 2 1) ") - da khoanh tim."))
       )
-      (alert (strcat "Phat hien " (itoa (length gro--hinh-loi-khung))
+      (gro--alert (strcat "Phat hien " (itoa (length gro--hinh-loi-khung))
                      " hinh co chua tu 2 ghi chu tro len tren layer 0-KAKOU!\nNghi ngo day la Khung ban ve bi de nham layer.\nDa khoanh tim tren layer CANH_BAO_KHUNG_CAT."))
       ;; Tu dong zoom toi khung loi dau tien
       (gro--zoom-vung (cadar gro--hinh-loi-khung))
@@ -10902,7 +10902,7 @@
     )
   )
   (if (and kq-dx (nth 2 kq-dx))
-    (alert (strcat "CANH BAO: Co " (itoa (length (nth 2 kq-dx)))
+    (gro--alert (strcat "CANH BAO: Co " (itoa (length (nth 2 kq-dx)))
                    " ghi chu KHONG TIM THAY HINH VE CAT GIA CONG!\n"
                    "Xem dong lenh de biet chi tiet toa do."
            )
@@ -11392,7 +11392,7 @@
   )
   (if (or (null ds) (= (length ds) 0)) 
     (progn 
-      (alert "Chua co danh sach tam nao tren ban ve.\n(Hay chay lenh GRO truoc de tu dong nhan dien cac tam gia cong).")
+      (gro--alert "Chua co danh sach tam nao tren ban ve.\n(Hay chay lenh GRO truoc de tu dong nhan dien cac tam gia cong).")
       nil
     )
     (progn 
@@ -13786,12 +13786,19 @@
   (princ)
 )
 
+;;; Muc 209: moi hop thong bao cua GRO deu ghi vao nhat ky bao loi (vd "ban ve chua luu")
+;;; truoc khi hien - nguoi debug doc nhat ky biet GRO da bao gi. Thay cho alert trong file nay.
+(defun gro--alert (msg)
+  (vl-catch-all-apply 'ohta_net_log (list "GRO" (strcat "thong bao: " (vl-princ-to-string msg))))
+  (alert msg)
+)
+
 ;;; Muc 184: cac buoc da chuyen C# KHONG con ban lisp du phong (da go 29/10/2026).
 ;;; C# loi / DLL thieu ham / ket qua sai dang -> in + alert roi DUNG lenh (khong chay sai im lang).
 (defun gro--cs-dung (buoc ly-do)
   (princ (strcat "\n*** [GRO .NET] Buoc " buoc " (C#) loi: " ly-do))
   (princ "\n*** Ban lisp du phong da go (muc 184) -> DUNG lenh. Kiem tra GROTOOL.dll (NETRELOAD) roi chay lai.")
-  (alert (strcat "GRO: buoc " buoc " (C#) loi:\n" ly-do
+  (gro--alert (strcat "GRO: buoc " buoc " (C#) loi:\n" ly-do
                  "\n\nBan lisp du phong da go (muc 184).\nKiem tra GROTOOL.dll (NETRELOAD) roi chay lai."))
   ;; Muc 209: loi nay tu alert + exit, KHONG qua nhanh loi that cua *error* -> tu hoi gui bao loi
   (gro--bao-loi-admin (strcat "buoc " buoc " (C#) loi: " ly-do))
@@ -13882,6 +13889,7 @@
   ;; dung de dung chuoi bao cao. AutoLISP dung pham vi DONG nen tham so cung
   ;; ten se che mat bien kia trong luc xu ly loi - tranh han cho de lan.
   (defun *error* (m) 
+    (vl-catch-all-apply 'ohta_net_log (list "GRO" (strcat "GROCHAY dung: " (vl-princ-to-string m))))
     (if filecsv 
       (progn 
         (close filecsv)
@@ -13925,7 +13933,7 @@
                         "GRO ghi file CSV / PDF canh file ban ve, nen can luu ban ve truoc.\n"
                         "Hay luu ban ve (Ctrl+S) roi chay lai GRO."))
       (princ (strcat "\n" msg))
-      (alert msg)
+      (gro--alert msg)
       (exit)
     )
   )
@@ -13981,7 +13989,7 @@
                 )
       )
       (princ (strcat "\n" msg))
-      (alert msg)
+      (gro--alert msg)
       (exit)
     )
   )
@@ -14467,7 +14475,7 @@
           )
           (princ "\n    Mot lan chay chi dung duoc MOT ma khac.")
           (princ "\n    Tach ban ve ra chay rieng, hoac sua lai dong ten khach.")
-          (alert "Cac khung bao cho ra hai ma khac nhau - da dung lai.\nXem dong lenh de biet khung nao ra ma gi.")
+          (gro--alert "Cac khung bao cho ra hai ma khac nhau - da dung lai.\nXem dong lenh de biet khung nao ra ma gi.")
           (exit)
         )
       )
@@ -15622,7 +15630,7 @@
               )
               (setq msg-tt (strcat msg-tt "\n    Kiem tra lai net ve tren layer cat hoac vi tri dat text.\n\n"))
             )
-            (alert (strcat "CANH BAO: Co " (itoa (length (nth 2 kq-dx)))
+            (gro--alert (strcat "CANH BAO: Co " (itoa (length (nth 2 kq-dx)))
                            " ghi chu KHONG TIM THAY HINH VE CAT GIA CONG!\n"
                            "Xem dong lenh de biet chi tiet toa do."
                    )
@@ -15654,7 +15662,7 @@
           (princ (strcat "\n" msg))
           ;; Loi BAT BUOC xu ly ngay (ban ve va CSV dang lech) -> VAN bat hop thoai,
           ;; dong thoi ghi vao tab Thong Tin (muc 105).
-          (alert msg)
+          (gro--alert msg)
           (setq msg-tt (strcat msg-tt msg "\n\n"))
         )
       )
@@ -15671,7 +15679,7 @@
           (princ (strcat "\n" msg))
           (if (gro--co-tab-thong-tin)
             (setq msg-tt (strcat msg-tt msg "\n\n"))
-            (alert msg)
+            (gro--alert msg)
           )
         )
       )
@@ -15886,7 +15894,7 @@
       ;; canh bao gom o tren noi phia duoi; gui sang palette o cuoi lenh.
       (if (gro--co-tab-thong-tin)
         (setq msg-tt (strcat msg (if (/= msg-tt "") (strcat "\n\n" msg-tt) "")))
-        (alert msg)
+        (gro--alert msg)
       )
 
       (setq gro--pdf-cuoi nil) ; muc 108: chi lay PDF cua CHINH lan chay nay
@@ -15932,7 +15940,7 @@
          (princ "\n[GRO] Bao cao: xem tab Thong Tin cua bang DST.")
          (if (not (gro--gui-thong-tin msg-tt))
            (progn
-             (alert msg-tt)
+             (gro--alert msg-tt)
              (vl-catch-all-apply 'gro_net_dst nil)
            )
          )
