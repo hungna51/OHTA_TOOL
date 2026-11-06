@@ -2,6 +2,12 @@
 
 Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_ohta.ps1` lấy nội dung mục đó làm ghi chú Release trên GitHub, và hộp thoại "Có bản mới" trên máy đội cũng hiện đúng nội dung này — viết ngắn, cho người dùng xưởng đọc.
 
+## v1.3.2
+
+- **Báo lỗi gửi ở nền**: bấm Gửi là form đóng ngay, vẫn làm việc tiếp được. Tiến trình gửi (% tải lên, Huỷ gửi) hiện ở khung **BÁO LỖI** trên tab Info; gửi xong có thông báo trên dòng lệnh.
+- Nhật ký gửi kèm báo lỗi ghi đầy đủ hơn (lệnh đã chạy, từng bước và thông báo của GRO, cài đặt GRO) để sửa lỗi nhanh hơn. Lỗi GRO thì tự tick sẵn gửi kèm bản vẽ (bỏ tick được).
+- Tab **Guro v1.6.1**: khi một bước C# của GRO lỗi (hộp "buoc ... (C#) loi") cũng hỏi gửi báo lỗi cho admin.
+
 ## v1.3.1
 
 - Vá bảo mật cho bản ZWCAD: cập nhật thư viện mã hoá đi kèm tab **PRINT** (gộp PDF) lên bản đã sửa 2 lỗi có thể làm treo chương trình. Không đổi cách dùng.
