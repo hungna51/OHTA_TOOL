@@ -64,6 +64,7 @@ namespace OhtaTool.Plugin
             BugGuard.ShowForm = BugReportWindow.Show;
             BugGuard.Notify = CadCompat.WriteMessage;
             BugSender.Init();
+            CommandLog.Hook();
         }
 
         /// <summary>

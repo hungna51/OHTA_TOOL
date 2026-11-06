@@ -10,6 +10,28 @@ namespace OhtaTool.Tests
     {
         private static void TestBugReport()
         {
+            // Test không được ghi vào nhật ký / hàng chờ thật của máy (báo lỗi thật sẽ gửi kèm rác test)
+            string realLog = Path.Combine(BugLog.Directory, "ohta.log"), realQueue = BugQueue.Directory;
+            long logBefore = File.Exists(realLog) ? new FileInfo(realLog).Length : -1;
+            int queueBefore = Directory.Exists(realQueue) ? Directory.GetFiles(realQueue).Length : -1;
+            string tmp = Path.Combine(Path.GetTempPath(), "ohta_bugtest_" + Guid.NewGuid().ToString("N"));
+            BugLog.Directory = Path.Combine(tmp, "logs");
+            BugQueue.Directory = Path.Combine(tmp, "queue");
+            try
+            {
+                TestBugReportCore();
+            }
+            finally
+            {
+                BugLog.Directory = Path.GetDirectoryName(realLog);
+                BugQueue.Directory = realQueue;
+            }
+            Check("Bug: test khong ghi nhat ky that", (File.Exists(realLog) ? new FileInfo(realLog).Length : -1) == logBefore);
+            Check("Bug: test khong ghi hang cho that", (Directory.Exists(realQueue) ? Directory.GetFiles(realQueue).Length : -1) == queueBefore);
+        }
+
+        private static void TestBugReportCore()
+        {
             var r = BugReport.Create();
             Check("Bug: Id 12 ky tu", r.Id.Length == 12, r.Id);
             Check("Bug: muc do mac dinh Phien", r.MucDo == "Phiền");

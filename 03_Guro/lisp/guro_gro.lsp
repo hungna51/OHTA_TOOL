@@ -13688,6 +13688,10 @@
 
 ;;; Gui bao cao sang tab Thong Tin (mo palette o tab do). T neu da hien.
 (defun gro--gui-thong-tin (msg / kq f)
+  ;; Muc 209: bao cao cuoi lenh vao nhat ky bao loi
+  (if (eq (type msg) 'STR)
+    (vl-catch-all-apply 'ohta_net_log (list "GRO" (strcat "bao cao cuoi lenh:\n" msg)))
+  )
   (cond
     ((vl-symbol-value 'gro_net_thong_tin)
      (setq kq (vl-catch-all-apply 'gro_net_thong_tin (list msg)))
@@ -13735,6 +13739,11 @@
 
 (defun gro--moc (ten / t1 k a)
   (setq t1 (gro--moc-giay))
+  ;; Muc 209: nhat ky bao loi - chi ghi khi sang nhom buoc moi
+  (if (/= (gro--moc-nhom ten)
+         (if (eq (type gro--moc-ten) 'STR) (gro--moc-nhom gro--moc-ten) ""))
+    (vl-catch-all-apply 'ohta_net_log (list "GRO" (strcat "buoc: " ten)))
+  )
   (if (and (eq (type gro--moc-ten) 'STR) (numberp gro--moc-t0))
     (progn
       (setq k (gro--moc-nhom gro--moc-ten)
