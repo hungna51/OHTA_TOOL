@@ -2,6 +2,11 @@
 
 Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_ohta.ps1` lấy nội dung mục đó làm ghi chú Release trên GitHub, và hộp thoại "Có bản mới" trên máy đội cũng hiện đúng nội dung này — viết ngắn, cho người dùng xưởng đọc.
 
+## v1.3.3
+
+- Tab **Guro v1.6.2** — sửa lỗi ZWCAD trên một số máy: bấm **Chạy GRO** báo "buoc nhannet (C#) loi: undefined function" và dừng, NETRELOAD cũng không hết. Sau khi cập nhật, **đóng ZWCAD rồi mở lại**.
+- Nhật ký báo lỗi ghi thêm các DLL đã nạp vào CAD để sửa lỗi nhanh hơn.
+
 ## v1.3.2
 
 - **Báo lỗi gửi ở nền**: bấm Gửi là form đóng ngay, vẫn làm việc tiếp được. Tiến trình gửi (% tải lên, Huỷ gửi) hiện ở khung **BÁO LỖI** trên tab Info; gửi xong có thông báo trên dòng lệnh.
