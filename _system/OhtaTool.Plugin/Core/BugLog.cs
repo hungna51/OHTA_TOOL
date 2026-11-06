@@ -23,7 +23,7 @@ namespace OhtaTool.Plugin.Core
             Path.Combine(Directory, index == 0 ? "ohta.log" : "ohta." + index + ".log");
 
         /// <summary>Số dòng cuối gửi kèm báo lỗi.</summary>
-        public const int TailLines = 500;
+        public const int TailLines = 1000;
 
         // Gộp dòng giống hệt liên tiếp (catch trong vòng lặp duyệt đối tượng): ghi 1 lần + "lap lai N lan"
         private static string _lastKey;

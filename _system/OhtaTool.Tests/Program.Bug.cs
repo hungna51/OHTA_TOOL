@@ -95,7 +95,7 @@ namespace OhtaTool.Tests
             Check("Log: loi lap chi ghi 1 lan", t.Count(l => l.Contains("[SCAN] System.InvalidOperationException")) == 1);
             Check("Log: ghi so lan lap", t.Any(l => l.Contains("[SCAN]") && l.Contains("lap lai 999 lan")), string.Join(" | ", t.Where(l => l.Contains("SCAN"))));
             Check("Log: dong khac van ghi", t.Last().Contains("[GRO] buoc: xong"));
-            Check("Log: bao loi gui 500 dong", BugLog.TailLines == 500);
+            Check("Log: bao loi gui 1000 dong", BugLog.TailLines == 1000);
         }
 
         // Sua sau review toan nhanh (ledger "Final: fixed ...")

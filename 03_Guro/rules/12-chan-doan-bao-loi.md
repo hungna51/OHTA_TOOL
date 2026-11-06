@@ -243,7 +243,7 @@
    lệnh CAD / lisp người dùng chạy (bắt đầu, huỷ, lỗi) kèm tên bản vẽ; mỗi `catch (Exception ex)` ngoài `Core/`,
    `Models/` ghi exception qua `OhtaBugBridge.Log` (GROTOOL) / `BugLog.Write` (OHTATOOL); đầu phiên ghi phiên bản +
    đường dẫn DLL đang nạp; mọi lần gọi Google Sheet / GitHub ghi action, dung lượng, thời gian, kết quả (không ghi
-   khoá). Dòng giống hệt liên tiếp gộp thành "lap lai N lan"; báo lỗi gửi kèm 500 dòng cuối.
+   khoá). Dòng giống hệt liên tiếp gộp thành "lap lai N lan"; báo lỗi gửi kèm 1000 dòng cuối.
    Thêm: mọi `princ` 1 tham số trong `guro_gro.lsp` thành `gro--princ` (in + ghi nhật ký), mọi `alert` thành
    `gro--alert` — 2 hàm này PHẢI nằm đầu file (lệnh chạy lúc nạp file gọi trước thì hỏng nạp). `gro--layer-tab`
    ghi layer thật dùng + layer chọn trên tab; mỗi lần GROCHAY chạy ghi toàn bộ registry `OFT_Lisp\GRO`.
