@@ -12,9 +12,6 @@ namespace OhtaTool.Plugin
     /// <summary>Báo lỗi (ADR 0007): lệnh OHTABUG và các hàm lisp ohta_net_log / ohta_net_bug_auto.</summary>
     public sealed class BugCommands
     {
-        private static int _resent;
-        private static DateTime _lastResend = DateTime.MinValue;
-
         /// <summary>File lisp ghi khi bản vẽ không gọi được ohta_net_bug_auto (giống cách GROTHONGTIN, mục 114 GURO).</summary>
         public static string AutoFile =>
             System.IO.Path.Combine(Environment.GetEnvironmentVariable("TEMP") ?? System.IO.Path.GetTempPath(), "ohta_bug_auto.txt");
@@ -66,6 +63,7 @@ namespace OhtaTool.Plugin
                 == System.Windows.MessageBoxResult.Yes;
             BugGuard.ShowForm = BugReportWindow.Show;
             BugGuard.Notify = CadCompat.WriteMessage;
+            BugSender.Init();
         }
 
         /// <summary>
@@ -87,39 +85,6 @@ namespace OhtaTool.Plugin
             List<string> args = StringArgs(rb);
             BugLog.Write(args.Count > 0 ? args[0] : "", args.Count > 1 ? args[1] : "");
             return true;
-        }
-
-        /// <summary>Mở bảng OHTA: gửi lại báo lỗi còn trong hàng chờ ở luồng nền, xong báo ra dòng lệnh (ở luồng CAD).</summary>
-        public static void ResendQueuedInBackground()
-        {
-            try
-            {
-                // Bảng OHTA mở rất thường xuyên (OHTA, FN, OI, mỗi lần GRO): chỉ thử lại tối đa 10 phút/lần,
-                // và trên luồng CAD chỉ xem có file chờ không (không đọc file — zip base64 có thể ~33 MB)
-                if (DateTime.Now - _lastResend < TimeSpan.FromMinutes(10) || !BugQueue.HasPending())
-                    return;
-                _lastResend = DateTime.Now;
-                System.Windows.Threading.Dispatcher cadThread = System.Windows.Threading.Dispatcher.CurrentDispatcher;
-                Task.Run(() =>
-                {
-                    int n = BugReportService.ResendQueued();
-                    if (n <= 0)
-                        return;
-                    _resent = n;
-                    // Đăng ký Idle / ghi dòng lệnh phải ở luồng CAD
-                    cadThread.BeginInvoke(new Action(() => CadApp.Idle += OnIdleReportResent));
-                });
-            }
-            catch (Exception ex)
-            {
-                BugLog.Write("BUG", ex);
-            }
-        }
-
-        private static void OnIdleReportResent(object sender, EventArgs e)
-        {
-            CadApp.Idle -= OnIdleReportResent;
-            CadCompat.WriteMessage("\n[OHTA TOOL] Da gui " + _resent + " bao loi con cho cho admin.\n");
         }
 
         internal static List<string> StringArgs(ResultBuffer rb)

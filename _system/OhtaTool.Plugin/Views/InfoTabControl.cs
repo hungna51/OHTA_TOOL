@@ -27,6 +27,10 @@ namespace OhtaTool.Plugin.Views
         private readonly Func<string> _getUpdateStatus;
         private readonly StackPanel _bugPanel;
         private readonly WrapPanel _bugButtons;
+        private readonly StackPanel _sendPanel;
+        private readonly ProgressBar _sendBar;
+        private readonly TextBlock _sendText;
+        private readonly Button _sendCancel;
         private Button _adminButton;
 
         /// <param name="modules">Các tab đang nạp (không gồm tab Info).</param>
@@ -124,6 +128,30 @@ namespace OhtaTool.Plugin.Views
             bug.Click += (s, e) => reportBug?.Invoke();
             _bugButtons.Children.Add(bug);
             _bugPanel.Children.Add(_bugButtons);
+
+            // Tiến trình gửi báo lỗi ở nền (BugSender) — người dùng vẫn làm việc tiếp khi đang gửi
+            _sendBar = new ProgressBar { Height = 6, Minimum = 0, Maximum = 100, Margin = new Thickness(0, 8, 0, 4) };
+            _sendText = Text("", sub: true);
+            _sendCancel = MakeButton("✕  Huỷ gửi", primary: false);
+            _sendCancel.Click += (s, e) =>
+            {
+                if (MessageBox.Show("Bỏ báo lỗi đang gửi? Báo lỗi này sẽ không được gửi cho admin.", "OHTA TOOL",
+                        MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                    OhtaTool.Plugin.Services.BugSender.CancelCurrent();
+            };
+            _sendPanel = new StackPanel { Visibility = Visibility.Collapsed };
+            _sendPanel.Children.Add(_sendBar);
+            _sendPanel.Children.Add(_sendText);
+            _sendPanel.Children.Add(_sendCancel);
+            _bugPanel.Children.Add(_sendPanel);
+            Loaded += (s, e) =>
+            {
+                OhtaTool.Plugin.Services.BugSender.Changed -= ShowSendStatus;
+                OhtaTool.Plugin.Services.BugSender.Changed += ShowSendStatus;
+                ShowSendStatus(OhtaTool.Plugin.Services.BugSender.Status);
+            };
+            Unloaded += (s, e) => OhtaTool.Plugin.Services.BugSender.Changed -= ShowSendStatus;
+
             stack.Children.Add(Card("BÁO LỖI", _bugPanel));
             LoadAdminBugCount();
 
@@ -191,6 +219,19 @@ namespace OhtaTool.Plugin.Views
         }
 
         private void SetAdminCount(int count) => _adminButton.Content = "🗂  Danh sách báo lỗi (" + count + ")";
+
+        private void ShowSendStatus(OhtaTool.Plugin.Services.BugSendStatus s)
+        {
+            bool show = s.Busy || s.Text.Length > 0;
+            _sendPanel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            _sendBar.Visibility = s.Busy ? Visibility.Visible : Visibility.Collapsed;
+            _sendBar.IsIndeterminate = s.Busy && s.Percent == null;
+            if (s.Percent != null)
+                _sendBar.Value = s.Percent.Value;
+            _sendText.Text = s.Text;
+            _sendText.Foreground = s.Error ? Brushes.Firebrick : TextSub;
+            _sendCancel.Visibility = s.Busy ? Visibility.Visible : Visibility.Collapsed;
+        }
 
         private void RefreshStatus()
         {

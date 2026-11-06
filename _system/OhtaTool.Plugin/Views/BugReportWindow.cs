@@ -132,13 +132,13 @@ namespace OhtaTool.Plugin.Views
                     try { _send.IsEnabled = true; ShowStatus("Lỗi: " + ex.Message, error: true); } catch { }
                 }
             };
-            // Đang gửi (zip tới 300 s) thì không cho đóng form: đóng giữa chừng rồi MessageBox/Close trên form đã đóng sẽ ném
+            // Đang nén thì không cho đóng form: đóng giữa chừng rồi Close trên form đã đóng sẽ ném
             Closing += (s, e) =>
             {
                 if (_sending)
                 {
                     e.Cancel = true;
-                    ShowStatus("Đang gửi, chờ một chút…", error: false);
+                    ShowStatus("Đang nén, chờ một chút…", error: false);
                 }
             };
             var cancel = new Button { Content = "Huỷ", Padding = new Thickness(14, 5, 14, 5), Margin = new Thickness(8, 0, 0, 0), IsCancel = true };
@@ -173,43 +173,43 @@ namespace OhtaTool.Plugin.Views
             (string phienBan, string info) = BugContext.Describe();
             _send.IsEnabled = false;
             _sending = true;
-            ShowStatus("Đang gửi…", error: false);
-            (bool ok, bool queued, string message) res;
+            ShowStatus(files.Count > 0 ? "Đang nén file đính kèm…" : "Đang chuẩn bị…", error: false);
+            string zipError;
             try
             {
-                res = await Task.Run(() =>
+                // Chỉ nén ở form (lỗi "quá 25 MB" sửa được ngay); tải lên chạy ở nền, tiến trình ở tab Info
+                zipError = await Task.Run(() =>
                 {
-                    (byte[] zip, string zipError) = BugAttachments.Zip(files);
-                    if (zipError != null)
-                        return (false, false, zipError);
+                    (byte[] zip, string ze) = BugAttachments.Zip(files);
+                    if (ze != null)
+                        return ze;
                     _report.DinhKemZip = zip;
                     _report.DinhKemTen = zip == null ? null : "dinh_kem.zip";
                     _report.AnhJpeg = guiAnh ? _anh : null;
                     _report.PhienBan = phienBan;
                     _report.ChiTiet = BuildChiTiet(info);
-                    return BugReportService.Submit(_report);
+                    return null;
                 });
+                if (zipError == null)
+                    BugSender.Send(_report);
             }
             catch (Exception ex)
             {
                 BugLog.Write("BUG", ex);
-                res = (false, false, "Lỗi khi gửi: " + ex.Message);
+                zipError = "Lỗi: " + ex.Message;
             }
             finally
             {
                 _sending = false;
             }
 
-            // Gửi xong, hoặc đã lưu hàng chờ (sẽ tự gửi lại) = xong; lỗi khác (đính kèm quá lớn...) để người dùng sửa rồi gửi lại
-            if (res.ok || res.queued)
+            if (zipError == null)
             {
-                MessageBox.Show(this, res.message, "OHTA TOOL", MessageBoxButton.OK,
-                    res.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
                 Close();
                 return;
             }
             _send.IsEnabled = true;
-            ShowStatus(res.message, error: true);
+            ShowStatus(zipError, error: true);
         }
 
         private string BuildChiTiet(string info)

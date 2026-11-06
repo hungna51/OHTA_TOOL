@@ -43,6 +43,28 @@ namespace OhtaTool.Tests
             TestBugSheet();
             TestBugGuard();
             TestBugReviewFixes();
+            TestProgressContent();
+        }
+
+        // Thanh tien trinh gui bao loi: dem byte da tai len
+        private static void TestProgressContent()
+        {
+            byte[] data = new byte[200_000];
+            new Random(1).NextBytes(data);
+            var calls = new List<long>();
+            long total = -1;
+            var content = new ProgressContent(data, "application/x-www-form-urlencoded", (sent, tot) => { calls.Add(sent); total = tot; });
+            var ms = new MemoryStream();
+            content.CopyToAsync(ms).GetAwaiter().GetResult();
+            Check("Progress: du lieu gui nguyen ven", ms.ToArray().SequenceEqual(data));
+            Check("Progress: bao nhieu lan, tang dan", calls.Count >= 3 && calls.SequenceEqual(calls.OrderBy(x => x)), calls.Count.ToString());
+            Check("Progress: lan cuoi = tong", calls.Count > 0 && calls[calls.Count - 1] == data.Length && total == data.Length);
+            Check("Progress: Content-Length dung", content.Headers.ContentLength == data.Length);
+            var cts = new System.Threading.CancellationTokenSource(); cts.Cancel();
+            bool huy = false;
+            try { new ProgressContent(data, "x/y", null, cts.Token).CopyToAsync(new MemoryStream()).GetAwaiter().GetResult(); }
+            catch (OperationCanceledException) { huy = true; }
+            Check("Progress: huy giua chung", huy);
         }
 
         // Sua sau review toan nhanh (ledger "Final: fixed ...")

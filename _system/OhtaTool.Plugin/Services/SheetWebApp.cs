@@ -16,7 +16,8 @@ namespace OhtaTool.Plugin.Services
     {
         /// <summary>Trả JSON thô (body) và bản đọc sẵn FnameSheetReply; null + error khi không gửi được.</summary>
         public static FnameSheetReply Post(string fnameModuleDir, string action, Dictionary<string, string> fields,
-            int timeoutSeconds, out string body, out string error)
+            int timeoutSeconds, out string body, out string error,
+            Action<long, long> progress = null, System.Threading.CancellationToken ct = default)
         {
             body = null;
             error = null;
@@ -50,8 +51,8 @@ namespace OhtaTool.Plugin.Services
                 {
                     // Tự mã hoá form thay FormUrlEncodedContent: bản .NET Framework báo "Uri string is too long" khi giá trị > ~65k ký tự (ảnh base64)
                     string form = string.Join("&", fields.Select(kv => Uri.EscapeDataString(kv.Key) + "=" + EscapeLong(kv.Value ?? string.Empty)));
-                    var content = new StringContent(form, Encoding.UTF8, "application/x-www-form-urlencoded");
-                    HttpResponseMessage resp = http.PostAsync(url, content).GetAwaiter().GetResult();
+                    var content = new ProgressContent(Encoding.UTF8.GetBytes(form), "application/x-www-form-urlencoded", progress, ct);
+                    HttpResponseMessage resp = http.PostAsync(url, content, ct).GetAwaiter().GetResult();
                     body = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                     FnameSheetReply reply = FnameSheetReply.Parse(body);
                     if (reply == null)

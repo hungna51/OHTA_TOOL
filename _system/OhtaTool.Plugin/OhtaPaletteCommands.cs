@@ -286,7 +286,7 @@ namespace OhtaTool.Plugin
                 if (_paletteSet.Name != PaletteTitle)
                     _paletteSet.Name = PaletteTitle;
                 UnrollIfAutoHidden();
-                BugCommands.ResendQueuedInBackground();
+                OhtaTool.Plugin.Services.BugSender.Kick();
 
                 if (forceRebuild)
                 {
