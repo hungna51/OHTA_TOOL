@@ -8,6 +8,7 @@ Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_oh
 - Khi một lệnh (hoặc **Chạy GRO**) gặp lỗi, tool hỏi "Gửi báo lỗi cho admin?" — bấm Có là form điền sẵn lỗi. Bấm Esc huỷ lệnh thì không hỏi.
 - Mất mạng lúc gửi: báo lỗi được lưu lại và tự gửi ở lần mở bảng OHTA sau.
 - Tab **Guro v1.6**: GRO ghi nhật ký và nối vào báo lỗi.
+- Tab **Guro v1.6** — sửa lỗi tách tấm: thanh vẽ liền nhiều tấm (vd `570 | 240`, `390 | 840 | 725`) mà ghi chú dài hơn đoạn ngắn thì không cắt, một tấm ôm cả hai hình, tấm kia không có hình. Nay cắt đúng. Sau khi cập nhật, đóng CAD rồi mở lại.
 
 ## v1.2.3
 
