@@ -1,11 +1,13 @@
 {
   "id": "ai",
   "enabled": true,
+  "adminOnly": true,
   "order": 50,
   "tabTitle": "AI",
-  "title": "AI kiểm tra",
-  "version": "0.1 (beta)",
-  "description": "Claude đọc khung · cảnh báo F-name / Q / ghi chú",
+  "title": "AI kiểm tra & phân loại",
+  "version": "0.2",
+  "stage": "beta",
+  "description": "Kev-0.8B (LAN) + Claude · phân loại tấm gia công · kiểm tra F-name / CSV / ghi chú",
   "accentColor": "#5B3FD1",
   "tools": []
 }

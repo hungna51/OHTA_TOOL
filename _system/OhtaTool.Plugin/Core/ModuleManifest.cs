@@ -17,6 +17,10 @@ namespace OhtaTool.Plugin.Core
         [DataMember(Name = "enabled", IsRequired = false)]
         public bool? Enabled { get; set; }
 
+        /// <summary>Nếu true: chỉ hiện tab này trên các máy Admin (có tên máy trong tab "admin" của Google Sheet).</summary>
+        [DataMember(Name = "adminOnly", IsRequired = false)]
+        public bool? AdminOnly { get; set; }
+
         [DataMember(Name = "order", IsRequired = false)]
         public int? Order { get; set; }
 
@@ -59,6 +63,7 @@ namespace OhtaTool.Plugin.Core
         public string LoadWarning { get; set; }
 
         public bool IsEnabled => Enabled ?? true;
+        public bool IsAdminOnly => AdminOnly ?? false;
         public int EffectiveOrder => Order ?? 1000;
 
         /// <summary>"v1.1 (beta)", "v1.5"; chưa khai báo version -> "".</summary>

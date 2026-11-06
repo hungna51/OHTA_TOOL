@@ -14,6 +14,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using AiTool.CadServices;
 using AiTool.Core;
 using AiTool.Services;
 using WinReg = Microsoft.Win32;
@@ -72,12 +73,27 @@ namespace AiTool.ViewModels
             MauNhan = string.IsNullOrWhiteSpace(mauNhan) ? "#5B3FD1" : mauNhan;
             ThuMucModule = thuMucModule;
 
+            try { DuLieuTinh.DocHuongDan(ThuMucModule, HuongDanMacDinh()); } // chưa có file thì tạo từ bản mặc định
+            catch (Exception) { }
+            try { CauHinhKev.DamBaoFileMacDinh(ThuMucModule); }
+            catch (Exception) { }
+
+            CauHinhKev chInit = CauHinhKev.DocTuThuMuc(ThuMucModule);
+            _cheDo = DocReg("che_do");
+            if (!KiemTraRunner.DanhSachCheDo.Contains(_cheDo))
+            {
+                _cheDo = DuLieuTinh.DocKey(ThuMucModule) != null
+                    ? KiemTraRunner.CheDoHybrid
+                    : KiemTraRunner.CheDoChiKev;
+            }
+            _kevUrl = KevHttp.ChonUrlHieuLuc(DocReg("kev_url"), chInit.MayChuLan);
+            string danNhanReg = DocReg("dan_nhan");
+            _danNhanGocKhung = danNhanReg == null || danNhanReg == "1";
+
             _model = DocReg("model");
             if (!BangGia.Model.Contains(_model)) _model = BangGia.Model[0];
             _layerKhung = DocReg("layer_khung") ?? LayerMacDinh;
             LamMoiLayer();
-            try { DuLieuTinh.DocHuongDan(ThuMucModule, HuongDanMacDinh()); } // chưa có file thì tạo từ bản mặc định
-            catch (Exception) { }
 
             KiemTraCmd = new Lenh(() => GuiLenh("OHTAAI "));
             ChonVungCmd = new Lenh(() => GuiLenh("OHTAAIVUNG "));
@@ -129,11 +145,12 @@ namespace AiTool.ViewModels
             get
             {
                 string k = DuLieuTinh.DocKey(ThuMucModule);
-                return k == null ? "Chưa có API key — bấm ⚙ để nhập" : "API key: " + DuLieuTinh.AnKey(k);
+                return k == null ? "Chưa có API key Claude — bấm ⚙ để nhập (hoặc chọn Chỉ Kev)" : "API key: " + DuLieuTinh.AnKey(k);
             }
         }
-        public bool ChuaCoKey => DuLieuTinh.DocKey(ThuMucModule) == null;
+        public bool ChuaCoKey => _cheDo == KiemTraRunner.CheDoChiClaude && DuLieuTinh.DocKey(ThuMucModule) == null;
         public string ThuMucModule { get; }
+        public string[] DanhSachCheDo => KiemTraRunner.DanhSachCheDo;
         public string[] DanhSachModel => BangGia.Model;
         public ObservableCollection<string> DanhSachLayer { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> Loi { get; } = new ObservableCollection<string>();
@@ -148,6 +165,44 @@ namespace AiTool.ViewModels
         public ICommand DungCmd { get; }
         public ICommand CaiDatCmd { get; }
         public ICommand MoNhatKyCmd { get; }
+
+        private string _cheDo;
+        public string CheDo
+        {
+            get => _cheDo;
+            set
+            {
+                if (Dat(ref _cheDo, value))
+                {
+                    GhiReg("che_do", value);
+                    OnChanged(nameof(ChuaCoKey));
+                    OnChanged(nameof(CanClaudeModel));
+                }
+            }
+        }
+        public bool CanClaudeModel => _cheDo != KiemTraRunner.CheDoChiKev;
+
+        private string _kevUrl;
+        public string KevUrl
+        {
+            get => _kevUrl;
+            set { if (Dat(ref _kevUrl, value)) GhiReg("kev_url", value); }
+        }
+
+        private bool _danNhanGocKhung;
+        public bool DanNhanGocKhung
+        {
+            get => _danNhanGocKhung;
+            set { if (Dat(ref _danNhanGocKhung, value)) GhiReg("dan_nhan", value ? "1" : "0"); }
+        }
+
+        private string _thongKePhanLoai = "";
+        public string ThongKePhanLoai
+        {
+            get => _thongKePhanLoai;
+            private set { if (Dat(ref _thongKePhanLoai, value)) OnChanged(nameof(CoThongKePhanLoai)); }
+        }
+        public bool CoThongKePhanLoai => !string.IsNullOrEmpty(_thongKePhanLoai);
 
         private string _layerKhung;
         public string LayerKhung
@@ -218,11 +273,14 @@ namespace AiTool.ViewModels
             if (DangChay) { CanhBaoDongLenh("[AI] Dang kiem tra, bam Dung truoc."); return; }
             KhungLanCuoi = khung ?? new List<KhungDuLieu>();
             Loi.Clear();
+            ThongKePhanLoai = "";
             _tatCa = new List<DongCanhBao>();
             LocCanhBao();
 
+            string cheDo = CheDo;
             string key = DuLieuTinh.DocKey(ThuMucModule);
-            string loiTruoc = KiemTraRunner.LoiTruocKhiChay(key, KhungLanCuoi.Count, LayerKhung);
+            string kevUrl = KevUrl;
+            string loiTruoc = KiemTraRunner.LoiTruocKhiChay(cheDo, key, kevUrl, KhungLanCuoi.Count, LayerKhung);
             if (loiTruoc != null)
             {
                 Loi.Add(loiTruoc);
@@ -231,9 +289,7 @@ namespace AiTool.ViewModels
             }
 
             string model = Model, thuMuc = ThuMucModule;
-            string loiDan, vatLieu;
-            try { loiDan = DuLieuTinh.DocHuongDan(thuMuc, HuongDanMacDinh()); }
-            catch (Exception ex) { Loi.Add("Không đọc được file hướng dẫn AI: " + ex.Message); return; }
+            string vatLieu = "";
             try { vatLieu = DuLieuTinh.KhoiVatLieuTrenMay(thuMuc); }
             catch (Exception ex) { Loi.Add("Không đọc được bảng vật liệu: " + ex.Message); return; }
 
@@ -241,14 +297,36 @@ namespace AiTool.ViewModels
             _huy = new CancellationTokenSource();
             CancellationToken ct = _huy.Token;
             List<KhungDuLieu> ds = KhungLanCuoi;
-            TienDo = "Đang gửi " + ds.Count + " khung…";
-            var tienDo = new BaoTienDo(_ui, p => TienDo = "Lô " + p.xong + "/" + p.tong);
+            TienDo = "Đang phân tích " + ds.Count + " khung (" + cheDo + ")…";
+            var tienDo = new BaoTienDo(_ui, p => TienDo = "Bước " + p.xong + "/" + p.tong);
 
-            Task.Run(() => KiemTraRunner.Chay(ds, model, loiDan, vatLieu, new ClaudeHttp(key, YeuCauApi.CoFallback(model)), tienDo, ct))
-                .ContinueWith(t => _ui.BeginInvoke(new Action(() => XongKiemTra(t, model, thuMuc))));
+            IGuiYeuCau guiKev = cheDo != KiemTraRunner.CheDoChiClaude
+                ? new KevHttp(kevUrl, thuMuc)
+                : null;
+            IGuiYeuCau guiClaude = (cheDo != KiemTraRunner.CheDoChiKev && !string.IsNullOrWhiteSpace(key))
+                ? new ClaudeHttp(key, YeuCauApi.CoFallback(model))
+                : null;
+
+            Task.Run(async () =>
+            {
+                if (cheDo != KiemTraRunner.CheDoChiClaude)
+                    await KevHttp.DongBoLuatTuMayChu(kevUrl, thuMuc, ct).ConfigureAwait(false);
+                CauHinhKev cauHinhKev = CauHinhKev.DocTuThuMuc(thuMuc);
+                string loiDan = "";
+                if (guiClaude != null)
+                {
+                    try
+                    {
+                        loiDan = DuLieuTinh.DocHuongDan(thuMuc, HuongDanMacDinh())
+                               + CauHinhKev.DocKhoiDongBoChoClaude(thuMuc);
+                    }
+                    catch (Exception) { }
+                }
+                return await KiemTraRunner.ChayTheoCheDo(cheDo, ds, model, loiDan, vatLieu, guiKev, guiClaude, tienDo, ct, cauHinhKev).ConfigureAwait(false);
+            }).ContinueWith(t => _ui.BeginInvoke(new Action(() => XongKiemTra(t, cheDo, model, thuMuc))));
         }
 
-        private void XongKiemTra(Task<KetQuaKiemTra> t, string model, string thuMuc)
+        private void XongKiemTra(Task<KetQuaKiemTra> t, string cheDo, string model, string thuMuc)
         {
             DangChay = false;
             TienDo = "";
@@ -269,11 +347,54 @@ namespace AiTool.ViewModels
                 GoiY = x.CB.GoiY,
             }).ToList();
             LocCanhBao();
+
+            if (kq.NhanGiaCong != null && kq.NhanGiaCong.Count > 0)
+            {
+                string tomTat = string.Join(" · ", kq.NhanGiaCong.Values
+                    .GroupBy(v => v)
+                    .OrderByDescending(g => g.Count())
+                    .Select(g => g.Key + " (" + g.Count() + ")"));
+
+                if (DanNhanGocKhung)
+                {
+                    try
+                    {
+                        int soGhi = DanNhanKhung.GhiNhan(CadApplication.DocumentManager.MdiActiveDocument, KhungLanCuoi, kq.NhanGiaCong);
+                        ThongKePhanLoai = "🏷 Phân loại " + kq.NhanGiaCong.Count + " tấm: " + tomTat
+                            + (soGhi > 0 ? " — đã dán " + soGhi + " nhãn góc trên-trái (layer " + KevApi.LayerNhan + ")" : "");
+                    }
+                    catch (Exception ex)
+                    {
+                        Loi.Add("Không dán được nhãn lên bản vẽ: " + ex.Message);
+                        ThongKePhanLoai = "🏷 Phân loại " + kq.NhanGiaCong.Count + " tấm: " + tomTat;
+                    }
+                }
+                else
+                {
+                    ThongKePhanLoai = "🏷 Phân loại " + kq.NhanGiaCong.Count + " tấm: " + tomTat;
+                }
+            }
+
             int soDo = _tatCa.Count(c => c.Do);
-            Tong = string.Format(CultureInfo.InvariantCulture,
-                "{0} cảnh báo ({1} 🔴) · {2} khung · token vào {3} / ra {4} / cache đọc {5} · ≈ ${6:0.0000}",
-                _tatCa.Count, soDo, KhungLanCuoi.Count, kq.TongSuDung.Vao + kq.TongSuDung.GhiCache, kq.TongSuDung.Ra,
-                kq.TongSuDung.DocCache, kq.TongTien);
+            if (cheDo == KiemTraRunner.CheDoChiKev)
+            {
+                Tong = string.Format(CultureInfo.InvariantCulture,
+                    "{0} cảnh báo ({1} 🔴) · {2} khung · Kev-0.8B ({3:0} ms · $0.0000)",
+                    _tatCa.Count, soDo, KhungLanCuoi.Count, kq.ThoiGianKevMs);
+            }
+            else if (cheDo == KiemTraRunner.CheDoHybrid)
+            {
+                Tong = string.Format(CultureInfo.InvariantCulture,
+                    "{0} cảnh báo ({1} 🔴) · {2} khung (Kev lọc {3} nghi vấn, {4:0} ms) · Claude ≈ ${5:0.0000}",
+                    _tatCa.Count, soDo, KhungLanCuoi.Count, kq.SoKhungGuiClaude, kq.ThoiGianKevMs, kq.TongTien);
+            }
+            else
+            {
+                Tong = string.Format(CultureInfo.InvariantCulture,
+                    "{0} cảnh báo ({1} 🔴) · {2} khung · token vào {3} / ra {4} / cache đọc {5} · ≈ ${6:0.0000}",
+                    _tatCa.Count, soDo, KhungLanCuoi.Count, kq.TongSuDung.Vao + kq.TongSuDung.GhiCache, kq.TongSuDung.Ra,
+                    kq.TongSuDung.DocCache, kq.TongTien);
+            }
             try
             {
                 _fileNhatKy = NhatKy.Ghi(thuMuc, model, kq);
@@ -305,12 +426,14 @@ namespace AiTool.ViewModels
             doc.SendStringToExecute("\x03\x03" + lenh, true, false, false);
         }
 
-        /// <summary>Nút ⚙: cửa sổ cài đặt (API key + file hướng dẫn AI). Đóng thì cập nhật trạng thái key.</summary>
+        /// <summary>Nút ⚙: cửa sổ cài đặt (Kev URL + API key + file hướng dẫn AI). Đóng thì cập nhật trạng thái key.</summary>
         private void MoCaiDat()
         {
             try
             {
-                CadApplication.ShowModalWindow(new Views.AiCaiDatWindow(ThuMucModule, HuongDanMacDinh(), AccentBrush));
+                var win = new Views.AiCaiDatWindow(ThuMucModule, HuongDanMacDinh(), AccentBrush, KevUrl);
+                if (CadApplication.ShowModalWindow(win) == true && !string.IsNullOrWhiteSpace(win.KevUrlDaLuu))
+                    KevUrl = win.KevUrlDaLuu;
             }
             catch (Exception ex)
             {

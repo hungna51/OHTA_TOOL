@@ -189,7 +189,16 @@ namespace OhtaTool.Plugin.Views
             {
                 try
                 {
+                    bool wasAdmin = OhtaTool.Plugin.Services.FnameSheetWriter.LoadIsAdmin();
                     var res = OhtaTool.Plugin.Services.BugReportService.ListBugs();
+                    if (res.ok)
+                    {
+                        OhtaTool.Plugin.Services.FnameSheetWriter.SaveIsAdmin(res.isAdmin);
+                        if (res.isAdmin != wasAdmin)
+                        {
+                            Dispatcher.BeginInvoke(new Action(() => OhtaPaletteCommands.ShowOrBuildPalette(forceRebuild: true)));
+                        }
+                    }
                     if (!res.ok || !res.isAdmin)
                     {
                         // Không hiện gì cho người dùng, nhưng ghi lý do để admin tra được (thiếu khoá, script cũ, mất mạng...)

@@ -30,11 +30,14 @@ namespace AiTool.CadServices
             using (doc.LockDocument())
             using (Transaction tr = db.TransactionManager.StartTransaction())
             {
+                var kieuNetLayer = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForRead);
                 foreach (ObjectId id in ms)
                 {
                     if (!(tr.GetObject(id, OpenMode.ForRead, false) is Entity ent))
                         continue;
+                    if (string.Equals(ent.Layer, KevApi.LayerNhan, StringComparison.OrdinalIgnoreCase))
+                        continue; // nhãn phân loại AI dán lần trước -> không đọc lại làm ghi chú
                     Extents3d ext;
                     try { ext = ent.GeometricExtents; }
                     catch (Exception) { continue; } // text rỗng, entity lỗi... -> bỏ
@@ -49,8 +52,14 @@ namespace AiTool.CadServices
                     DoiTuong d = Doi(ent);
                     if (d == null) continue;
                     d.Layer = ent.Layer;
+                    d.KieuNet = LayKieuNet(ent, tr, kieuNetLayer);
                     d.MinX = ext.MinPoint.X; d.MinY = ext.MinPoint.Y;
                     d.MaxX = ext.MaxPoint.X; d.MaxY = ext.MaxPoint.Y;
+                    if (d.Loai == LoaiDoiTuong.Hatch)
+                    {
+                        d.X1 = (d.MinX + d.MaxX) / 2.0;
+                        d.Y1 = (d.MinY + d.MaxY) / 2.0;
+                    }
                     if (d.Loai == LoaiDoiTuong.Dim && double.IsNaN(d.X1))
                     {
                         d.X1 = d.MinX; d.Y1 = d.MinY; d.X2 = d.MaxX; d.Y2 = d.MaxY;
@@ -60,6 +69,33 @@ namespace AiTool.CadServices
                 tr.Commit();
             }
             return GomKhung.Gom(khung, doiTuong);
+        }
+
+        private static string LayKieuNet(Entity ent, Transaction tr, Dictionary<string, string> cacheLayer)
+        {
+            try
+            {
+                string lt = ent.Linetype ?? string.Empty;
+                if (string.IsNullOrEmpty(lt) || string.Equals(lt, "BYLAYER", StringComparison.OrdinalIgnoreCase))
+                {
+                    string tenLayer = ent.Layer ?? string.Empty;
+                    if (cacheLayer.TryGetValue(tenLayer, out string cached))
+                        return cached;
+                    string resolved = string.Empty;
+                    if (!ent.LayerId.IsNull && tr.GetObject(ent.LayerId, OpenMode.ForRead, false) is LayerTableRecord ltr &&
+                        !ltr.LinetypeObjectId.IsNull && tr.GetObject(ltr.LinetypeObjectId, OpenMode.ForRead, false) is LinetypeTableRecord lttr)
+                    {
+                        resolved = lttr.Name ?? string.Empty;
+                    }
+                    cacheLayer[tenLayer] = resolved;
+                    return resolved;
+                }
+                return lt;
+            }
+            catch (Exception)
+            {
+                return string.Empty;
+            }
         }
 
         private static bool LaKhung(Entity ent, string layerKhung) =>
@@ -87,15 +123,17 @@ namespace AiTool.CadServices
                 case Polyline p:
                     return DoiPolyline(p);
                 case DBText t:
-                    return new DoiTuong { Loai = LoaiDoiTuong.Text, X1 = t.Position.X, Y1 = t.Position.Y, NoiDung = t.TextString, ChieuCao = t.Height };
+                    return new DoiTuong { Loai = LoaiDoiTuong.Text, LaMText = false, X1 = t.Position.X, Y1 = t.Position.Y, NoiDung = t.TextString, ChieuCao = t.Height };
                 case MText m:
-                    return new DoiTuong { Loai = LoaiDoiTuong.Text, X1 = m.Location.X, Y1 = m.Location.Y, NoiDung = m.Contents, ChieuCao = m.TextHeight };
+                    return new DoiTuong { Loai = LoaiDoiTuong.Text, LaMText = true, X1 = m.Location.X, Y1 = m.Location.Y, NoiDung = m.Contents, ChieuCao = m.TextHeight };
                 case Dimension dim:
                     return DoiDim(dim);
+                case Hatch _:
+                    return new DoiTuong { Loai = LoaiDoiTuong.Hatch };
                 case MLeader ml when ml.ContentType == ContentType.MTextContent && ml.MText != null:
                     // Ghi chú tiếng Nhật (タップ M6, 逆図, 曲げ…) hay ghi bằng MLeader
                     MText mt = ml.MText;
-                    return new DoiTuong { Loai = LoaiDoiTuong.Text, X1 = mt.Location.X, Y1 = mt.Location.Y, NoiDung = mt.Contents, ChieuCao = mt.TextHeight };
+                    return new DoiTuong { Loai = LoaiDoiTuong.Text, LaMText = true, X1 = mt.Location.X, Y1 = mt.Location.Y, NoiDung = mt.Contents, ChieuCao = mt.TextHeight };
                 default:
                     return null;
             }

@@ -200,6 +200,41 @@ namespace OhtaTool.Plugin.Services
 
         public static bool LoadIsAdmin() => ReadInt("ApprovalIsAdmin") == 1;
 
+        /// <summary>
+        /// Kiểm tra máy hiện tại có quyền Admin không (dựa theo tab "admin" trên Google Sheet đã lưu trong registry,
+        /// hoặc máy chủ cài sẵn môi trường Kev-0.8B local).
+        /// </summary>
+        public static bool IsAdminMachine()
+        {
+            if (LoadIsAdmin())
+                return true;
+            try
+            {
+                string kevPy = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "OHTA_TOOL", "kev", ".venv", "Scripts", "python.exe");
+                return File.Exists(kevPy);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static void SaveIsAdmin(bool isAdmin)
+        {
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.CreateSubKey(RegSubKey))
+                {
+                    key?.SetValue("ApprovalIsAdmin", isAdmin ? 1 : 0, RegistryValueKind.DWord);
+                }
+            }
+            catch
+            {
+            }
+        }
+
         public static int LoadPendingCount() => Math.Max(0, ReadInt("ApprovalPending"));
 
         public static void SaveState(bool isAdmin, int pending)

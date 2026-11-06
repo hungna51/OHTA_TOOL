@@ -79,7 +79,10 @@ namespace AiTool.Core
             switch (d.Loai)
             {
                 case LoaiDoiTuong.Line:
-                    return "L " + d.Layer + " " + P(d.X1, d.Y1) + " " + P(d.X2, d.Y2);
+                    string net = !string.IsNullOrEmpty(d.KieuNet) && d.KieuNet.StartsWith("DASHED", StringComparison.OrdinalIgnoreCase)
+                        ? " net=DASHED"
+                        : "";
+                    return "L " + d.Layer + " " + P(d.X1, d.Y1) + " " + P(d.X2, d.Y2) + net;
                 case LoaiDoiTuong.Circle:
                     return "C " + d.Layer + " " + P(d.Cx, d.Cy) + " d=" + T(2 * d.R);
                 case LoaiDoiTuong.Arc:
@@ -92,6 +95,8 @@ namespace AiTool.Core
                 case LoaiDoiTuong.Dim:
                     string gd = string.IsNullOrEmpty(d.GhiDe) ? "" : " ghide=" + Q(d.GhiDe);
                     return "D " + d.Layer + " " + d.LoaiDim + " do=" + T(d.GiaTriDo) + gd + " " + P(d.X1, d.Y1) + " " + P(d.X2, d.Y2);
+                case LoaiDoiTuong.Hatch:
+                    return "H " + d.Layer + " " + P(d.X1, d.Y1);
                 default:
                     return null;
             }

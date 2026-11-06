@@ -2,6 +2,14 @@
 
 Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_ohta.ps1` lấy nội dung mục đó làm ghi chú Release trên GitHub, và hộp thoại "Có bản mới" trên máy đội cũng hiện đúng nội dung này — viết ngắn, cho người dùng xưởng đọc.
 
+## v1.4.0
+
+- Tab **AI v0.2 (beta)** *(mở thử nghiệm cho các máy Admin)*: kết hợp mô hình **Kev-0.8B** chạy mạng LAN (`http://NGUYEN-A-HUNG:8008`) và **Claude API** để kiểm tra bản vẽ.
+- **Tự phân loại tấm gia công sau cắt laser**: dán nhãn `[BE]`, `[VAT]`, `[CUON]`, `[SARA]`, `[TAPU]`, `[PHANG]` (hoặc ghép nhiều công đoạn) ở góc trên-trái khung trên layer `AI-PHAN-LOAI`.
+- **Kiểm tra F-name, ghi chú & chuẩn xuất CSV**: đối chiếu `M= / T= / Z=` theo bảng vật liệu chuẩn, tấm nhám `SIMA` / `CPL`, số lượng `Q=`, trùng tên `N=`, trộn `TEXT` + `MTEXT` trên `2-F-NAME`, đối tượng lạ trên `0-KAKOU`, chú thích đường bẻ và khối MText Bước 1 xuất CSV.
+- **Tự đồng bộ luật AI qua mạng LAN**: máy Admin không cần cài Kev hay Python — chỉ cần cập nhật từ GitHub là chạy ngay chế độ Kev (LAN) và tự tải bộ luật `.md` mới nhất từ máy chủ mỗi lần kiểm tra.
+- Bổ sung quy tắc hướng dẫn xử lý lỗi ZWCAD treo giữa chừng khi chạy GRO do còn lisp GURO cũ trong Startup Suite.
+
 ## v1.3.3
 
 - Tab **Guro v1.6.2** — sửa lỗi ZWCAD trên một số máy: bấm **Chạy GRO** báo "buoc nhannet (C#) loi: undefined function" và dừng, NETRELOAD cũng không hết. Sau khi cập nhật, **đóng ZWCAD rồi mở lại**.

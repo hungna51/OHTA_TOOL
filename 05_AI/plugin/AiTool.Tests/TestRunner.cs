@@ -37,6 +37,18 @@ namespace AiTool.Tests
             public Task<string> Gui(string body, CancellationToken ct) => Task.FromException<string>(_ex);
         }
 
+        private sealed class GuiKevGia : IGuiYeuCau
+        {
+            public Task<string> Gui(string body, CancellationToken ct)
+            {
+                bool khung1 = body.Contains("\"frame_id\": 1");
+                string json = khung1
+                    ? "{\"answers\":{\"be\":{\"noul\":0.91},\"vat\":{\"noul\":0.05},\"cuon\":{\"noul\":0.04},\"sara\":{\"noul\":0.03},\"tapu\":{\"noul\":0.06},\"nghi_loi\":{\"noul\":0.05}},\"latency_ms\":18.0}"
+                    : "{\"answers\":{\"be\":{\"noul\":0.06},\"vat\":{\"noul\":0.04},\"cuon\":{\"noul\":0.05},\"sara\":{\"noul\":0.05},\"tapu\":{\"noul\":0.07},\"nghi_loi\":{\"noul\":0.96}},\"latency_ms\":18.0}";
+                return Task.FromResult(json);
+            }
+        }
+
         private static List<KhungDuLieu> NhieuKhung(int n) =>
             Enumerable.Range(1, n).Select(i => new KhungDuLieu { SoThuTu = i, MaxX = 10, MaxY = 10 }).ToList();
 
@@ -96,6 +108,41 @@ namespace AiTool.Tests
             {
                 Directory.Delete(tam, true);
             }
+
+            // Test ChayTheoCheDo (Chi Kev & Hybrid)
+            var haiKhung = new List<KhungDuLieu>
+            {
+                new KhungDuLieu
+                {
+                    SoThuTu = 1, MaxX = 100, MaxY = 100,
+                    DoiTuong = new List<DoiTuong>
+                    {
+                        new DoiTuong { Loai = LoaiDoiTuong.Text, Layer = DongChu.LayerFname, NoiDung = "N=PL1\nM=SS400\nT=9\nQ=2\nZ=SG-K\nV=1-90-50" },
+                        new DoiTuong { Loai = LoaiDoiTuong.Text, Layer = "4-TEXT", NoiDung = "PL9 2枚 曲げ" },
+                    }
+                },
+                new KhungDuLieu
+                {
+                    SoThuTu = 2, MaxX = 100, MaxY = 100,
+                    DoiTuong = new List<DoiTuong>
+                    {
+                        new DoiTuong { Loai = LoaiDoiTuong.Text, Layer = DongChu.LayerFname, NoiDung = "N=PL2\nM=SS400\nT=9\nQ=4\nZ=SG-K" },
+                        new DoiTuong { Loai = LoaiDoiTuong.Text, Layer = "4-TEXT", NoiDung = "PL9 2枚" },
+                    }
+                },
+            };
+            var kevGia = new GuiKevGia();
+
+            KetQuaKiemTra kqChiKev = KiemTraRunner.ChayTheoCheDo(
+                KiemTraRunner.CheDoChiKev, haiKhung, "claude-sonnet-5-5", "LD", "", kevGia, null, null, CancellationToken.None).Result;
+            Kiem("Chi Kev: phan loai khung 1 = BE, khung 2 = PHANG", kqChiKev.NhanGiaCong[1] + "|" + kqChiKev.NhanGiaCong[2], "BE|PHANG");
+            Kiem("Chi Kev: phat hien khung 2 sai Q (Q=4 != 2枚)", kqChiKev.CanhBao.Count + ":" + kqChiKev.CanhBao[0].Khung.SoThuTu, "1:2");
+
+            var claudeGia = new GuiGia();
+            KetQuaKiemTra kqHybrid = KiemTraRunner.ChayTheoCheDo(
+                KiemTraRunner.CheDoHybrid, haiKhung, "claude-sonnet-5-5", "LD", "", kevGia, claudeGia, null, CancellationToken.None).Result;
+            Kiem("Hybrid: Kev loc 1 khung nghi van -> chi gui 1 khung sang Claude", kqHybrid.SoKhungGuiClaude + ":" + claudeGia.SoLanGoi, "1:1");
+            Kiem("Hybrid: van giu nhan gia cong cho ca 2 khung", kqHybrid.NhanGiaCong.Count, 2);
             Console.WriteLine();
         }
 

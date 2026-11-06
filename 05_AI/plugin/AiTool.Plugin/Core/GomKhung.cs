@@ -36,7 +36,7 @@ namespace AiTool.Core
         {
             var m = new DoiTuong
             {
-                Loai = d.Loai, Layer = d.Layer,
+                Loai = d.Loai, Layer = d.Layer, KieuNet = d.KieuNet, LaMText = d.LaMText,
                 MinX = d.MinX - ox, MinY = d.MinY - oy, MaxX = d.MaxX - ox, MaxY = d.MaxY - oy,
                 X1 = d.X1 - ox, Y1 = d.Y1 - oy, X2 = d.X2 - ox, Y2 = d.Y2 - oy,
                 Cx = d.Cx - ox, Cy = d.Cy - oy, R = d.R, GocDau = d.GocDau, GocCuoi = d.GocCuoi,

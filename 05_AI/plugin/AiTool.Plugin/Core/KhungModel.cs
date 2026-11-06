@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace AiTool.Core
 {
-    public enum LoaiDoiTuong { Line, Arc, Circle, Polyline, Text, Dim }
+    public enum LoaiDoiTuong { Line, Arc, Circle, Polyline, Text, Dim, Hatch }
 
     /// <summary>Một đoạn của polyline: thẳng, hoặc cung (bulge đã đổi sang tâm + bán kính).</summary>
     public sealed class DoanPl
@@ -22,6 +22,10 @@ namespace AiTool.Core
     {
         public LoaiDoiTuong Loai;
         public string Layer;
+        /// <summary>Kiểu đường (ví dụ "DASHED", "Continuous") đã tính cả trường hợp BYLAYER.</summary>
+        public string KieuNet;
+        /// <summary>Với Loai == Text: true nếu là MTEXT, false nếu là DBText đơn.</summary>
+        public bool LaMText;
         /// <summary>Hộp bao (GeometricExtents) — tâm của nó quyết định đối tượng thuộc khung nào.</summary>
         public double MinX, MinY, MaxX, MaxY;
         /// <summary>Line: hai đầu. Dim: hai điểm đo. Text: X1,Y1 = điểm chèn.</summary>

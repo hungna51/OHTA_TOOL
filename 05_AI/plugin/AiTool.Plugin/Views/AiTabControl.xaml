@@ -104,7 +104,7 @@
                 <TextBlock Text="{Binding TrangThaiKey}" Foreground="#8A5300" TextWrapping="Wrap"/>
             </Border>
 
-            <!-- Chon layer + model -->
+            <!-- Chon che do + layer + model + dan nhan -->
             <Border Style="{StaticResource The}">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -114,14 +114,27 @@
                     <Grid.RowDefinitions>
                         <RowDefinition/>
                         <RowDefinition/>
+                        <RowDefinition/>
+                        <RowDefinition/>
                     </Grid.RowDefinitions>
-                    <TextBlock Text="Layer khung" VerticalAlignment="Center" Margin="0,0,8,6"/>
-                    <ComboBox Grid.Column="1" Margin="0,0,0,6" IsEditable="True"
+                    <TextBlock Text="Chế độ" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                    <ComboBox Grid.Column="1" Margin="0,0,0,6"
+                              ItemsSource="{Binding DanhSachCheDo}"
+                              SelectedItem="{Binding CheDo}"/>
+                    <TextBlock Grid.Row="1" Text="Layer khung" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                    <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,0,0,6" IsEditable="True"
                               ItemsSource="{Binding DanhSachLayer}"
                               Text="{Binding LayerKhung, UpdateSourceTrigger=LostFocus}"
                               DropDownOpened="LayerMo"/>
-                    <TextBlock Grid.Row="1" Text="Model" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding DanhSachModel}" SelectedItem="{Binding Model}"/>
+                    <TextBlock Grid.Row="2" Text="Model" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                    <ComboBox Grid.Row="2" Grid.Column="1" Margin="0,0,0,6"
+                              ItemsSource="{Binding DanhSachModel}"
+                              SelectedItem="{Binding Model}"
+                              IsEnabled="{Binding CanClaudeModel}"/>
+                    <CheckBox Grid.Row="3" Grid.ColumnSpan="2"
+                              Content="Dán nhãn gia công ở góc trên-trái khung (layer AI-PHAN-LOAI)"
+                              IsChecked="{Binding DanNhanGocKhung}"
+                              ToolTip="Ghi nhãn [BE], [TAPU], [SARA], [CUON], [VAT], [PHANG] tỷ lệ theo chiều cao khung ở góc trên-trái"/>
                 </Grid>
             </Border>
 
@@ -135,9 +148,9 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Button x:Name="NutKiemTra" Style="{StaticResource Nut}" Content="▶ Kiểm tra" Command="{Binding KiemTraCmd}"
-                        IsEnabled="{Binding KhongChay}" ToolTip="Kiểm tra mọi khung trong bản vẽ (lệnh OHTAAI)"/>
+                        IsEnabled="{Binding KhongChay}" ToolTip="Kiểm tra &amp; phân loại mọi khung trong bản vẽ (lệnh OHTAAI)"/>
                 <Button Grid.Column="2" Style="{StaticResource NutPhu}" Content="⬚ Chọn vùng" Command="{Binding ChonVungCmd}"
-                        IsEnabled="{Binding KhongChay}" ToolTip="Quét một vùng, chỉ kiểm các khung nằm trọn trong vùng (lệnh OHTAAIVUNG)"/>
+                        IsEnabled="{Binding KhongChay}" ToolTip="Quét một vùng, chỉ kiểm &amp; phân loại các khung nằm trọn trong vùng (lệnh OHTAAIVUNG)"/>
                 <Button Grid.Column="4" Style="{StaticResource NutPhu}" Content="■ Dừng" Command="{Binding DungCmd}"
                         Visibility="{Binding DangChay, Converter={StaticResource HienKhi}}"/>
             </Grid>
@@ -150,6 +163,12 @@
                         Command="{Binding MoNhatKyCmd}" Visibility="{Binding CoNhatKy, Converter={StaticResource HienKhi}}"/>
                 <TextBlock Text="{Binding Tong}" Foreground="#5F6B7A" TextWrapping="Wrap" VerticalAlignment="Center"/>
             </DockPanel>
+
+            <!-- Thong ke phan loai gia cong -->
+            <Border Background="#EEF2FF" BorderBrush="#C7D2FE" BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="0,0,0,6"
+                    Visibility="{Binding CoThongKePhanLoai, Converter={StaticResource HienKhi}}">
+                <TextBlock Text="{Binding ThongKePhanLoai}" Foreground="#3730A3" FontWeight="SemiBold" TextWrapping="Wrap"/>
+            </Border>
 
             <!-- Loi -->
             <ItemsControl ItemsSource="{Binding Loi}" Margin="0,0,0,4">

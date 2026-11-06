@@ -107,6 +107,11 @@ namespace OhtaTool.Tests
                     modules[modules.Count - 1].FolderName == "More", modules[modules.Count - 1].FolderName);
                 Check("Khong co tab tu thu muc docs / graphify-out",
                     !modules.Exists(m => m.FolderName == "docs" || m.FolderName == "graphify-out"));
+
+                List<ModuleManifest> nonAdminModules = ModuleDiscovery.DiscoverModules(rootDir, includeAdminOnly: false);
+                Check("Tab 05_AI co adminOnly=true -> chi hien tren may Admin, an tren may thuong",
+                    modules.Exists(m => m.FolderName == "05_AI" && m.IsAdminOnly) &&
+                    !nonAdminModules.Exists(m => m.FolderName == "05_AI"));
             }
         }
 

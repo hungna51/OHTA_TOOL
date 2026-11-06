@@ -88,8 +88,9 @@ namespace OhtaTool.Plugin.Core
 
         /// <summary>
         /// Quét toàn bộ thư mục con hợp lệ trong rootDir và trả về danh sách ModuleManifest đã chuẩn hóa & sắp xếp.
+        /// Nếu includeAdminOnly = false thì ẩn các tab có adminOnly = true trên máy thường.
         /// </summary>
-        public static List<ModuleManifest> DiscoverModules(string rootDir)
+        public static List<ModuleManifest> DiscoverModules(string rootDir, bool includeAdminOnly = true)
         {
             var results = new List<ModuleManifest>();
             if (string.IsNullOrWhiteSpace(rootDir) || !Directory.Exists(rootDir))
@@ -109,7 +110,7 @@ namespace OhtaTool.Plugin.Core
                 colorIndex++;
 
                 ModuleManifest manifest = LoadModuleFromDirectory(subDir, folderName, fallbackColor);
-                if (manifest != null && manifest.IsEnabled)
+                if (manifest != null && manifest.IsEnabled && (includeAdminOnly || !manifest.IsAdminOnly))
                 {
                     results.Add(manifest);
                 }

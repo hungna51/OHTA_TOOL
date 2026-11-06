@@ -214,8 +214,9 @@ namespace OhtaTool.Plugin
             BugGuard.Run("OHTAINFO", () =>
             {
                 string root = CadCompat.GetRootDirectory() ?? "(Không tìm thấy)";
+                bool isAdmin = Services.FnameSheetWriter.IsAdminMachine();
                 List<ModuleManifest> modules = Directory.Exists(root)
-                    ? ModuleDiscovery.DiscoverModules(root)
+                    ? ModuleDiscovery.DiscoverModules(root, includeAdminOnly: isAdmin)
                     : new List<ModuleManifest>();
 
                 CadCompat.WriteMessage("\n================ OHTA TOOL INFO ================\n");
@@ -320,7 +321,8 @@ namespace OhtaTool.Plugin
             }
             ClearHostedTabs();
 
-            List<ModuleManifest> modules = ModuleDiscovery.DiscoverModules(rootDir);
+            bool isAdmin = Services.FnameSheetWriter.IsAdminMachine();
+            List<ModuleManifest> modules = ModuleDiscovery.DiscoverModules(rootDir, includeAdminOnly: isAdmin);
             if (modules.Count == 0)
             {
                 modules.Add(new ModuleManifest

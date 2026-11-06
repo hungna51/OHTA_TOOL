@@ -49,7 +49,8 @@ if ($Problems.Count -gt 0) {
 
 $Dlls = @(
     "_system/bin/ZwCAD/OHTATOOL.dll", "_system/bin/AutoCAD/OHTATOOL.dll",
-    "03_Guro/bin/ZwCAD/GROTOOL.dll",  "03_Guro/bin/AutoCAD/GROTOOL.dll"
+    "03_Guro/bin/ZwCAD/GROTOOL.dll",  "03_Guro/bin/AutoCAD/GROTOOL.dll",
+    "05_AI/bin/ZwCAD/AITOOL.dll",     "05_AI/bin/AutoCAD/AITOOL.dll"
 )
 foreach ($d in $Dlls) {
     $f = Get-Item (Join-Path $Root $d) -ErrorAction SilentlyContinue
@@ -71,10 +72,8 @@ $Files = $Tracked | Where-Object {
     $p = $_
     $top = $p.Split('/')[0]
     if ($p -notmatch '/') { return $RootFiles -contains $p }
-    if ($p -match '^[^/]+/plugin/' -or $p -match '\.gs$' -or $p -match 'google_sheet\.key$') { return $false }
+    if ($p -match '^[^/]+/plugin/' -or $p -match '\.gs$' -or $p -match 'google_sheet\.key$' -or $p -match 'ai\.key' -or $p -match '^05_AI/log/') { return $false }
     if ($top -eq '_Template_Module') { return $true }
-    # Tab AI dang thu nghiem: chua phat hanh cho doi (ADR 0006)
-    if ($top -eq '05_AI') { return $false }
     return -not ($top.StartsWith('_') -or $top.StartsWith('.') -or $top -eq 'rules')
 }
 $Files = @($Files) + $Dlls
