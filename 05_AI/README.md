@@ -55,6 +55,7 @@ Tab đọc dữ liệu trong từng **khung** (polyline kín 4 đỉnh, mặc đ
 | `OHTAAI` | Quét mọi khung trên layer đang chọn ở tab, phân loại & kiểm tra AI |
 | `OHTAAIVUNG` | Như trên, chỉ khung nằm trọn trong vùng chọn 2 điểm |
 | `OHTAAIZOOM` | Zoom tới khung theo số thứ tự (tab gọi khi bấm cảnh báo) |
+| `OHTAAIMOTA` | Nút **📝 Xuất mô tả**: quét chọn khung in (mỗi khung = 1 tấm), ghi `<bản vẽ>.ai.md` (gọn, không toạ độ) + `.ai.json` (đủ toạ độ) + chép `kien-thuc-co-ban.md` cạnh file bản vẽ để Kev / Claude đọc hiểu. Thông tin tấm chỉ lấy từ F-name. Không gọi AI, không sửa bản vẽ |
 
 ## Tệp
 

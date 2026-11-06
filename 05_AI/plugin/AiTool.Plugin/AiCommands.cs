@@ -51,6 +51,54 @@ namespace AiTool
             Chay(vung);
         }
 
+        /// <summary>Quét chọn vùng → ghi &lt;ban ve&gt;.ai.md + .ai.json (mô tả từng khung in) cạnh file bản vẽ.</summary>
+        [CommandMethod("OHTAAIMOTA")]
+        public void XuatMoTa()
+        {
+            Document doc = CadApplication.DocumentManager.MdiActiveDocument;
+            AiTabViewModel vm = doc == null ? null : CanTab(doc);
+            if (vm == null) return;
+            Editor ed = doc.Editor;
+            string fileBv = doc.Database.Filename;
+            string duoi = System.IO.Path.GetExtension(fileBv ?? "").ToLowerInvariant();
+            if (duoi != ".dwg" && duoi != ".dxf")
+            {
+                ed.WriteMessage("\n[AI] Luu ban ve truoc khi xuat mo ta.");
+                return;
+            }
+            PromptPointResult p1 = ed.GetPoint("\n[AI] Chon khung in - goc thu nhat: ");
+            if (p1.Status != PromptStatus.OK) return;
+            PromptPointResult p2 = ed.GetCorner("\n[AI] Goc doi dien: ", p1.Value);
+            if (p2.Status != PromptStatus.OK) return;
+            Matrix3d ucs = ed.CurrentUserCoordinateSystem;
+            Point3d a = p1.Value.TransformBy(ucs), b = p2.Value.TransformBy(ucs);
+            var vung = new Extents3d(new Point3d(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), 0),
+                                     new Point3d(Math.Max(a.X, b.X), Math.Max(a.Y, b.Y), 0));
+            try
+            {
+                List<KhungDuLieu> khung = QuetKhung.Quet(doc, vm.LayerKhung, vung);
+                if (khung.Count == 0)
+                {
+                    ed.WriteMessage("\n[AI] Khong co khung in (layer " + vm.LayerKhung + ") trong vung chon - chay KI de tao khung truoc.");
+                    return;
+                }
+                string thuMuc = System.IO.Path.GetDirectoryName(fileBv);
+                string ten = System.IO.Path.GetFileNameWithoutExtension(fileBv);
+                var utf8 = new System.Text.UTF8Encoding(false);
+                string md = System.IO.Path.Combine(thuMuc, ten + ".ai.md");
+                System.IO.File.WriteAllText(md, MoTaKhung.Md(ten, khung), utf8);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(thuMuc, ten + ".ai.json"), MoTaKhung.Json(ten, khung), utf8);
+                string kienThuc = System.IO.Path.Combine(CauHinhKev.DuongDanThuMucKev(vm.ThuMucModule), MoTaKhung.FileKienThuc);
+                if (System.IO.File.Exists(kienThuc))
+                    System.IO.File.Copy(kienThuc, System.IO.Path.Combine(thuMuc, MoTaKhung.FileKienThuc), true);
+                ed.WriteMessage("\n[AI] Da xuat mo ta " + khung.Count + " tam: " + md);
+            }
+            catch (System.Exception ex)
+            {
+                ed.WriteMessage("\n[AI] Loi xuat mo ta (file dang mo o chuong trinh khac?): " + ex.Message);
+            }
+        }
+
         [CommandMethod("OHTAAIZOOM")]
         public void ZoomKhungCanhBao()
         {

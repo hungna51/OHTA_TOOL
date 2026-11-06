@@ -97,6 +97,7 @@ namespace AiTool.ViewModels
 
             KiemTraCmd = new Lenh(() => GuiLenh("OHTAAI "));
             ChonVungCmd = new Lenh(() => GuiLenh("OHTAAIVUNG "));
+            XuatMoTaCmd = new Lenh(() => GuiLenh("OHTAAIMOTA "));
             DungCmd = new Lenh(() => _huy?.Cancel());
             CaiDatCmd = new Lenh(MoCaiDat);
             MoNhatKyCmd = new Lenh(MoNhatKy);
@@ -162,6 +163,7 @@ namespace AiTool.ViewModels
 
         public ICommand KiemTraCmd { get; }
         public ICommand ChonVungCmd { get; }
+        public ICommand XuatMoTaCmd { get; }
         public ICommand DungCmd { get; }
         public ICommand CaiDatCmd { get; }
         public ICommand MoNhatKyCmd { get; }

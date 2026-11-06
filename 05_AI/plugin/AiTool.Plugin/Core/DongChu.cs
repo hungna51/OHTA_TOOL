@@ -60,21 +60,21 @@ namespace AiTool.Core
             return "Khung " + k.SoThuTu;
         }
 
-        private static bool LaFname(DoiTuong d) =>
+        internal static bool LaFname(DoiTuong d) =>
             d.Loai == LoaiDoiTuong.Text && string.Equals(d.Layer, LayerFname, StringComparison.OrdinalIgnoreCase);
 
         private static bool LaDongN(string s) => s.TrimStart().StartsWith("N=", StringComparison.OrdinalIgnoreCase);
 
-        private static int DemN(List<string> dong) => dong.Count(LaDongN);
+        internal static int DemN(List<string> dong) => dong.Count(LaDongN);
 
         /// <summary>Các dòng F-name sạch, theo thứ tự trên xuống (Y giảm) rồi trái sang (X tăng).</summary>
-        private static List<string> DongFname(KhungDuLieu k) =>
+        internal static List<string> DongFname(KhungDuLieu k) =>
             k.DoiTuong.Where(LaFname)
              .OrderByDescending(d => Math.Round(d.Y1, 2)).ThenBy(d => d.X1)
              .SelectMany(d => FnameParser.SplitAndCleanMText(d.NoiDung))
              .ToList();
 
-        private static string Dong(DoiTuong d)
+        internal static string Dong(DoiTuong d)
         {
             switch (d.Loai)
             {

@@ -154,6 +154,8 @@
                 <Button Grid.Column="4" Style="{StaticResource NutPhu}" Content="■ Dừng" Command="{Binding DungCmd}"
                         Visibility="{Binding DangChay, Converter={StaticResource HienKhi}}"/>
             </Grid>
+            <Button Style="{StaticResource NutPhu}" Content="📝 Xuất mô tả" Command="{Binding XuatMoTaCmd}" Margin="0,0,0,8"
+                    IsEnabled="{Binding KhongChay}" ToolTip="Quét chọn các khung in, ghi &lt;bản vẽ&gt;.ai.md + .ai.json cạnh file bản vẽ để Kev / Claude đọc hiểu từng tấm (lệnh OHTAAIMOTA)"/>
 
             <!-- Tien do + tong -->
             <TextBlock Text="{Binding TienDo}" Foreground="#5B3FD1" FontWeight="SemiBold" Margin="2,0,0,4"
