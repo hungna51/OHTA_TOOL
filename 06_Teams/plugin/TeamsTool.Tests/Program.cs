@@ -71,6 +71,11 @@ namespace TeamsTool.Tests
             var t = PhanTichTeams.DocToken(@"{""token_type"":""Bearer"",""expires_in"":3599,""access_token"":""AT"",""refresh_token"":""RT""}");
             Kiem("DocToken", t.Access + "|" + t.Refresh + "|" + t.HetSau, "AT|RT|3599");
 
+            var ma = PhanTichTeams.DocMa(PhanTichTeams.GhiMa(" abc-tenant \n", "xyz-client"));
+            Kiem("teams.json ghi roi doc lai, bo khoang trang", ma.Tenant + "|" + ma.Client, "abc-tenant|xyz-client");
+            var thieu = PhanTichTeams.DocMa(@"{""tenantId"":""t""}");
+            Kiem("teams.json thieu clientId -> rong", thieu.Tenant + "|" + thieu.Client, "t|");
+
             Console.WriteLine();
             Console.WriteLine("Tong: {0} OK, {1} FAIL", _ok, _fail);
             return _fail == 0 ? 0 : 1;

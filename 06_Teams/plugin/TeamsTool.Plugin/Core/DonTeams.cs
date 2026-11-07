@@ -41,6 +41,21 @@ namespace TeamsTool.Core
         private static JsonObject Obj(object o, string key) => (o as JsonObject)?.Get(key) as JsonObject;
         private static List<object> Mang(object o, string key) => (o as JsonObject)?.Get(key) as List<object> ?? new List<object>();
 
+        /// <summary>Đọc teams.json {"tenantId","clientId"}; thiếu khoá = "" (bỏ khoảng trắng thừa khi dán).</summary>
+        public static (string Tenant, string Client) DocMa(string json)
+        {
+            var o = JsonLite.Parse(json) as JsonObject;
+            return ((o?.GetString("tenantId") ?? "").Trim(), (o?.GetString("clientId") ?? "").Trim());
+        }
+
+        public static string GhiMa(string tenant, string client)
+        {
+            var o = new JsonObject();
+            o.Set("tenantId", (tenant ?? "").Trim());
+            o.Set("clientId", (client ?? "").Trim());
+            return JsonLite.Serialize(o);
+        }
+
         /// <summary>Danh sách {id, displayName} (joinedTeams, channels).</summary>
         public static List<KeyValuePair<string, string>> DocDanhSach(string json)
         {

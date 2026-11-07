@@ -15,20 +15,27 @@ Entra admin center → **App registrations → New registration** (`OHTA TOOL`, 
 
 1. **Authentication** → *Allow public client flows* = **Yes**.
 2. **API permissions** → Microsoft Graph → *Delegated*: `User.Read`, `Team.ReadBasic.All`, `Channel.ReadBasic.All`, `ChannelMessage.Read.All`, `ChannelMessage.Send`, `Files.Read.All` → **Grant admin consent**.
-3. Lấy **Directory (tenant) ID** và **Application (client) ID** ở trang Overview.
+3. Lấy **Directory (tenant) ID** và **Application (client) ID** ở trang Overview, ghi vào file `teams.json`:
+
+```json
+{ "tenantId": "<Directory (tenant) ID>", "clientId": "<Application (client) ID>" }
+```
+
+File **không lên GitHub** (`.gitignore`) — gửi riêng cho từng máy.
 
 ## Mỗi máy
 
-1. Tab Teams → **⚙ Cài đặt**: dán Tenant ID, Client ID (chỉnh thư mục lưu nếu muốn) → **Lưu**.
-2. **Đăng nhập**: trình duyệt mở `microsoft.com/devicelogin`, mã đã chép sẵn → dán, đăng nhập tài khoản công ty.
-3. **Chọn kênh** → tích các kênh nhận đơn → **Lưu kênh đã chọn**.
-4. **⟳ Làm mới đơn**.
+1. Chép `teams.json` vào `06_Teams\data\` (hoặc nút **⚙** trên header → nhập Tenant ID, Client ID → **Lưu**, tab tự tạo file). Thư mục lưu đơn cũng chỉnh ở ⚙.
+2. Chưa đăng nhập, tab chỉ có nút **Đăng nhập** giữa palette (mờ nếu chưa có `teams.json`). Bấm → trình duyệt mở `microsoft.com/devicelogin`, mã hiện to dưới nút và đã chép sẵn → dán, đăng nhập tài khoản công ty.
+3. **Chọn kênh** → tích các kênh nhận đơn → **Lưu kênh đã chọn** (tự tải đơn).
+4. **⟳ Làm mới đơn** khi cần. Mở lại CAD mà còn phiên đăng nhập thì tab tự tải đơn một lần. Đăng xuất ở ⚙.
 
 ## Dữ liệu nằm ở đâu
 
 | Thứ | Chỗ |
 |---|---|
-| Tenant ID, Client ID, thư mục lưu, kênh đã chọn | `HKCU\Software\OFT_Lisp\OhtaTool\Teams` |
+| Tenant ID, Client ID | `06_Teams\data\teams.json` (gitignore, gửi riêng) |
+| Thư mục lưu, kênh đã chọn | `HKCU\Software\OFT_Lisp\OhtaTool\Teams` |
 | Phiên đăng nhập (refresh token, mã hoá DPAPI theo tài khoản Windows) | `%LOCALAPPDATA%\OHTA_TOOL\teams\token.bin` — **Đăng xuất** xoá file này |
 | File đơn tải về | Mặc định `Documents\OHTA_DonTeams` |
 
@@ -41,4 +48,4 @@ Entra admin center → **App registrations → New registration** (`OHTA TOOL`, 
 
 ## Test
 
-`dotnet run --project 06_Teams/plugin/TeamsTool.Tests` (build_ohta.ps1 tự chạy) — phân tích JSON Graph, lọc đơn, tag, mã `/shares`, tên thư mục an toàn.
+`dotnet run --project 06_Teams/plugin/TeamsTool.Tests` (build_ohta.ps1 tự chạy) — phân tích JSON Graph, đọc/ghi `teams.json`, lọc đơn, tag, mã `/shares`, tên thư mục an toàn.

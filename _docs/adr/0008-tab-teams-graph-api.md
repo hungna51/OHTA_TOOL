@@ -4,7 +4,7 @@ Từ 11/2026, công ty nhận và giao đơn qua nhiều kênh Microsoft Teams (
 
 - **Đăng nhập kiểu mã thiết bị (OAuth device code, quyền Delegated)**: không cần client secret trong DLL (repo public), người dùng chỉ thấy đúng các kênh họ vốn xem được. Ứng dụng phải được admin đăng ký trên Entra ID và *Grant admin consent* vì `ChannelMessage.Read.All` bắt buộc admin duyệt.
 - **HttpClient thẳng, không MSAL / Graph SDK** — cùng lý do ADR 0006 (không kéo NuGet vào AppDomain của CAD). JSON đọc bằng `JsonLite` (link nguồn).
-- **Refresh token mã hoá DPAPI** (`ProtectedData`, CurrentUser) ở `%LOCALAPPDATA%\OHTA_TOOL\teams\`, ngoài thư mục OHTA (OneDrive + gói phát hành). Tenant/Client ID không phải bí mật nhưng vẫn để ở registry từng máy, không ghi vào repo public.
+- **Refresh token mã hoá DPAPI** (`ProtectedData`, CurrentUser) ở `%LOCALAPPDATA%\OHTA_TOOL\teams\`, ngoài thư mục OHTA (OneDrive + gói phát hành). Tenant/Client ID không phải bí mật nhưng repo public nên để trong `06_Teams/data/teams.json` (gitignore, admin gửi file riêng từng máy); thư mục lưu đơn + kênh đã chọn ở registry từng máy.
 - **Đang phát triển (`stage: "dev"`) + `adminOnly: true`** cho tới khi chạy thử xong trên kênh thật.
 
 ## Considered Options

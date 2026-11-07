@@ -73,6 +73,10 @@
     <Reference Include="System.Security" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\settings_logo.png" LogicalName="TeamsTool.Assets.settings_logo.png" />
+  </ItemGroup>
+
   <!-- JsonLite dung lai bang LINK NGUON (khong tham chieu OHTATOOL.dll) -->
   <ItemGroup>
     <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\JsonLite.cs" Link="Shared\JsonLite.cs" />

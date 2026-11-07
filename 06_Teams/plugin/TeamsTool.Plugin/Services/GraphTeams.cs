@@ -14,10 +14,31 @@ using TeamsTool.Core;
 
 namespace TeamsTool.Services
 {
-    /// <summary>Cài đặt tab Teams: HKCU\Software\OFT_Lisp\OhtaTool\Teams (riêng từng máy).</summary>
+    /// <summary>
+    /// Cài đặt tab Teams. Tenant/Client ID: file 06_Teams\data\teams.json (gitignore, admin gửi riêng từng máy).
+    /// Thư mục lưu đơn + kênh đã chọn: HKCU\Software\OFT_Lisp\OhtaTool\Teams (riêng từng máy).
+    /// </summary>
     public static class CaiDatTeams
     {
         private const string Khoa = @"Software\OFT_Lisp\OhtaTool\Teams";
+
+        /// <summary>Thư mục 06_Teams, TeamsOhtaTab gán khi tạo tab.</summary>
+        public static string ThuMucModule = "";
+
+        public static string FileMa => Path.Combine(ThuMucModule, "data", "teams.json");
+        public static bool CoFileMa => File.Exists(FileMa);
+
+        private static (string Tenant, string Client) DocFileMa()
+        {
+            try { return CoFileMa ? PhanTichTeams.DocMa(File.ReadAllText(FileMa)) : ("", ""); }
+            catch (Exception) { return ("", ""); } // file hỏng = như chưa có, tab nhắc nhập lại
+        }
+
+        public static void GhiMa(string tenant, string client)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(FileMa));
+            File.WriteAllText(FileMa, PhanTichTeams.GhiMa(tenant, client), new UTF8Encoding(false));
+        }
 
         public static string Doc(string ten, string macDinh = "")
         {
@@ -31,8 +52,8 @@ namespace TeamsTool.Services
                 k.SetValue(ten, giaTri ?? "");
         }
 
-        public static string TenantId => Doc("tenant_id").Trim();
-        public static string ClientId => Doc("client_id").Trim();
+        public static string TenantId => DocFileMa().Tenant;
+        public static string ClientId => DocFileMa().Client;
 
         public static string ThuMucDon => Doc("thu_muc",
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "OHTA_DonTeams"));
@@ -126,7 +147,7 @@ namespace TeamsTool.Services
         private static void KiemCaiDat()
         {
             if (CaiDatTeams.TenantId.Length == 0 || CaiDatTeams.ClientId.Length == 0)
-                throw new InvalidOperationException("Chưa nhập Tenant ID / Client ID trong ⚙ Cài đặt.");
+                throw new InvalidOperationException("Chưa có Tenant ID / Client ID — chép teams.json vào " + Path.GetDirectoryName(CaiDatTeams.FileMa) + " hoặc nhập trong ⚙.");
         }
 
         /// <summary>Bước 1: xin mã. Trả mã để người dùng nhập ở trang verification_uri.</summary>

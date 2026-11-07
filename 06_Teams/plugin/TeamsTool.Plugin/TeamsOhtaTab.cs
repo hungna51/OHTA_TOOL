@@ -11,6 +11,7 @@ namespace TeamsTool
     {
         public static FrameworkElement TaoGiaoDien(string tieuDe, string moTa, string mauNhan, string thuMucModule)
         {
+            Services.CaiDatTeams.ThuMucModule = thuMucModule ?? "";
             return new TeamsTabControl(tieuDe, moTa, mauNhan);
         }
     }
