@@ -293,6 +293,8 @@
 
         <DockPanel Grid.Row="4" Margin="2,4,0,0">
             <CheckBox DockPanel.Dock="Right" Content="Hiện suy nghĩ" IsChecked="{Binding HienSuyNghi}" Margin="6,0,0,0"/>
+            <TextBlock DockPanel.Dock="Left" Text="{Binding TenModel}" Foreground="#5B3FD1" FontWeight="SemiBold" Margin="0,0,8,0"
+                       ToolTip="Model đang chat (đổi ở nút ⚙ → Ling API)"/>
             <TextBlock Text="{Binding TrangThai}" Foreground="#5F6B7A" TextWrapping="Wrap"/>
         </DockPanel>
     </Grid>

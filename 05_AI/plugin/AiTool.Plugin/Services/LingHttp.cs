@@ -65,6 +65,46 @@ namespace AiTool.Services
         }
 
         /// <summary>
+        /// Phần ▶ Kiểm tra chạy bằng Ling: nhận body Claude, gửi body Ling, trả phản hồi dạng Claude
+        /// (LingDich) để KiemTraRunner / PhanHoiApi dùng y như Claude. 429 / 5xx thử lại 3 lần (5, 10, 20 s).
+        /// </summary>
+        public sealed class GuiKiemTra : IGuiYeuCau
+        {
+            // tbox trả 429 khi gọi dồn (đã gặp với 3 lệnh liền nhau) → Ling chỉ gửi từng lô một
+            private static readonly SemaphoreSlim MotLuot = new SemaphoreSlim(1, 1);
+            private readonly string _key, _model;
+            public GuiKiemTra(string apiKey, string model) { _key = apiKey; _model = model; }
+
+            public async Task<string> Gui(string bodyClaude, CancellationToken ct)
+            {
+                await MotLuot.WaitAsync(ct).ConfigureAwait(false);
+                try { return await GuiMot(bodyClaude, ct).ConfigureAwait(false); }
+                finally { MotLuot.Release(); }
+            }
+
+            private async Task<string> GuiMot(string bodyClaude, CancellationToken ct)
+            {
+                string body = LingDich.ChuyenBody(bodyClaude, _model);
+                for (int lan = 0; ; lan++)
+                {
+                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ct))
+                    {
+                        cts.CancelAfter(TimeSpan.FromSeconds(180));
+                        using (HttpRequestMessage req = TaoYeuCau(_key, body))
+                        using (HttpResponseMessage res = await Http.SendAsync(req, cts.Token).ConfigureAwait(false))
+                        {
+                            string text = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            int ma = (int)res.StatusCode;
+                            if (res.IsSuccessStatusCode) return LingDich.ChuyenPhanHoi(text);
+                            if ((ma != 429 && ma < 500) || lan >= 3) return LingDich.LoiHttp(ma, text);
+                        }
+                    }
+                    await Task.Delay(TimeSpan.FromSeconds(5 << lan), ct).ConfigureAwait(false);
+                }
+            }
+        }
+
+        /// <summary>
         /// Gửi body (stream=true), mỗi mẩu chữ / suy nghĩ mới gọi moiPhan(chu, suyNghi) trên luồng nền.
         /// Lỗi HTTP ném InvalidOperationException có mã + nội dung lỗi.
         /// </summary>

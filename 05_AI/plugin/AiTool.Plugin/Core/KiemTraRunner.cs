@@ -32,9 +32,9 @@ namespace AiTool.Core
         public const int SongSong = 3;
         public const int SongSongKev = 4;
 
-        public const string CheDoHybrid = "Hybrid (Kev + Claude)";
+        public const string CheDoHybrid = "Hybrid (Kev + Claude/Ling)";
         public const string CheDoChiKev = "Chỉ Kev (Local/LAN)";
-        public const string CheDoChiClaude = "Chỉ Claude";
+        public const string CheDoChiClaude = "Chỉ Claude / Ling";
 
         public static readonly string[] DanhSachCheDo = { CheDoHybrid, CheDoChiKev, CheDoChiClaude };
 
@@ -48,7 +48,7 @@ namespace AiTool.Core
             bool canKev = !string.Equals(cheDo, CheDoChiClaude, StringComparison.Ordinal);
 
             if (batBuocClaude && string.IsNullOrWhiteSpace(key))
-                return "Chưa có API key: tạo file 05_AI\\data\\ai.key (xem README)";
+                return "Chưa có API key cho model đang chọn: bấm ⚙ nhập key Claude (ai.key) hoặc Ling (ling.key)";
             if (canKev && string.IsNullOrWhiteSpace(kevUrl))
                 return "Chưa có địa chỉ Kev Server (bấm ⚙ để kiểm tra)";
             if (soKhung == 0)

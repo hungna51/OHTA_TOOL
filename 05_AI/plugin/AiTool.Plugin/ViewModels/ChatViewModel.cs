@@ -130,8 +130,11 @@ namespace AiTool.ViewModels
         }
 
         /// <summary>Mỗi lần vào màn hình chat: tính lại thư mục theo bản vẽ đang mở, nạp danh sách cuộc.</summary>
+        public string TenModel => "🤖 " + _model();
+
         public void VaoManHinh()
         {
+            Bao(nameof(TenModel)); // model có thể vừa đổi trong ⚙
             string moi = ChatLing.ThuMucChat(_fileBanVe(), Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
             if (moi == _thuMucChat) return;
             _thuMucChat = moi;

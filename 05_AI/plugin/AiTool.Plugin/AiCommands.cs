@@ -68,7 +68,8 @@ namespace AiTool
                     doc.Editor.WriteMessage("\n[AI] Khong co khung in (layer " + vm.LayerKhung + ") trong vung chon.");
                     return;
                 }
-                vm.Chat.DatDinhKem(MoTaKhung.Md(System.IO.Path.GetFileNameWithoutExtension(doc.Name), khung));
+                string ten = System.IO.Path.GetFileNameWithoutExtension(doc.Name);
+                vm.Chat.DatDinhKem(ChatLing.GhepDinhKem(MoTaKhung.Md(ten, khung), MoTaKhung.Json(ten, khung)));
                 doc.Editor.WriteMessage("\n[AI] Da dinh kem " + khung.Count + " khung - go cau hoi o tab AI roi bam Gui.");
             }
             catch (System.Exception ex)

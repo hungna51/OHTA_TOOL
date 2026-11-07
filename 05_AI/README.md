@@ -23,9 +23,11 @@ Tab đọc dữ liệu trong từng **khung** (polyline kín 4 đỉnh, mặc đ
 
 | Chế độ | Mô tả | Yêu cầu |
 |---|---|---|
-| **Hybrid (Kev + Claude)** *(mặc định)* | Kev-0.8B phân loại 100% khung + lọc các khung nghi vấn lỗi (`P >= 0.50`) → chỉ gửi khung nghi vấn lên Claude API giải thích chi tiết | Kev Server + Claude API key |
+| **Hybrid (Kev + Claude/Ling)** *(mặc định)* | Kev-0.8B phân loại 100% khung + lọc các khung nghi vấn lỗi (`P >= 0.50`) → chỉ gửi khung nghi vấn lên Claude API giải thích chi tiết | Kev Server + Claude API key |
 | **Chỉ Kev (Local/LAN)** | Chạy 100% nội bộ qua Kev-0.8B (~120–150 ms/khung trên GTX 1070 Ti, `$0.0000`) — phân loại tấm + cảnh báo lỗi | Chỉ cần Kev Server (không cần API key) |
-| **Chỉ Claude** | Gửi toàn bộ khung lên Claude API theo lô 10 khung + phân loại tấm | Claude API key |
+| **Chỉ Claude / Ling** | Gửi toàn bộ khung lên Claude API theo lô 10 khung + phân loại tấm | Claude API key |
+
+**Dùng Ling thay Claude:** ô **Model** chọn `Ling (model trong ⚙)` → phần "Claude" của 2 chế độ trên gửi tới Ling (key `data\ling.key`, tên model trong ⚙). Ling không có ép JSON schema nên schema được đưa vào lời dặn; Ling gửi **từng lô một** (gọi dồn bị 429) và thử lại 3 lần (5 / 10 / 20 s). Dòng tổng hiện token vào/ra thay cho tiền $.
 
 ## Khởi động Kev Server (Local / LAN) & Đồng bộ Luật `.md` cho Máy Con
 
@@ -65,7 +67,8 @@ Nút **💬 Chat với AI (Ling)** đổi tab sang màn hình chat; **← Quay l
 
 - Chữ trả lời hiện dần (streaming); ô **Hiện suy nghĩ** bật/tắt phần suy nghĩ của model (mặc định ẩn). **Enter** gửi, **Shift+Enter** xuống dòng, **■ Dừng** ngắt giữa chừng.
 - Mỗi lần gửi luôn kèm bộ luật `data\kev\*.md` làm kiến thức nền, cùng tối đa **20 tin gần nhất** của cuộc (file lưu vẫn đủ).
-- **📎 Gửi khung** đính kèm mô tả khung in (như `.ai.md`, không toạ độ) vào câu hỏi kế tiếp; bấm ✕ để bỏ.
+- **📎 Gửi khung** đính kèm mô tả khung in vào câu hỏi kế tiếp — cả bản `.md` gọn lẫn bản `.json` đủ toạ độ từng đối tượng (để AI tự đo kích thước tổng khi bản vẽ không có dim); bấm ✕ để bỏ. Nhiều khung thì JSON dài, tốn token.
+- Tên model đang chat hiện ở góc dưới trái (🤖 …).
 - AI **chỉ đọc và trả lời**, không sửa bản vẽ.
 - Mỗi cuộc chat là một file `.json`; ô chọn trên cùng mở lại cuộc cũ của bản vẽ đang mở, **＋ Cuộc mới** bắt đầu cuộc khác, **📁** mở thư mục lưu.
 

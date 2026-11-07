@@ -68,6 +68,33 @@ namespace AiTool.Tests
             Kiem("NhanCuoc: ngay gio + cau dau", ChatLing.NhanCuoc("2026-11-07_153005.json", goc), "2026-11-07 15:30 · Câu hỏi \"có\" dấu hai dòng");
             Kiem("NhanCuoc: cuoc rong -> chi ngay gio", ChatLing.NhanCuoc("2026-11-07_153005.json", new List<TinChat>()), "2026-11-07 15:30");
 
+            string dk2 = ChatLing.GhepDinhKem("## Tam 1 — A\n", "{\"x\": 1}\n");
+            Kiem("Dinh kem co ca md va json", dk2.Contains("## Tam 1") && dk2.Contains("```json\n{\"x\": 1}\n```"), true);
+            Kiem("Dinh kem: dem khung khong tinh phan json", dk2.Split('\n').Count(l => l.StartsWith("## Tam ", StringComparison.Ordinal)), 1);
+
+            // LingDich: body Claude -> body Ling
+            string bodyClaude = YeuCauApi.Body("x", "LOI DAN", "VAT LIEU", "DU LIEU LO");
+            var bl = (JsonObject)JsonLite.Parse(LingDich.ChuyenBody(bodyClaude, "Ling-3.2-flash"));
+            var ml = (List<object>)bl.Get("messages");
+            string sysL = ((JsonObject)ml[0]).GetString("content");
+            Kiem("LingDich: model Ling", bl.GetString("model"), "Ling-3.2-flash");
+            Kiem("LingDich: khong stream", bl.Get("stream"), false);
+            Kiem("LingDich: system gom loi dan + vat lieu", sysL.Contains("LOI DAN") && sysL.Contains("VAT LIEU"), true);
+            Kiem("LingDich: system co schema canh_bao", sysL.Contains("canh_bao") && sysL.Contains("muc_do"), true);
+            Kiem("LingDich: tin user giu du lieu lo", ((JsonObject)ml[1]).GetString("content"), "DU LIEU LO");
+            Kiem("LingDich: khong mang cache_control/output_config", LingDich.ChuyenBody(bodyClaude, "L").Contains("cache_control"), false);
+
+            // LingDich: phan hoi Ling -> dang Claude, PhanHoiApi doc duoc
+            string phLing = "{\"choices\":[{\"message\":{\"content\":\"```json\\n{\\\"canh_bao\\\":[{\\\"khung\\\":2,\\\"muc_do\\\":\\\"do\\\",\\\"loai_loi\\\":\\\"Q\\\",\\\"ly_do\\\":\\\"sai Q\\\",\\\"goi_y\\\":\\\"\\\"}]}\\n```\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":120,\"completion_tokens\":30}}";
+            KetQuaLo kl = PhanHoiApi.Doc(LingDich.ChuyenPhanHoi(phLing), new HashSet<int> { 2 });
+            Kiem("LingDich: doc duoc canh bao qua ```json", kl.Loi == null && kl.CanhBao.Count == 1 && kl.CanhBao[0].Do, true);
+            Kiem("LingDich: usage vao/ra", kl.SuDung.Vao + "/" + kl.SuDung.Ra, "120/30");
+            KetQuaLo kc = PhanHoiApi.Doc(LingDich.ChuyenPhanHoi("{\"choices\":[{\"message\":{\"content\":\"{\\\"canh_bao\\\":[]}\"},\"finish_reason\":\"length\"}]}"), null);
+            Kiem("LingDich: finish length -> bi cat", kc.Loi, PhanHoiApi.LoiBiCat);
+            KetQuaLo kh = PhanHoiApi.Doc(LingDich.LoiHttp(404, "The Model not exists"), null);
+            Kiem("LingDich: loi HTTP chu tron -> bao ro", kh.Loi, "Ling trả lỗi HTTP 404: The Model not exists");
+            Kiem("LingDich: CatJson bo chu thua", LingDich.CatJson("Day la ket qua: {\"a\":1} het"), "{\"a\":1}");
+
             string tam = Path.Combine(Path.GetTempPath(), "aitool_chat_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(tam);
             try

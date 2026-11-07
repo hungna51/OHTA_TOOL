@@ -59,7 +59,9 @@ namespace AiTool.Core
             var sb = new StringBuilder();
             sb.Append("Ban la tro ly AI cua xuong gia cong kim loai tam OHTA (cat laser, be, vat, cuon, taro). ")
               .Append("Tra loi bang tieng Viet, ngan gon, ro rang. Ban chi doc va giai thich, khong sua ban ve. ")
-              .Append("Khi nguoi dung dinh kem mo ta khung in, moi khung la mot tam; thong tin tam lay tu F-name.");
+              .Append("Khi nguoi dung dinh kem mo ta khung in, moi khung la mot tam; thong tin tam lay tu F-name. ")
+              .Append("Phan JSON dinh kem co toa do (mm) cua tung doi tuong kem layer: hay dung no de tu tinh kich thuoc ")
+              .Append("(vd. kich thuoc tong X/Y = hop bao cac doi tuong tren layer 0-KAKOU) khi ban ve khong co dim.");
             if (!string.IsNullOrWhiteSpace(boLuat))
                 sb.Append("\n\n# Kien thuc nghiep vu\n").Append(boLuat.Trim());
             return sb.ToString();
@@ -75,6 +77,10 @@ namespace AiTool.Core
                   .Append(File.ReadAllText(f, Encoding.UTF8).Trim()).Append('\n');
             return sb.ToString();
         }
+
+        /// <summary>Đính kèm của nút 📎 Gửi khung: bản .md gọn + bản .json đủ toạ độ (để AI tự đo kích thước).</summary>
+        public static string GhepDinhKem(string md, string json) =>
+            (md ?? "").TrimEnd() + "\n\n## JSON day du (toa do tung doi tuong)\n```json\n" + (json ?? "").Trim() + "\n```\n";
 
         /// <summary>Nội dung thật gửi cho model của một tin người dùng (đính kèm đứng trước câu hỏi).</summary>
         public static string NoiDungGui(TinChat t) =>
