@@ -2,6 +2,14 @@
 
 Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_ohta.ps1` lấy nội dung mục đó làm ghi chú Release trên GitHub, và hộp thoại "Có bản mới" trên máy đội cũng hiện đúng nội dung này — viết ngắn, cho người dùng xưởng đọc.
 
+## v1.4.1
+
+- Tab **AI**: thêm **💬 Chat với AI (Ling)** — hỏi đáp trực tiếp trong tab, chữ trả lời hiện dần, bật/tắt "Hiện suy nghĩ", hiện tên model đang dùng.
+- **📎 Gửi khung**: quét chọn khung in để AI đọc kèm (cả toạ độ từng đối tượng, AI tự đo được kích thước).
+- Lịch sử chat lưu trong thư mục **`OHTA_AI`** cạnh bản vẽ (mỗi cuộc một file, mở lại được); nút **📝 Xuất mô tả** cũng ghi vào `OHTA_AI\mo-ta`.
+- Nút ⚙ có mục **Ling API**: nhập key, đổi tên model, kiểm tra kết nối.
+- Phần **▶ Kiểm tra** chạy được bằng Ling: ô **Model** chọn `Ling (model trong ⚙)`.
+
 ## v1.4.0
 
 - Tab **AI v0.2 (beta)** *(mở thử nghiệm cho các máy Admin)*: kết hợp mô hình **Kev-0.8B** chạy mạng LAN (`http://NGUYEN-A-HUNG:8008`) và **Claude API** để kiểm tra bản vẽ.
