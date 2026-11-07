@@ -86,9 +86,29 @@ namespace TeamsTool.Core
 
         private static readonly Regex UrlList = new Regex(@"https://[^\s""'&?#]+?/Lists/[^/\s""'&?#]+", RegexOptions.IgnoreCase);
 
+        private static readonly Regex ThamSoFileBrowser = new Regex(@"[?&]fileBrowser=([^&]+)", RegexOptions.IgnoreCase);
+
         /// <summary>URL danh sách SharePoint ("https://x.sharepoint.com/sites/A/Lists/B") trong chuỗi cấu hình tab (có thể bị mã hoá URL nhiều lớp).</summary>
         public static string TimUrlList(string s)
         {
+            // Tab Lists của Teams: ...FileBrowser.aspx?fileBrowser={"entry":{"sharePoint":{"byPath":{"list":"/sites/A/Lists/B","web":"https://x/sites/A"}}}}
+            // "list" có thể là đường dẫn tương đối và có dấu cách
+            Match fb = ThamSoFileBrowser.Match(s ?? "");
+            if (fb.Success)
+            {
+                try
+                {
+                    var o = JsonLite.Parse(Uri.UnescapeDataString(fb.Groups[1].Value)) as JsonObject;
+                    var byPath = ((((o?.Get("entry") as JsonObject)?.Get("sharePoint")) as JsonObject)?.Get("byPath")) as JsonObject;
+                    string list = byPath?.GetString("list"), web = byPath?.GetString("web");
+                    if (!string.IsNullOrEmpty(list) && list.IndexOf("/Lists/", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        if (list.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return list;
+                        if (Uri.TryCreate(web, UriKind.Absolute, out Uri w)) return w.Scheme + "://" + w.Host + list;
+                    }
+                }
+                catch (Exception) { } // không phải JSON → thử cách dưới
+            }
             for (int i = 0; i < 4 && !string.IsNullOrEmpty(s); i++)
             {
                 Match m = UrlList.Match(s);
@@ -119,7 +139,12 @@ namespace TeamsTool.Core
                 .FirstOrDefault(l => ChuanUrl(l.GetString("webUrl")) == can)?.GetString("id");
         }
 
-        private static readonly string[] CotHeThong = { "Attachments", "ContentType", "_ColorTag", "ComplianceAssetId", "Edit", "LinkTitle", "LinkTitleNoMenu", "DocIcon", "ItemChildCount", "FolderChildCount", "AppAuthor", "AppEditor" };
+        /// <summary>Id danh sách người dùng của site (User Information List, URL .../_catalogs/users) trong /lists?$select=id,webUrl,system.</summary>
+        public static string TimListNguoi(string json) =>
+            Mang(JsonLite.Parse(json), "value").OfType<JsonObject>()
+                .FirstOrDefault(l => (l.GetString("webUrl") ?? "").TrimEnd('/').EndsWith("/_catalogs/users", StringComparison.OrdinalIgnoreCase))?.GetString("id");
+
+        private static readonly string[] CotHeThong ={ "Attachments", "ContentType", "_ColorTag", "ComplianceAssetId", "Edit", "LinkTitle", "LinkTitleNoMenu", "DocIcon", "ItemChildCount", "FolderChildCount", "AppAuthor", "AppEditor" };
         private static readonly string[] LoaiCot ={ "personOrGroup", "dateTime", "choice", "lookup", "boolean", "number", "text" };
 
         /// <summary>Cột hiển thị được của danh sách (bỏ cột ẩn và cột hệ thống chỉ đọc trừ Title).</summary>
@@ -129,7 +154,8 @@ namespace TeamsTool.Core
             foreach (JsonObject c in Mang(JsonLite.Parse(json), "value").OfType<JsonObject>())
             {
                 string ten = c.GetString("name");
-                if (string.IsNullOrEmpty(ten) || Equals(c.Get("hidden"), true) || CotHeThong.Contains(ten)) continue;
+                if (string.IsNullOrEmpty(ten) || Equals(c.Get("hidden"), true) || CotHeThong.Contains(ten)
+                    || ten.StartsWith("teamsConversationMetadata", StringComparison.Ordinal) || ten.StartsWith("_FormSourceId", StringComparison.Ordinal)) continue;
                 if (Equals(c.Get("readOnly"), true) && ten != "Title") continue;
                 kq.Add(new CotList { Ten = ten, TieuDe = c.GetString("displayName") ?? ten,
                                      Loai = LoaiCot.FirstOrDefault(l => c.Get(l) != null) ?? "khac" });
@@ -177,6 +203,8 @@ namespace TeamsTool.Core
                 case List<object> ds:
                     return string.Join(", ", ds.Select(x => x is JsonObject o ? o.GetString("LookupValue") ?? o.GetString("Email") : x?.ToString())
                                                .Where(x => !string.IsNullOrEmpty(x)));
+                case JsonObject o: // cột người một giá trị: {LookupId, LookupValue, Email}
+                    return o.GetString("LookupValue") ?? o.GetString("Email") ?? tenNguoi(o.Get("LookupId")?.ToString());
                 case bool b:
                     return b ? "Có" : "Không";
                 case string s when c.Loai == "dateTime":
@@ -214,7 +242,8 @@ namespace TeamsTool.Core
                     Check = Gt(chinh.Check),
                     Han = chinh.Han == null ? null : DocNgay(f.GetString(chinh.Han)),
                 };
-                d.DaXong = BoDau(d.TrangThai) == "da hoan thanh" || d.StatusJp == "完了";
+                // TRẠNG THÁI chọn nhiều giá trị ("Đã hoàn thành, Đã nhập giá") → xong nếu có "Đã hoàn thành"
+                d.DaXong = d.TrangThai.Split(',').Any(x => BoDau(x) == "da hoan thanh") || d.StatusJp.Split(',').Any(x => x.Trim() == "完了");
                 foreach (CotList c in cots)
                 {
                     string g = GiaTri(f, c, tenNguoi);

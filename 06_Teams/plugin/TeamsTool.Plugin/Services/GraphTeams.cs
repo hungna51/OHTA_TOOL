@@ -266,7 +266,9 @@ namespace TeamsTool.Services
             var kq = new Dictionary<string, string>();
             try
             {
-                string url = "/sites/" + siteId + "/lists/" + Uri.EscapeDataString("User Information List") + "/items?$expand=fields($select=Title)&$top=999";
+                // Danh sách hệ thống: gọi theo tên bị 404, phải lấy id qua $select=system
+                string listId = PhanTichTeams.TimListNguoi(await GetJson("/sites/" + siteId + "/lists?$select=id,webUrl,system&$top=999", ct));
+                string url = listId == null ? null : "/sites/" + siteId + "/lists/" + listId + "/items?$expand=fields($select=Title)&$top=999";
                 while (url != null)
                 {
                     string json = await GetJson(url, ct);

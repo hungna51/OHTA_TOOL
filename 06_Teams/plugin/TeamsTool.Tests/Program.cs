@@ -56,6 +56,22 @@ namespace TeamsTool.Tests
             Kiem("Tab Bai dang khong phai Lists", tabs[0].ListUrl, null);
             Kiem("Tab Lists: URL giai ma tu dest=", tabs[1].ListUrl, "https://kohtavn.sharepoint.com/sites/OHTA/Lists/2026");
             Kiem("Tab web khong phai Lists", tabs[2].ListUrl, null);
+            // Cấu hình thật của tab Lists trong Teams (11/2026): "list" tương đối, có dấu cách
+            Kiem("Tab Lists that: list tuong doi + web",
+                 PhanTichTeams.TimUrlList("https://kohtavn.sharepoint.com/sites/OHTA-OFT/_layouts/15/FileBrowser.aspx?fileBrowser=%7B%22sdk%22%3A%228%2E0%22%2C%22entry%22%3A%7B%22sharePoint%22%3A%7B%22byPath%22%3A%7B%22list%22%3A%22%2Fsites%2FOHTA%2DOFT%2FLists%2F2024%22%2C%22web%22%3A%22https%3A%2F%2Fkohtavn%2Esharepoint%2Ecom%2Fsites%2FOHTA%2DOFT%22%7D%7D%7D%7D&app=Teams&scenario=Lists&auth=none&teamId={teamId}"),
+                 "https://kohtavn.sharepoint.com/sites/OHTA-OFT/Lists/2024");
+            Kiem("Tab Lists that: ten list co dau cach",
+                 PhanTichTeams.TimUrlList("https://kohtavn.sharepoint.com/sites/msteams_3bcaea/_layouts/15/FileBrowser.aspx?fileBrowser=%7B%22sdk%22%3A%228%2E0%22%2C%22entry%22%3A%7B%22sharePoint%22%3A%7B%22byPath%22%3A%7B%22list%22%3A%22%2Fsites%2Fmsteams%5F3bcaea%2FLists%2FTt%20c%20cc%20mc%22%2C%22web%22%3A%22https%3A%2F%2Fkohtavn%2Esharepoint%2Ecom%2Fsites%2Fmsteams%5F3bcaea%22%7D%7D%7D%7D&app=Teams&scenario=Lists"),
+                 "https://kohtavn.sharepoint.com/sites/msteams_3bcaea/Lists/Tt c cc mc");
+            Kiem("Tab Files (folder, khong co list) = chua ho tro",
+                 PhanTichTeams.TimUrlList("https://{teamSiteDomain}{teamSitePath}/_layouts/15/filebrowser.aspx?fileBrowser=%7B%22sdk%22%3A%22v1.0%22%2C%22entry%22%3A%7B%22sharePoint%22%3A%7B%22byPath%22%3A%7B%22web%22%3A%22{teamSitePath}%22%2C%22folder%22%3A%22{channelRelativeUrl}%22%7D%7D%7D%7D&app=teamsfile"),
+                 null);
+            var coCach = PhanTichTeams.TachSite("https://kohtavn.sharepoint.com/sites/msteams_3bcaea/Lists/Tt c cc mc");
+            Kiem("TachSite URL co dau cach", coCach.Host + "|" + coCach.DuongSite, "kohtavn.sharepoint.com|/sites/msteams_3bcaea");
+            Kiem("TimListId khop webUrl %20 voi dau cach",
+                 PhanTichTeams.TimListId(@"{""value"":[{""id"":""L9"",""webUrl"":""https://kohtavn.sharepoint.com/sites/msteams_3bcaea/Lists/Tt%20c%20cc%20mc""}]}",
+                                          "https://kohtavn.sharepoint.com/sites/msteams_3bcaea/Lists/Tt c cc mc"), "L9");
+
             var site = PhanTichTeams.TachSite(tabs[1].ListUrl);
             Kiem("TachSite", site.Host + "|" + site.DuongSite, "kohtavn.sharepoint.com|/sites/OHTA");
             Kiem("TimListId theo webUrl (khong phan biet hoa thuong, /)",
@@ -83,6 +99,17 @@ namespace TeamsTool.Tests
             Kiem("Nguoi nhieu gia tri lay LookupValue", don[2].Check, "Lê Gia Vinh");
             Kiem("TrangSau", PhanTichTeams.TrangSau(Items), "https://graph.microsoft.com/v1.0/next");
             Kiem("DocNguoi", PhanTichTeams.DocNguoi(@"{""value"":[{""id"":""12"",""fields"":{""Title"":""Mai Trung Nam""}}]}")["12"], "Mai Trung Nam");
+
+            // Dạng thật của danh sách 注文書2026.1 (11/2026)
+            var don2 = PhanTichTeams.DocDon(@"{""value"":[{""id"":""9"",""fields"":{""Title"":""126165"",
+                ""NguoiTK"":{""LookupId"":296,""LookupValue"":""Đỗ Văn Quang"",""Email"":""q@x""},
+                ""TrangThai"":[""Đã hoàn thành"",""Đã nhập giá""]}}]}", cots, chinh, id => "#" + id);
+            Kiem("Nguoi 1 gia tri dang object -> LookupValue", don2[0].TrienKhai, "Đỗ Văn Quang");
+            Kiem("Trang thai nhieu gia tri co Da hoan thanh = xong", don2[0].DaXong, true);
+            Kiem("Bo cot teamsConversationMetadata / _FormSourceId",
+                 PhanTichTeams.DocCot(@"{""value"":[{""name"":""teamsConversationMetadata_D86AE2"",""displayName"":""x"",""text"":{}},{""name"":""_FormSourceId_0"",""displayName"":""y"",""text"":{}}]}").Count, 0);
+            Kiem("TimListNguoi theo _catalogs/users",
+                 PhanTichTeams.TimListNguoi(@"{""value"":[{""id"":""a"",""webUrl"":""https://k/sites/s/Lists/x""},{""id"":""u"",""webUrl"":""https://k/sites/s/_catalogs/users""}]}"), "u");
 
             Kiem("Danh sach nhom/kenh", PhanTichTeams.DocDanhSach(@"{""value"":[{""id"":""a"",""displayName"":""Xuong""},{""displayName"":""thieu id""}]}").Count, 1);
             Kiem("BoDau", PhanTichTeams.BoDau(" Hạn Hoàn Thành Đơn "), "han hoan thanh don");
