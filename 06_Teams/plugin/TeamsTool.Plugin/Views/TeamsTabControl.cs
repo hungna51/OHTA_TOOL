@@ -205,6 +205,7 @@ namespace TeamsTool.Views
         /// <summary>Đầu màn hình: nút ← Quay lại (nếu có) + đường dẫn hiện tại + dòng trạng thái.</summary>
         private void DauTrang(string duongDan, string nutLui, Action lui)
         {
+            _oDanhSach = false;
             _noiDung.Children.Clear();
             Tach(_trangThai);
             Tach(_caDaXong);
@@ -282,15 +283,52 @@ namespace TeamsTool.Views
 
         // ---------- Danh sách đơn ----------
 
+        /// <summary>
+        /// Mở danh sách đơn: có bản lưu tạm thì hiện ngay rồi cập nhật ở nền (không giữ khoá _ban — vẫn bấm xem / quay lại được);
+        /// chưa có thì chờ tải.
+        /// </summary>
         private async Task TaiDon()
         {
             HienKhungDon();
+            string listId = _tab[6];
+            var tam = GraphTeams.DocTam(listId);
+            if (tam != null)
+            {
+                _don = await Task.Run(() => PhanTichTeams.DocToanBo(tam.Value.Tho));
+                if (_tab?[6] != listId) return;
+                VeDon();
+                CapNhatNen(_tab[5], listId, tam.Value.Luc);
+                return;
+            }
             BaoTrangThai("Đang tải đơn…");
-            var cots = await GraphTeams.CotCuaList(_tab[5], _tab[6], CancellationToken.None);
-            var nguoi = await GraphTeams.NguoiCuaSite(_tab[5], CancellationToken.None);
-            _don = await GraphTeams.DonCuaList(_tab[5], _tab[6], cots, PhanTichTeams.KhopCot(cots),
-                                               id => id != null && nguoi.TryGetValue(id, out string t) ? t : "#" + id, CancellationToken.None);
-            VeDon();
+            var tho = await GraphTeams.TaiList(_tab[5], listId, CancellationToken.None);
+            _don = await Task.Run(() => PhanTichTeams.DocToanBo(tho));
+            if (_tab?[6] == listId) VeDon();
+        }
+
+        private bool _dangCapNhat, _oDanhSach; // _oDanhSach: đang ở màn hình danh sách đơn
+
+        /// <summary>Tải lại ở nền sau khi đã hiện bản lưu tạm. Chỉ vẽ lại nếu người dùng vẫn đang ở danh sách đó.</summary>
+        private async void CapNhatNen(string siteId, string listId, DateTime? lucTam)
+        {
+            if (_dangCapNhat) return;
+            _dangCapNhat = true;
+            string goc = _trangThai.Text + (lucTam == null ? "" : " — bản lưu lúc " + lucTam.Value.ToString("dd/MM HH:mm"));
+            BaoTrangThai(goc + " — đang cập nhật…");
+            try
+            {
+                var tho = await GraphTeams.TaiList(siteId, listId, CancellationToken.None);
+                var moi = await Task.Run(() => PhanTichTeams.DocToanBo(tho));
+                if (_tab?[6] != listId) return; // đã chuyển sang tab khác
+                _don = moi;
+                if (_oDanhSach) VeDon();
+            }
+            catch (Exception ex) { if (_oDanhSach) BaoTrangThai(goc + ". Không cập nhật được: " + ex.Message); }
+            finally
+            {
+                _dangCapNhat = false;
+                if (!GraphTeams.DaCoDangNhap) CapNhatMan();
+            }
         }
 
         /// <summary>Đầu màn hình đơn: ← Tab, ⟳ Làm mới, 2 ô lọc, dòng trạng thái.</summary>
@@ -300,7 +338,7 @@ namespace TeamsTool.Views
             DauTrang(nhomTen + " / " + kenhTen + " / " + _tab[4], "Tab", () => Chay(() => HienTabKenh(nhomId, nhomTen, kenhId, kenhTen)));
             _noiDung.Children.Remove(_trangThai);
             var hang = new WrapPanel();
-            hang.Children.Add(KieuTeams.Nut("⟳ Làm mới", _mau, (s, e) => Chay(TaiDon)));
+            hang.Children.Add(KieuTeams.Nut("⟳ Làm mới", _mau, (s, e) => CapNhatNen(_tab[5], _tab[6], null)));
             hang.Children.Add(_caDaXong);
             hang.Children.Add(_cuaToi);
             var dk = new StackPanel();
@@ -327,6 +365,7 @@ namespace TeamsTool.Views
                     _noiDung.Children.Add(TheDon(d));
             }
             BaoTrangThai(loc.Count + " / " + _don.Count + " đơn (" + DateTime.Now.ToString("HH:mm") + ")");
+            _oDanhSach = true;
         }
 
         private Border NhanTrangThai(DonTeams d)

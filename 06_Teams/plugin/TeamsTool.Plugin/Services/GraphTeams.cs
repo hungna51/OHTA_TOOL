@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -85,7 +86,9 @@ namespace TeamsTool.Services
 #if ZWCAD
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
 #endif
-            return new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+            // gzip: danh sách ~9 MB JSON tải nhanh gần gấp đôi (đo 11/2026)
+            var hd = new HttpClientHandler { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate };
+            return new HttpClient(hd) { Timeout = TimeSpan.FromSeconds(120) };
         }
 
         private static string FileToken => Path.Combine(
@@ -118,6 +121,7 @@ namespace TeamsTool.Services
         {
             _access = null;
             try { File.Delete(FileToken); } catch { }
+            XoaTam(); // dữ liệu đơn lưu tạm theo phiên, đăng xuất thì xoá
         }
 
         private static async Task<(bool Ok, string Json)> PostForm(string url, Dictionary<string, string> form, CancellationToken ct)
@@ -257,42 +261,99 @@ namespace TeamsTool.Services
             return (siteId, listId);
         }
 
-        public static async Task<List<CotList>> CotCuaList(string siteId, string listId, CancellationToken ct) =>
-            PhanTichTeams.DocCot(await GetJson("/sites/" + siteId + "/lists/" + listId + "/columns", ct));
-
-        /// <summary>LookupId → tên người (User Information List của site). Lỗi = rỗng, cột người hiện "#id".</summary>
-        public static async Task<Dictionary<string, string>> NguoiCuaSite(string siteId, CancellationToken ct)
+        /// <summary>Tải hết các trang theo @odata.nextLink (tối đa soTrang trang).</summary>
+        private static async Task<List<string>> TaiTrang(string url, int soTrang, CancellationToken ct)
         {
-            var kq = new Dictionary<string, string>();
-            try
-            {
-                // Danh sách hệ thống: gọi theo tên bị 404, phải lấy id qua $select=system
-                string listId = PhanTichTeams.TimListNguoi(await GetJson("/sites/" + siteId + "/lists?$select=id,webUrl,system&$top=999", ct));
-                string url = listId == null ? null : "/sites/" + siteId + "/lists/" + listId + "/items?$expand=fields($select=Title)&$top=999";
-                while (url != null)
-                {
-                    string json = await GetJson(url, ct);
-                    foreach (var kv in PhanTichTeams.DocNguoi(json)) kq[kv.Key] = kv.Value;
-                    url = PhanTichTeams.TrangSau(json);
-                }
-            }
-            catch (InvalidOperationException) { }
-            return kq;
-        }
-
-        // shortcut: tải hết các dòng rồi lọc trên máy (tối đa 5000 dòng); danh sách lớn hơn thì lọc $filter trên cột có index
-        public static async Task<List<DonTeams>> DonCuaList(string siteId, string listId, List<CotList> cots, CotChinh chinh,
-                                                            Func<string, string> tenNguoi, CancellationToken ct)
-        {
-            var kq = new List<DonTeams>();
-            string url = "/sites/" + siteId + "/lists/" + listId + "/items?$expand=fields&$top=500";
-            while (url != null && kq.Count < 5000)
+            var kq = new List<string>();
+            while (url != null && kq.Count < soTrang)
             {
                 string json = await GetJson(url, ct);
-                kq.AddRange(PhanTichTeams.DocDon(json, cots, chinh, tenNguoi));
+                kq.Add(json);
                 url = PhanTichTeams.TrangSau(json);
             }
             return kq;
+        }
+
+        /// <summary>Id User Information List của site (danh sách hệ thống: gọi theo tên bị 404, phải lấy id qua $select=system). Lỗi = null.</summary>
+        private static async Task<string> TimListNguoi(string siteId, CancellationToken ct)
+        {
+            try { return PhanTichTeams.TimListNguoi(await GetJson("/sites/" + siteId + "/lists?$select=id,webUrl,system&$top=999", ct)); }
+            catch (InvalidOperationException) { return null; }
+        }
+
+        /// <summary>Tra tên các LookupId cần (song song tối đa 8). Trả 1 trang dạng {"value":[...]} cho DocNguoi; người đã xoá bị bỏ qua (hiện "#id").</summary>
+        private static async Task<List<string>> TaiNguoi(string siteId, string uilId, List<string> ids, CancellationToken ct)
+        {
+            if (uilId == null || ids.Count == 0) return new List<string>();
+            using (var gioiHan = new SemaphoreSlim(8))
+            {
+                var viec = ids.Select(async id =>
+                {
+                    await gioiHan.WaitAsync(ct);
+                    try { return await GetJson("/sites/" + siteId + "/lists/" + uilId + "/items/" + Uri.EscapeDataString(id) + "?$select=id&$expand=fields($select=Title)", ct); }
+                    catch (InvalidOperationException) { return null; }
+                    finally { gioiHan.Release(); }
+                }).ToList();
+                string[] kq = await Task.WhenAll(viec);
+                return new List<string> { "{\"value\":[" + string.Join(",", kq.Where(x => x != null)) + "]}" };
+            }
+        }
+
+        /// <summary>
+        /// Tải thô cả danh sách: cột, người, dòng chạy song song; $top=5000 = thường 1 lần gọi (đo: 9 s → ~4 s).
+        /// Xong thì ghi bộ nhớ tạm để lần sau hiện ngay.
+        /// </summary>
+        // shortcut: tải hết các dòng rồi lọc trên máy (tối đa 10 trang x 5000); danh sách lớn hơn thì lọc $filter trên cột có index
+        public static async Task<PhanTichTeams.ThoList> TaiList(string siteId, string listId, CancellationToken ct)
+        {
+            Task<string> cot = GetJson("/sites/" + siteId + "/lists/" + listId + "/columns", ct);
+            Task<string> uil = TimListNguoi(siteId, ct);
+            Task<List<string>> dong = TaiTrang("/sites/" + siteId + "/lists/" + listId + "/items?$expand=fields&$top=5000", 10, ct);
+            var t = new PhanTichTeams.ThoList { Cot = await cot, Dong = await dong };
+            List<string> ids = await Task.Run(() => PhanTichTeams.IdNguoiCan(t));
+            t.Nguoi = await TaiNguoi(siteId, await uil, ids, ct);
+            GhiTam(listId, t);
+            return t;
+        }
+
+        // ---------- Bộ nhớ tạm: %LOCALAPPDATA%\OHTA_TOOL\teams\tam\<listId>\ (ngoài OneDrive / repo) ----------
+
+        private static string ThuMucTam(string listId) => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OHTA_TOOL", "teams", "tam", listId); // listId là GUID
+
+        private static void GhiTam(string listId, PhanTichTeams.ThoList t)
+        {
+            try
+            {
+                string d = ThuMucTam(listId);
+                if (Directory.Exists(d)) Directory.Delete(d, true);
+                Directory.CreateDirectory(d);
+                var utf8 = new UTF8Encoding(false);
+                File.WriteAllText(Path.Combine(d, "cot.json"), t.Cot, utf8);
+                for (int i = 0; i < t.Nguoi.Count; i++) File.WriteAllText(Path.Combine(d, "nguoi" + i + ".json"), t.Nguoi[i], utf8);
+                for (int i = 0; i < t.Dong.Count; i++) File.WriteAllText(Path.Combine(d, "dong" + i + ".json"), t.Dong[i], utf8);
+            }
+            catch (Exception) { } // bộ nhớ tạm hỏng chỉ làm lần sau tải chậm, không chặn
+        }
+
+        /// <summary>Danh sách tải lần trước (null = chưa có). Kèm giờ tải.</summary>
+        public static (PhanTichTeams.ThoList Tho, DateTime Luc)? DocTam(string listId)
+        {
+            try
+            {
+                string d = ThuMucTam(listId), fCot = Path.Combine(d, "cot.json");
+                if (!File.Exists(fCot)) return null;
+                List<string> Doc(string tien) => Enumerable.Range(0, 50).Select(i => Path.Combine(d, tien + i + ".json"))
+                                                          .TakeWhile(File.Exists).Select(File.ReadAllText).ToList();
+                return (new PhanTichTeams.ThoList { Cot = File.ReadAllText(fCot), Nguoi = Doc("nguoi"), Dong = Doc("dong") }, File.GetLastWriteTime(fCot));
+            }
+            catch (Exception) { return null; }
+        }
+
+        public static void XoaTam()
+        {
+            try { Directory.Delete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OHTA_TOOL", "teams", "tam"), true); }
+            catch (Exception) { }
         }
     }
 }

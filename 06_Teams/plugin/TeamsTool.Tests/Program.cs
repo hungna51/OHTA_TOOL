@@ -113,6 +113,19 @@ namespace TeamsTool.Tests
             Kiem("TimListNguoi theo _catalogs/users",
                  PhanTichTeams.TimListNguoi(@"{""value"":[{""id"":""a"",""webUrl"":""https://k/sites/s/Lists/x""},{""id"":""u"",""webUrl"":""https://k/sites/s/_catalogs/users""}]}"), "u");
 
+            var toanBo = PhanTichTeams.DocToanBo(new PhanTichTeams.ThoList
+            {
+                Cot = Cots,
+                Nguoi = new List<string> { @"{""value"":[{""id"":""12"",""fields"":{""Title"":""Mai Trung Nam""}}]}", @"{""value"":[{""id"":""13"",""fields"":{""Title"":""Lê Gia Vinh""}}]}" },
+                Dong = new List<string> { Items, @"{""value"":[{""id"":""4"",""fields"":{""Title"":""X4""}}]}" },
+            });
+            Kiem("DocToanBo: gop trang nguoi + trang dong", toanBo.Count + "|" + toanBo[0].TrienKhai + "|" + toanBo[0].Check, "4|Mai Trung Nam|Lê Gia Vinh");
+
+            Kiem("IdNguoiCan: chi LookupId cua cot nguoi",
+                 string.Join(",", PhanTichTeams.IdNguoiCan(new PhanTichTeams.ThoList { Cot = Cots, Dong = new List<string> { Items,
+                     @"{""value"":[{""id"":""5"",""fields"":{""NguoiTKLookupId"":[""14"",""12""],""AuthorLookupId"":""99""}}]}" } })),
+                 "12,13,14");
+
             Kiem("Danh sach nhom/kenh", PhanTichTeams.DocDanhSach(@"{""value"":[{""id"":""a"",""displayName"":""Xuong""},{""displayName"":""thieu id""}]}").Count, 1);
             Kiem("BoDau", PhanTichTeams.BoDau(" Hạn Hoàn Thành Đơn "), "han hoan thanh don");
             var t = PhanTichTeams.DocToken(@"{""token_type"":""Bearer"",""expires_in"":3599,""access_token"":""AT"",""refresh_token"":""RT""}");

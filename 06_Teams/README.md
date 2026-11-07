@@ -43,13 +43,19 @@ Thêm quyền mới sau khi đã đăng nhập → trên CAD bấm ⚙ → **Đ�
 | Tenant ID, Client ID | `06_Teams\data\teams.json` (gitignore, gửi riêng) |
 | Tab Lists đã chọn | `HKCU\Software\OFT_Lisp\OhtaTool\Teams` (`tab_chon`) |
 | Phiên đăng nhập (refresh token, mã hoá DPAPI theo tài khoản Windows) | `%LOCALAPPDATA%\OHTA_TOOL\teams\token.bin` — **Đăng xuất** xoá file này |
+| Bản lưu tạm danh sách đơn (JSON thô) | `%LOCALAPPDATA%\OHTA_TOOL\teams\tam\<listId>\` — **Đăng xuất** xoá |
+
+## Tốc độ
+
+- Lần đầu mở một danh sách: tải cột + dòng song song, `$top=5000` (thường 1 lần gọi), nén gzip; tên người chỉ tra những người có trong các dòng (song song 8). Đo 11/2026: 3748 đơn ~4,7 s (trước ~25 s).
+- Lần sau: hiện ngay bản lưu tạm (~0,3 s) rồi tự cập nhật ở nền; trong lúc đó vẫn bấm xem / quay lại được. ⟳ Làm mới cũng tải ở nền.
 
 ## Giới hạn hiện tại
 
-- Tải hết các dòng (tối đa 5000) rồi lọc trên máy.
+- Tải hết các dòng (tối đa 10 × 5000) rồi lọc trên máy.
 - Không đọc file đính kèm của dòng (Graph v1.0 không hỗ trợ) — dùng **Mở trên Teams**.
-- Tên người lấy từ *User Information List* của site; không đọc được thì hiện `#id`.
-- Không tự làm mới: bấm ⟳ khi cần.
+- Tên người lấy từ *User Information List* của site; người đã xoá / không đọc được thì hiện `#id`.
+- Không tự làm mới theo giờ: mở danh sách hoặc bấm ⟳ để cập nhật.
 
 ## Test
 

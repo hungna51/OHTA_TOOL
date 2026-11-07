@@ -256,6 +256,46 @@ namespace TeamsTool.Core
             return kq;
         }
 
+        /// <summary>JSON thô của một danh sách: cột, các trang người dùng (User Information List), các trang dòng.</summary>
+        public sealed class ThoList
+        {
+            public string Cot = "";
+            public List<string> Nguoi = new List<string>(), Dong = new List<string>();
+        }
+
+        /// <summary>
+        /// LookupId người mà các dòng chỉ trả id (cột người không kèm LookupValue) — chỉ tra những người này,
+        /// không tải cả User Information List (~17.000 người, 18 trang).
+        /// </summary>
+        public static List<string> IdNguoiCan(ThoList t)
+        {
+            var cotNguoi = new HashSet<string>(DocCot(t.Cot).Where(c => c.Loai == "personOrGroup").Select(c => c.Ten + "LookupId"));
+            var kq = new HashSet<string>();
+            foreach (string trang in t.Dong)
+                foreach (JsonObject it in Mang(JsonLite.Parse(trang), "value").OfType<JsonObject>())
+                    foreach (var kv in (it.Get("fields") as JsonObject)?.Items ?? new List<KeyValuePair<string, object>>())
+                    {
+                        if (!cotNguoi.Contains(kv.Key)) continue;
+                        if (kv.Value is List<object> ds) foreach (object x in ds) { if (x != null) kq.Add(x.ToString()); }
+                        else if (kv.Value != null) kq.Add(kv.Value.ToString());
+                    }
+            return kq.OrderBy(x => x, StringComparer.Ordinal).ToList();
+        }
+
+        /// <summary>Phân tích trọn danh sách (chạy được ở luồng nền: không đụng giao diện).</summary>
+        public static List<DonTeams> DocToanBo(ThoList t)
+        {
+            var cots = DocCot(t.Cot);
+            var chinh = KhopCot(cots);
+            var nguoi = new Dictionary<string, string>();
+            foreach (string trang in t.Nguoi)
+                foreach (var kv in DocNguoi(trang)) nguoi[kv.Key] = kv.Value;
+            var kq = new List<DonTeams>();
+            foreach (string trang in t.Dong)
+                kq.AddRange(DocDon(trang, cots, chinh, id => id != null && nguoi.TryGetValue(id, out string ten) ? ten : "#" + id));
+            return kq;
+        }
+
         /// <summary>User Information List của site: LookupId → tên hiển thị (cột người chỉ trả LookupId).</summary>
         public static Dictionary<string, string> DocNguoi(string json)
         {
