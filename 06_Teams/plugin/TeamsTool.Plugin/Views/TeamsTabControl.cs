@@ -199,10 +199,16 @@ namespace TeamsTool.Views
 
         // ---------- Điều hướng ----------
 
+        /// <summary>Gỡ control dùng lại (_trangThai, 2 ô lọc) khỏi khung cũ — WPF không cho một control có 2 cha.</summary>
+        private static void Tach(FrameworkElement e) => (e.Parent as Panel)?.Children.Remove(e);
+
         /// <summary>Đầu màn hình: nút ← Quay lại (nếu có) + đường dẫn hiện tại + dòng trạng thái.</summary>
         private void DauTrang(string duongDan, string nutLui, Action lui)
         {
             _noiDung.Children.Clear();
+            Tach(_trangThai);
+            Tach(_caDaXong);
+            Tach(_cuaToi);
             var hang = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
             if (lui != null)
             {
