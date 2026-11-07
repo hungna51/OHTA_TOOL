@@ -16,7 +16,7 @@ namespace TeamsTool.Services
 {
     /// <summary>
     /// Cài đặt tab Teams. Tenant/Client ID: file 06_Teams\data\teams.json (gitignore, admin gửi riêng từng máy).
-    /// Thư mục lưu đơn + kênh đã chọn: HKCU\Software\OFT_Lisp\OhtaTool\Teams (riêng từng máy).
+    /// Tab Lists đã chọn lần trước: HKCU\Software\OFT_Lisp\OhtaTool\Teams (riêng từng máy).
     /// </summary>
     public static class CaiDatTeams
     {
@@ -55,20 +55,14 @@ namespace TeamsTool.Services
         public static string TenantId => DocFileMa().Tenant;
         public static string ClientId => DocFileMa().Client;
 
-        public static string ThuMucDon => Doc("thu_muc",
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "OHTA_DonTeams"));
-
-        /// <summary>Kênh đã chọn, mỗi dòng "nhomId|kenhId|Tên nhóm / Tên kênh".</summary>
-        public static List<string[]> Kenh()
+        /// <summary>Tab Lists đã chọn lần trước: nhómId, tên nhóm, kênhId, tên kênh, tên tab, siteId, listId, URL list (mỗi dòng một giá trị).</summary>
+        public static string[] TabChon()
         {
-            var kq = new List<string[]>();
-            foreach (string dong in Doc("kenh").Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                string[] p = dong.Trim().Split(new[] { '|' }, 3);
-                if (p.Length == 3) kq.Add(p);
-            }
-            return kq;
+            string[] p = Doc("tab_chon").Split('\n');
+            return p.Length == 8 ? p : null;
         }
+
+        public static void GhiTabChon(params string[] giaTri) => Ghi("tab_chon", string.Join("\n", giaTri));
     }
 
     /// <summary>
@@ -79,7 +73,7 @@ namespace TeamsTool.Services
     public static class GraphTeams
     {
         private const string Scope =
-            "offline_access User.Read Team.ReadBasic.All Channel.ReadBasic.All ChannelMessage.Read.All ChannelMessage.Send Files.Read.All";
+            "offline_access User.Read Team.ReadBasic.All Channel.ReadBasic.All TeamsTab.Read.All Sites.Read.All";
         private const string Graph = "https://graph.microsoft.com/v1.0";
 
         private static readonly HttpClient Http = TaoHttp();
@@ -249,36 +243,54 @@ namespace TeamsTool.Services
         public static async Task<List<KeyValuePair<string, string>>> KenhCuaNhom(string nhomId, CancellationToken ct) =>
             PhanTichTeams.DocDanhSach(await GetJson("/teams/" + nhomId + "/channels?$select=id,displayName", ct));
 
-        // shortcut: chỉ đọc 50 tin gốc mới nhất mỗi kênh, bỏ file trong tin trả lời; cần hơn thì đi theo @odata.nextLink
-        public static async Task<List<DonTeams>> DonCuaKenh(string nhomId, string kenhId, string tenKenh, CancellationToken ct) =>
-            PhanTichTeams.DocDon(await GetJson("/teams/" + nhomId + "/channels/" + Uri.EscapeDataString(kenhId) + "/messages?$top=50", ct),
-                                 nhomId, kenhId, tenKenh);
+        public static async Task<List<TabTeams>> TabCuaKenh(string nhomId, string kenhId, CancellationToken ct) =>
+            PhanTichTeams.DocTab(await GetJson("/teams/" + nhomId + "/channels/" + Uri.EscapeDataString(kenhId) + "/tabs", ct));
 
-        /// <summary>Tải file đính kèm (link SharePoint) về đường dẫn đích qua /shares.</summary>
-        public static async Task TaiFile(string urlSharePoint, string dich, CancellationToken ct)
+        /// <summary>URL danh sách của tab → (siteId, listId).</summary>
+        public static async Task<(string SiteId, string ListId)> MoList(string listUrl, CancellationToken ct)
         {
-            using (HttpResponseMessage res = await Gui(HttpMethod.Get, "/shares/" + PhanTichTeams.MaShare(urlSharePoint) + "/driveItem/content", null, ct))
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(dich));
-                string tam = dich + ".tai";
-                using (Stream src = await res.Content.ReadAsStreamAsync())
-                using (FileStream dst = File.Create(tam))
-                    await src.CopyToAsync(dst);
-                if (File.Exists(dich)) File.Delete(dich);
-                File.Move(tam, dich);
-            }
+            var (host, duong) = PhanTichTeams.TachSite(listUrl);
+            string url = "/sites/" + host + (duong.Length > 0 ? ":" + string.Join("/", Array.ConvertAll(duong.Split('/'), Uri.EscapeDataString)) + ":" : "") + "?$select=id";
+            string siteId = ((JsonObject)JsonLite.Parse(await GetJson(url, ct))).GetString("id");
+            string listId = PhanTichTeams.TimListId(await GetJson("/sites/" + siteId + "/lists?$select=id,displayName,webUrl&$top=999", ct), listUrl);
+            if (listId == null) throw new InvalidOperationException("Không tìm thấy danh sách " + listUrl);
+            return (siteId, listId);
         }
 
-        /// <summary>Trả lời vào luồng của tin nhắn đơn.</summary>
-        public static async Task TraLoi(DonTeams d, string noiDung, CancellationToken ct)
+        public static async Task<List<CotList>> CotCuaList(string siteId, string listId, CancellationToken ct) =>
+            PhanTichTeams.DocCot(await GetJson("/sites/" + siteId + "/lists/" + listId + "/columns", ct));
+
+        /// <summary>LookupId → tên người (User Information List của site). Lỗi = rỗng, cột người hiện "#id".</summary>
+        public static async Task<Dictionary<string, string>> NguoiCuaSite(string siteId, CancellationToken ct)
         {
-            var body = new JsonObject();
-            var b = new JsonObject();
-            b.Set("contentType", "text");
-            b.Set("content", noiDung);
-            body.Set("body", b);
-            string url = "/teams/" + d.NhomId + "/channels/" + Uri.EscapeDataString(d.KenhId) + "/messages/" + d.Id + "/replies";
-            using (await Gui(HttpMethod.Post, url, JsonLite.Serialize(body), ct)) { }
+            var kq = new Dictionary<string, string>();
+            try
+            {
+                string url = "/sites/" + siteId + "/lists/" + Uri.EscapeDataString("User Information List") + "/items?$expand=fields($select=Title)&$top=999";
+                while (url != null)
+                {
+                    string json = await GetJson(url, ct);
+                    foreach (var kv in PhanTichTeams.DocNguoi(json)) kq[kv.Key] = kv.Value;
+                    url = PhanTichTeams.TrangSau(json);
+                }
+            }
+            catch (InvalidOperationException) { }
+            return kq;
+        }
+
+        // shortcut: tải hết các dòng rồi lọc trên máy (tối đa 5000 dòng); danh sách lớn hơn thì lọc $filter trên cột có index
+        public static async Task<List<DonTeams>> DonCuaList(string siteId, string listId, List<CotList> cots, CotChinh chinh,
+                                                            Func<string, string> tenNguoi, CancellationToken ct)
+        {
+            var kq = new List<DonTeams>();
+            string url = "/sites/" + siteId + "/lists/" + listId + "/items?$expand=fields&$top=500";
+            while (url != null && kq.Count < 5000)
+            {
+                string json = await GetJson(url, ct);
+                kq.AddRange(PhanTichTeams.DocDon(json, cots, chinh, tenNguoi));
+                url = PhanTichTeams.TrangSau(json);
+            }
+            return kq;
         }
     }
 }

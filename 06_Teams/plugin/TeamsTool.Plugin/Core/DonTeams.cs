@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -10,35 +9,40 @@ using OhtaTool.Plugin.Core;
 
 namespace TeamsTool.Core
 {
-    /// <summary>Một file đính kèm (SharePoint) của tin nhắn đơn.</summary>
-    public sealed class FileDon
+    /// <summary>Một tab của kênh. ListUrl = URL danh sách Microsoft Lists, null = loại tab chưa hỗ trợ.</summary>
+    public sealed class TabTeams
     {
-        public string Ten;
-        public string Url;
+        public string Id, Ten, ListUrl;
     }
 
-    /// <summary>Một đơn = một tin nhắn gốc trong kênh có ít nhất 1 file DWG/DXF/PDF/Excel/CSV.</summary>
+    /// <summary>Một cột của danh sách: Ten = tên nội bộ (khoá trong fields), TieuDe = tên hiển thị.</summary>
+    public sealed class CotList
+    {
+        public string Ten, TieuDe, Loai; // Loai: personOrGroup | dateTime | choice | lookup | boolean | number | text | khac
+    }
+
+    /// <summary>Tên nội bộ các cột chính của danh sách đơn (null = danh sách không có cột đó).</summary>
+    public sealed class CotChinh
+    {
+        public string Han, TrangThai, StatusJp, TrienKhai, Check;
+    }
+
+    /// <summary>Một đơn = một dòng của danh sách Lists.</summary>
     public sealed class DonTeams
     {
-        public string Id, NhomId, KenhId, TenKenh, NguoiGui, NoiDung;
-        public DateTime Luc;
-        public List<FileDon> Files = new List<FileDon>();
-        public List<string> TagId = new List<string>();
-        public List<string> TagTen = new List<string>();
+        public string Id, WebUrl, Title, TrangThai, StatusJp, TrienKhai, Check;
+        public DateTime? Han;
+        public bool DaXong;
+        /// <summary>Mọi cột có giá trị, theo thứ tự cột của danh sách: (tên hiển thị, giá trị).</summary>
+        public List<KeyValuePair<string, string>> TatCa = new List<KeyValuePair<string, string>>();
 
-        public bool CoTag(string userId) =>
-            !string.IsNullOrEmpty(userId) && TagId.Any(t => string.Equals(t, userId, StringComparison.OrdinalIgnoreCase));
+        public bool CuaToi(string ten) =>
+            !string.IsNullOrEmpty(ten) && ((TrienKhai ?? "").Contains(ten) || (Check ?? "").Contains(ten));
     }
 
     /// <summary>Phân tích JSON trả về của Microsoft Graph (logic thuần, test không cần CAD / mạng).</summary>
     public static class PhanTichTeams
     {
-        public static readonly string[] DuoiDon = { ".dwg", ".dxf", ".pdf", ".xlsx", ".xlsm", ".xls", ".csv" };
-
-        public static bool LaFileDon(string ten) =>
-            !string.IsNullOrEmpty(ten) && DuoiDon.Contains(Path.GetExtension(ten).ToLowerInvariant());
-
-        private static JsonObject Obj(object o, string key) => (o as JsonObject)?.Get(key) as JsonObject;
         private static List<object> Mang(object o, string key) => (o as JsonObject)?.Get(key) as List<object> ?? new List<object>();
 
         /// <summary>Đọc teams.json {"tenantId","clientId"}; thiếu khoá = "" (bỏ khoảng trắng thừa khi dán).</summary>
@@ -64,79 +68,186 @@ namespace TeamsTool.Core
                 .Where(kv => !string.IsNullOrEmpty(kv.Key)).ToList();
         }
 
-        /// <summary>Lọc tin nhắn kênh thành đơn: bỏ tin hệ thống, tin đã xoá, tin không có file đơn.</summary>
-        public static List<DonTeams> DocDon(string json, string nhomId, string kenhId, string tenKenh)
+        /// <summary>@odata.nextLink của một trang kết quả (null = hết).</summary>
+        public static string TrangSau(string json) => (JsonLite.Parse(json) as JsonObject)?.GetString("@odata.nextLink");
+
+        /// <summary>Tabs của kênh; tab nào có URL .../Lists/... trong cấu hình là tab Lists.</summary>
+        public static List<TabTeams> DocTab(string json)
         {
-            var kq = new List<DonTeams>();
-            foreach (JsonObject m in Mang(JsonLite.Parse(json), "value").OfType<JsonObject>())
+            var kq = new List<TabTeams>();
+            foreach (JsonObject t in Mang(JsonLite.Parse(json), "value").OfType<JsonObject>())
             {
-                if (m.GetString("messageType") != "message" || m.Get("deletedDateTime") != null)
-                    continue;
-
-                var files = Mang(m, "attachments").OfType<JsonObject>()
-                    .Where(a => a.GetString("contentType") == "reference" && LaFileDon(a.GetString("name")))
-                    .Select(a => new FileDon { Ten = a.GetString("name"), Url = a.GetString("contentUrl") })
-                    .ToList();
-                if (files.Count == 0)
-                    continue;
-
-                var don = new DonTeams
-                {
-                    Id = m.GetString("id"),
-                    NhomId = nhomId,
-                    KenhId = kenhId,
-                    TenKenh = tenKenh,
-                    NguoiGui = Obj(Obj(m, "from"), "user")?.GetString("displayName") ?? "?",
-                    NoiDung = BoHtml(Obj(m, "body")?.GetString("content")),
-                    Files = files,
-                };
-                DateTime.TryParse(m.GetString("createdDateTime"), CultureInfo.InvariantCulture,
-                                  DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out don.Luc);
-                don.Luc = don.Luc.ToLocalTime();
-
-                foreach (JsonObject t in Mang(m, "mentions").OfType<JsonObject>())
-                {
-                    JsonObject u = Obj(Obj(t, "mentioned"), "user");
-                    if (u == null) continue;
-                    don.TagId.Add(u.GetString("id"));
-                    don.TagTen.Add(u.GetString("displayName") ?? t.GetString("mentionText"));
-                }
-                kq.Add(don);
+                var cfg = t.Get("configuration") as JsonObject;
+                string chuoi = string.Join(" ", cfg?.GetString("contentUrl"), cfg?.GetString("websiteUrl"), cfg?.GetString("entityId"), t.GetString("webUrl"));
+                kq.Add(new TabTeams { Id = t.GetString("id"), Ten = t.GetString("displayName") ?? "?", ListUrl = TimUrlList(chuoi) });
             }
             return kq;
         }
 
-        /// <summary>HTML nội dung tin nhắn -> chữ thường (bỏ thẻ, giải mã &amp;, gộp khoảng trắng).</summary>
+        private static readonly Regex UrlList = new Regex(@"https://[^\s""'&?#]+?/Lists/[^/\s""'&?#]+", RegexOptions.IgnoreCase);
+
+        /// <summary>URL danh sách SharePoint ("https://x.sharepoint.com/sites/A/Lists/B") trong chuỗi cấu hình tab (có thể bị mã hoá URL nhiều lớp).</summary>
+        public static string TimUrlList(string s)
+        {
+            for (int i = 0; i < 4 && !string.IsNullOrEmpty(s); i++)
+            {
+                Match m = UrlList.Match(s);
+                if (m.Success) return m.Value;
+                string giai = Uri.UnescapeDataString(s);
+                if (giai == s) break;
+                s = giai;
+            }
+            return null;
+        }
+
+        /// <summary>Tách URL danh sách thành (host, đường dẫn site) để gọi /sites/{host}:{path}.</summary>
+        public static (string Host, string DuongSite) TachSite(string listUrl)
+        {
+            var u = new Uri(listUrl);
+            string p = Uri.UnescapeDataString(u.AbsolutePath);
+            int i = p.IndexOf("/Lists/", StringComparison.OrdinalIgnoreCase);
+            return (u.Host, (i > 0 ? p.Substring(0, i) : "").TrimEnd('/'));
+        }
+
+        private static string ChuanUrl(string s) => Uri.UnescapeDataString(s ?? "").TrimEnd('/').ToLowerInvariant();
+
+        /// <summary>Id của danh sách có webUrl trùng URL tab (trong /sites/{id}/lists).</summary>
+        public static string TimListId(string json, string listUrl)
+        {
+            string can = ChuanUrl(listUrl);
+            return Mang(JsonLite.Parse(json), "value").OfType<JsonObject>()
+                .FirstOrDefault(l => ChuanUrl(l.GetString("webUrl")) == can)?.GetString("id");
+        }
+
+        private static readonly string[] CotHeThong = { "Attachments", "ContentType", "_ColorTag", "ComplianceAssetId", "Edit", "LinkTitle", "LinkTitleNoMenu", "DocIcon", "ItemChildCount", "FolderChildCount", "AppAuthor", "AppEditor" };
+        private static readonly string[] LoaiCot ={ "personOrGroup", "dateTime", "choice", "lookup", "boolean", "number", "text" };
+
+        /// <summary>Cột hiển thị được của danh sách (bỏ cột ẩn và cột hệ thống chỉ đọc trừ Title).</summary>
+        public static List<CotList> DocCot(string json)
+        {
+            var kq = new List<CotList>();
+            foreach (JsonObject c in Mang(JsonLite.Parse(json), "value").OfType<JsonObject>())
+            {
+                string ten = c.GetString("name");
+                if (string.IsNullOrEmpty(ten) || Equals(c.Get("hidden"), true) || CotHeThong.Contains(ten)) continue;
+                if (Equals(c.Get("readOnly"), true) && ten != "Title") continue;
+                kq.Add(new CotList { Ten = ten, TieuDe = c.GetString("displayName") ?? ten,
+                                     Loai = LoaiCot.FirstOrDefault(l => c.Get(l) != null) ?? "khac" });
+            }
+            return kq;
+        }
+
+        /// <summary>Chữ thường, bỏ dấu tiếng Việt (đ → d) để so tên cột.</summary>
+        public static string BoDau(string s)
+        {
+            var sb = new StringBuilder();
+            foreach (char ch in (s ?? "").Normalize(NormalizationForm.FormD))
+                if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark) sb.Append(ch);
+            return sb.ToString().Normalize(NormalizationForm.FormC).Replace('đ', 'd').Replace('Đ', 'D').ToLowerInvariant().Trim();
+        }
+
+        /// <summary>Tìm cột chính theo tên hiển thị (Hạn hoàn thành, Trạng thái, ステータス, Người triển khai, Người check…).</summary>
+        public static CotChinh KhopCot(List<CotList> cots)
+        {
+            string Tim(Func<string, bool> khop, string uuTienLoai = null) =>
+                (cots.FirstOrDefault(c => khop(BoDau(c.TieuDe)) && (uuTienLoai == null || c.Loai == uuTienLoai))
+                 ?? cots.FirstOrDefault(c => khop(BoDau(c.TieuDe))))?.Ten;
+            return new CotChinh
+            {
+                Han = Tim(t => t.Contains("han hoan thanh"), "dateTime"),
+                TrangThai = Tim(t => t == "trang thai" || t.StartsWith("trang thai")),
+                StatusJp = Tim(t => t.Contains("ステータス")),
+                TrienKhai = Tim(t => t.Contains("trien khai"), "personOrGroup"),
+                Check = Tim(t => t.Contains("check"), "personOrGroup"),
+            };
+        }
+
+        /// <summary>Giá trị một cột của dòng thành chữ. tenNguoi: LookupId → tên (cột người).</summary>
+        public static string GiaTri(JsonObject f, CotList c, Func<string, string> tenNguoi)
+        {
+            object v = f.Get(c.Ten);
+            if (v == null)
+            {
+                object id = f.Get(c.Ten + "LookupId");
+                if (id is List<object> ds) return string.Join(", ", ds.Select(x => tenNguoi(x?.ToString())));
+                return id == null ? "" : tenNguoi(id.ToString());
+            }
+            switch (v)
+            {
+                case List<object> ds:
+                    return string.Join(", ", ds.Select(x => x is JsonObject o ? o.GetString("LookupValue") ?? o.GetString("Email") : x?.ToString())
+                                               .Where(x => !string.IsNullOrEmpty(x)));
+                case bool b:
+                    return b ? "Có" : "Không";
+                case string s when c.Loai == "dateTime":
+                    return DocNgay(s)?.ToString("dd/MM/yyyy") ?? s;
+                case string s:
+                    return s.Contains("<") ? BoHtml(s) : s.Trim();
+                default:
+                    return v.ToString();
+            }
+        }
+
+        /// <summary>Ngày ISO UTC của SharePoint → ngày giờ máy.</summary>
+        public static DateTime? DocNgay(string s) =>
+            DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out DateTime d)
+                ? d.ToLocalTime() : (DateTime?)null;
+
+        /// <summary>Một trang /items?$expand=fields → đơn.</summary>
+        public static List<DonTeams> DocDon(string json, List<CotList> cots, CotChinh chinh, Func<string, string> tenNguoi)
+        {
+            var kq = new List<DonTeams>();
+            foreach (JsonObject it in Mang(JsonLite.Parse(json), "value").OfType<JsonObject>())
+            {
+                var f = it.Get("fields") as JsonObject;
+                if (f == null) continue;
+                string Gt(string ten) { CotList c = cots.FirstOrDefault(x => x.Ten == ten); return c == null ? "" : GiaTri(f, c, tenNguoi); }
+
+                var d = new DonTeams
+                {
+                    Id = it.GetString("id"),
+                    WebUrl = it.GetString("webUrl"),
+                    Title = f.GetString("Title") ?? "",
+                    TrangThai = Gt(chinh.TrangThai),
+                    StatusJp = Gt(chinh.StatusJp),
+                    TrienKhai = Gt(chinh.TrienKhai),
+                    Check = Gt(chinh.Check),
+                    Han = chinh.Han == null ? null : DocNgay(f.GetString(chinh.Han)),
+                };
+                d.DaXong = BoDau(d.TrangThai) == "da hoan thanh" || d.StatusJp == "完了";
+                foreach (CotList c in cots)
+                {
+                    string g = GiaTri(f, c, tenNguoi);
+                    if (g.Length > 0) d.TatCa.Add(new KeyValuePair<string, string>(c.TieuDe, g));
+                }
+                kq.Add(d);
+            }
+            return kq;
+        }
+
+        /// <summary>User Information List của site: LookupId → tên hiển thị (cột người chỉ trả LookupId).</summary>
+        public static Dictionary<string, string> DocNguoi(string json)
+        {
+            var kq = new Dictionary<string, string>();
+            foreach (JsonObject it in Mang(JsonLite.Parse(json), "value").OfType<JsonObject>())
+            {
+                string ten = (it.Get("fields") as JsonObject)?.GetString("Title");
+                if (it.GetString("id") != null && ten != null) kq[it.GetString("id")] = ten;
+            }
+            return kq;
+        }
+
+        /// <summary>HTML (cột chữ nhiều dòng) → chữ thường (bỏ thẻ, giải mã &amp;, gộp khoảng trắng).</summary>
         public static string BoHtml(string html)
         {
             if (string.IsNullOrEmpty(html)) return "";
             string s = Regex.Replace(html, @"<(br|/p|/div)\s*/?>", "\n", RegexOptions.IgnoreCase);
             s = Regex.Replace(s, "<[^>]+>", "");
             s = WebUtility.HtmlDecode(s);
-            s = Regex.Replace(s, @"[ \t ]+", " ");
+            s = Regex.Replace(s, @"[ \t ]+", " ");
             s = Regex.Replace(s, @"\s*\n\s*", "\n");
             return s.Trim();
         }
-
-        /// <summary>Mã chia sẻ của Graph cho URL SharePoint: "u!" + base64url (không dấu =).</summary>
-        public static string MaShare(string url)
-        {
-            string b64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(url ?? ""));
-            return "u!" + b64.TrimEnd('=').Replace('/', '_').Replace('+', '-');
-        }
-
-        /// <summary>Tên an toàn làm thư mục/file Windows.</summary>
-        public static string TenAnToan(string s)
-        {
-            if (string.IsNullOrWhiteSpace(s)) return "_";
-            var bad = Path.GetInvalidFileNameChars();
-            string r = new string(s.Select(c => bad.Contains(c) ? '_' : c).ToArray()).Trim().TrimEnd('.');
-            return r.Length == 0 ? "_" : (r.Length > 60 ? r.Substring(0, 60) : r);
-        }
-
-        /// <summary>Thư mục lưu một đơn: &lt;gốc&gt;\&lt;kênh&gt;\yyyyMMdd_HHmm_&lt;người gửi&gt;.</summary>
-        public static string ThuMucDon(string goc, DonTeams d) =>
-            Path.Combine(goc, TenAnToan(d.TenKenh), d.Luc.ToString("yyyyMMdd_HHmm", CultureInfo.InvariantCulture) + "_" + TenAnToan(d.NguoiGui));
 
         /// <summary>Đọc access_token / refresh_token / expires_in từ phản hồi token của Entra ID.</summary>
         public static (string Access, string Refresh, int HetSau) DocToken(string json)

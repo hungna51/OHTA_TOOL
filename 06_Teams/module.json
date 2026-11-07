@@ -7,7 +7,7 @@
   "title": "Nhận đơn từ Microsoft Teams",
   "version": "0.1",
   "stage": "dev",
-  "description": "Đọc đơn (DWG / PDF / Excel) ở các kênh Teams · lọc đơn tag tôi · tải + mở · báo đã nhận",
+  "description": "Xem đơn trong tab Lists của kênh Teams · nhóm → kênh → tab → đơn · ẩn đơn đã xong · lọc đơn của tôi",
   "accentColor": "#4B53BC",
   "tools": []
 }

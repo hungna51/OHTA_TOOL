@@ -12,7 +12,7 @@ namespace TeamsTool.Views
     /// </summary>
     internal sealed class TeamsCaiDatWindow : Window
     {
-        private readonly TextBox _tenant = O(), _client = O(), _thuMuc = O();
+        private readonly TextBox _tenant = O(), _client = O();
         private readonly TextBlock _baoLoi = new TextBlock { Foreground = KieuTeams.Mau("#B42318"), TextWrapping = TextWrapping.Wrap };
         public bool DaDangXuat { get; private set; }
 
@@ -32,7 +32,6 @@ namespace TeamsTool.Views
 
             _tenant.Text = CaiDatTeams.TenantId;
             _client.Text = CaiDatTeams.ClientId;
-            _thuMuc.Text = CaiDatTeams.ThuMucDon;
 
             var ma = new StackPanel();
             ma.Children.Add(new TextBlock { Text = "Microsoft 365", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) });
@@ -42,16 +41,6 @@ namespace TeamsTool.Views
             ma.Children.Add(_client);
             ma.Children.Add(new TextBlock { Text = "Lưu trong " + CaiDatTeams.FileMa + " (không lên GitHub).",
                                             Foreground = KieuTeams.ChuPhu, FontSize = 10.5, TextWrapping = TextWrapping.Wrap });
-
-            var dong = new DockPanel { Margin = new Thickness(0, 2, 0, 0) };
-            var chon = KieuTeams.Nut("Chọn…", mau, (s, e) => ChonThuMuc(), chinh: false);
-            chon.Margin = new Thickness(6, 2, 0, 8);
-            DockPanel.SetDock(chon, Dock.Right);
-            dong.Children.Add(chon);
-            dong.Children.Add(_thuMuc);
-            var don = new StackPanel();
-            don.Children.Add(new TextBlock { Text = "Thư mục lưu đơn tải về", FontWeight = FontWeights.SemiBold });
-            don.Children.Add(dong);
 
             var tk = new DockPanel();
             var dx = KieuTeams.Nut("Đăng xuất", mau, (s, e) =>
@@ -72,17 +61,10 @@ namespace TeamsTool.Views
 
             var goc = new StackPanel { Margin = new Thickness(12) };
             goc.Children.Add(KieuTeams.The(ma));
-            goc.Children.Add(KieuTeams.The(don));
             goc.Children.Add(KieuTeams.The(tk));
             goc.Children.Add(_baoLoi);
             goc.Children.Add(nut);
             Content = goc;
-        }
-
-        private void ChonThuMuc()
-        {
-            using (var hop = new System.Windows.Forms.FolderBrowserDialog { SelectedPath = _thuMuc.Text })
-                if (hop.ShowDialog() == System.Windows.Forms.DialogResult.OK) _thuMuc.Text = hop.SelectedPath;
         }
 
         private void Luu()
@@ -90,7 +72,6 @@ namespace TeamsTool.Views
             try
             {
                 CaiDatTeams.GhiMa(_tenant.Text, _client.Text);
-                CaiDatTeams.Ghi("thu_muc", _thuMuc.Text.Trim());
                 DialogResult = true;
             }
             catch (Exception ex) { _baoLoi.Text = "Không lưu được: " + ex.Message; }
