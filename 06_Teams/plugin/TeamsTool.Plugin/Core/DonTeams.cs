@@ -242,8 +242,10 @@ namespace TeamsTool.Core
                     Check = Gt(chinh.Check),
                     Han = chinh.Han == null ? null : DocNgay(f.GetString(chinh.Han)),
                 };
-                // TRẠNG THÁI chọn nhiều giá trị ("Đã hoàn thành, Đã nhập giá") → xong nếu có "Đã hoàn thành"
-                d.DaXong = d.TrangThai.Split(',').Any(x => BoDau(x) == "da hoan thanh") || d.StatusJp.Split(',').Any(x => x.Trim() == "完了");
+                // TRẠNG THÁI chọn nhiều giá trị ("Đã hoàn thành, Đã nhập giá") → xong nếu có "Đã hoàn thành" / "STOP";
+                // ステータス "完了" / "キャンセル" cũng ẩn như đơn xong
+                d.DaXong = d.TrangThai.Split(',').Any(x => BoDau(x) == "da hoan thanh" || BoDau(x) == "stop")
+                        || d.StatusJp.Split(',').Any(x => x.Trim() == "完了" || x.Trim() == "キャンセル");
                 foreach (CotList c in cots)
                 {
                     string g = GiaTri(f, c, tenNguoi);

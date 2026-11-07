@@ -106,6 +106,8 @@ namespace TeamsTool.Tests
                 ""TrangThai"":[""Đã hoàn thành"",""Đã nhập giá""]}}]}", cots, chinh, id => "#" + id);
             Kiem("Nguoi 1 gia tri dang object -> LookupValue", don2[0].TrienKhai, "Đỗ Văn Quang");
             Kiem("Trang thai nhieu gia tri co Da hoan thanh = xong", don2[0].DaXong, true);
+            var huy = PhanTichTeams.DocDon(@"{""value"":[{""id"":""a"",""fields"":{""Title"":""129487"",""Status"":""キャンセル""}},{""id"":""b"",""fields"":{""Title"":""129500"",""TrangThai"":""STOP""}},{""id"":""c"",""fields"":{""Title"":""x"",""TrangThai"":""Đang check""}}]}", cots, chinh, id => "#" + id);
+            Kiem("キャンセル / STOP an nhu xong, Dang check thi khong", string.Join(",", huy.Select(x => x.DaXong)), "True,True,False");
             Kiem("Bo cot teamsConversationMetadata / _FormSourceId",
                  PhanTichTeams.DocCot(@"{""value"":[{""name"":""teamsConversationMetadata_D86AE2"",""displayName"":""x"",""text"":{}},{""name"":""_FormSourceId_0"",""displayName"":""y"",""text"":{}}]}").Count, 0);
             Kiem("TimListNguoi theo _catalogs/users",

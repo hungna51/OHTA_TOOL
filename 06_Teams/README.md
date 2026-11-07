@@ -6,7 +6,7 @@
 
 - Chỉ tab **Lists** mở được; tab khác (Bài đăng, File, Wiki, web…) hiện mờ "chưa hỗ trợ".
 - Danh sách đơn gom theo **Hạn hoàn thành** (gần nhất trên cùng). Thẻ đơn: Title, Trạng thái, Người triển khai, Người check.
-- Mặc định **ẩn đơn đã xong**: TRẠNG THÁI = "Đã hoàn thành" hoặc ステータス = "完了". Ô tích **Xem cả đơn đã xong**, **Chỉ đơn của tôi** (tên người đăng nhập nằm trong Người triển khai / Người check).
+- Mặc định **ẩn đơn đã xong / dừng**: TRẠNG THÁI có "Đã hoàn thành" hoặc "STOP", hoặc ステータス = "完了" / "キャンセル". Ô tích **Xem cả đơn đã xong**, **Chỉ đơn của tôi** (tên người đăng nhập nằm trong Người triển khai / Người check).
 - Bấm thẻ → mọi cột của đơn + nút **Mở trên Teams** (xem file, sửa đơn ở đó).
 - **Chỉ xem**, không sửa đơn. Tab Lists chọn lần trước được nhớ: mở lại CAD là vào thẳng và tự tải đơn.
 
