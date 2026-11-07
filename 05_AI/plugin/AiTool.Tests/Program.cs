@@ -27,6 +27,7 @@ namespace AiTool.Tests
             TestDongChu();
             TestMoTaKhung();
             TestDuLieuTinh();
+            TestChatLing();
             TestApi();
             TestRunner();
 

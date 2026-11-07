@@ -95,7 +95,8 @@
             </DockPanel>
         </Border>
 
-    <ScrollViewer x:Name="KhungCuon" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer x:Name="KhungCuon" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                  Visibility="{Binding KhongChat, Converter={StaticResource HienKhi}}">
         <StackPanel Margin="8">
             <!-- Trang thai key: bam de mo cai dat -->
             <Border Background="#FFF4E5" BorderBrush="#F9C97A" BorderThickness="1" CornerRadius="4" Padding="8,5" Margin="0,0,0,8"
@@ -155,7 +156,9 @@
                         Visibility="{Binding DangChay, Converter={StaticResource HienKhi}}"/>
             </Grid>
             <Button Style="{StaticResource NutPhu}" Content="📝 Xuất mô tả" Command="{Binding XuatMoTaCmd}" Margin="0,0,0,8"
-                    IsEnabled="{Binding KhongChay}" ToolTip="Quét chọn các khung in, ghi &lt;bản vẽ&gt;.ai.md + .ai.json cạnh file bản vẽ để Kev / Claude đọc hiểu từng tấm (lệnh OHTAAIMOTA)"/>
+                    IsEnabled="{Binding KhongChay}" ToolTip="Quét chọn các khung in, ghi &lt;bản vẽ&gt;.ai.md + .ai.json vào OHTA_AI\mo-ta cạnh file bản vẽ để Kev / Claude đọc hiểu từng tấm (lệnh OHTAAIMOTA)"/>
+            <Button Style="{StaticResource NutPhu}" Content="💬 Chat với AI (Ling)" Command="{Binding MoChatCmd}" Margin="0,0,0,8"
+                    ToolTip="Chuyển sang màn hình chat với Ling. Cần key Ling (nút ⚙)."/>
 
             <!-- Tien do + tong -->
             <TextBlock Text="{Binding TienDo}" Foreground="#5B3FD1" FontWeight="SemiBold" Margin="2,0,0,4"
@@ -209,5 +212,89 @@
 
         </StackPanel>
     </ScrollViewer>
+    <!-- 1b. Man hinh chat (thay cho man hinh kiem tra khi DangChat) -->
+    <Grid Grid.Row="1" Margin="8" DataContext="{Binding Chat}"
+          Visibility="{Binding DataContext.DangChat, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource HienKhi}}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <DockPanel Margin="0,0,0,6">
+            <Button DockPanel.Dock="Left" Style="{StaticResource NutPhu}" Content="← Quay lại" Margin="0,0,6,0"
+                    Command="{Binding DataContext.QuayLaiCmd, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+            <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Content="📁" Margin="6,0,0,0" Padding="6,5"
+                    Command="{Binding MoThuMucCmd}" ToolTip="Mở thư mục lưu chat (OHTA_AI\chat)"/>
+            <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Content="＋ Cuộc mới" Margin="6,0,0,0"
+                    Command="{Binding CuocMoiCmd}" IsEnabled="{Binding KhongGui}"/>
+            <ComboBox ItemsSource="{Binding DanhSachCuoc}" SelectedItem="{Binding CuocChon}" IsEnabled="{Binding KhongGui}"
+                      ToolTip="Mở lại cuộc chat cũ của bản vẽ này"/>
+        </DockPanel>
+
+        <ScrollViewer x:Name="ChatCuon" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Dong}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border CornerRadius="6" Padding="8,6" Margin="0,0,0,6" BorderThickness="1">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#FFFFFF"/>
+                                    <Setter Property="BorderBrush" Value="#E1E4E8"/>
+                                    <Setter Property="Margin" Value="0,0,24,6"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding LaNguoiDung}" Value="True">
+                                            <Setter Property="Background" Value="#EEF2FF"/>
+                                            <Setter Property="BorderBrush" Value="#C7D2FE"/>
+                                            <Setter Property="Margin" Value="24,0,0,6"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel>
+                                <TextBlock Text="{Binding NhanDinhKem}" Foreground="#5B3FD1" FontSize="11" Margin="0,0,0,3"
+                                           Visibility="{Binding CoDinhKem, Converter={StaticResource HienKhi}}"/>
+                                <TextBox Text="{Binding SuyNghi, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0"
+                                         Background="Transparent" Foreground="#7B8794" FontStyle="Italic" FontSize="11" Margin="0,0,0,4"
+                                         Visibility="{Binding HienSuyNghiO, Converter={StaticResource HienKhi}}"/>
+                                <TextBox Text="{Binding NoiDung, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0"
+                                         Background="Transparent" Foreground="#1F2933"/>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <DockPanel Grid.Row="2" Margin="0,6,0,0" Visibility="{Binding CoDinhKem, Converter={StaticResource HienKhi}}">
+            <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Content="✕" Padding="6,2" Command="{Binding BoDinhKemCmd}"
+                    ToolTip="Bỏ đính kèm"/>
+            <TextBlock Text="{Binding NhanDinhKem}" Foreground="#5B3FD1" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </DockPanel>
+
+        <Grid Grid.Row="3" Margin="0,6,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="OCauHoi" Text="{Binding CauHoi, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True"
+                     TextWrapping="Wrap" MinHeight="54" MaxHeight="140" VerticalScrollBarVisibility="Auto" Padding="4"
+                     PreviewKeyDown="CauHoiPhim" ToolTip="Enter = gửi · Shift+Enter = xuống dòng"/>
+            <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                <Button x:Name="NutGui" Style="{StaticResource Nut}" Content="Gửi ➤" Command="{Binding GuiCmd}" Margin="0,0,0,4"
+                        Visibility="{Binding KhongGui, Converter={StaticResource HienKhi}}"/>
+                <Button Style="{StaticResource NutPhu}" Content="■ Dừng" Command="{Binding DungCmd}" Margin="0,0,0,4"
+                        Visibility="{Binding DangGui, Converter={StaticResource HienKhi}}"/>
+                <Button Style="{StaticResource NutPhu}" Content="📎 Gửi khung" Command="{Binding GuiKhungCmd}"
+                        ToolTip="Quét chọn vùng trong CAD: mô tả các khung in trong vùng được gửi kèm câu hỏi kế tiếp"/>
+            </StackPanel>
+        </Grid>
+
+        <DockPanel Grid.Row="4" Margin="2,4,0,0">
+            <CheckBox DockPanel.Dock="Right" Content="Hiện suy nghĩ" IsChecked="{Binding HienSuyNghi}" Margin="6,0,0,0"/>
+            <TextBlock Text="{Binding TrangThai}" Foreground="#5F6B7A" TextWrapping="Wrap"/>
+        </DockPanel>
+    </Grid>
     </Grid>
 </UserControl>

@@ -44,6 +44,7 @@ Tab đọc dữ liệu trong từng **khung** (polyline kín 4 đỉnh, mặc đ
 4. Nút **⚙** (góc phải tiêu đề) mở **Cài Đặt AI**:
    - **Kev Server**: nhập URL (`http://127.0.0.1:8008` hoặc IP LAN), kiểm tra kết nối, hoặc bật nhanh server trên máy hiện tại.
    - **API key**: dán key rồi **Lưu** (hiện dạng che `sk-ant-…1234`), **Xoá key** để gỡ khỏi máy.
+   - **Ling API** (cho màn hình 💬 Chat): dán key Ling (`sk-studio-…`, lưu ở `data\ling.key`), ô **Model** (mặc định `Ling-3.2-flash` — model cũ bị ngừng thì gõ tên mới, không cần build lại), **Kiểm tra kết nối** gửi thử một câu ngắn.
    - **Bộ file hướng dẫn & luật AI (`data\kev\*.md` + `data\huong_dan_ai.md`)**: chọn từng file trong ô **Chọn file** để sửa trực tiếp trên giao diện, mở bằng Notepad, mở thư mục `data\kev`, hoặc khôi phục mặc định:
      - `00-index.md`: File chính điều hướng Kev (ngưỡng xác suất + liên kết tới các file `.md` con).
      - `01-phan-loai-gia-cong.md`: Định nghĩa các loại tấm gia công (`BE`, `VAT`, `CUON`, `SARA`, `TAPU`... có thể tự thêm nhóm `## [MÃ]` mới mà không cần build lại DLL).
@@ -55,7 +56,28 @@ Tab đọc dữ liệu trong từng **khung** (polyline kín 4 đỉnh, mặc đ
 | `OHTAAI` | Quét mọi khung trên layer đang chọn ở tab, phân loại & kiểm tra AI |
 | `OHTAAIVUNG` | Như trên, chỉ khung nằm trọn trong vùng chọn 2 điểm |
 | `OHTAAIZOOM` | Zoom tới khung theo số thứ tự (tab gọi khi bấm cảnh báo) |
-| `OHTAAIMOTA` | Nút **📝 Xuất mô tả**: quét chọn khung in (mỗi khung = 1 tấm), ghi `<bản vẽ>.ai.md` (gọn, không toạ độ) + `.ai.json` (đủ toạ độ) + chép `kien-thuc-co-ban.md` cạnh file bản vẽ để Kev / Claude đọc hiểu. Thông tin tấm chỉ lấy từ F-name. Không gọi AI, không sửa bản vẽ |
+| `OHTAAIMOTA` | Nút **📝 Xuất mô tả**: quét chọn khung in (mỗi khung = 1 tấm), ghi `<bản vẽ>.ai.md` (gọn, không toạ độ) + `.ai.json` (đủ toạ độ) + chép `kien-thuc-co-ban.md` vào `OHTA_AI\mo-ta\` cạnh file bản vẽ để Kev / Claude đọc hiểu. Thông tin tấm chỉ lấy từ F-name. Không gọi AI, không sửa bản vẽ |
+| `OHTAAICHATKHUNG` | Nút **📎 Gửi khung** của màn hình chat: quét vùng, mô tả gọn các khung in trong vùng được gửi kèm câu hỏi kế tiếp |
+
+## 💬 Chat với AI (Ling)
+
+Nút **💬 Chat với AI (Ling)** đổi tab sang màn hình chat; **← Quay lại** trở về màn hình kiểm tra. Cần key Ling (nút ⚙).
+
+- Chữ trả lời hiện dần (streaming); ô **Hiện suy nghĩ** bật/tắt phần suy nghĩ của model (mặc định ẩn). **Enter** gửi, **Shift+Enter** xuống dòng, **■ Dừng** ngắt giữa chừng.
+- Mỗi lần gửi luôn kèm bộ luật `data\kev\*.md` làm kiến thức nền, cùng tối đa **20 tin gần nhất** của cuộc (file lưu vẫn đủ).
+- **📎 Gửi khung** đính kèm mô tả khung in (như `.ai.md`, không toạ độ) vào câu hỏi kế tiếp; bấm ✕ để bỏ.
+- AI **chỉ đọc và trả lời**, không sửa bản vẽ.
+- Mỗi cuộc chat là một file `.json`; ô chọn trên cùng mở lại cuộc cũ của bản vẽ đang mở, **＋ Cuộc mới** bắt đầu cuộc khác, **📁** mở thư mục lưu.
+
+Thư mục AI cạnh bản vẽ:
+
+```
+<thư mục bản vẽ>\OHTA_AI\
+├── mo-ta\                     <bản vẽ>.ai.md, .ai.json, kien-thuc-co-ban.md (nút 📝 Xuất mô tả)
+└── chat\<tên bản vẽ>\         2026-11-07_153005.json … (mỗi cuộc một file)
+```
+
+Bản vẽ chưa lưu: chat ghi vào `%LOCALAPPDATA%\OHTA_TOOL\AI\chat\_chua-luu\`.
 
 ## Tệp
 
@@ -68,13 +90,14 @@ Tab đọc dữ liệu trong từng **khung** (polyline kín 4 đỉnh, mặc đ
 ├── data/kev/02-luat-fname-vat-lieu.md  Luật F-name & bảng vật liệu (MTZ)
 ├── data/kev/03-luat-ghi-chu-ban-ve.md  Luật đối chiếu ghi chú & số lượng (Q / GHI_CHU)
 ├── data/huong_dan_ai.md                File hướng dẫn gốc của Claude
-├── data/ai.key                         API key — KHÔNG lên git (.gitignore chặn ai.key*)
+├── data/ai.key                         API key Claude — KHÔNG lên git (.gitignore chặn ai.key*)
+├── data/ling.key                       API key Ling (chat) — KHÔNG lên git (.gitignore chặn ling.key*)
 ├── log/                                Nhật ký mỗi lần kiểm (JSON) — không lên git
 ├── bin/<ZwCAD|AutoCAD>/AITOOL.dll
 └── plugin/AiTool.Plugin, AiTool.Tests
 ```
 
-Cài đặt riêng: `HKCU\Software\OFT_Lisp\OhtaTool\AI` (`che_do`, `kev_url`, `dan_nhan`, `layer_khung`, `model`). Build + test: `powershell -ExecutionPolicy Bypass -File OHTA_TOOL\build_ohta.ps1` (chạy cả `AiTool.Tests`).
+Cài đặt riêng: `HKCU\Software\OFT_Lisp\OhtaTool\AI` (`che_do`, `kev_url`, `dan_nhan`, `layer_khung`, `model`, `ling_model`). Build + test: `powershell -ExecutionPolicy Bypass -File OHTA_TOOL\build_ohta.ps1` (chạy cả `AiTool.Tests`).
 
 Dữ liệu gửi đi: mọi đối tượng có tâm hộp bao nằm trong khung (line, cung, tròn, polyline, chữ, dim — kèm layer), toạ độ tính từ góc dưới trái khung, làm tròn 2 chữ số; cùng bảng vật liệu và file hướng dẫn AI (được Claude cache 5 phút nên các lô sau rẻ hơn). Không gửi ảnh. Ghi chú MLeader được đọc; đối tượng nằm trong block (BlockReference) **không** được đọc. Khung bao trùm trọn một khung khác (vd. viền bản vẽ cùng layer) bị bỏ qua — không phải một tấm.
 

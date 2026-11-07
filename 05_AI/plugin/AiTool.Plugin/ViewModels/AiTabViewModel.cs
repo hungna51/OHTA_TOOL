@@ -101,6 +101,14 @@ namespace AiTool.ViewModels
             DungCmd = new Lenh(() => _huy?.Cancel());
             CaiDatCmd = new Lenh(MoCaiDat);
             MoNhatKyCmd = new Lenh(MoNhatKy);
+
+            string lm = DocReg("ling_model");
+            _lingModel = string.IsNullOrWhiteSpace(lm) ? LingHttp.ModelMacDinh : lm;
+            Chat = new ChatViewModel(ThuMucModule, () => _lingModel,
+                () => CadApplication.DocumentManager.MdiActiveDocument?.Database.Filename,
+                () => GuiLenh("OHTAAICHATKHUNG "));
+            MoChatCmd = new Lenh(() => { Chat.VaoManHinh(); DangChat = true; });
+            QuayLaiCmd = new Lenh(() => DangChat = false);
             HienTai = this;
         }
 
@@ -167,6 +175,17 @@ namespace AiTool.ViewModels
         public ICommand DungCmd { get; }
         public ICommand CaiDatCmd { get; }
         public ICommand MoNhatKyCmd { get; }
+        public ICommand MoChatCmd { get; }
+        public ICommand QuayLaiCmd { get; }
+
+        /// <summary>Màn hình 💬 Chat (thay chỗ màn hình kiểm tra khi DangChat).</summary>
+        public ChatViewModel Chat { get; }
+
+        private bool _dangChat;
+        public bool DangChat { get => _dangChat; private set { if (Dat(ref _dangChat, value)) OnChanged(nameof(KhongChat)); } }
+        public bool KhongChat => !_dangChat;
+
+        private string _lingModel;
 
         private string _cheDo;
         public string CheDo
@@ -420,7 +439,8 @@ namespace AiTool.ViewModels
         {
             Document doc = CadApplication.DocumentManager.MdiActiveDocument;
             if (doc == null) return;
-            if (DangChay && lenh != null && !lenh.StartsWith("OHTAAIZOOM", StringComparison.Ordinal))
+            if (DangChay && lenh != null && !lenh.StartsWith("OHTAAIZOOM", StringComparison.Ordinal)
+                && !lenh.StartsWith("OHTAAICHATKHUNG", StringComparison.Ordinal))
             {
                 Loi.Add("Đang kiểm tra — bấm Dừng trước khi chạy lại.");
                 return;
@@ -433,9 +453,13 @@ namespace AiTool.ViewModels
         {
             try
             {
-                var win = new Views.AiCaiDatWindow(ThuMucModule, HuongDanMacDinh(), AccentBrush, KevUrl);
-                if (CadApplication.ShowModalWindow(win) == true && !string.IsNullOrWhiteSpace(win.KevUrlDaLuu))
-                    KevUrl = win.KevUrlDaLuu;
+                var win = new Views.AiCaiDatWindow(ThuMucModule, HuongDanMacDinh(), AccentBrush, KevUrl, _lingModel);
+                if (CadApplication.ShowModalWindow(win) == true)
+                {
+                    if (!string.IsNullOrWhiteSpace(win.KevUrlDaLuu)) KevUrl = win.KevUrlDaLuu;
+                    _lingModel = win.LingModelDaLuu;
+                    GhiReg("ling_model", _lingModel);
+                }
             }
             catch (Exception ex)
             {

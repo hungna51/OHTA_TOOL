@@ -47,7 +47,10 @@ namespace AiTool.Core
         /// <summary>File hướng dẫn AI chạy (system prompt), sửa trong cửa sổ cài đặt hoặc bằng Notepad.</summary>
         public static string FileHuongDan(string thuMucModule) => Path.Combine(thuMucModule, "data", "huong_dan_ai.md");
 
-        private static string FileKey(string thuMucModule) => Path.Combine(thuMucModule, "data", "ai.key");
+        public const string FileKeyClaude = "ai.key";
+        public const string FileKeyLing = "ling.key";
+
+        private static string FileKey(string thuMucModule, string tenFile) => Path.Combine(thuMucModule, "data", tenFile ?? FileKeyClaude);
 
         public static string DocHuongDan(string thuMucModule, string macDinh)
         {
@@ -66,17 +69,17 @@ namespace AiTool.Core
         }
 
         /// <summary>Ghi key vào data\ai.key (một dòng). File nằm trong .gitignore.</summary>
-        public static void GhiKey(string thuMucModule, string key)
+        public static void GhiKey(string thuMucModule, string key, string tenFile = FileKeyClaude)
         {
-            string f = FileKey(thuMucModule);
+            string f = FileKey(thuMucModule, tenFile);
             Directory.CreateDirectory(Path.GetDirectoryName(f));
             File.WriteAllText(f, (key ?? string.Empty).Trim() + "\n", Utf8KhongBom);
             if (File.Exists(f + ".txt")) File.Delete(f + ".txt"); // bản Notepad cũ không còn được dùng
         }
 
-        public static void XoaKey(string thuMucModule)
+        public static void XoaKey(string thuMucModule, string tenFile = FileKeyClaude)
         {
-            string f = FileKey(thuMucModule);
+            string f = FileKey(thuMucModule, tenFile);
             if (File.Exists(f)) File.Delete(f);
             if (File.Exists(f + ".txt")) File.Delete(f + ".txt");
         }
@@ -91,9 +94,9 @@ namespace AiTool.Core
         }
 
         /// <summary>Dòng đầu không rỗng, không bắt đầu bằng # của data\ai.key; không có file thì null.</summary>
-        public static string DocKey(string thuMucModule)
+        public static string DocKey(string thuMucModule, string tenFile = FileKeyClaude)
         {
-            string f = FileKey(thuMucModule);
+            string f = FileKey(thuMucModule, tenFile);
             if (!File.Exists(f))
                 f = f + ".txt"; // Notepad hay lưu thành ai.key.txt (đuôi bị ẩn)
             if (!File.Exists(f))

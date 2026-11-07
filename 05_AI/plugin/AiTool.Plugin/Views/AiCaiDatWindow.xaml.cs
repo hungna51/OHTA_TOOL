@@ -35,8 +35,9 @@ namespace AiTool.Views
         }
 
         public string KevUrlDaLuu { get; private set; }
+        public string LingModelDaLuu { get; private set; }
 
-        public AiCaiDatWindow(string thuMucModule, string huongDanMacDinh, Brush mauTab, string kevUrl = null)
+        public AiCaiDatWindow(string thuMucModule, string huongDanMacDinh, Brush mauTab, string kevUrl = null, string lingModel = null)
         {
             InitializeComponent();
             _thuMuc = thuMucModule;
@@ -48,6 +49,11 @@ namespace AiTool.Views
 
             DuongDanKey.Text = Path.Combine(_thuMuc, "data", "ai.key");
             HienTrangThaiKey();
+
+            LingModelDaLuu = string.IsNullOrWhiteSpace(lingModel) ? LingHttp.ModelMacDinh : lingModel.Trim();
+            LingModelBox.Text = LingModelDaLuu;
+            DuongDanLing.Text = Path.Combine(_thuMuc, "data", DuLieuTinh.FileKeyLing);
+            HienTrangThaiLing();
             NapDanhSachFileHuongDan();
         }
 
@@ -142,6 +148,36 @@ namespace AiTool.Views
             NutXoaKey.IsEnabled = k != null;
         }
 
+        private void HienTrangThaiLing()
+        {
+            string k = DuLieuTinh.DocKey(_thuMuc, DuLieuTinh.FileKeyLing);
+            TrangThaiLing.Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x4E, 0x68));
+            TrangThaiLing.Text = k == null ? "🔴 Chưa có key Ling (màn hình 💬 Chat cần key này)" : "✅ Đã có key: " + DuLieuTinh.AnKey(k);
+            NutXoaLing.IsEnabled = k != null;
+        }
+
+        private async void KiemTraLing(object sender, RoutedEventArgs e)
+        {
+            string key = LingKeyMoi.Password?.Trim();
+            if (string.IsNullOrEmpty(key)) key = DuLieuTinh.DocKey(_thuMuc, DuLieuTinh.FileKeyLing);
+            string model = string.IsNullOrWhiteSpace(LingModelBox.Text) ? LingHttp.ModelMacDinh : LingModelBox.Text.Trim();
+            TrangThaiLing.Foreground = new SolidColorBrush(Color.FromRgb(0x5F, 0x6B, 0x7A));
+            TrangThaiLing.Text = "⏳ Đang gửi thử tới " + model + "...";
+            var (ok, thongTin) = await LingHttp.KiemTraKey(key, model);
+            TrangThaiLing.Foreground = ok ? new SolidColorBrush(Color.FromRgb(0x1F, 0x7A, 0x4D)) : new SolidColorBrush(Color.FromRgb(0xB4, 0x23, 0x18));
+            TrangThaiLing.Text = ok ? "✅ Key + model dùng được (" + thongTin + "). Bấm Lưu để giữ." : "❌ " + thongTin;
+        }
+
+        private void XoaKeyLing(object sender, RoutedEventArgs e)
+        {
+            if (MessageBox.Show(this, "Xoá key Ling khỏi máy này?", "AI", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+            try { DuLieuTinh.XoaKey(_thuMuc, DuLieuTinh.FileKeyLing); }
+            catch (Exception ex) { MessageBox.Show(this, "Không xoá được: " + ex.Message, "AI"); }
+            LingKeyMoi.Clear();
+            HienTrangThaiLing();
+        }
+
         private async void KiemTraKev(object sender, RoutedEventArgs e)
         {
             string url = KevUrlBox.Text?.Trim();
@@ -205,6 +241,12 @@ namespace AiTool.Views
                         return;
                     DuLieuTinh.GhiKey(_thuMuc, moi);
                 }
+
+                string lingMoi = LingKeyMoi.Password?.Trim();
+                if (!string.IsNullOrEmpty(lingMoi))
+                    DuLieuTinh.GhiKey(_thuMuc, lingMoi, DuLieuTinh.FileKeyLing);
+                string lingModel = LingModelBox.Text?.Trim();
+                LingModelDaLuu = string.IsNullOrEmpty(lingModel) ? LingHttp.ModelMacDinh : lingModel;
 
                 if (_dangChon != null)
                     _dangChon.NoiDungDangSua = HuongDan.Text;

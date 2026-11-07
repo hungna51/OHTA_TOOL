@@ -51,7 +51,45 @@ namespace AiTool
             Chay(vung);
         }
 
-        /// <summary>Quét chọn vùng → ghi &lt;ban ve&gt;.ai.md + .ai.json (mô tả từng khung in) cạnh file bản vẽ.</summary>
+        /// <summary>Nút 📎 Gửi khung của màn hình chat: quét vùng → mô tả gọn các khung in đính kèm câu hỏi kế tiếp.</summary>
+        [CommandMethod("OHTAAICHATKHUNG")]
+        public void ChatGuiKhung()
+        {
+            Document doc = CadApplication.DocumentManager.MdiActiveDocument;
+            AiTabViewModel vm = doc == null ? null : CanTab(doc);
+            if (vm == null) return;
+            Extents3d? vung = ChonVung(doc.Editor, "\n[AI] Chon khung gui chat - goc thu nhat: ");
+            if (vung == null) return;
+            try
+            {
+                List<KhungDuLieu> khung = QuetKhung.Quet(doc, vm.LayerKhung, vung);
+                if (khung.Count == 0)
+                {
+                    doc.Editor.WriteMessage("\n[AI] Khong co khung in (layer " + vm.LayerKhung + ") trong vung chon.");
+                    return;
+                }
+                vm.Chat.DatDinhKem(MoTaKhung.Md(System.IO.Path.GetFileNameWithoutExtension(doc.Name), khung));
+                doc.Editor.WriteMessage("\n[AI] Da dinh kem " + khung.Count + " khung - go cau hoi o tab AI roi bam Gui.");
+            }
+            catch (System.Exception ex)
+            {
+                doc.Editor.WriteMessage("\n[AI] Loi doc ban ve: " + ex.Message);
+            }
+        }
+
+        private static Extents3d? ChonVung(Editor ed, string loiNhac)
+        {
+            PromptPointResult p1 = ed.GetPoint(loiNhac);
+            if (p1.Status != PromptStatus.OK) return null;
+            PromptPointResult p2 = ed.GetCorner("\n[AI] Goc doi dien: ", p1.Value);
+            if (p2.Status != PromptStatus.OK) return null;
+            Matrix3d ucs = ed.CurrentUserCoordinateSystem;
+            Point3d a = p1.Value.TransformBy(ucs), b = p2.Value.TransformBy(ucs);
+            return new Extents3d(new Point3d(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), 0),
+                                 new Point3d(Math.Max(a.X, b.X), Math.Max(a.Y, b.Y), 0));
+        }
+
+        /// <summary>Quét chọn vùng → ghi &lt;ban ve&gt;.ai.md + .ai.json (mô tả từng khung in) vào OHTA_AI\mo-ta cạnh file bản vẽ.</summary>
         [CommandMethod("OHTAAIMOTA")]
         public void XuatMoTa()
         {
@@ -60,20 +98,14 @@ namespace AiTool
             if (vm == null) return;
             Editor ed = doc.Editor;
             string fileBv = doc.Database.Filename;
-            string duoi = System.IO.Path.GetExtension(fileBv ?? "").ToLowerInvariant();
-            if (duoi != ".dwg" && duoi != ".dxf")
+            string thuMuc = ChatLing.ThuMucMoTa(fileBv);
+            if (thuMuc == null)
             {
                 ed.WriteMessage("\n[AI] Luu ban ve truoc khi xuat mo ta.");
                 return;
             }
-            PromptPointResult p1 = ed.GetPoint("\n[AI] Chon khung in - goc thu nhat: ");
-            if (p1.Status != PromptStatus.OK) return;
-            PromptPointResult p2 = ed.GetCorner("\n[AI] Goc doi dien: ", p1.Value);
-            if (p2.Status != PromptStatus.OK) return;
-            Matrix3d ucs = ed.CurrentUserCoordinateSystem;
-            Point3d a = p1.Value.TransformBy(ucs), b = p2.Value.TransformBy(ucs);
-            var vung = new Extents3d(new Point3d(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), 0),
-                                     new Point3d(Math.Max(a.X, b.X), Math.Max(a.Y, b.Y), 0));
+            Extents3d? vung = ChonVung(ed, "\n[AI] Chon khung in - goc thu nhat: ");
+            if (vung == null) return;
             try
             {
                 List<KhungDuLieu> khung = QuetKhung.Quet(doc, vm.LayerKhung, vung);
@@ -82,7 +114,7 @@ namespace AiTool
                     ed.WriteMessage("\n[AI] Khong co khung in (layer " + vm.LayerKhung + ") trong vung chon - chay KI de tao khung truoc.");
                     return;
                 }
-                string thuMuc = System.IO.Path.GetDirectoryName(fileBv);
+                System.IO.Directory.CreateDirectory(thuMuc);
                 string ten = System.IO.Path.GetFileNameWithoutExtension(fileBv);
                 var utf8 = new System.Text.UTF8Encoding(false);
                 string md = System.IO.Path.Combine(thuMuc, ten + ".ai.md");
