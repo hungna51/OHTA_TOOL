@@ -50,7 +50,8 @@ if ($Problems.Count -gt 0) {
 $Dlls = @(
     "_system/bin/ZwCAD/OHTATOOL.dll", "_system/bin/AutoCAD/OHTATOOL.dll",
     "03_Guro/bin/ZwCAD/GROTOOL.dll",  "03_Guro/bin/AutoCAD/GROTOOL.dll",
-    "05_AI/bin/ZwCAD/AITOOL.dll",     "05_AI/bin/AutoCAD/AITOOL.dll"
+    "05_AI/bin/ZwCAD/AITOOL.dll",     "05_AI/bin/AutoCAD/AITOOL.dll",
+    "06_Teams/bin/ZwCAD/TEAMSTOOL.dll", "06_Teams/bin/AutoCAD/TEAMSTOOL.dll"
 )
 foreach ($d in $Dlls) {
     $f = Get-Item (Join-Path $Root $d) -ErrorAction SilentlyContinue

@@ -60,6 +60,14 @@ namespace OhtaTool.Plugin.Views
 
             Register("ai", aiFactory);
             Register("05_AI", aiFactory);
+
+            // Tab Teams: nhận đơn từ kênh Microsoft Teams, giao diện trong TEAMSTOOL.dll (ADR 0008)
+            Func<ModuleManifest, Action, FrameworkElement> teamsFactory = (manifest, reloadCallback) =>
+                DllTabLoader.TaoGiaoDien(manifest, "TEAMSTOOL", "TeamsTool.TeamsOhtaTab", "Teams") ??
+                new ModuleTabControl(new ModuleTabViewModel(manifest, reloadCallback));
+
+            Register("teams", teamsFactory);
+            Register("06_Teams", teamsFactory);
         }
 
         public static void Register(string moduleIdOrFolder, Func<ModuleManifest, Action, FrameworkElement> viewFactory)

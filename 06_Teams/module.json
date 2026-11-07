@@ -1,0 +1,13 @@
+{
+  "id": "teams",
+  "enabled": true,
+  "adminOnly": true,
+  "order": 60,
+  "tabTitle": "Teams",
+  "title": "Nhận đơn từ Microsoft Teams",
+  "version": "0.1",
+  "stage": "dev",
+  "description": "Đọc đơn (DWG / PDF / Excel) ở các kênh Teams · lọc đơn tag tôi · tải + mở · báo đã nhận",
+  "accentColor": "#4B53BC",
+  "tools": []
+}

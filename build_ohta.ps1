@@ -14,6 +14,10 @@ $GroTestProj = Join-Path $OhtaRoot "03_Guro\plugin\GroTool.Tests\GroTool.Tests.c
 $AiProj     = Join-Path $OhtaRoot "05_AI\plugin\AiTool.Plugin\AiTool.Plugin.csproj"
 $AiTestProj = Join-Path $OhtaRoot "05_AI\plugin\AiTool.Tests\AiTool.Tests.csproj"
 $HasAi = Test-Path $AiProj
+# 06_Teams: DLL rieng TEAMSTOOL.dll cua tab Teams (ADR 0008)
+$TeamsProj     = Join-Path $OhtaRoot "06_Teams\plugin\TeamsTool.Plugin\TeamsTool.Plugin.csproj"
+$TeamsTestProj = Join-Path $OhtaRoot "06_Teams\plugin\TeamsTool.Tests\TeamsTool.Tests.csproj"
+$HasTeams = Test-Path $TeamsProj
 
 # --- Tu do SDK CAD dang cai tren may (moi may co the cai phien ban khac nhau) ---
 # ZWCAD co the cai o o khac (vd D:\ZWCAD) -> lay InstallLocation tu registry, fallback duong dan mac dinh
@@ -71,6 +75,12 @@ if ($HasAi) {
         throw "Bien dich AiTool.Plugin (05_AI) THAT BAI!"
     }
 }
+if ($HasTeams) {
+    dotnet build $TeamsProj @BuildArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Bien dich TeamsTool.Plugin (06_Teams) THAT BAI!"
+    }
+}
 
 function Publish-CadDll($srcDir, $destDir, $label, $name = "OHTATOOL") {
     if (-not (Test-Path (Join-Path $srcDir "$name.dll"))) { return }
@@ -120,11 +130,13 @@ if ($HasZwCad) {
     Publish-CadDll (Join-Path $OhtaRoot "_system\OhtaTool.Plugin\bin\Release\net48") (Join-Path $OhtaRoot "_system\bin\ZwCAD") "ZWCAD"
     Publish-CadDll (Join-Path $OhtaRoot "03_Guro\plugin\GroTool.Plugin\bin\Release\net48") (Join-Path $OhtaRoot "03_Guro\bin\ZwCAD") "ZWCAD" "GROTOOL"
     if ($HasAi) { Publish-CadDll (Join-Path $OhtaRoot "05_AI\plugin\AiTool.Plugin\bin\Release\net48") (Join-Path $OhtaRoot "05_AI\bin\ZwCAD") "ZWCAD" "AITOOL" }
+    if ($HasTeams) { Publish-CadDll (Join-Path $OhtaRoot "06_Teams\plugin\TeamsTool.Plugin\bin\Release\net48") (Join-Path $OhtaRoot "06_Teams\bin\ZwCAD") "ZWCAD" "TEAMSTOOL" }
 }
 if ($AutoCadSdkDir) {
     Publish-CadDll (Join-Path $OhtaRoot "_system\OhtaTool.Plugin\bin\Release\$AutoCadTfm") (Join-Path $OhtaRoot "_system\bin\AutoCAD") "AutoCAD $AutoCadYear"
     Publish-CadDll (Join-Path $OhtaRoot "03_Guro\plugin\GroTool.Plugin\bin\Release\$AutoCadTfm") (Join-Path $OhtaRoot "03_Guro\bin\AutoCAD") "AutoCAD $AutoCadYear" "GROTOOL"
     if ($HasAi) { Publish-CadDll (Join-Path $OhtaRoot "05_AI\plugin\AiTool.Plugin\bin\Release\$AutoCadTfm") (Join-Path $OhtaRoot "05_AI\bin\AutoCAD") "AutoCAD $AutoCadYear" "AITOOL" }
+    if ($HasTeams) { Publish-CadDll (Join-Path $OhtaRoot "06_Teams\plugin\TeamsTool.Plugin\bin\Release\$AutoCadTfm") (Join-Path $OhtaRoot "06_Teams\bin\AutoCAD") "AutoCAD $AutoCadYear" "TEAMSTOOL" }
 }
 
 Write-Host "`n[2/3] Chay bo Unit Tests OhtaTool.Tests + GroTool.Tests..." -ForegroundColor Cyan
@@ -140,6 +152,12 @@ if ($HasAi) {
     dotnet run --project $AiTestProj -c Release --nologo
     if ($LASTEXITCODE -ne 0) {
         throw "Unit Tests AiTool.Tests (05_AI) THAT BAI!"
+    }
+}
+if ($HasTeams) {
+    dotnet run --project $TeamsTestProj -c Release --nologo
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unit Tests TeamsTool.Tests (06_Teams) THAT BAI!"
     }
 }
 

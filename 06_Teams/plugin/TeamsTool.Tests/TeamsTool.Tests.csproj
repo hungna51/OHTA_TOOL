@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Test logic thuan cua TeamsTool.Plugin (Core/), chay KHONG can CAD / mang.
+    Chay: dotnet run (tham so project) 06_Teams/plugin/TeamsTool.Tests (build_ohta.ps1 tu chay).
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\TeamsTool.Plugin\Core\*.cs" Link="Core\%(Filename)%(Extension)" />
+    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\JsonLite.cs" Link="Shared\JsonLite.cs" />
+  </ItemGroup>
+</Project>

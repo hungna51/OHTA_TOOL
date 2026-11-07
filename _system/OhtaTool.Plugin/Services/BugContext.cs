@@ -39,7 +39,7 @@ namespace OhtaTool.Plugin.Services
             foreach (System.Reflection.Assembly a in AppDomain.CurrentDomain.GetAssemblies())
             {
                 string n = a.GetName().Name;
-                if (n == "OHTATOOL" || n == "GROTOOL" || n == "AITOOL")
+                if (n == "OHTATOOL" || n == "GROTOOL" || n == "AITOOL" || n == "TEAMSTOOL")
                 {
                     string loc;
                     try { loc = a.Location; } catch { loc = "?"; }
