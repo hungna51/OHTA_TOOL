@@ -44,8 +44,12 @@ namespace OhtaTool.Plugin.Core
             if (IsLoai(LoaiTrialBend))
             {
                 string note = Get("Ghi_chu");
+                var r = TraVThuRecord.FromParams(Params);
                 return $"{Get("Dinh_danh")} {Get("Loai")} T={Get("T")} — {Get("Goc")}° — {Get("Dao")} — Denta {Get("Denta")} — tấm {Get("Ma_tam")}"
-                    + (note.Length > 0 ? " — " + note : string.Empty);
+                    + (r.HasDieParams ? " — " + string.Join(" ", r.DieParts()) : string.Empty)
+                    + (r.NguoiXacNhan.Length > 0 ? " — xác nhận: " + r.NguoiXacNhan : string.Empty)
+                    + (note.Length > 0 ? " — " + note : string.Empty)
+                    + (ImageLinks.Count > 0 ? $" — {ImageLinks.Count} ảnh" : string.Empty);
             }
             if (IsLoai(LoaiTam))
             {
@@ -132,7 +136,10 @@ namespace OhtaTool.Plugin.Core
                 new KeyValuePair<string, string>("L_saitei", r.LSaitei),
                 new KeyValuePair<string, string>("Z_saitei", r.ZSaitei),
                 new KeyValuePair<string, string>("Rend", r.Rend),
-                new KeyValuePair<string, string>("Ghi_chu", ghiChu)
+                new KeyValuePair<string, string>("Nguoi_xac_nhan", r.NguoiXacNhan),
+                new KeyValuePair<string, string>("Anh", r.Anh),
+                // Ghi chú bằng chứng của người dùng + ghi chú tool tự thêm (nội suy từ đâu, thay số cũ...)
+                new KeyValuePair<string, string>("Ghi_chu", string.Join(" — ", new[] { r.GhiChu, ghiChu }.Where(x => !string.IsNullOrWhiteSpace(x))))
             });
         }
 

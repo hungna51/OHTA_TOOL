@@ -1034,12 +1034,12 @@ namespace OhtaTool.Plugin.ViewModels
         /// <summary>
         /// Gửi 1 góc bẻ thử / nội suy vào hàng chờ duyệt ở luồng nền. Gửi được thì máy này dùng ngay (trav_thu_local.csv).
         /// </summary>
-        public async System.Threading.Tasks.Task<(bool ok, string message)> SubmitTrialAsync(TraVThuRecord record, string ghiChu)
+        public async System.Threading.Tasks.Task<(bool ok, string message)> SubmitTrialAsync(TraVThuRecord record, string ghiChu, List<byte[]> jpegs = null)
         {
             var ui = System.Windows.Threading.Dispatcher.CurrentDispatcher;
             var result = await System.Threading.Tasks.Task.Run(() =>
             {
-                var r = FnameSheetWriter.SubmitTrialRequest(_manifest.DirectoryPath, record, ghiChu);
+                var r = FnameSheetWriter.SubmitTrialRequest(_manifest.DirectoryPath, record, ghiChu, jpegs);
                 if (!r.ok)
                     return (false, "Chưa gửi được " + record.DinhDanh.ToLowerInvariant() + " lên Google Sheet: " + r.message);
                 try

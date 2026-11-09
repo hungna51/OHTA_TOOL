@@ -48,7 +48,18 @@ var HANDLERS = {
       if (!isNum_(p.Denta)) return 'Denta không hợp lệ.';
       return '';
     },
-    apply: function (p, ctx) { return applyTravThu_(p, ctx); }
+    // Thông số dao người dùng tự nhập: gửi kèm ảnh + người xác nhận (giống T thực); không có ảnh thì bỏ qua bước này
+    prepare: function (params, p, ctx) {
+      if (!p.anh_1) return '';
+      params.Nguoi_xac_nhan = cleanText_(params.Nguoi_xac_nhan);
+      if (!params.Nguoi_xac_nhan) return 'Thông số dao tự nhập cần người xác nhận.';
+      var err = saveAnh_(params, p, ctx, 'Bang chung thong so dao ' + clean_(params.Loai) + ' T=' + clean_(params.T) + ' ' + clean_(params.Dao));
+      if (!err) params.Anh_moi = '1';   // ảnh vừa tải cùng yêu cầu này -> từ chối thì bỏ vào thùng rác
+      return err;
+    },
+    apply: function (p, ctx) { return applyTravThu_(p, ctx); },
+    // Chỉ xoá ảnh tải lên cùng yêu cầu; link ảnh chép từ dòng đã duyệt (gửi lại) thì giữ nguyên
+    onReject: function (p) { if (p.Anh_moi === '1') trashAnh_(p.Anh); }
   },
   // Bổ sung T thực (T_hienthi) của tấm vào tab tam, kèm ảnh bằng chứng lưu trên Drive + người xác nhận + ghi chú.
   // Chỉ lấp chỗ trống: Loai + T đã có T_hienthi trên tab tam thì từ chối.
@@ -68,8 +79,9 @@ var HANDLERS = {
   }
 };
 var TRAV_THU_SHEET_NAME = 'trav_thu';
-// 4 cột cuối: thông số dao lúc bẻ thử (tuỳ chọn) — thiếu cột trên Sheet thì applyTravThu_ tự thêm
-var TRAV_THU_HEADER = ['Loai', 'T', 'Goc', 'Dao', 'Denta', 'Ma_tam', 'Dinh_danh', 'Saichou', 'L_saitei', 'Z_saitei', 'Rend'];
+// Saichou..Rend: thông số dao lúc bẻ thử (tuỳ chọn); Nguoi_xac_nhan / Ghi_chu / Anh: bằng chứng khi tự nhập. Thiếu cột thì applyTravThu_ tự thêm
+var TRAV_THU_HEADER = ['Loai', 'T', 'Goc', 'Dao', 'Denta', 'Ma_tam', 'Dinh_danh', 'Saichou', 'L_saitei', 'Z_saitei', 'Rend',
+                       'Nguoi_xac_nhan', 'Ghi_chu', 'Anh'];
 
 // Action chỉ đọc + submit_bug (tự khoá đúng đoạn ghi dòng) không giữ khoá chung: 1 báo lỗi kèm zip 25 MB
 // tải lên mất cả chục giây, giữ khoá thì máy khác ghi Fname / gửi báo lỗi bị "Lỗi Apps Script" (hết 20 s chờ).
@@ -278,7 +290,8 @@ function applyTravThu_(p, ctx) {
 
   var vals = { Loai: clean_(p.Loai), T: clean_(p.T), Goc: clean_(p.Goc), Dao: clean_(p.Dao).toUpperCase(),
                Denta: clean_(p.Denta), Ma_tam: clean_(p.Ma_tam), Dinh_danh: clean_(p.Dinh_danh) || 'Bẻ thử',
-               Saichou: clean_(p.Saichou), L_saitei: clean_(p.L_saitei), Z_saitei: clean_(p.Z_saitei), Rend: clean_(p.Rend) };
+               Saichou: clean_(p.Saichou), L_saitei: clean_(p.L_saitei), Z_saitei: clean_(p.Z_saitei), Rend: clean_(p.Rend),
+               Nguoi_xac_nhan: cleanText_(p.Nguoi_xac_nhan), Ghi_chu: cleanText_(p.Ghi_chu), Anh: cleanText_(p.Anh) };
   var row = 0, lastRow = sh.getLastRow();
   if (lastRow >= 2) {
     var data = sh.getRange(2, 1, lastRow - 1, lastCol).getDisplayValues();
@@ -311,6 +324,12 @@ function prepareTam_(params, p, ctx) {
   if (findTamRow_(ctx.ss, params.Loai, params.T).hasValue)
     return 'Tab tam đã có T thực cho ' + params.Loai + ' T=' + params.T + ' — không bổ sung đè (sửa trực tiếp trên Sheet nếu cần).';
 
+  return saveAnh_(params, p, ctx, 'Bang chung T thuc ' + params.Loai + ' T=' + params.T);
+}
+
+// Lưu anh_1..anh_3 (base64 JPEG) vào thư mục bằng chứng trên Drive (ai có link được xem), ghi link vào params.Anh.
+// Dùng chung cho T thực (tam) và thông số dao (trav_thu). Trả chuỗi lỗi hoặc ''.
+function saveAnh_(params, p, ctx, label) {
   var blobs = [];
   for (var i = 1; i <= MAX_ANH; i++) {
     var b64 = p['anh_' + i];
@@ -324,10 +343,10 @@ function prepareTam_(params, p, ctx) {
   var folder = bangChungFolder_();
   var stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd_HHmm');
   var links = blobs.map(function (bytes, idx) {
-    var name = params.Loai + ' T' + params.T + ' - ' + stamp + ' - ' + (idx + 1) + '.jpg';
+    var name = label + ' - ' + stamp + ' - ' + (idx + 1) + '.jpg';
     var file = folder.createFile(Utilities.newBlob(bytes, 'image/jpeg', name));
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    file.setDescription('Bang chung T thuc ' + params.Loai + ' T=' + params.T + ' - xac nhan: ' + params.Nguoi_xac_nhan + ' - may gui: ' + ctx.machine);
+    file.setDescription(label + ' - xac nhan: ' + params.Nguoi_xac_nhan + ' - may gui: ' + ctx.machine);
     return file.getUrl();
   });
   params.Anh = links.join(' ');

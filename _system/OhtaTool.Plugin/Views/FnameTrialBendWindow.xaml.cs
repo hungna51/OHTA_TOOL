@@ -14,7 +14,7 @@ namespace OhtaTool.Plugin.Views
     /// </summary>
     public partial class FnameTrialBendWindow : Window
     {
-        public delegate Task<(bool ok, string message)> SubmitHandler(TraVThuRecord record, string ghiChu);
+        public delegate Task<(bool ok, string message)> SubmitHandler(TraVThuRecord record, string ghiChu, List<byte[]> jpegs);
 
         private readonly SubmitHandler _submit;
 
@@ -48,12 +48,39 @@ namespace OhtaTool.Plugin.Views
                 cmb.SelectionChanged += (s, e) => Dispatcher.BeginInvoke(new Action(SuggestDie));
             }
             TxtT.TextChanged += (s, e) => SuggestDie();
+            foreach (var box in new[] { TxtSaichou, TxtLSaitei, TxtZSaitei, TxtRend })
+                box.TextChanged += (s, e) => UpdateEvidenceVisibility();
+            PanelEvidence.ShowStatus = ShowStatus;
+            PreviewKeyDown += (s, e) => e.Handled |= PanelEvidence.TryHandlePasteKey(e);
             SuggestDie();
             Loaded += (s, e) => (CmbLoai.Text.Length == 0 ? (UIElement)CmbLoai : TxtGoc).Focus();
         }
 
         // Giá trị tool tự điền lần trước cho từng ô — ô người dùng đã sửa khác đi thì không ghi đè nữa
         private readonly Dictionary<System.Windows.Controls.TextBox, string> _dieAuto = new Dictionary<System.Windows.Controls.TextBox, string>();
+
+        // Thông số dao có sẵn trong dữ liệu cho đúng loại + T + dao (null = chưa có, người dùng tự nhập kèm bằng chứng)
+        private TraVThuRecord _dieSuggestion;
+
+        private TraVThuRecord TypedDie() => new TraVThuRecord
+        {
+            Saichou = TxtSaichou.Text.Trim(),
+            LSaitei = TxtLSaitei.Text.Trim(),
+            ZSaitei = TxtZSaitei.Text.Trim(),
+            Rend = TxtRend.Text.Trim()
+        };
+
+        /// <summary>Thông số dao đang nhập khác dữ liệu có sẵn -> là số người dùng tự đưa vào, cần bằng chứng.</summary>
+        private bool DieNeedsEvidence()
+        {
+            TraVThuRecord typed = TypedDie();
+            return typed.HasDieParams && !typed.SameDieParams(_dieSuggestion);
+        }
+
+        private void UpdateEvidenceVisibility()
+        {
+            PanelEvidence.Visibility = DieNeedsEvidence() ? Visibility.Visible : Visibility.Collapsed;
+        }
 
         private void SuggestDie()
         {
@@ -63,6 +90,7 @@ namespace OhtaTool.Plugin.Views
             string source = string.Empty;
             TraVThuRecord s = loai.Length > 0 && t.HasValue && dao.Length > 1
                 ? TraVCalculator.SuggestDieParams(loai, t.Value, dao, out source) : null;
+            _dieSuggestion = s;
 
             foreach (var (box, value) in new[] { (TxtSaichou, s?.Saichou), (TxtLSaitei, s?.LSaitei), (TxtZSaitei, s?.ZSaitei), (TxtRend, s?.Rend) })
             {
@@ -74,11 +102,14 @@ namespace OhtaTool.Plugin.Views
                 }
             }
 
+            bool known = loai.Length > 0 && t.HasValue && dao.Length > 1;
             TxtDieHint.Text = s != null
-                ? $"Gợi ý theo {source} — sửa nếu số đo thực tế khác."
-                : dao.Length > 1
-                    ? $"Dao {dao} chưa có thông số trong dữ liệu — nhập nếu có, để trống cũng được."
+                ? $"Lấy theo {source}. Sửa khác đi thì cần người xác nhận + ảnh."
+                : known
+                    ? $"⚠ Chưa có thông số dao cho {loai} T={TxtT.Text.Trim()} {dao} — nhập nếu có (kèm người xác nhận + ảnh), để trống cũng được."
                     : "Tuỳ chọn — thông số dao lúc bẻ thử, hiện dưới dòng V= như bẻ thường.";
+            TxtDieHint.Foreground = (Brush)new BrushConverter().ConvertFrom(s == null && known ? "#B45309" : "#64748B");
+            UpdateEvidenceVisibility();
         }
 
         private async void OnSubmitClick(object sender, RoutedEventArgs e)
@@ -130,7 +161,7 @@ namespace OhtaTool.Plugin.Views
                     ShowStatus("Góc này đã có trong dữ liệu, không cần gửi lại.", true);
                     return;
                 }
-                // Gửi lại dòng đã có mà để trống thông số dao thì giữ thông số dao cũ (không xoá mất)
+                // Gửi lại dòng đã có mà để trống thông số dao thì giữ thông số dao cũ + bằng chứng của nó (không xoá mất)
                 if (!record.HasDieParams)
                     record.CopyDieParams(old);
                 string oldDie = old.HasDieParams ? " — " + string.Join(" - ", old.DieParts()) : string.Empty;
@@ -141,6 +172,19 @@ namespace OhtaTool.Plugin.Views
                     return;
             }
 
+            // Thông số dao: lấy từ dữ liệu có sẵn -> chép kèm bằng chứng gốc; tự nhập -> bắt buộc bằng chứng mới
+            List<byte[]> images = null;
+            if (DieNeedsEvidence() && !(old != null && record.SameDieParams(old)))
+            {
+                string evErr = PanelEvidence.Validate("Thông số dao");
+                if (evErr != null) { ShowStatus(evErr, false); return; }
+                record.NguoiXacNhan = PanelEvidence.NguoiXacNhan;
+                record.GhiChu = PanelEvidence.GhiChu;
+                images = PanelEvidence.Images;
+            }
+            else if (record.HasDieParams && record.SameDieParams(_dieSuggestion))
+                record.CopyDieParams(_dieSuggestion);
+
             if (_submit == null)
                 return;
 
@@ -148,12 +192,14 @@ namespace OhtaTool.Plugin.Views
             ShowStatus("Đang gửi yêu cầu...", true);
             try
             {
-                var (ok, message) = await _submit(record, old != null ? $"Thay Denta cũ {old.Denta} (tấm {old.MaTam})" : string.Empty);
+                var (ok, message) = await _submit(record, old != null ? $"Thay Denta cũ {old.Denta} (tấm {old.MaTam})" : string.Empty, images);
                 ShowStatus(message, ok);
                 if (ok)
                 {
                     TxtDenta.Clear();
                     TxtMaTam.Clear();
+                    PanelEvidence.ClearImages();
+                    SuggestDie();   // số vừa gửi thành dữ liệu có sẵn -> ẩn khối bằng chứng
                 }
             }
             catch (Exception ex) // async void: lỗi lọt ra ngoài sẽ làm sập CAD

@@ -35,19 +35,26 @@ namespace OhtaTool.Plugin.Services
         }
 
         /// <summary>Gửi 1 dòng góc bẻ thử / nội suy vào hàng chờ (tab "update"), admin duyệt thì ghi vào tab trav_thu.</summary>
-        public static (bool ok, string message) SubmitTrialRequest(string moduleDirectory, TraVThuRecord record, string ghiChu)
+        /// <param name="jpegs">Ảnh bằng chứng khi người dùng tự nhập thông số dao (null = không có); Apps Script lưu Drive, ghi link vào record.Anh.</param>
+        public static (bool ok, string message) SubmitTrialRequest(string moduleDirectory, TraVThuRecord record, string ghiChu, IList<byte[]> jpegs = null)
         {
-            FnameSheetReply r = Post(moduleDirectory, "submit_request", new Dictionary<string, string>
+            var fields = new Dictionary<string, string>
             {
                 ["loai"] = FnameUpdateRequest.LoaiTrialBend,
                 ["thong_so"] = FnameUpdateRequest.BuildTrialParams(record, ghiChu)
-            }, out string error);
+            };
+            for (int i = 0; i < (jpegs?.Count ?? 0) && i < 3; i++)
+                fields["anh_" + (i + 1)] = Convert.ToBase64String(jpegs[i]);
+
+            FnameSheetReply r = Post(moduleDirectory, "submit_request", fields, out string error);
             if (r == null)
                 return (false, error);
             string msg = r.Message ?? string.Empty;
             // Apps Script trên Google còn bản cũ (chưa có bộ xử lý trav_thu)
             if (!r.Ok && msg.IndexOf("không hỗ trợ", StringComparison.OrdinalIgnoreCase) >= 0)
                 msg += " — Apps Script trên Google chưa cập nhật: dán lại google_sheet_apps_script.gs rồi Triển khai > Quản lý các tùy chọn triển khai > Sửa > Phiên bản mới.";
+            if (r.Ok && !string.IsNullOrEmpty(r.Anh))
+                record.Anh = r.Anh;   // link ảnh trên Drive -> lưu cùng bản chờ duyệt trên máy
             return (r.Ok, msg);
         }
 

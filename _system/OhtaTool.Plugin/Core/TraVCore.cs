@@ -450,6 +450,8 @@ namespace OhtaTool.Plugin.Core
                 TraV90Row r90 = FindRow90(matKey, thick, dao);
                 if (r90 != null)
                     parts.AddRange(BuildDetailParts(r90, includeR: false));
+                else
+                    parts.Add("Chưa có thông số dao (最長 / Ｌ最低 / Ｚ最低 / Rend) — bổ sung ở Cài đặt → Góc bẻ thử");
             }
 
             return new TraVCandidate
@@ -683,8 +685,8 @@ namespace OhtaTool.Plugin.Core
         /// Dòng bảng 90° ứng với dao của bảng góc nhọn ("V12" / "U18" -> cột V = "12" / "18").
         /// </summary>
         /// <summary>
-        /// Gợi ý 最長 / Ｌ最低 / Ｚ最低 / Rend cho form góc bẻ thử: góc bẻ thử khác cùng loại + T + dao đã có số,
-        /// rồi trav_90 cùng dao (ưu tiên cùng loại, T gần nhất), rồi loại khác. Dao không có ở đâu -> null.
+        /// Thông số dao có sẵn cho form góc bẻ thử (最長 / Ｌ最低 / Ｚ最低 / Rend): góc bẻ thử khác cùng loại + T + dao đã có số,
+        /// rồi dòng trav_90 đúng loại + T + dao. Không có -> null (người dùng tự nhập kèm bằng chứng).
         /// </summary>
         public static TraVThuRecord SuggestDieParams(string loai, double thick, string dao, out string source)
         {
@@ -700,11 +702,9 @@ namespace OhtaTool.Plugin.Core
                 return copy;
             }
 
-            string v = d.Length > 1 && char.IsLetter(d[0]) ? d.Substring(1) : d;
-            TraV90Row row = Table90.Where(r => string.Equals(r.V, v, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(r => TraVThuData.SameLoai(r.Mat, loai) ? 0 : 1)
-                .ThenBy(r => Math.Abs(r.T - thick))
-                .FirstOrDefault();
+            // Chỉ đúng loại + T + dao — không mượn độ dày / loại khác (最長 đổi theo độ dày)
+            TraV90Row row = Table90.FirstOrDefault(r => TraVThuData.SameLoai(r.Mat, loai) && Math.Abs(r.T - thick) < 0.05
+                && string.Equals(TraVThuData.NormalizeDao(r.V), d, StringComparison.OrdinalIgnoreCase));
             if (row == null)
                 return null;
             source = $"bảng TraV {row.Mat} T={FormatDenta(row.T)} V{row.V}";

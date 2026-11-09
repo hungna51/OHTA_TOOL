@@ -23,14 +23,9 @@ namespace OhtaTool.Plugin.Views
         public delegate Task<(bool ok, string message)> SubmitHandler(string m, string loai, string z, List<string> thicknesses);
         public delegate Task<(bool ok, string message)> SubmitTamHandler(TamRecord record, List<byte[]> jpegs);
 
-        private const int MaxImages = 3;
-        private const int MaxSide = 1600;
-        private const int JpegQuality = 85;
-
         private readonly Func<FnameCatalogData> _getCatalog;
         private readonly SubmitHandler _submit;
         private readonly SubmitTamHandler _submitTam;
-        private readonly List<byte[]> _images = new List<byte[]>();
 
         // Ô nhập T thực đang hiện, theo độ dày (giữ chữ đã gõ khi danh sách T được dựng lại)
         private readonly Dictionary<string, TextBox> _tamInputs = new Dictionary<string, TextBox>();
@@ -53,11 +48,11 @@ namespace OhtaTool.Plugin.Views
             CmbLoai.AddHandler(TextBoxBase.TextChangedEvent, new TextChangedEventHandler((s, e) => RebuildTamRows()));
             CmbLoai.SelectionChanged += (s, e) => Dispatcher.BeginInvoke(new Action(RebuildTamRows));
             TxtT.TextChanged += (s, e) => RebuildTamRows();
-            PreviewKeyDown += OnPreviewKeyDown;
+            PanelEvidence.ShowStatus = ShowStatus;
+            PreviewKeyDown += (s, e) => e.Handled |= PanelEvidence.TryHandlePasteKey(e);
             CmbM.Text = initialM ?? string.Empty;
             TxtT.Text = initialT ?? string.Empty;
             OnMTextChanged();
-            RefreshImages();
             Loaded += (s, e) => CmbM.Focus();
         }
 
@@ -226,152 +221,6 @@ namespace OhtaTool.Plugin.Views
             PanelEvidence.Visibility = TamEntries().Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        // ---------- Ảnh bằng chứng ----------
-
-        private void OnPickImagesClick(object sender, RoutedEventArgs e)
-        {
-            var dlg = new Microsoft.Win32.OpenFileDialog
-            {
-                Title = "Chọn ảnh bằng chứng",
-                Filter = "Ảnh (*.jpg;*.jpeg;*.png;*.bmp;*.gif;*.tif;*.tiff)|*.jpg;*.jpeg;*.png;*.bmp;*.gif;*.tif;*.tiff",
-                Multiselect = true
-            };
-            if (dlg.ShowDialog(this) != true)
-                return;
-            foreach (string f in dlg.FileNames)
-                AddImageFromFile(f);
-        }
-
-        private void OnPasteImageClick(object sender, RoutedEventArgs e) => PasteFromClipboard(showEmptyMessage: true);
-
-        // Ctrl+V khi phần bằng chứng đang hiện và clipboard có ảnh / file ảnh -> thêm ảnh (ô chữ vẫn dán chữ như thường)
-        private void OnPreviewKeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control && PanelEvidence.Visibility == Visibility.Visible
-                && (Clipboard.ContainsImage() || Clipboard.ContainsFileDropList()))
-            {
-                PasteFromClipboard(showEmptyMessage: false);
-                e.Handled = true;
-            }
-        }
-
-        private void PasteFromClipboard(bool showEmptyMessage)
-        {
-            try
-            {
-                if (Clipboard.ContainsImage())
-                {
-                    AddImage(Clipboard.GetImage());
-                    return;
-                }
-                if (Clipboard.ContainsFileDropList())
-                {
-                    foreach (string f in Clipboard.GetFileDropList())
-                        AddImageFromFile(f);
-                    return;
-                }
-                if (showEmptyMessage)
-                    ShowStatus("Clipboard không có ảnh. Chụp màn hình / copy ảnh rồi bấm lại.", false);
-            }
-            catch (Exception ex)
-            {
-                OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameMaterialWindow.xaml", ex);
-                ShowStatus("Không đọc được ảnh trong clipboard: " + ex.GetBaseException().Message, false);
-            }
-        }
-
-        private void AddImageFromFile(string path)
-        {
-            try
-            {
-                var bmp = new BitmapImage();
-                bmp.BeginInit();
-                bmp.CacheOption = BitmapCacheOption.OnLoad; // đọc xong nhả file
-                bmp.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
-                bmp.UriSource = new Uri(path);
-                bmp.EndInit();
-                AddImage(bmp);
-            }
-            catch (Exception ex)
-            {
-                OhtaTool.Plugin.Core.BugLog.Write("OHTA/FnameMaterialWindow.xaml", ex);
-                ShowStatus($"Không mở được ảnh \"{Path.GetFileName(path)}\": " + ex.GetBaseException().Message, false);
-            }
-        }
-
-        private void AddImage(BitmapSource source)
-        {
-            if (source == null)
-                return;
-            if (_images.Count >= MaxImages)
-            {
-                ShowStatus($"Tối đa {MaxImages} ảnh — bỏ bớt ảnh trước khi thêm.", false);
-                return;
-            }
-            _images.Add(ToJpeg(source));
-            RefreshImages();
-        }
-
-        /// <summary>Thu nhỏ cạnh dài về ≤ MaxSide rồi nén JPEG (bỏ kênh alpha — ảnh chụp màn hình đôi khi alpha = 0).</summary>
-        private static byte[] ToJpeg(BitmapSource source)
-        {
-            BitmapSource img = source;
-            double scale = Math.Min(1.0, (double)MaxSide / Math.Max(source.PixelWidth, source.PixelHeight));
-            if (scale < 1.0)
-                img = new TransformedBitmap(img, new ScaleTransform(scale, scale));
-            img = new FormatConvertedBitmap(img, PixelFormats.Bgr24, null, 0);
-            var enc = new JpegBitmapEncoder { QualityLevel = JpegQuality };
-            enc.Frames.Add(BitmapFrame.Create(img));
-            using (var ms = new MemoryStream())
-            {
-                enc.Save(ms);
-                return ms.ToArray();
-            }
-        }
-
-        private void RefreshImages()
-        {
-            PanelImages.Children.Clear();
-            for (int i = 0; i < _images.Count; i++)
-            {
-                int index = i;
-                var thumb = new BitmapImage();
-                thumb.BeginInit();
-                thumb.CacheOption = BitmapCacheOption.OnLoad;
-                thumb.DecodePixelHeight = 120;
-                thumb.StreamSource = new MemoryStream(_images[i]);
-                thumb.EndInit();
-
-                var remove = new Button
-                {
-                    Content = "✕",
-                    Width = 20,
-                    Height = 20,
-                    Padding = new Thickness(0),
-                    FontSize = 10,
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    VerticalAlignment = VerticalAlignment.Top,
-                    Margin = new Thickness(0, 2, 2, 0),
-                    ToolTip = "Bỏ ảnh này",
-                    Cursor = Cursors.Hand
-                };
-                remove.Click += (s, e) => { _images.RemoveAt(index); RefreshImages(); };
-
-                var grid = new Grid();
-                grid.Children.Add(new Image { Source = thumb, Height = 64, Stretch = Stretch.Uniform });
-                grid.Children.Add(remove);
-                PanelImages.Children.Add(new Border
-                {
-                    Child = grid,
-                    BorderBrush = (Brush)new BrushConverter().ConvertFrom("#CBD5E1"),
-                    BorderThickness = new Thickness(1),
-                    CornerRadius = new CornerRadius(4),
-                    Margin = new Thickness(0, 0, 6, 6),
-                    ToolTip = $"Ảnh {i + 1} — {_images[i].Length / 1024} KB sau khi thu nhỏ"
-                });
-            }
-        }
-
         // ---------- Gửi ----------
 
         private async void OnSubmitClick(object sender, RoutedEventArgs e)
@@ -409,13 +258,12 @@ namespace OhtaTool.Plugin.Views
                     _tamInputs[kv.Key].Focus();
                     return;
                 }
-            string nguoi = (TxtNguoi.Text ?? string.Empty).Trim();
-            string ghiChu = (TxtGhiChu.Text ?? string.Empty).Trim();
+            string nguoi = PanelEvidence.NguoiXacNhan;
+            string ghiChu = PanelEvidence.GhiChu;
             if (tamEntries.Count > 0)
             {
-                if (nguoi.Length == 0) { ShowStatus("T thực cần tên người xác nhận.", false); TxtNguoi.Focus(); return; }
-                if (ghiChu.Length == 0) { ShowStatus("T thực cần ghi chú (đo bằng gì, ở đâu...).", false); TxtGhiChu.Focus(); return; }
-                if (_images.Count == 0) { ShowStatus("T thực cần ít nhất 1 ảnh bằng chứng.", false); return; }
+                string evErr = PanelEvidence.Validate("T thực");
+                if (evErr != null) { ShowStatus(evErr, false); return; }
             }
 
             if (!catalogNeeded && tamEntries.Count == 0)
@@ -444,7 +292,7 @@ namespace OhtaTool.Plugin.Views
                 }
 
                 string tamLoai = TamLoai();
-                var images = new List<byte[]>(_images);
+                var images = PanelEvidence.Images;
                 foreach (var kv in tamEntries)
                 {
                     ShowStatus($"Đang gửi T thực T={kv.Key} kèm {images.Count} ảnh...", true);
@@ -465,8 +313,7 @@ namespace OhtaTool.Plugin.Views
                 }
                 if (allOk && tamEntries.Count > 0)
                 {
-                    _images.Clear();
-                    RefreshImages();
+                    PanelEvidence.ClearImages();
                 }
                 ShowStatus(string.Join("\n", lines), allOk);
                 FillOptions(null);

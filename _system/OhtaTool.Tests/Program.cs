@@ -662,11 +662,30 @@ namespace OhtaTool.Tests
                 // Goi y thong so dao cho form be thu
                 var s1 = TraVCalculator.SuggestDieParams("SUS", 9, "40", out string src1);
                 Check("Goi y: uu tien goc be thu cung loai + T + dao da co so", s1?.Saichou == "2600" && src1.Contains("85494-2-1"), src1);
-                var s2 = TraVCalculator.SuggestDieParams("SUS", 7, "V40", out string src2);
-                Check("Goi y: khong co be thu -> trav_90 cung dao, cung loai, T gan nhat (SUS T=6 V40)",
+                var s2 = TraVCalculator.SuggestDieParams("SUS", 6, "V40", out string src2);
+                Check("Goi y: khong co be thu -> dong trav_90 DUNG loai + T + dao (SUS T=6 V40)",
                     s2 != null && s2.HasDieParams && src2.Contains("SUS T=6 V40"), src2);
+                Check("Goi y: khong muon do day khac (SUS T=7 V40 khong co dong nao) -> null",
+                    TraVCalculator.SuggestDieParams("SUS", 7, "V40", out _) == null);
                 Check("Goi y: dao khong co trong du lieu -> null",
                     TraVCalculator.SuggestDieParams("SUS", 9, "V999", out _) == null);
+
+                // Goc be thu khong co thong so dao + trav_90 khong co dong -> bao thieu
+                var c70 = TraVCalculator.GetBendOptionsForFname("SUS304 2B", "9", 70).Find(c => c.DieLabel == "V40");
+                Check("Be thu thieu thong so dao -> dong thong tin bao 'Chua co thong so dao'",
+                    c70 != null && c70.DetailParts.Count == 1 && c70.DetailParts[0].StartsWith("Chưa có thông số dao"), c70?.DetailInfo);
+
+                // Bang chung cua thong so dao di cung dong (chep sang dong noi suy, khu hoi qua Thong_so)
+                var ev = new TraVThuRecord { Loai = "SUS", T = "9", Goc = 60, Dao = "V40", Denta = "15", Saichou = "2600",
+                    NguoiXacNhan = "Anh Tu", GhiChu = "do thuoc", Anh = "https://drive.google.com/file/d/abc/view" };
+                var evBack = TraVThuRecord.FromParams(FnameUpdateRequest.ParseParams(FnameUpdateRequest.BuildTrialParams(ev, "thay so cu")));
+                Check("Thong_so trav_thu khu hoi bang chung + gop ghi chu",
+                    evBack.NguoiXacNhan == "Anh Tu" && evBack.Anh.EndsWith("/view") && evBack.GhiChu == "do thuoc — thay so cu", evBack.GhiChu);
+                var copy = new TraVThuRecord();
+                copy.CopyDieParams(ev);
+                Check("CopyDieParams chep ca bang chung", copy.NguoiXacNhan == "Anh Tu" && copy.Anh == ev.Anh && copy.SameDieParams(ev));
+                Check("CSV trav_thu ghi / doc lai 3 cot bang chung",
+                    TraVThuData.Parse(TraVThuData.ToCsvLines(new[] { ev })).Single().NguoiXacNhan == "Anh Tu");
             }
             finally
             {
