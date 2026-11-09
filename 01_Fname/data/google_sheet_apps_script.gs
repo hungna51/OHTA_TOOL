@@ -68,7 +68,8 @@ var HANDLERS = {
   }
 };
 var TRAV_THU_SHEET_NAME = 'trav_thu';
-var TRAV_THU_HEADER = ['Loai', 'T', 'Goc', 'Dao', 'Denta', 'Ma_tam', 'Dinh_danh'];
+// 4 cột cuối: thông số dao lúc bẻ thử (tuỳ chọn) — thiếu cột trên Sheet thì applyTravThu_ tự thêm
+var TRAV_THU_HEADER = ['Loai', 'T', 'Goc', 'Dao', 'Denta', 'Ma_tam', 'Dinh_danh', 'Saichou', 'L_saitei', 'Z_saitei', 'Rend'];
 
 // Action chỉ đọc + submit_bug (tự khoá đúng đoạn ghi dòng) không giữ khoá chung: 1 báo lỗi kèm zip 25 MB
 // tải lên mất cả chục giây, giữ khoá thì máy khác ghi Fname / gửi báo lỗi bị "Lỗi Apps Script" (hết 20 s chờ).
@@ -276,7 +277,8 @@ function applyTravThu_(p, ctx) {
   });
 
   var vals = { Loai: clean_(p.Loai), T: clean_(p.T), Goc: clean_(p.Goc), Dao: clean_(p.Dao).toUpperCase(),
-               Denta: clean_(p.Denta), Ma_tam: clean_(p.Ma_tam), Dinh_danh: clean_(p.Dinh_danh) || 'Bẻ thử' };
+               Denta: clean_(p.Denta), Ma_tam: clean_(p.Ma_tam), Dinh_danh: clean_(p.Dinh_danh) || 'Bẻ thử',
+               Saichou: clean_(p.Saichou), L_saitei: clean_(p.L_saitei), Z_saitei: clean_(p.Z_saitei), Rend: clean_(p.Rend) };
   var row = 0, lastRow = sh.getLastRow();
   if (lastRow >= 2) {
     var data = sh.getRange(2, 1, lastRow - 1, lastCol).getDisplayValues();

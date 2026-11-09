@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Danh Sách Góc Bẻ Thử — Fname"
-        Width="820"
+        Width="1020"
         Height="560"
         MinWidth="560"
         MinHeight="360"
@@ -135,6 +135,10 @@
                     <DataGridTextColumn Header="Dao" Binding="{Binding Dao}" Width="56"/>
                     <DataGridTextColumn Header="Denta" Binding="{Binding Denta}" Width="58"/>
                     <DataGridTextColumn Header="Mã tấm" Binding="{Binding MaTam}" Width="*" MinWidth="140"/>
+                    <DataGridTextColumn Header="最長" Binding="{Binding Saichou}" Width="54"/>
+                    <DataGridTextColumn Header="Ｌ最低" Binding="{Binding LSaitei}" Width="50"/>
+                    <DataGridTextColumn Header="Ｚ最低" Binding="{Binding ZSaitei}" Width="50"/>
+                    <DataGridTextColumn Header="Rend" Binding="{Binding Rend}" Width="44"/>
                     <DataGridTextColumn Header="Định danh" Binding="{Binding DinhDanh}" Width="78"/>
                     <DataGridTextColumn Header="Trạng thái" Binding="{Binding TrangThai}" Width="92"/>
                 </DataGrid.Columns>

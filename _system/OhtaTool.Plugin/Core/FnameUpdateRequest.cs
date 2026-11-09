@@ -128,6 +128,10 @@ namespace OhtaTool.Plugin.Core
                 new KeyValuePair<string, string>("Denta", r.Denta),
                 new KeyValuePair<string, string>("Ma_tam", r.MaTam),
                 new KeyValuePair<string, string>("Dinh_danh", r.DinhDanh),
+                new KeyValuePair<string, string>("Saichou", r.Saichou),
+                new KeyValuePair<string, string>("L_saitei", r.LSaitei),
+                new KeyValuePair<string, string>("Z_saitei", r.ZSaitei),
+                new KeyValuePair<string, string>("Rend", r.Rend),
                 new KeyValuePair<string, string>("Ghi_chu", ghiChu)
             });
         }

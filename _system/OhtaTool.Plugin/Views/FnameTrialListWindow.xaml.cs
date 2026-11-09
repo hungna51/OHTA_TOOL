@@ -24,6 +24,10 @@ namespace OhtaTool.Plugin.Views
             public string Dao { get; set; }
             public string Denta { get; set; }
             public string MaTam { get; set; }
+            public string Saichou { get; set; }
+            public string LSaitei { get; set; }
+            public string ZSaitei { get; set; }
+            public string Rend { get; set; }
             public string DinhDanh { get; set; }
             public string TrangThai { get; set; }
 
@@ -72,6 +76,10 @@ namespace OhtaTool.Plugin.Views
                     Dao = r.Dao,
                     Denta = r.Denta,
                     MaTam = r.MaTam,
+                    Saichou = r.Saichou,
+                    LSaitei = r.LSaitei,
+                    ZSaitei = r.ZSaitei,
+                    Rend = r.Rend,
                     DinhDanh = r.SourceLabel,
                     TrangThai = pending.Any(p => p.SameKey(r) && p.Denta == r.Denta) ? "Chờ duyệt" : "Đã duyệt"
                 }).ToList();

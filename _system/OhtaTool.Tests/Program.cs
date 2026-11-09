@@ -35,6 +35,7 @@ namespace OhtaTool.Tests
             TestFnameComputeDraggedTextHeight();
             TestTraVCalculations();
             TestTrialBendLookup();
+            TestTrialDieParams();
             TestTamTableAndConfig();
             TestTamBoSung();
             TestPressOneTimeFormatAndParsing();
@@ -629,6 +630,40 @@ namespace OhtaTool.Tests
                 string.Join(" | ", warn));
             Check("File mau hien tai khong co canh bao lien ket", TraVCalculator.GetDataWarnings(FnameCatalogData.LoadFromModuleDirectory(FnameDir, NoCache)).Count == 0,
                 string.Join(" | ", TraVCalculator.GetDataWarnings(FnameCatalogData.LoadFromModuleDirectory(FnameDir, NoCache))));
+        }
+
+        private static void TestTrialDieParams()
+        {
+            string cache = Path.Combine(Path.GetTempPath(), "ohta_thu_die_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(cache);
+            try
+            {
+                File.WriteAllText(Path.Combine(cache, "trav_thu.csv"), string.Join("\n", new[]
+                {
+                    TraVThuData.Header,
+                    "SUS,9,60,V40,15,85494-2-1,Bẻ thử,2600,40,50,12.3",
+                    "SUS,9,70,V40,13,X1,Bẻ thử,,,,"
+                }) + "\n");
+                TraVCalculator.Load(FnameDir, cache);
+
+                var c60 = TraVCalculator.GetBendOptionsForFname("SUS304 2B", "9", 60).Find(c => c.DieLabel == "V40");
+                Check("Be thu co thong so dao -> hien 最長 / L / Z / Rend, khong co R",
+                    c60 != null && string.Join("|", c60.DetailParts) == "最長 2600|Ｌ最低 40|Ｚ最低 50|Rend 12.3", c60?.DetailInfo);
+
+                var c65 = TraVCalculator.GetBendOptionsForFname("SUS304 2B", "9", 65).Find(c => c.DieLabel == "V40");
+                Check("Noi suy 60/70: lay thong so dao cua goc goc co nhap, ghi kem vao dong gui Sheet",
+                    c65 != null && c65.DetailParts.Count == 4 && c65.NewTrialRecord?.Saichou == "2600" && c65.NewTrialRecord.Rend == "12.3", c65?.DetailInfo);
+
+                var back = TraVThuRecord.FromParams(FnameUpdateRequest.ParseParams(FnameUpdateRequest.BuildTrialParams(c65.NewTrialRecord)));
+                Check("Thong_so trav_thu khu hoi 4 thong so dao", back.LSaitei == "40" && back.ZSaitei == "50" && back.HasDieParams);
+                Check("CSV trav_thu ghi / doc lai 4 cot dao",
+                    TraVThuData.Parse(TraVThuData.ToCsvLines(new[] { back })).Single().Saichou == "2600");
+            }
+            finally
+            {
+                Directory.Delete(cache, true);
+                TraVCalculator.Load(FnameDir, NoCache);
+            }
         }
 
         private static void TestTrialBendLookup()

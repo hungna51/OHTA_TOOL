@@ -296,7 +296,7 @@ namespace OhtaTool.Plugin.Core
                         string info = r.IsBeThu
                             ? "tham khảo tấm " + RefTam(r.MaTam)
                             : "từ " + RefTam(r.MaTam);
-                        results.Add(BuildTrialCandidate(matKey, thick, angle, r.Dao, r.DentaValue.Value, r.SourceLabel, info));
+                        results.Add(BuildTrialCandidate(matKey, thick, angle, r.Dao, r.DentaValue.Value, r.SourceLabel, info, r));
                     }
                     continue;
                 }
@@ -307,7 +307,9 @@ namespace OhtaTool.Plugin.Core
 
                 string kind = extrap ? TraVThuRecord.NgoaiSuy : TraVThuRecord.NoiSuy;
                 string sourceInfo = $"từ góc {DescribeBase(a)} và {DescribeBase(b)}";
-                TraVCandidate c = BuildTrialCandidate(matKey, thick, angle, dieGroup.Key, d, kind, sourceInfo);
+                // Thông số dao lấy theo góc gốc có nhập (ưu tiên góc gần hơn: b)
+                TraVThuRecord dieSource = new[] { b, a }.FirstOrDefault(r => r.HasDieParams);
+                TraVCandidate c = BuildTrialCandidate(matKey, thick, angle, dieGroup.Key, d, kind, sourceInfo, dieSource);
                 c.NewTrialRecord = new TraVThuRecord
                 {
                     Loai = a.Loai,
@@ -318,6 +320,7 @@ namespace OhtaTool.Plugin.Core
                     MaTam = BaseToken(a) + " / " + BaseToken(b),
                     DinhDanh = kind
                 };
+                c.NewTrialRecord.CopyDieParams(dieSource);
 
                 var derived = new[] { a, b }.Where(r => !r.IsBeThu).ToList();
                 if (derived.Count > 0)
@@ -421,7 +424,8 @@ namespace OhtaTool.Plugin.Core
 
         private static string RefTam(string maTam) => string.IsNullOrWhiteSpace(maTam) ? "?" : maTam.Trim();
 
-        private static TraVCandidate BuildTrialCandidate(string matKey, double thick, double angle, string dao, double denta, string source, string sourceInfo)
+        private static TraVCandidate BuildTrialCandidate(string matKey, double thick, double angle, string dao, double denta, string source, string sourceInfo,
+            TraVThuRecord dieSource = null)
         {
             string loai = TraVThuData.NormalizeLoai(matKey);
             bool isSimaNgoai = loai.EndsWith("SIMA NGOAI", StringComparison.Ordinal);
@@ -437,10 +441,16 @@ namespace OhtaTool.Plugin.Core
             else
                 fmt = $"{FormatVLabel(dao)}-{dentaStr}({angStr}°)";
 
+            // Thông số dao (không có R): nhập kèm lúc bẻ thử; không có thì lấy dòng trav_90 đúng loại + T + dao nếu có
             var parts = new List<string>();
-            TraV90Row r90 = FindRow90(matKey, thick, dao);
-            if (r90 != null)
-                parts.AddRange(BuildDetailParts(r90, includeR: angle >= 90.0));
+            if (dieSource != null && dieSource.HasDieParams)
+                parts.AddRange(dieSource.DieParts());
+            else
+            {
+                TraV90Row r90 = FindRow90(matKey, thick, dao);
+                if (r90 != null)
+                    parts.AddRange(BuildDetailParts(r90, includeR: false));
+            }
 
             return new TraVCandidate
             {

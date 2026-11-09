@@ -9,7 +9,9 @@ namespace OhtaTool.Plugin.Core
 {
     /// <summary>
     /// 1 dòng bảng góc bẻ thử (tab "trav_thu" trên Google Sheet): số liệu đo thực tế khi bảng TraV không tính được.
-    /// Cột: Loai,T,Goc,Dao,Denta,Ma_tam,Dinh_danh — Dinh_danh = "Bẻ thử" (đo thật), "Nội suy" / "Ngoại suy" (tool tính từ 2 góc bẻ thử).    /// </summary>
+    /// Cột: Loai,T,Goc,Dao,Denta,Ma_tam,Dinh_danh — Dinh_danh = "Bẻ thử" (đo thật), "Nội suy" / "Ngoại suy" (tool tính từ 2 góc bẻ thử).
+    /// Thêm 4 cột tuỳ chọn thông số dao lúc bẻ thử (Saichou, L_saitei, Z_saitei, Rend) — bảng TraV 90° thường không có đúng loại + T + dao này.
+    /// </summary>
     public sealed class TraVThuRecord
     {
         public const string BeThu = "Bẻ thử";
@@ -23,6 +25,32 @@ namespace OhtaTool.Plugin.Core
         public string Denta { get; set; } = string.Empty;
         public string MaTam { get; set; } = string.Empty;
         public string DinhDanh { get; set; } = BeThu;
+
+        // Thông số dao lúc bẻ thử (tuỳ chọn, cùng tên cột trav_90): 最長 / Ｌ最低 / Ｚ最低 / Rend
+        public string Saichou { get; set; } = string.Empty;
+        public string LSaitei { get; set; } = string.Empty;
+        public string ZSaitei { get; set; } = string.Empty;
+        public string Rend { get; set; } = string.Empty;
+
+        public bool HasDieParams => Saichou.Length + LSaitei.Length + ZSaitei.Length + Rend.Length > 0;
+
+        /// <summary>Cụm hiển thị như dòng thông số dao của bẻ thường (không có R).</summary>
+        public List<string> DieParts()
+        {
+            var parts = new List<string>();
+            if (Saichou.Length > 0) parts.Add("最長 " + Saichou);
+            if (LSaitei.Length > 0) parts.Add("Ｌ最低 " + LSaitei);
+            if (ZSaitei.Length > 0) parts.Add("Ｚ最低 " + ZSaitei);
+            if (Rend.Length > 0) parts.Add("Rend " + Rend);
+            return parts;
+        }
+
+        /// <summary>Chép 4 thông số dao từ dòng khác (dòng nội suy / ngoại suy lấy theo góc bẻ thử gốc).</summary>
+        public void CopyDieParams(TraVThuRecord from)
+        {
+            if (from == null) return;
+            Saichou = from.Saichou; LSaitei = from.LSaitei; ZSaitei = from.ZSaitei; Rend = from.Rend;
+        }
 
         public bool IsNoiSuy => TraVThuData.Fold(DinhDanh).StartsWith("NOI", StringComparison.Ordinal);
 
@@ -54,14 +82,18 @@ namespace OhtaTool.Plugin.Core
                 Dao = TraVThuData.NormalizeDao(Get("Dao")),
                 Denta = Get("Denta").Trim(),
                 MaTam = Get("Ma_tam").Trim(),
-                DinhDanh = Get("Dinh_danh").Trim().Length > 0 ? Get("Dinh_danh").Trim() : BeThu
+                DinhDanh = Get("Dinh_danh").Trim().Length > 0 ? Get("Dinh_danh").Trim() : BeThu,
+                Saichou = Get("Saichou").Trim(),
+                LSaitei = Get("L_saitei").Trim(),
+                ZSaitei = Get("Z_saitei").Trim(),
+                Rend = Get("Rend").Trim()
             };
         }
     }
 
     public static class TraVThuData
     {
-        public const string Header = "Loai,T,Goc,Dao,Denta,Ma_tam,Dinh_danh";
+        public const string Header = "Loai,T,Goc,Dao,Denta,Ma_tam,Dinh_danh,Saichou,L_saitei,Z_saitei,Rend";
 
         /// <summary>Khoảng cách 2 góc bẻ thử dùng để nội suy lớn hơn mức này -> phải xác nhận với quản lý.</summary>
         public const double MaxInterpolationGap = 10.0;
@@ -79,13 +111,13 @@ namespace OhtaTool.Plugin.Core
         public static List<TraVThuRecord> Parse(string[] lines)
         {
             var list = new List<TraVThuRecord>();
-            int iLoai = 0, iT = 1, iGoc = 2, iDao = 3, iDenta = 4, iMa = 5, iDinh = 6;
+            int iLoai = 0, iT = 1, iGoc = 2, iDao = 3, iDenta = 4, iMa = 5, iDinh = 6, iSai = 7, iL = 8, iZ = 9, iRend = 10;
             foreach (string line in lines ?? new string[0])
             {
                 string[] p = line.Split(',');
                 if (IsHeaderRow(p))
                 {
-                    iLoai = iT = iGoc = iDao = iDenta = iMa = iDinh = -1;
+                    iLoai = iT = iGoc = iDao = iDenta = iMa = iDinh = iSai = iL = iZ = iRend = -1;
                     for (int i = 0; i < p.Length; i++)
                     {
                         switch (Fold(p[i]).Replace("_", string.Empty).Replace(" ", string.Empty))
@@ -97,6 +129,10 @@ namespace OhtaTool.Plugin.Core
                             case "DENTA": iDenta = i; break;
                             case "MATAM": iMa = i; break;
                             case "DINHDANH": iDinh = i; break;
+                            case "SAICHOU": iSai = i; break;
+                            case "LSAITEI": iL = i; break;
+                            case "ZSAITEI": iZ = i; break;
+                            case "REND": iRend = i; break;
                         }
                     }
                     continue;
@@ -117,7 +153,11 @@ namespace OhtaTool.Plugin.Core
                     Dao = NormalizeDao(Cell(iDao)),
                     Denta = Cell(iDenta),
                     MaTam = Cell(iMa),
-                    DinhDanh = Cell(iDinh).Length > 0 ? Cell(iDinh) : TraVThuRecord.BeThu
+                    DinhDanh = Cell(iDinh).Length > 0 ? Cell(iDinh) : TraVThuRecord.BeThu,
+                    Saichou = Cell(iSai),
+                    LSaitei = Cell(iL),
+                    ZSaitei = Cell(iZ),
+                    Rend = Cell(iRend)
                 });
             }
             return list;
@@ -137,7 +177,8 @@ namespace OhtaTool.Plugin.Core
 
         public static string ToCsvLine(TraVThuRecord r) => string.Join(",", new[]
         {
-            Clean(r.Loai), Clean(r.T), TraVCalculator.FormatAngle(r.Goc), Clean(r.Dao), Clean(r.Denta), Clean(r.MaTam), Clean(r.DinhDanh)
+            Clean(r.Loai), Clean(r.T), TraVCalculator.FormatAngle(r.Goc), Clean(r.Dao), Clean(r.Denta), Clean(r.MaTam), Clean(r.DinhDanh),
+            Clean(r.Saichou), Clean(r.LSaitei), Clean(r.ZSaitei), Clean(r.Rend)
         });
 
         public static string[] ToCsvLines(IEnumerable<TraVThuRecord> records) =>

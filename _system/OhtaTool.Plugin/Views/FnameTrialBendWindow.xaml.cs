@@ -66,19 +66,38 @@ namespace OhtaTool.Plugin.Views
                 Dao = dao,
                 Denta = TxtDenta.Text.Trim(),
                 MaTam = maTam,
-                DinhDanh = CmbDinhDanh.SelectedItem as string ?? TraVThuRecord.BeThu
+                DinhDanh = CmbDinhDanh.SelectedItem as string ?? TraVThuRecord.BeThu,
+                Saichou = TxtSaichou.Text.Trim(),
+                LSaitei = TxtLSaitei.Text.Trim(),
+                ZSaitei = TxtZSaitei.Text.Trim(),
+                Rend = TxtRend.Text.Trim()
             };
+            // Thông số dao tuỳ chọn: đã nhập thì phải là số
+            foreach (var (box, name) in new[] { (TxtSaichou, "最長"), (TxtLSaitei, "Ｌ最低"), (TxtZSaitei, "Ｚ最低"), (TxtRend, "Rend") })
+                if (box.Text.Trim().Length > 0 && !TraVThuData.ParseNumber(box.Text).HasValue)
+                {
+                    ShowStatus(name + " không hợp lệ (dùng dấu chấm, ví dụ 2.5).", false);
+                    box.Focus();
+                    return;
+                }
 
             TraVThuRecord old = TraVCalculator.GetTrialRecords().FirstOrDefault(r => r.SameKey(record));
             if (old != null)
             {
-                if (old.SourceLabel == record.SourceLabel && old.DentaValue == denta && string.Equals(old.MaTam, maTam, StringComparison.OrdinalIgnoreCase))
+                bool sameDie = string.Join("|", old.DieParts()) == string.Join("|", record.DieParts());
+                if (old.SourceLabel == record.SourceLabel && old.DentaValue == denta && string.Equals(old.MaTam, maTam, StringComparison.OrdinalIgnoreCase)
+                    && (sameDie || !record.HasDieParams))
                 {
                     ShowStatus("Góc này đã có trong dữ liệu, không cần gửi lại.", true);
                     return;
                 }
+                // Gửi lại dòng đã có mà để trống thông số dao thì giữ thông số dao cũ (không xoá mất)
+                if (!record.HasDieParams)
+                    record.CopyDieParams(old);
+                string oldDie = old.HasDieParams ? " — " + string.Join(" - ", old.DieParts()) : string.Empty;
+                string newDie = record.HasDieParams ? " — " + string.Join(" - ", record.DieParts()) : string.Empty;
                 if (MessageBox.Show(this, $"Đã có {old.DinhDanh.ToLowerInvariant()} {old.Loai} T={old.T} {TraVCalculator.FormatAngle(old.Goc)}° {old.Dao}: "
-                        + $"Denta {old.Denta} (tấm {old.MaTam}).\n\nGửi yêu cầu thay bằng Denta {record.Denta} (tấm {maTam})?",
+                        + $"Denta {old.Denta} (tấm {old.MaTam}){oldDie}.\n\nGửi yêu cầu thay bằng Denta {record.Denta} (tấm {maTam}){newDie}?",
                         "Đã có góc này", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                     return;
             }
