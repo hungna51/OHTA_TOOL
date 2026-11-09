@@ -39,7 +39,46 @@ namespace OhtaTool.Plugin.Views
             CmbLoai.Text = string.IsNullOrWhiteSpace(initialM) ? string.Empty : TraVCalculator.GetTraVMaterialKeys(initialM).FirstOrDefault() ?? string.Empty;
             TxtT.Text = initialT ?? string.Empty;
             TxtGoc.Text = initialAngle ?? string.Empty;
+
+            // Đổi loại / T / dao -> gợi ý lại 4 thông số dao
+            foreach (var cmb in new[] { CmbLoai, CmbDao })
+            {
+                cmb.AddHandler(System.Windows.Controls.Primitives.TextBoxBase.TextChangedEvent,
+                    new System.Windows.Controls.TextChangedEventHandler((s, e) => SuggestDie()));
+                cmb.SelectionChanged += (s, e) => Dispatcher.BeginInvoke(new Action(SuggestDie));
+            }
+            TxtT.TextChanged += (s, e) => SuggestDie();
+            SuggestDie();
             Loaded += (s, e) => (CmbLoai.Text.Length == 0 ? (UIElement)CmbLoai : TxtGoc).Focus();
+        }
+
+        // Giá trị tool tự điền lần trước cho từng ô — ô người dùng đã sửa khác đi thì không ghi đè nữa
+        private readonly Dictionary<System.Windows.Controls.TextBox, string> _dieAuto = new Dictionary<System.Windows.Controls.TextBox, string>();
+
+        private void SuggestDie()
+        {
+            string loai = (CmbLoai.Text ?? string.Empty).Trim();
+            double? t = TraVThuData.ParseNumber(TxtT.Text);
+            string dao = TraVThuData.NormalizeDao(CmbDao.Text);
+            string source = string.Empty;
+            TraVThuRecord s = loai.Length > 0 && t.HasValue && dao.Length > 1
+                ? TraVCalculator.SuggestDieParams(loai, t.Value, dao, out source) : null;
+
+            foreach (var (box, value) in new[] { (TxtSaichou, s?.Saichou), (TxtLSaitei, s?.LSaitei), (TxtZSaitei, s?.ZSaitei), (TxtRend, s?.Rend) })
+            {
+                string cur = box.Text.Trim();
+                if (cur.Length == 0 || (_dieAuto.TryGetValue(box, out string last) && cur == last))
+                {
+                    box.Text = value ?? string.Empty;
+                    _dieAuto[box] = box.Text;
+                }
+            }
+
+            TxtDieHint.Text = s != null
+                ? $"Gợi ý theo {source} — sửa nếu số đo thực tế khác."
+                : dao.Length > 1
+                    ? $"Dao {dao} chưa có thông số trong dữ liệu — nhập nếu có, để trống cũng được."
+                    : "Tuỳ chọn — thông số dao lúc bẻ thử, hiện dưới dòng V= như bẻ thường.";
         }
 
         private async void OnSubmitClick(object sender, RoutedEventArgs e)

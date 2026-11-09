@@ -682,6 +682,35 @@ namespace OhtaTool.Plugin.Core
         /// <summary>
         /// Dòng bảng 90° ứng với dao của bảng góc nhọn ("V12" / "U18" -> cột V = "12" / "18").
         /// </summary>
+        /// <summary>
+        /// Gợi ý 最長 / Ｌ最低 / Ｚ最低 / Rend cho form góc bẻ thử: góc bẻ thử khác cùng loại + T + dao đã có số,
+        /// rồi trav_90 cùng dao (ưu tiên cùng loại, T gần nhất), rồi loại khác. Dao không có ở đâu -> null.
+        /// </summary>
+        public static TraVThuRecord SuggestDieParams(string loai, double thick, string dao, out string source)
+        {
+            source = string.Empty;
+            string d = TraVThuData.NormalizeDao(dao);
+            TraVThuRecord thu = TableThu.FirstOrDefault(r => r.HasDieParams && TraVThuData.SameLoai(r.Loai, loai)
+                && Math.Abs(r.TValue - thick) < 0.05 && string.Equals(r.Dao, d, StringComparison.OrdinalIgnoreCase));
+            if (thu != null)
+            {
+                source = $"góc bẻ thử {thu.Loai} T={thu.T} {thu.Dao} (tấm {thu.MaTam})";
+                var copy = new TraVThuRecord();
+                copy.CopyDieParams(thu);
+                return copy;
+            }
+
+            string v = d.Length > 1 && char.IsLetter(d[0]) ? d.Substring(1) : d;
+            TraV90Row row = Table90.Where(r => string.Equals(r.V, v, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(r => TraVThuData.SameLoai(r.Mat, loai) ? 0 : 1)
+                .ThenBy(r => Math.Abs(r.T - thick))
+                .FirstOrDefault();
+            if (row == null)
+                return null;
+            source = $"bảng TraV {row.Mat} T={FormatDenta(row.T)} V{row.V}";
+            return new TraVThuRecord { Saichou = row.C8, LSaitei = row.C9, ZSaitei = row.C10, Rend = row.C14 };
+        }
+
         private static TraV90Row FindRow90(string matKey, double thick, string dieLabel)
         {
             string v = (dieLabel ?? string.Empty).Trim();

@@ -658,6 +658,15 @@ namespace OhtaTool.Tests
                 Check("Thong_so trav_thu khu hoi 4 thong so dao", back.LSaitei == "40" && back.ZSaitei == "50" && back.HasDieParams);
                 Check("CSV trav_thu ghi / doc lai 4 cot dao",
                     TraVThuData.Parse(TraVThuData.ToCsvLines(new[] { back })).Single().Saichou == "2600");
+
+                // Goi y thong so dao cho form be thu
+                var s1 = TraVCalculator.SuggestDieParams("SUS", 9, "40", out string src1);
+                Check("Goi y: uu tien goc be thu cung loai + T + dao da co so", s1?.Saichou == "2600" && src1.Contains("85494-2-1"), src1);
+                var s2 = TraVCalculator.SuggestDieParams("SUS", 7, "V40", out string src2);
+                Check("Goi y: khong co be thu -> trav_90 cung dao, cung loai, T gan nhat (SUS T=6 V40)",
+                    s2 != null && s2.HasDieParams && src2.Contains("SUS T=6 V40"), src2);
+                Check("Goi y: dao khong co trong du lieu -> null",
+                    TraVCalculator.SuggestDieParams("SUS", 9, "V999", out _) == null);
             }
             finally
             {

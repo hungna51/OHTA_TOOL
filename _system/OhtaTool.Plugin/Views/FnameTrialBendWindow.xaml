@@ -166,8 +166,8 @@
                     <TextBlock Text="Rend" FontSize="12" VerticalAlignment="Center" Margin="0,0,4,0"/>
                     <TextBox x:Name="TxtRend" Width="46" Height="25" FontSize="12" FontFamily="Consolas" VerticalContentAlignment="Center" Margin="0,0,0,4"/>
                 </WrapPanel>
-                <TextBlock Grid.Row="10" Grid.Column="1" Style="{StaticResource FieldHint}"
-                           Text="Tuỳ chọn — thông số dao lúc bẻ thử, hiện dưới dòng V= như bẻ thường (bảng TraV thường không có đúng loại + T + dao này)."/>
+                <TextBlock x:Name="TxtDieHint" Grid.Row="10" Grid.Column="1" Style="{StaticResource FieldHint}"
+                           Text="Tuỳ chọn — thông số dao lúc bẻ thử, hiện dưới dòng V= như bẻ thường."/>
 
                 <TextBlock Grid.Row="11" Grid.Column="0" Text="Định danh" Style="{StaticResource FieldLabel}"/>
                 <ComboBox x:Name="CmbDinhDanh" Grid.Row="11" Grid.Column="1" IsEditable="False" Height="25" FontSize="12"
