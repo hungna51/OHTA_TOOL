@@ -77,6 +77,13 @@ namespace TeamsTool.Core
                 .Select(t => new TepDinhKem { Ten = t.GetString("FileName"), DuongDan = t.GetString("ServerRelativeUrl") })
                 .Where(t => !string.IsNullOrEmpty(t.Ten) && !string.IsNullOrEmpty(t.DuongDan)).ToList();
 
+        /// <summary>
+        /// URL tải nội dung tệp qua SharePoint REST. Đường dẫn trực tiếp (/sites/…/Attachments/…) trả 401 với token OAuth —
+        /// phải đi qua /_api/…/$value. Dấu ' trong đường dẫn nhân đôi theo cú pháp OData.
+        /// </summary>
+        public static string UrlTaiTep(string web, string duongDan) =>
+            web + "/_api/web/GetFileByServerRelativePath(decodedurl='" + Uri.EscapeDataString((duongDan ?? "").Replace("'", "''")) + "')/$value";
+
         /// <summary>Chữ người gõ → HTML của tin trả lời (mã hoá ký tự đặc biệt, xuống dòng = &lt;br&gt;).</summary>
         public static string HtmlTraLoi(string chu) =>
             // tự mã hoá 4 ký tự HTML: WebUtility.HtmlEncode của net48 đổi cả chữ có dấu thành &#227;

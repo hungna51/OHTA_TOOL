@@ -275,6 +275,8 @@ namespace TeamsTool.Tests
             Kiem("chat: tin cu truoc, bo tin da xoa, bo HTML", string.Join(" / ", tins.Select(t => t.Nguoi + ": " + t.Chu + (t.SoTep > 0 ? " +" + t.SoTep : ""))), "Nguyễn A Hùng: Phạm Anh Tuấn Làm giúp anh nhé! +1 / 谷本: OK");
             Kiem("chat: mot tin (object)", TraoDoi.DocTin(@"{""id"":""9"",""from"":{""user"":{""displayName"":""A""}},""body"":{""contentType"":""text"",""content"":""x""}}")[0].Nguoi, "A");
             Kiem("tep: doc AttachmentFiles", string.Join(",", TraoDoi.DocTep(@"{""value"":[{""FileName"":""130819.pdf"",""ServerRelativeUrl"":""/sites/x/Lists/y/Attachments/2758/130819.pdf""},{""FileName"":""""}]}").Select(t => t.Ten + "=" + t.DuongDan)), "130819.pdf=/sites/x/Lists/y/Attachments/2758/130819.pdf");
+            Kiem("tep: URL tai qua _api, ma hoa dau cach + nhay don", TraoDoi.UrlTaiTep("https://h/sites/x", "/sites/x/Lists/Tt c/Attachments/1/a'b.pdf"),
+                 "https://h/sites/x/_api/web/GetFileByServerRelativePath(decodedurl='%2Fsites%2Fx%2FLists%2FTt%20c%2FAttachments%2F1%2Fa%27%27b.pdf')/$value");
             Kiem("tra loi: ma hoa HTML + xuong dong", TraoDoi.HtmlTraLoi(" Đã xong <1>\r\ndòng 2 "), "Đã xong &lt;1&gt;<br>dòng 2");
             Kiem("tra loi: body", ((OhtaTool.Plugin.Core.JsonObject)((OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyTraLoi("hi"))).Get("body")).GetString("content"), "hi");
             Kiem("tach nhan", string.Join("|", BangDon.TachNhan("切板, 曲げ,  ")), "切板|曲げ");

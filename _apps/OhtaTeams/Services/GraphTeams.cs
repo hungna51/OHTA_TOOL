@@ -336,8 +336,8 @@ namespace TeamsTool.Services
         /// <summary>Tải tệp về %TEMP%\OHTA_TOOL\teams\tep\&lt;itemId&gt;\ (ghi đè bản cũ), trả đường dẫn để mở.</summary>
         public static async Task<string> TaiTep(string listUrl, string itemId, TepDinhKem tep, CancellationToken ct)
         {
-            var (host, _) = WebCuaList(listUrl);
-            string url = "https://" + host + string.Join("/", tep.DuongDan.Split('/').Select(Uri.EscapeDataString));
+            var (host, web) = WebCuaList(listUrl);
+            string url = TraoDoi.UrlTaiTep(web, tep.DuongDan);
             string thuMuc = Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "teams", "tep", itemId);
             Directory.CreateDirectory(thuMuc);
             string f = Path.Combine(thuMuc, string.Concat(tep.Ten.Split(Path.GetInvalidFileNameChars())));
