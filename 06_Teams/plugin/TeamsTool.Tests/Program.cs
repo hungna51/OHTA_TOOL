@@ -235,8 +235,10 @@ namespace TeamsTool.Tests
             // Bang don kieu Lists
             var homNay = new DateTime(2026, 11, 10);
             string Mau(string tt, DateTime? han, bool xong = false) => BangDon.MauDong(new DonTeams { TrangThai = tt, Han = han, DaXong = xong }, homNay) ?? "-";
-            Kiem("mau dong: qua han / chua gan han = hong", Mau("Đang triển khai", new DateTime(2026, 11, 9)) + "|" + Mau("Đang check", null), "hong|hong");
-            Kiem("mau dong: dung han theo trang thai", Mau("Đang check", homNay) + "|" + Mau("Đang triển khai", homNay) + "|" + Mau("Chưa triển khai", homNay), "vang|xanh|-");
+            Kiem("mau dong: qua han chua xong = hong (ke ca cau hoi)", Mau("Đang triển khai", new DateTime(2026, 11, 9)) + "|" + Mau("Câu hỏi - xác nhận", new DateTime(2026, 11, 1)), "hong|hong");
+            Kiem("mau dong: chua gan han theo trang thai", Mau("Đang check", null) + "|" + Mau("Chưa triển khai", null), "vang|-");
+            Kiem("mau dong: dung han theo trang thai", Mau("Đang check", homNay) + "|" + Mau("Đang triển khai", homNay) + "|" + Mau("Câu hỏi - xác nhận", homNay) + "|" + Mau("Chưa triển khai", homNay), "vang|xanh|do|-");
+            Kiem("mau dong: nhieu trang thai, cau hoi uu tien", Mau("Đang check, Câu hỏi - xác nhận", homNay), "do");
             Kiem("mau dong: da xong khong to", Mau("Đã hoàn thành", null, true), "-");
             Kiem("mau nhan: co dinh, trong khoang", BangDon.MauNhan("切板", 8) == BangDon.MauNhan("切板", 8) && BangDon.MauNhan("x", 8) < 8 && BangDon.MauNhan("", 8) >= 0, true);
             var dBang = new List<DonTeams> { new DonTeams { Han = new DateTime(2026, 11, 22) }, new DonTeams(), new DonTeams { Han = new DateTime(2026, 10, 22, 7, 0, 0) } };

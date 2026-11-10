@@ -8,14 +8,16 @@ namespace TeamsTool.Core
     public static class BangDon
     {
         /// <summary>
-        /// Màu dòng: "hong" = chưa xong mà quá hạn / chưa gán hạn, "vang" = Đang check, "xanh" = Đang triển khai, null = không tô.
-        /// shortcut: Graph không trả định dạng màu của view Lists — quy tắc suy từ ảnh view "tiến độ"; đổi ở đây nếu xưởng dùng quy tắc khác.
+        /// Màu dòng (quy tắc xưởng, Graph không trả định dạng màu của view Lists):
+        /// "hong" = quá Hạn hoàn thành mà chưa xong (ưu tiên nhất); rồi theo Trạng thái: "do" = Câu hỏi - xác nhận,
+        /// "vang" = Đang check, "xanh" = Đang triển khai; null = không tô. Trạng thái nhiều giá trị: lấy theo thứ tự trên.
         /// </summary>
         public static string MauDong(DonTeams d, DateTime homNay)
         {
             if (d.DaXong) return null;
-            if (d.Han == null || d.Han.Value.Date < homNay.Date) return "hong";
+            if (d.Han != null && d.Han.Value.Date < homNay.Date) return "hong";
             string tt = PhanTichTeams.BoDau(d.TrangThai);
+            if (tt.Contains("cau hoi")) return "do";
             if (tt.Contains("dang check")) return "vang";
             if (tt.Contains("dang trien khai")) return "xanh";
             return null;

@@ -501,7 +501,7 @@ namespace TeamsTool.Views
                 {
                     if (daVe >= DongToiDa) break;
                     string mau = BangDon.MauDong(d, homNay);
-                    Brush nen = KieuTeams.Mau(mau == "hong" ? "#F6D3DA" : mau == "vang" ? "#F7E2B0" : mau == "xanh" ? "#CBE3FA" : "#FFFFFF");
+                    Brush nen = KieuTeams.Mau(mau == "hong" ? "#F6D3DA" : mau == "do" ? "#F28B82" : mau == "vang" ? "#F7E2B0" : mau == "xanh" ? "#CBE3FA" : "#FFFFFF");
                     var h = HangBang(cots, nen);
                     h.MinHeight = 30;
                     h.Margin = new Thickness(0, 0, 0, 1);
