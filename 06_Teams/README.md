@@ -19,7 +19,7 @@ Mã: `Views/DangLamControl.cs` (tab CAD), `Core/DangLam.cs` (đọc/ghi file, kh
 - Chỉ tab **Lists** mở được; tab khác (Bài đăng, File, Wiki, web…) hiện mờ "chưa hỗ trợ".
 - Danh sách đơn dạng **bảng như view Lists** (cửa sổ 1400 px, kéo ngang): nhóm theo **Hạn hoàn thành** ("Chưa được gán" trên cùng, bấm tiêu đề nhóm để thu gọn, cuối nhóm có số đơn, cuối bảng "Số lượng"); cột người hiện thẻ tên, cột lựa chọn hiện nhãn màu. Màu dòng: quá Hạn hoàn thành mà chưa xong = hồng (ưu tiên nhất); còn lại theo Trạng thái: Câu hỏi - xác nhận = đỏ, Đang check = vàng, Đang triển khai = xanh (Graph không trả quy tắc màu của view — quy tắc ở `Core/BangDon.cs`). Cột mặc định theo view tiến độ (Title, Người triển khai, Người check 1, 加工, Trạng thái, Hạn hoàn thành, 切断スタート納期, 納期, 担当者, Loại đơn, Phân loại, Công ty, 注意); **kéo thả tiêu đề cột** ngay trên bảng để đổi vị trí (vạch màu báo chỗ thả); **☰ Cột** chọn cột hiện và sắp thứ tự bằng ▲ ▼; thứ tự nhớ riêng từng danh sách (registry `cot_hien_<listId>`). Vẽ tối đa 500 dòng.
 - Mặc định **ẩn đơn đã xong / dừng**: TRẠNG THÁI có "Đã hoàn thành" hoặc "STOP", hoặc ステータス = "完了" / "キャンセル". Ô tích **Xem cả đơn đã xong**, **Chỉ đơn của tôi** (tên người đăng nhập nằm trong Người triển khai / Người check).
-- Bấm một dòng → **chi tiết đơn dạng form Lists**: 2 phần **OHTA COMPANY** (Title + cột tên tiếng Nhật) / **OFT BY OHTA** (còn lại), lưới 3 cột, biểu tượng theo loại cột, ô trống hiện "Nhập giá trị tại đây". **Bấm một ô để sửa ngay tại chỗ** → **✓ Lưu** gửi riêng cột đó lên Teams (kèm phiên bản đơn) rồi tải lại đúng đơn đó (~0,3 s); **✕ Huỷ** đóng ô. Tệp đính kèm: Graph chưa đọc được → nút mở đơn trên Teams. Cách chia phần theo tên cột (Graph không trả cấu hình form) — ở `BangDon.PhanForm`.
+- Bấm một dòng → **chi tiết đơn dạng form Lists**: 2 phần **OHTA COMPANY** (Title + cột tên tiếng Nhật) / **OFT BY OHTA** (còn lại), lưới 3 cột, biểu tượng theo loại cột, ô trống hiện "Nhập giá trị tại đây". **Bấm một ô để sửa ngay tại chỗ** → **✓ Lưu** gửi riêng cột đó lên Teams (kèm phiên bản đơn) rồi tải lại đúng đơn đó (~0,3 s); **✕ Huỷ** đóng ô. Cuối form: **📎 Tệp đính kèm** (bấm tên tệp → tải về `%TEMP%\OHTA_TOOL\teams\tep\<id đơn>\` rồi mở) và **💬 Trao đổi trên Teams** (mọi chuỗi chat gắn với đơn — cột ẩn `teamsConversationMetadata_*` — tin gốc + trả lời, ô **Gửi trả lời** vào đúng chuỗi). Cách chia phần theo tên cột (Graph không trả cấu hình form) — ở `BangDon.PhanForm`.
 - **✏ Sửa nhiều ô** (trong chi tiết đơn): form theo loại cột — chữ (cả nhiều dòng), số, lựa chọn (ô tích nếu chọn nhiều), ngày (+ giờ nếu cột có giờ), có/không, **người** (giao đơn: ô gõ tên để lọc + danh sách nhân viên tích chọn; cột 1 người thì tích người mới là bỏ người cũ). Cột tra cứu / chữ có định dạng chỉ xem (sửa trên Teams). Danh sách nhân viên = mọi người từng có trong cột người của các đơn đã tải — người chưa từng được giao đơn nào thì giao lần đầu trên Teams. **💾 Lưu** hiện bảng *cũ → mới* để xác nhận, chỉ gửi các ô đã đổi, kèm phiên bản đơn: ai đó vừa sửa đơn trên Teams thì không ghi đè mà báo và tải lại. Lưu xong tự tải lại danh sách.
 - Ô **Nhân viên** trên danh sách đơn: chỉ hiện đơn có người đó ở bất kỳ cột người nào (triển khai, check 1/2, phụ trách…).
 - Tab Lists chọn lần trước được nhớ: mở lại là vào thẳng và tự tải đơn.
@@ -33,7 +33,7 @@ Graph + màn hình duyệt đơn nằm trong `_apps/OhtaTeams` ([ADR 0008](../_d
 Entra admin center → **App registrations → New registration** (`OHTA TOOL`, single tenant):
 
 1. **Authentication** → *Allow public client flows* = **Yes**.
-2. **API permissions** → Microsoft Graph → *Delegated*: `User.Read`, `Team.ReadBasic.All`, `Channel.ReadBasic.All`, `TeamsTab.Read.All`, `Sites.Read.All` → **Grant admin consent**. Muốn **sửa đơn** thì thêm `Sites.ReadWrite.All` (Delegated) → Grant admin consent — chưa có quyền này thì chỉ nút Lưu báo lỗi, phần xem vẫn chạy; cấp xong không cần đăng nhập lại.
+2. **API permissions** → Microsoft Graph → *Delegated*: `User.Read`, `Team.ReadBasic.All`, `Channel.ReadBasic.All`, `TeamsTab.Read.All`, `Sites.Read.All` → **Grant admin consent**. Thêm cho OhtaTeams (Delegated → Grant admin consent): Microsoft Graph `Sites.ReadWrite.All` (sửa đơn), `ChannelMessage.Read.All` + `ChannelMessage.Send` (chat kèm đơn); **SharePoint** `AllSites.Read` (tệp đính kèm — Graph v1.0 không có) — mỗi nhóm quyền xin token riêng lúc dùng, thiếu quyền nào thì chỉ tính năng đó báo lỗi — chưa có quyền này thì chỉ nút Lưu báo lỗi, phần xem vẫn chạy; cấp xong không cần đăng nhập lại.
 3. Lấy **Directory (tenant) ID** và **Application (client) ID** ở trang Overview, ghi vào file `teams.json`:
 
 ```json
@@ -68,7 +68,7 @@ Thêm quyền mới sau khi đã đăng nhập → trong OhtaTeams bấm ⚙ →
 ## Giới hạn hiện tại
 
 - Tải hết các dòng (tối đa 10 × 5000) rồi lọc trên máy.
-- Không đọc file đính kèm của dòng (Graph v1.0 không hỗ trợ) — dùng **Mở trên Teams**.
+- Tệp đính kèm đọc qua SharePoint REST (`/_api/web/lists(guid)/items(id)/AttachmentFiles`) vì Graph v1.0 không hỗ trợ; chưa thêm / xoá tệp từ ứng dụng.
 - Tên người lấy từ *User Information List* của site; người đã xoá / không đọc được thì hiện `#id`.
 - Không tự làm mới theo giờ: mở danh sách hoặc bấm ⟳ để cập nhật.
 

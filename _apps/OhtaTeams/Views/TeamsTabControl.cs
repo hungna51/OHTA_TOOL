@@ -681,17 +681,114 @@ namespace TeamsTool.Views
                 _noiDung.Children.Add(the);
             }
 
-            var tep = new StackPanel();
-            tep.Children.Add(new TextBlock { Text = "📎 Tệp đính kèm", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) });
-            tep.Children.Add(new TextBlock { Text = "Graph chưa cho đọc tệp đính kèm của đơn — xem trên Teams.", Foreground = KieuTeams.ChuPhu });
-            if (!string.IsNullOrEmpty(d.WebUrl))
+            int phien = ++_phienChiTiet;
+            _noiDung.Children.Add(KhoiTep(d, phien));
+            _noiDung.Children.Add(KhoiChat(d, phien));
+        }
+
+        // ---------- Tệp đính kèm + chat kèm đơn (tải sau khi form đã hiện) ----------
+
+        private int _phienChiTiet; // tăng mỗi lần vẽ chi tiết: kết quả tải về muộn của trang cũ thì bỏ
+
+        private static TextBlock ChuPhu(string s, bool loi = false) =>
+            new TextBlock { Text = s, Foreground = loi ? KieuTeams.Mau("#B42318") : KieuTeams.ChuPhu, TextWrapping = TextWrapping.Wrap };
+
+        private Border KhoiTep(DonTeams d, int phien)
+        {
+            var p = new StackPanel();
+            p.Children.Add(new TextBlock { Text = "📎 Tệp đính kèm", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) });
+            var ds = new WrapPanel();
+            p.Children.Add(ds);
+            if (!d.CoTep) ds.Children.Add(ChuPhu("Đơn không có tệp đính kèm."));
+            else { ds.Children.Add(ChuPhu("Đang tải danh sách tệp…")); TaiTepVao(ds, d, phien); }
+            var the = KieuTeams.The(p);
+            the.Margin = new Thickness(0, 0, 0, 8);
+            return the;
+        }
+
+        private async void TaiTepVao(WrapPanel ds, DonTeams d, int phien)
+        {
+            string listUrl = _tab[7], listId = _tab[6];
+            try
             {
-                var mo = KieuTeams.Nut("Mở đơn trên Teams để xem tệp", _mau, (s, e) => MoNgoai(d.WebUrl), chinh: false);
-                mo.HorizontalAlignment = HorizontalAlignment.Left;
-                mo.Margin = new Thickness(0, 6, 0, 0);
-                tep.Children.Add(mo);
+                List<TepDinhKem> tep = await GraphTeams.TepCuaDon(listUrl, listId, d.Id, CancellationToken.None);
+                if (phien != _phienChiTiet) return;
+                ds.Children.Clear();
+                if (tep.Count == 0) ds.Children.Add(ChuPhu("Đơn không có tệp đính kèm."));
+                foreach (TepDinhKem t in tep)
+                {
+                    Button b = null;
+                    b = KieuTeams.Nut("📄 " + t.Ten, _mau, async (s, e) =>
+                    {
+                        b.IsEnabled = false;
+                        try { MoNgoai(await GraphTeams.TaiTep(listUrl, d.Id, t, CancellationToken.None)); }
+                        catch (Exception ex) { MessageBox.Show("Không tải được " + t.Ten + ":\n" + ex.Message, "Tệp đính kèm", MessageBoxButton.OK, MessageBoxImage.Warning); }
+                        finally { b.IsEnabled = true; }
+                    }, chinh: false);
+                    b.ToolTip = "Tải về máy và mở";
+                    ds.Children.Add(b);
+                }
             }
-            _noiDung.Children.Add(KieuTeams.The(tep));
+            catch (Exception ex) { if (phien == _phienChiTiet) { ds.Children.Clear(); ds.Children.Add(ChuPhu(ex.Message, true)); } }
+        }
+
+        private Border KhoiChat(DonTeams d, int phien)
+        {
+            var p = new StackPanel();
+            p.Children.Add(new TextBlock { Text = "💬 Trao đổi trên Teams", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) });
+            List<HoiThoai> hts = TraoDoi.DocHoiThoai(d.HoiThoaiMeta);
+            if (hts.Count == 0) p.Children.Add(ChuPhu("Đơn chưa có chuỗi chat nào trên Teams."));
+            foreach (HoiThoai h in hts)
+            {
+                var khung = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
+                khung.Children.Add(ChuPhu("Đang tải chat…"));
+                p.Children.Add(khung);
+                TaiChuoiVao(khung, h, phien);
+            }
+            var the = KieuTeams.The(p);
+            the.Margin = new Thickness(0, 0, 0, 8);
+            return the;
+        }
+
+        private async void TaiChuoiVao(StackPanel khung, HoiThoai h, int phien)
+        {
+            try
+            {
+                var kq = await GraphTeams.TaiChuoi(h, CancellationToken.None);
+                if (phien != _phienChiTiet) return;
+                khung.Children.Clear();
+                if (kq == null) { khung.Children.Add(ChuPhu("Chuỗi chat nằm ở nhóm Teams bạn chưa tham gia.")); return; }
+                khung.Children.Add(new TextBlock { Text = "Nhóm " + kq.Value.NhomTen, Foreground = _mau, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) });
+                foreach (TinNhan t in kq.Value.Tin)
+                {
+                    var tin = new StackPanel();
+                    tin.Children.Add(new TextBlock { Text = t.Nguoi + "   " + (t.Luc?.ToString("dd/MM HH:mm") ?? ""), FontWeight = FontWeights.SemiBold, FontSize = 11.5 });
+                    tin.Children.Add(new TextBox { Text = t.Chu + (t.SoTep > 0 ? "  (+" + t.SoTep + " tệp — xem trên Teams)" : ""), IsReadOnly = true,
+                                                   BorderThickness = new Thickness(0), Background = Brushes.Transparent, TextWrapping = TextWrapping.Wrap });
+                    khung.Children.Add(new Border { Child = tin, Background = KieuTeams.Mau("#EEF0FA"), CornerRadius = new CornerRadius(6),
+                                                    Padding = new Thickness(8, 5, 8, 5), Margin = new Thickness(0, 0, 0, 4) });
+                }
+                var o = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 44, Margin = new Thickness(0, 4, 0, 4), ToolTip = "Trả lời trong chuỗi hội thoại" };
+                Button gui = null;
+                gui = KieuTeams.Nut("Gửi trả lời", _mau, async (s, e) =>
+                {
+                    if (o.Text.Trim().Length == 0) return;
+                    gui.IsEnabled = false;
+                    try
+                    {
+                        await GraphTeams.TraLoi(kq.Value.NhomId, h, o.Text, CancellationToken.None);
+                        if (phien != _phienChiTiet) return;
+                        khung.Children.Clear();
+                        khung.Children.Add(ChuPhu("Đã gửi. Đang tải lại chat…"));
+                        TaiChuoiVao(khung, h, phien);
+                    }
+                    catch (Exception ex) { gui.IsEnabled = true; MessageBox.Show("Không gửi được:\n" + ex.Message, "Chat", MessageBoxButton.OK, MessageBoxImage.Warning); }
+                });
+                gui.HorizontalAlignment = HorizontalAlignment.Left;
+                khung.Children.Add(o);
+                khung.Children.Add(gui);
+            }
+            catch (Exception ex) { if (phien == _phienChiTiet) { khung.Children.Clear(); khung.Children.Add(ChuPhu(ex.Message, true)); } }
         }
 
         /// <summary>Biểu tượng loại cột (font Segoe MDL2 Assets có sẵn trên Windows 10/11).</summary>

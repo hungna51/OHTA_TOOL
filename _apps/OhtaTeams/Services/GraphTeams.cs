@@ -160,7 +160,8 @@ namespace TeamsTool.Services
         public static void DangXuat()
         {
             _access = null;
-            _accessGhi = null;
+            _tokenPhu.Clear();
+            _nhomTheoInternal = null;
             try { File.Delete(FileToken); } catch { }
             XoaTam(); // dữ liệu đơn lưu tạm theo phiên, đăng xuất thì xoá
         }
@@ -252,14 +253,22 @@ namespace TeamsTool.Services
             return _access;
         }
 
-        // Quyền ghi xin riêng, chỉ khi sửa đơn: admin chưa cấp Sites.ReadWrite.All thì chỉ lúc lưu báo lỗi, phần xem vẫn chạy
-        private const string ScopeGhi = "offline_access Sites.ReadWrite.All";
-        private static string _accessGhi;
-        private static DateTime _hetHanGhi = DateTime.MinValue;
+        // Quyền thêm xin riêng từng nhóm, chỉ khi dùng tới: admin chưa cấp quyền nào thì chỉ tính năng đó báo lỗi, phần xem vẫn chạy
+        private const string ScopeGhi = "offline_access Sites.ReadWrite.All";                          // sửa đơn
+        private const string ScopeChat = "offline_access ChannelMessage.Read.All ChannelMessage.Send";  // chat kèm đơn
+        private static string ScopeSharePoint(string host) => "offline_access https://" + host + "/AllSites.Read"; // tệp đính kèm (SharePoint REST)
 
-        private static async Task<string> LayAccessGhi(CancellationToken ct)
+        private static readonly Dictionary<string, (string Access, DateTime Het)> _tokenPhu = new Dictionary<string, (string, DateTime)>();
+
+        private static readonly Dictionary<string, string> TenQuyen = new Dictionary<string, string>
         {
-            if (_accessGhi != null && DateTime.UtcNow < _hetHanGhi) return _accessGhi;
+            [ScopeGhi] = "sửa đơn (Microsoft Graph · Sites.ReadWrite.All)",
+            [ScopeChat] = "chat kèm đơn (Microsoft Graph · ChannelMessage.Read.All, ChannelMessage.Send)",
+        };
+
+        private static async Task<string> LayAccessPhu(string scope, CancellationToken ct)
+        {
+            if (_tokenPhu.TryGetValue(scope, out var tk) && DateTime.UtcNow < tk.Het) return tk.Access;
             KiemCaiDat();
             string refresh = DocRefresh();
             if (refresh == null) throw new InvalidOperationException("Chưa đăng nhập Microsoft 365 — bấm Đăng nhập.");
@@ -268,21 +277,24 @@ namespace TeamsTool.Services
                 ["grant_type"] = "refresh_token",
                 ["client_id"] = CaiDatTeams.ClientId,
                 ["refresh_token"] = refresh,
-                ["scope"] = ScopeGhi,
+                ["scope"] = scope,
             }, ct);
-            if (!ok) // không đăng xuất: thường là admin chưa cấp quyền ghi
-                throw new InvalidOperationException("Chưa có quyền sửa đơn. Admin Microsoft 365 cần thêm quyền Delegated Sites.ReadWrite.All cho ứng dụng OHTA TOOL và bấm Grant admin consent, rồi thử lại.\n(" + LoiOAuth(json) + ")");
+            if (!ok) // không đăng xuất: thường là admin chưa cấp quyền này
+                throw new InvalidOperationException("Chưa có quyền " + (TenQuyen.TryGetValue(scope, out string ten) ? ten : "tệp đính kèm (SharePoint · AllSites.Read)")
+                    + ". Admin Microsoft 365 cần thêm quyền Delegated này cho ứng dụng OHTA TOOL và bấm Grant admin consent, rồi thử lại.\n(" + LoiOAuth(json) + ")");
             var t = PhanTichTeams.DocToken(json);
-            _accessGhi = t.Access;
-            _hetHanGhi = DateTime.UtcNow.AddSeconds(Math.Max(t.HetSau - 120, 60));
+            _tokenPhu[scope] = (t.Access, DateTime.UtcNow.AddSeconds(Math.Max(t.HetSau - 120, 60)));
             GhiRefresh(t.Refresh);
-            return _accessGhi;
+            return t.Access;
         }
 
-        private static async Task<HttpResponseMessage> Gui(HttpMethod method, string url, string body, CancellationToken ct, bool ghi = false, string ifMatch = null)
+        /// <summary>scope = null: quyền đọc lúc đăng nhập; khác: quyền thêm (ScopeGhi / ScopeChat / SharePoint).</summary>
+        private static async Task<HttpResponseMessage> Gui(HttpMethod method, string url, string body, CancellationToken ct, string scope = null, string ifMatch = null,
+                                                           string accept = null)
         {
             var req = new HttpRequestMessage(method, url.StartsWith("http") ? url : Graph + url);
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ghi ? await LayAccessGhi(ct) : await LayAccess(ct));
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", scope != null ? await LayAccessPhu(scope, ct) : await LayAccess(ct));
+            if (accept != null) req.Headers.TryAddWithoutValidation("Accept", accept);
             if (!string.IsNullOrEmpty(ifMatch)) req.Headers.TryAddWithoutValidation("If-Match", ifMatch.StartsWith("\"") ? ifMatch : "\"" + ifMatch + "\"");
             if (body != null) req.Content = new StringContent(body, new UTF8Encoding(false), "application/json");
             HttpResponseMessage res = await Http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
@@ -298,10 +310,83 @@ namespace TeamsTool.Services
             return res;
         }
 
-        private static async Task<string> GetJson(string url, CancellationToken ct)
+        private static async Task<string> GetJson(string url, CancellationToken ct, string scope = null, string accept = null)
         {
-            using (HttpResponseMessage res = await Gui(HttpMethod.Get, url, null, ct))
+            using (HttpResponseMessage res = await Gui(HttpMethod.Get, url, null, ct, scope, accept: accept))
                 return await res.Content.ReadAsStringAsync();
+        }
+
+        // ---------- Tệp đính kèm (SharePoint REST — Graph v1.0 không có) ----------
+
+        /// <summary>(host, URL web của site) từ URL danh sách …/Lists/….</summary>
+        private static (string Host, string Web) WebCuaList(string listUrl)
+        {
+            var (host, duong) = PhanTichTeams.TachSite(listUrl);
+            return (host, "https://" + host + (duong.Length > 0 ? "/" + string.Join("/", duong.Split('/').Select(Uri.EscapeDataString)) : ""));
+        }
+
+        public static async Task<List<TepDinhKem>> TepCuaDon(string listUrl, string listId, string itemId, CancellationToken ct)
+        {
+            var (host, web) = WebCuaList(listUrl);
+            string json = await GetJson(web + "/_api/web/lists(guid'" + listId + "')/items(" + Uri.EscapeDataString(itemId) + ")/AttachmentFiles",
+                                        ct, ScopeSharePoint(host), "application/json;odata=nometadata");
+            return TraoDoi.DocTep(json);
+        }
+
+        /// <summary>Tải tệp về %TEMP%\OHTA_TOOL\teams\tep\&lt;itemId&gt;\ (ghi đè bản cũ), trả đường dẫn để mở.</summary>
+        public static async Task<string> TaiTep(string listUrl, string itemId, TepDinhKem tep, CancellationToken ct)
+        {
+            var (host, _) = WebCuaList(listUrl);
+            string url = "https://" + host + string.Join("/", tep.DuongDan.Split('/').Select(Uri.EscapeDataString));
+            string thuMuc = Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "teams", "tep", itemId);
+            Directory.CreateDirectory(thuMuc);
+            string f = Path.Combine(thuMuc, string.Concat(tep.Ten.Split(Path.GetInvalidFileNameChars())));
+            using (HttpResponseMessage res = await Gui(HttpMethod.Get, url, null, ct, ScopeSharePoint(host)))
+            using (var ra = File.Create(f))
+                await res.Content.CopyToAsync(ra);
+            return f;
+        }
+
+        // ---------- Chat kèm đơn (tin nhắn kênh Teams) ----------
+
+        private static Dictionary<string, (string Id, string Ten)> _nhomTheoInternal; // "19:…@thread.tacv2" → (id nhóm, tên)
+
+        /// <summary>Metadata chat ghi nhóm bằng internalId → tra id nhóm (Graph cần id) qua các nhóm đã tham gia; nhớ cả phiên.</summary>
+        private static async Task<(string Id, string Ten)?> NhomCuaInternal(string internalId, CancellationToken ct)
+        {
+            if (_nhomTheoInternal == null)
+            {
+                var bang = new Dictionary<string, (string, string)>();
+                var nhom = await Nhom(ct);
+                var viec = nhom.Select(async n =>
+                {
+                    try { return (n, (JsonLite.Parse(await GetJson("/teams/" + n.Key + "?$select=internalId", ct)) as JsonObject)?.GetString("internalId")); }
+                    catch (InvalidOperationException) { return (n, (string)null); }
+                }).ToList();
+                foreach (var (n, iid) in await Task.WhenAll(viec)) if (iid != null) bang[iid] = (n.Key, n.Value);
+                _nhomTheoInternal = bang;
+            }
+            return _nhomTheoInternal.TryGetValue(internalId, out var g) ? g : ((string, string)?)null;
+        }
+
+        /// <summary>Một chuỗi chat: tên nhóm, id nhóm (để trả lời), tin gốc + các trả lời (cũ trước). Nhóm không tham gia → null.</summary>
+        public static async Task<(string NhomTen, string NhomId, List<TinNhan> Tin)?> TaiChuoi(HoiThoai h, CancellationToken ct)
+        {
+            var nhom = await NhomCuaInternal(h.TeamInternalId, ct);
+            if (nhom == null) return null;
+            string goc = "/teams/" + nhom.Value.Id + "/channels/" + Uri.EscapeDataString(h.ChannelId) + "/messages/" + Uri.EscapeDataString(h.ConvId);
+            Task<string> tGoc = GetJson(goc, ct, ScopeChat);
+            Task<string> tTraLoi = GetJson(goc + "/replies?$top=50", ct, ScopeChat);
+            var tin = TraoDoi.DocTin(await tGoc);
+            tin.AddRange(TraoDoi.DocTin(await tTraLoi));
+            return (nhom.Value.Ten, nhom.Value.Id, tin);
+        }
+
+        /// <summary>Gửi một tin trả lời vào chuỗi chat của đơn.</summary>
+        public static async Task TraLoi(string nhomId, HoiThoai h, string chu, CancellationToken ct)
+        {
+            string url = "/teams/" + nhomId + "/channels/" + Uri.EscapeDataString(h.ChannelId) + "/messages/" + Uri.EscapeDataString(h.ConvId) + "/replies";
+            using (await Gui(HttpMethod.Post, url, TraoDoi.BodyTraLoi(chu), ct, ScopeChat)) { }
         }
 
         /// <summary>(id, tên hiển thị) của người đang đăng nhập.</summary>
@@ -338,7 +423,7 @@ namespace TeamsTool.Services
         public static async Task SuaDon(string siteId, string listId, string itemId, string eTag, string body, CancellationToken ct)
         {
             string url = "/sites/" + siteId + "/lists/" + listId + "/items/" + Uri.EscapeDataString(itemId) + "/fields";
-            using (await Gui(new HttpMethod("PATCH"), url, body, ct, ghi: true, ifMatch: eTag)) { }
+            using (await Gui(new HttpMethod("PATCH"), url, body, ct, ScopeGhi, eTag)) { }
         }
 
         /// <summary>Một đơn (sau khi sửa) dạng một trang {"value":[item]} để PhanTichTeams.DocDon đọc như danh sách.</summary>

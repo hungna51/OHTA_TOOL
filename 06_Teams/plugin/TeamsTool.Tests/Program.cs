@@ -262,6 +262,21 @@ namespace TeamsTool.Tests
             CotList Cf(string ten, string tieuDe) => new CotList { Ten = ten, TieuDe = tieuDe, Loai = "text" };
             Kiem("phan form: Title + ten chu Nhat = OHTA COMPANY", string.Join("|", new[] { Cf("Title", "Title"), Cf("a", "受注日"), Cf("b", "ステータス"), Cf("c", "注意 (Chú Ý)") }.Select(BangDon.PhanForm).Distinct()), "OHTA COMPANY");
             Kiem("phan form: ten Viet / Anh = OFT BY OHTA", string.Join("|", new[] { Cf("d", "HẠN HOÀN THÀNH"), Cf("e", "Note"), Cf("f", "GURO - TẤM ĐƠN") }.Select(BangDon.PhanForm).Distinct()), "OFT BY OHTA");
+            // Trao doi: chat + tep dinh kem (du lieu dang that cua don 130819)
+            var hts = TraoDoi.DocHoiThoai(@"{""v1"":[{""conversationId"":""1794293920171"",""channelId"":""19:771e@thread.tacv2"",""teamId"":""19:A20w@thread.tacv2""},{""conversationId"":""x""},{""conversationId"":1794292715769,""channelId"":""19:5o3@thread.tacv2"",""teamId"":""19:5o3@thread.tacv2""}]}");
+            Kiem("chat: doc metadata, bo phan tu thieu, id so", string.Join(",", hts.Select(h => h.ConvId + "@" + h.ChannelId)), "1794293920171@19:771e@thread.tacv2,1794292715769@19:5o3@thread.tacv2");
+            Kiem("chat: metadata rong / hong -> rong", TraoDoi.DocHoiThoai("").Count + TraoDoi.DocHoiThoai("{hong").Count, 0);
+            var dCt = PhanTichTeams.DocDon(@"{""value"":[{""id"":""2758"",""fields"":{""Title"":""130819"",""Attachments"":true,""teamsConversationMetadata_D86AE2"":""{\""v1\"":[]}""}}]}", cs, PhanTichTeams.KhopCot(cs), id => id)[0];
+            Kiem("chat: don giu metadata + co tep", dCt.HoiThoaiMeta + "|" + dCt.CoTep, "{\"v1\":[]}|True");
+            var tins = TraoDoi.DocTin(@"{""value"":[
+  {""id"":""2"",""createdDateTime"":""2026-11-10T07:00:00Z"",""from"":{""user"":{""displayName"":""谷本""}},""body"":{""contentType"":""text"",""content"":""OK""}},
+  {""id"":""3"",""deletedDateTime"":""2026-11-10T08:00:00Z"",""from"":null,""body"":{""content"":""""}},
+  {""id"":""1"",""createdDateTime"":""2026-11-10T06:58:00Z"",""from"":{""user"":{""displayName"":""Nguyễn A Hùng""}},""body"":{""contentType"":""html"",""content"":""<p><at id=\""0\"">Phạm Anh Tuấn</at>&nbsp;Làm giúp anh nhé!</p>""},""attachments"":[{""id"":""a"",""contentType"":""reference""},{""id"":""the"",""contentType"":""application/vnd.microsoft.card.adaptive""}]}]}");
+            Kiem("chat: tin cu truoc, bo tin da xoa, bo HTML", string.Join(" / ", tins.Select(t => t.Nguoi + ": " + t.Chu + (t.SoTep > 0 ? " +" + t.SoTep : ""))), "Nguyễn A Hùng: Phạm Anh Tuấn Làm giúp anh nhé! +1 / 谷本: OK");
+            Kiem("chat: mot tin (object)", TraoDoi.DocTin(@"{""id"":""9"",""from"":{""user"":{""displayName"":""A""}},""body"":{""contentType"":""text"",""content"":""x""}}")[0].Nguoi, "A");
+            Kiem("tep: doc AttachmentFiles", string.Join(",", TraoDoi.DocTep(@"{""value"":[{""FileName"":""130819.pdf"",""ServerRelativeUrl"":""/sites/x/Lists/y/Attachments/2758/130819.pdf""},{""FileName"":""""}]}").Select(t => t.Ten + "=" + t.DuongDan)), "130819.pdf=/sites/x/Lists/y/Attachments/2758/130819.pdf");
+            Kiem("tra loi: ma hoa HTML + xuong dong", TraoDoi.HtmlTraLoi(" Đã xong <1>\r\ndòng 2 "), "Đã xong &lt;1&gt;<br>dòng 2");
+            Kiem("tra loi: body", ((OhtaTool.Plugin.Core.JsonObject)((OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyTraLoi("hi"))).Get("body")).GetString("content"), "hi");
             Kiem("tach nhan", string.Join("|", BangDon.TachNhan("切板, 曲げ,  ")), "切板|曲げ");
             Kiem("loc nhan vien: co trong cot nguoi bat ky", SuaDon.CoNguoi(dN[0], cs, "12") + "|" + SuaDon.CoNguoi(dN[1], cs, "55") + "|" + SuaDon.CoNguoi(dN[1], cs, "12"), "True|True|False");
             Kiem("nguoi body: 1 nguoi bo trong = null",bN.ContainsKey("Ng1LookupId") && bN.Get("Ng1LookupId") == null, true);
