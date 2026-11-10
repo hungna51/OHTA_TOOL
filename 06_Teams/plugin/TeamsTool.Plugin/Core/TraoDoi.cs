@@ -15,12 +15,14 @@ namespace TeamsTool.Core
     {
         public string Id, Nguoi, Chu;
         public DateTime? Luc;
-        public int SoTep; // tệp / thẻ đính kèm trong tin
+        public List<string> Anh = new List<string>();          // ảnh dán trong tin: URL hostedContents của Graph
+        public List<TepDinhKem> Tep = new List<TepDinhKem>();  // tệp gửi kèm: DuongDan = URL SharePoint đầy đủ
+        public int SoTep => Tep.Count;
     }
 
     public sealed class TepDinhKem
     {
-        public string Ten, DuongDan; // DuongDan = ServerRelativeUrl trên SharePoint
+        public string Ten, DuongDan; // tệp đính kèm của đơn: ServerRelativeUrl; tệp trong chat: URL SharePoint đầy đủ
     }
 
     /// <summary>Đọc chat + tệp đính kèm của đơn (logic thuần, test không cần mạng).</summary>
@@ -49,17 +51,36 @@ namespace TeamsTool.Core
                         ?? (from?.Get("application") as JsonObject)?.GetString("displayName") ?? "";
             var body = m.Get("body") as JsonObject;
             string chu = body?.GetString("content") ?? "";
-            if (body?.GetString("contentType") == "html") chu = PhanTichTeams.BoHtml(chu);
-            return new TinNhan
+            bool html = body?.GetString("contentType") == "html";
+            var t = new TinNhan
             {
                 Id = m.GetString("id"),
                 Nguoi = nguoi,
-                Chu = chu,
+                Chu = html ? PhanTichTeams.BoHtml(chu) : chu,
                 Luc = PhanTichTeams.DocNgay(m.GetString("createdDateTime")),
-                // chỉ tệp thật (contentType "reference"); thẻ "Về: <đơn>" Teams tự gắn vào tin gốc không tính
-                SoTep = (m.Get("attachments") as List<object> ?? new List<object>()).OfType<JsonObject>().Count(a => a.GetString("contentType") == "reference"),
+                Anh = html ? AnhTrongTin(chu) : new List<string>(),
+                // chỉ tệp thật (contentType "reference"); thẻ "Về: <đơn>" (tabReference) Teams tự gắn vào tin gốc bỏ qua
+                Tep = (m.Get("attachments") as List<object> ?? new List<object>()).OfType<JsonObject>()
+                        .Where(a => a.GetString("contentType") == "reference" && !string.IsNullOrEmpty(a.GetString("contentUrl")))
+                        .Select(a => new TepDinhKem { Ten = a.GetString("name") ?? "tệp", DuongDan = a.GetString("contentUrl") }).ToList(),
             };
+            return t;
         }
+
+        /// <summary>
+        /// Ảnh dán trong tin: src của &lt;img&gt; trỏ tới hostedContents trên Graph (tải bằng quyền đọc chat).
+        /// Ảnh khác (emoji của Teams trên CDN…) bỏ qua.
+        /// </summary>
+        public static List<string> AnhTrongTin(string html) =>
+            System.Text.RegularExpressions.Regex.Matches(html ?? "", "<img[^>]*?\\ssrc=\"([^\"]+)\"", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+                .Cast<System.Text.RegularExpressions.Match>()
+                .Select(x => System.Net.WebUtility.HtmlDecode(x.Groups[1].Value))
+                .Where(u => u.StartsWith("https://graph.microsoft.com/", StringComparison.OrdinalIgnoreCase) && u.Contains("/hostedContents/"))
+                .Distinct().ToList();
+
+        /// <summary>Mã chia sẻ cho Graph /shares/{mã}/driveItem/content: "u!" + base64url(URL) — tải tệp gửi trong chat.</summary>
+        public static string MaShare(string url) =>
+            "u!" + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(url ?? "")).TrimEnd('=').Replace('/', '_').Replace('+', '-');
 
         /// <summary>Một tin (object) hoặc một trang {"value":[...]} → các tin, cũ trước. Tin đã xoá (deletedDateTime) bỏ qua.</summary>
         public static List<TinNhan> DocTin(string json)

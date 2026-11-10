@@ -424,6 +424,28 @@ namespace TeamsTool.Services
             return (nhom.Value.Ten, nhom.Value.Id, tin);
         }
 
+        /// <summary>Ảnh dán trong tin (URL hostedContents của Graph) → byte, dùng quyền đọc chat.</summary>
+        public static async Task<byte[]> TaiAnhChat(string url, CancellationToken ct)
+        {
+            using (HttpResponseMessage res = await Gui(HttpMethod.Get, url, null, ct, ScopeChat))
+                return await res.Content.ReadAsByteArrayAsync();
+        }
+
+        /// <summary>
+        /// Tệp gửi kèm trong chat (URL SharePoint của thư mục Files kênh) → tải qua Graph /shares (quyền Sites.ReadWrite.All)
+        /// về %TEMP%\OHTA_TOOL\teams\chat\, trả đường dẫn để mở.
+        /// </summary>
+        public static async Task<string> TaiTepChat(TepDinhKem tep, CancellationToken ct)
+        {
+            string thuMuc = Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "teams", "chat");
+            Directory.CreateDirectory(thuMuc);
+            string f = Path.Combine(thuMuc, string.Concat(tep.Ten.Split(Path.GetInvalidFileNameChars())));
+            using (HttpResponseMessage res = await Gui(HttpMethod.Get, "/shares/" + TraoDoi.MaShare(tep.DuongDan) + "/driveItem/content", null, ct, ScopeGhi))
+            using (var ra = File.Create(f))
+                await res.Content.CopyToAsync(ra);
+            return f;
+        }
+
         /// <summary>Gửi một tin trả lời vào chuỗi chat của đơn.</summary>
         public static async Task TraLoi(string nhomId, HoiThoai h, string chu, CancellationToken ct)
         {

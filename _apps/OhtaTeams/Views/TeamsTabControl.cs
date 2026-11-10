@@ -945,6 +945,67 @@ namespace TeamsTool.Views
             catch (Exception ex) { if (phien == _phienChiTiet) { ds.Children.Clear(); ds.Children.Add(ChuPhu(ex.Message, true)); } }
         }
 
+        // Ảnh chat đã tải trong phiên (URL → ảnh) — vẽ lại chi tiết / trả lời không tải lại
+        private readonly Dictionary<string, System.Windows.Media.Imaging.BitmapImage> _anhChat = new Dictionary<string, System.Windows.Media.Imaging.BitmapImage>();
+
+        /// <summary>Ảnh dán trong tin: hiện thu nhỏ (tải nền), bấm để mở ảnh cỡ thật bằng trình xem ảnh của Windows.</summary>
+        private FrameworkElement AnhChat(string url)
+        {
+            var anh = new Image { MaxHeight = 260, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Left, Cursor = Cursors.Hand, ToolTip = "Bấm để mở ảnh cỡ thật" };
+            var khung = new Border { Margin = new Thickness(0, 4, 0, 2), HorizontalAlignment = HorizontalAlignment.Left, Child = ChuPhu("Đang tải ảnh…") };
+            async void Tai()
+            {
+                try
+                {
+                    if (!_anhChat.TryGetValue(url, out var bmp))
+                    {
+                        byte[] b = await GraphTeams.TaiAnhChat(url, CancellationToken.None);
+                        bmp = new System.Windows.Media.Imaging.BitmapImage();
+                        bmp.BeginInit();
+                        bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                        bmp.StreamSource = new MemoryStream(b);
+                        bmp.EndInit();
+                        bmp.Freeze();
+                        _anhChat[url] = bmp;
+                    }
+                    anh.Source = bmp;
+                    khung.Child = anh;
+                }
+                catch (Exception ex) { khung.Child = ChuPhu("Không tải được ảnh: " + ex.Message.Split('\n')[0], true); }
+            }
+            anh.MouseLeftButtonUp += (s, e) =>
+            {
+                try
+                {
+                    if (!(anh.Source is System.Windows.Media.Imaging.BitmapImage bmp)) return;
+                    string f = Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "teams", "chat", "anh_" + Math.Abs(url.GetHashCode()) + ".png");
+                    Directory.CreateDirectory(Path.GetDirectoryName(f));
+                    var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bmp));
+                    using (var ra = File.Create(f)) enc.Save(ra);
+                    MoNgoai(f);
+                }
+                catch (Exception ex) { MessageBox.Show("Không mở được ảnh:\n" + ex.Message, "Chat", MessageBoxButton.OK, MessageBoxImage.Warning); }
+            };
+            Tai();
+            return khung;
+        }
+
+        /// <summary>Tệp gửi kèm trong tin: bấm → tải về máy (Graph /shares) rồi mở.</summary>
+        private Button NutTepChat(TepDinhKem f)
+        {
+            Button b = null;
+            b = KieuTeams.Nut("📄 " + f.Ten, _mau, async (s, e) =>
+            {
+                b.IsEnabled = false;
+                try { MoNgoai(await GraphTeams.TaiTepChat(f, CancellationToken.None)); }
+                catch (Exception ex) { MessageBox.Show("Không tải được " + f.Ten + ":\n" + ex.Message, "Chat", MessageBoxButton.OK, MessageBoxImage.Warning); }
+                finally { b.IsEnabled = true; }
+            }, chinh: false);
+            b.ToolTip = "Tải về máy và mở";
+            return b;
+        }
+
         private Border KhoiChat(DonTeams d, int phien)
         {
             var p = new StackPanel();
@@ -979,8 +1040,15 @@ namespace TeamsTool.Views
                 {
                     var tin = new StackPanel();
                     tin.Children.Add(new TextBlock { Text = t.Nguoi + "   " + (t.Luc?.ToString("dd/MM HH:mm") ?? ""), FontWeight = FontWeights.SemiBold, FontSize = 11.5 });
-                    tin.Children.Add(new TextBox { Text = t.Chu + (t.SoTep > 0 ? "  (+" + t.SoTep + " tệp — xem trên Teams)" : ""), IsReadOnly = true,
-                                                   BorderThickness = new Thickness(0), Background = Brushes.Transparent, TextWrapping = TextWrapping.Wrap });
+                    if (t.Chu.Length > 0)
+                        tin.Children.Add(new TextBox { Text = t.Chu, IsReadOnly = true, BorderThickness = new Thickness(0), Background = Brushes.Transparent, TextWrapping = TextWrapping.Wrap });
+                    foreach (string url in t.Anh) tin.Children.Add(AnhChat(url));
+                    if (t.Tep.Count > 0)
+                    {
+                        var tep = new WrapPanel { Margin = new Thickness(0, 4, 0, 0) };
+                        foreach (TepDinhKem f in t.Tep) tep.Children.Add(NutTepChat(f));
+                        tin.Children.Add(tep);
+                    }
                     khung.Children.Add(new Border { Child = tin, Background = KieuTeams.Mau("#EEF0FA"), CornerRadius = new CornerRadius(6),
                                                     Padding = new Thickness(8, 5, 8, 5), Margin = new Thickness(0, 0, 0, 4) });
                 }
