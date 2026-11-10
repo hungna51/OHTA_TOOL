@@ -171,7 +171,7 @@ namespace TeamsTool.Views
 
         private void MoCaiDat()
         {
-            var w = new TeamsCaiDatWindow(_mau);
+            var w = new TeamsCaiDatWindow(_mau, _danhBaDu.Select(kv => kv.Value).Distinct().ToList());
             bool luu = w.ShowDialog() == true;
             if (w.DaDangXuat)
             {
@@ -184,6 +184,7 @@ namespace TeamsTool.Views
             else if (luu)
             {
                 if (_don.Count > 0) GhiDangLam(); // thư mục gốc có thể vừa đổi
+                GopDanhBa();                       // danh sách nhân viên ẩn / hiện có thể vừa đổi
                 BaoTrangThai("Đã lưu cài đặt." + _loiGhi);
             }
             CapNhatMan();
@@ -430,13 +431,16 @@ namespace TeamsTool.Views
         // ---------- Danh bạ nhân viên đầy đủ ----------
 
         private List<KeyValuePair<string, string>> _danhBaDon = new List<KeyValuePair<string, string>>(); // người đã có trong các đơn
+        private List<KeyValuePair<string, string>> _danhBaDu = new List<KeyValuePair<string, string>>();  // cả người bị ẩn: tra tên người đã giao
         private List<KeyValuePair<string, string>> _congTy, _nguoiSite; // (tên, email) công ty / (mã, email) site — null = chưa tải
         private bool _dangTaiDanhBa;
 
         /// <summary>_danhBa = người trong đơn + cả công ty (khi đã tải); nạp lại ô Nhân viên, giữ lựa chọn.</summary>
         private void GopDanhBa()
         {
-            _danhBa = _congTy == null ? _danhBaDon : SuaDon.GopDanhBa(_danhBaDon, _congTy, _nguoiSite);
+            _danhBaDu = _congTy == null ? _danhBaDon : SuaDon.GopDanhBa(_danhBaDon, _congTy, _nguoiSite);
+            HashSet<string> an = CaiDatTeams.NhanVienAn; // ⚙ → Danh sách nhân viên: ẩn công ty khách, Administrator…
+            _danhBa = _danhBaDu.Where(kv => !an.Contains(kv.Value)).ToList();
             string dangChon = _nhanVien.SelectedItem as string;
             _nhanVien.Items.Clear();
             _nhanVien.Items.Add(MoiNhanVien);
@@ -1083,7 +1087,7 @@ namespace TeamsTool.Views
 
         // ---------- Sửa đơn ----------
 
-        private string TenNguoi(string id) => _danhBa.FirstOrDefault(kv => kv.Key == id).Value ?? "#" + id;
+        private string TenNguoi(string id) => _danhBaDu.FirstOrDefault(kv => kv.Key == id).Value ?? "#" + id;
 
         private string HienGiaTri(CotList c, object v)
         {

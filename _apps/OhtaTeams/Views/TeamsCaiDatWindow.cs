@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using TeamsTool.Core;
 using TeamsTool.Services;
 
 namespace TeamsTool.Views
@@ -19,7 +22,10 @@ namespace TeamsTool.Views
 
         private static TextBox O() => new TextBox { Padding = new Thickness(4, 3, 4, 3), Margin = new Thickness(0, 2, 0, 8) };
 
-        public TeamsCaiDatWindow(Brush mau)
+        private readonly List<CheckBox> _nhanVien = new List<CheckBox>(); // ô "hiện" từng người — bỏ tích = ẩn khỏi ô chọn người
+
+        /// <param name="danhBa">Tên mọi người (danh bạ công ty + người trong đơn) để chọn ẩn / hiện; rỗng = chưa mở danh sách đơn.</param>
+        public TeamsCaiDatWindow(Brush mau, List<string> danhBa = null)
         {
             Title = "Cài Đặt Teams";
             Width = 520;
@@ -76,16 +82,69 @@ namespace TeamsTool.Views
             var goc = new StackPanel { Margin = new Thickness(12) };
             goc.Children.Add(KieuTeams.The(ma));
             goc.Children.Add(KieuTeams.The(tm));
+            goc.Children.Add(KieuTeams.The(KhoiNhanVien(mau, danhBa ?? new List<string>())));
             goc.Children.Add(KieuTeams.The(tk));
             goc.Children.Add(_baoLoi);
             goc.Children.Add(nut);
             Content = goc;
         }
 
+        /// <summary>
+        /// Danh sách nhân viên: tích = hiện trong ô chọn người (giao đơn) và ô lọc Nhân viên; bỏ tích = ẩn (công ty khách, Administrator…).
+        /// Người đã được giao trên đơn vẫn hiện tên ở bảng / chi tiết.
+        /// </summary>
+        private StackPanel KhoiNhanVien(Brush mau, List<string> danhBa)
+        {
+            var p = new StackPanel();
+            p.Children.Add(new TextBlock { Text = "Danh sách nhân viên", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) });
+            if (danhBa.Count == 0)
+            {
+                p.Children.Add(new TextBlock { Text = "Mở một danh sách đơn trước để tải danh bạ công ty.", Foreground = KieuTeams.ChuPhu, TextWrapping = TextWrapping.Wrap });
+                return p;
+            }
+            p.Children.Add(new TextBlock { Text = "Bỏ tích người không phải nhân viên (công ty khách, Administrator…) để ẩn khỏi ô chọn người khi giao đơn và ô lọc Nhân viên.",
+                                           TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6) });
+            HashSet<string> an = CaiDatTeams.NhanVienAn;
+            var ds = new StackPanel();
+            foreach (string ten in danhBa.OrderBy(x => x, StringComparer.CurrentCulture))
+            {
+                var o = new CheckBox { Content = ten, IsChecked = !an.Contains(ten), Margin = new Thickness(0, 2, 0, 2) };
+                _nhanVien.Add(o);
+                ds.Children.Add(o);
+            }
+            var dem = new TextBlock { Foreground = KieuTeams.ChuPhu, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) };
+            void Dem() => dem.Text = "Hiện " + _nhanVien.Count(x => x.IsChecked == true) + " / " + _nhanVien.Count + " người";
+            _nhanVien.ForEach(o => { o.Checked += (s, e) => Dem(); o.Unchecked += (s, e) => Dem(); });
+            Dem();
+
+            var loc = new TextBox { Width = 180, Padding = new Thickness(4, 2, 4, 2), ToolTip = "Gõ tên để lọc" };
+            loc.TextChanged += (s, e) =>
+            {
+                string k = PhanTichTeams.BoDau(loc.Text);
+                foreach (CheckBox o in _nhanVien)
+                    o.Visibility = k.Length == 0 || PhanTichTeams.BoDau((string)o.Content).Contains(k) ? Visibility.Visible : Visibility.Collapsed;
+            };
+            var hang = new WrapPanel { Margin = new Thickness(0, 0, 0, 6) };
+            hang.Children.Add(new TextBlock { Text = "🔍 ", VerticalAlignment = VerticalAlignment.Center });
+            hang.Children.Add(loc);
+            hang.Children.Add(KieuTeams.Nut("Hiện hết", mau, (s, e) => _nhanVien.Where(o => o.Visibility == Visibility.Visible).ToList().ForEach(o => o.IsChecked = true), chinh: false));
+            hang.Children.Add(KieuTeams.Nut("Ẩn hết", mau, (s, e) => _nhanVien.Where(o => o.Visibility == Visibility.Visible).ToList().ForEach(o => o.IsChecked = false), chinh: false));
+            hang.Children.Add(dem);
+            p.Children.Add(hang);
+            p.Children.Add(new Border
+            {
+                BorderBrush = KieuTeams.Mau("#D0D5DD"), BorderThickness = new Thickness(1), Padding = new Thickness(6, 2, 6, 2),
+                Child = new ScrollViewer { Content = ds, MaxHeight = 240, VerticalScrollBarVisibility = ScrollBarVisibility.Auto },
+            });
+            return p;
+        }
+
         private void Luu()
         {
             try
             {
+                if (_nhanVien.Count > 0)
+                    CaiDatTeams.NhanVienAn = new HashSet<string>(_nhanVien.Where(o => o.IsChecked != true).Select(o => (string)o.Content));
                 string tm = _thuMuc.Text.Trim().Trim('"');
                 if (tm.Length > 0 && !Directory.Exists(tm)) { _baoLoi.Text = "Thư mục đơn không tồn tại: " + tm; return; }
                 CaiDatTeams.GhiMa(_tenant.Text, _client.Text);

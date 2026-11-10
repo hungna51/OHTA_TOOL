@@ -72,6 +72,13 @@ namespace TeamsTool.Services
             set => Ghi("thu_muc_goc", value);
         }
 
+        /// <summary>Tên người ẩn khỏi ô chọn người / lọc Nhân viên (⚙ → Danh sách nhân viên): công ty khách, Administrator…</summary>
+        public static HashSet<string> NhanVienAn
+        {
+            get => new HashSet<string>(Doc("nv_an").Split('\n').Where(x => x.Length > 0));
+            set => Ghi("nv_an", string.Join("\n", value));
+        }
+
         /// <summary>Id đơn người dùng bấm 📌 Đang làm ("" = chưa chọn).</summary>
         public static string DonChon
         {
