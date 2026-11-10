@@ -858,6 +858,17 @@ namespace TeamsTool.Views
             if (thongBao != null) _noiDung.Children.Add(new TextBlock { Text = thongBao, Foreground = KieuTeams.Mau("#1F7A4D"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6) });
             _noiDung.Children.Add(NutChiTiet(d));
 
+            // 2 cột: chat bên trái, form + tệp đính kèm bên phải
+            var trai = new StackPanel { Margin = new Thickness(0, 0, 8, 0) };
+            var phai = new StackPanel();
+            var hai = new Grid();
+            hai.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.36, GridUnitType.Star), MinWidth = 320 });
+            hai.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.64, GridUnitType.Star) });
+            Grid.SetColumn(phai, 1);
+            hai.Children.Add(trai);
+            hai.Children.Add(phai);
+            _noiDung.Children.Add(hai);
+
             bool sua = !string.IsNullOrEmpty(d.ETag);
             List<CotList> cots = _cots.Count > 0 ? _cots
                 : d.TatCa.Select(kv => new CotList { Ten = kv.Key, TieuDe = kv.Key, Loai = "khac" }).ToList(); // chưa có cột (hiếm): chỉ xem
@@ -880,12 +891,12 @@ namespace TeamsTool.Views
                 khoi.Children.Add(luoi);
                 var the = KieuTeams.The(khoi);
                 the.Margin = new Thickness(0, 0, 0, 8);
-                _noiDung.Children.Add(the);
+                phai.Children.Add(the);
             }
 
             int phien = ++_phienChiTiet;
-            _noiDung.Children.Add(KhoiTep(d, phien));
-            _noiDung.Children.Add(KhoiChat(d, phien));
+            phai.Children.Add(KhoiTep(d, phien));
+            trai.Children.Add(KhoiChat(d, phien));
         }
 
         // ---------- Tệp đính kèm + chat kèm đơn (tải sau khi form đã hiện) ----------
