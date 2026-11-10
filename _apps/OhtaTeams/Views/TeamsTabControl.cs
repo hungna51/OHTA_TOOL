@@ -440,17 +440,18 @@ namespace TeamsTool.Views
             bool nguoi = c.Loai == "personOrGroup";
             int i = BangDon.MauNhan(chu, MauNen.Length);
             Brush vien = nguoi ? KieuTeams.Mau(PhanTichTeams.BoDau(c.TieuDe).Contains("trien khai") ? "#D0528A" : "#2E9C76") : null;
+            var tt = nguoi ? null : BangDon.MauTrangThai(chu); // Trạng thái: màu cố định như Lists
             return new Border
             {
-                Background = nguoi ? Brushes.White : KieuTeams.Mau(MauNen[i]),
-                BorderBrush = vien,
-                BorderThickness = new Thickness(nguoi ? 1 : 0),
+                Background = nguoi ? Brushes.White : KieuTeams.Mau(tt?.Nen ?? MauNen[i]),
+                BorderBrush = vien ?? (tt != null ? KieuTeams.Mau("#59000000") : null), // viền mảnh: nhãn trạng thái nổi trên dòng cùng màu
+                BorderThickness = new Thickness(nguoi || tt != null ? 1 : 0),
                 CornerRadius = new CornerRadius(nguoi ? 4 : 9),
                 Padding = new Thickness(6, 1, 6, 1),
                 Margin = new Thickness(0, 1, 3, 1),
                 MaxWidth = DoRong(c) - 12, // nhãn dài hơn cột: cắt "…", rê chuột xem đủ (ToolTip của ô)
                 VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock { Text = nguoi ? "👤 " + chu : chu, FontSize = 11, Foreground = nguoi ? vien : KieuTeams.Mau(MauChu[i]),
+                Child = new TextBlock { Text = nguoi ? "👤 " + chu : chu, FontSize = 11, Foreground = nguoi ? vien : KieuTeams.Mau(tt?.Chu ?? MauChu[i]),
                                         FontWeight = nguoi ? FontWeights.SemiBold : FontWeights.Normal, TextTrimming = TextTrimming.CharacterEllipsis },
             };
         }

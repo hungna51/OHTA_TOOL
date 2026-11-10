@@ -23,6 +23,25 @@ namespace TeamsTool.Core
             return null;
         }
 
+        /// <summary>Màu nhãn Trạng thái như trên Lists (khoá = tên bỏ dấu): (nền, chữ).</summary>
+        private static readonly Dictionary<string, (string Nen, string Chu)> MauTT = new Dictionary<string, (string, string)>
+        {
+            ["chua trien khai"] = ("#C9C9C9", "#2B2B2B"),
+            ["dang trien khai"] = ("#74B9F2", "#1B1B1B"),
+            ["cau hoi - xac nhan"] = ("#F0908E", "#1B1B1B"),
+            ["dang check"] = ("#E2C18A", "#1B1B1B"),
+            ["dang sua"] = ("#A8262E", "#FFFFFF"),
+            ["lien lac"] = ("#12C9A8", "#1B1B1B"),
+            ["da hoan thanh"] = ("#8EE38A", "#1B1B1B"),
+            ["da nhap gia"] = ("#8A3B88", "#FFFFFF"),
+            ["du lieu sua doi"] = ("#7C8DF2", "#1B1B1B"),
+            ["stop"] = ("#B1262B", "#FFFFFF"),
+        };
+
+        /// <summary>Màu cố định của một giá trị Trạng thái (null = không phải trạng thái đã biết → màu tự gán).</summary>
+        public static (string Nen, string Chu)? MauTrangThai(string giaTri) =>
+            MauTT.TryGetValue(PhanTichTeams.BoDau(giaTri ?? ""), out var m) ? m : ((string, string)?)null;
+
         /// <summary>Chỉ số màu nhãn (0..soMau-1) cố định theo chữ: cùng giá trị luôn cùng màu.</summary>
         public static int MauNhan(string giaTri, int soMau)
         {

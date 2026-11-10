@@ -257,7 +257,9 @@ namespace TeamsTool.Tests
             Kiem("keo cot: sang phai chiem cho cot dich", string.Join("", BangDon.DoiCho(cotK, "A", "C")), "BCAD");
             Kiem("keo cot: sang trai chiem cho cot dich", string.Join("", BangDon.DoiCho(cotK, "D", "B")), "ADBC");
             Kiem("keo cot: tha cho cu / cot la -> null", BangDon.DoiCho(cotK, "B", "B") == null && BangDon.DoiCho(cotK, "X", "A") == null, true);
-            Kiem("tach nhan",string.Join("|", BangDon.TachNhan("切板, 曲げ,  ")), "切板|曲げ");
+            Kiem("mau trang thai: dung bang Lists, khong phan biet hoa", BangDon.MauTrangThai("Đang sửa")?.Nen + "|" + BangDon.MauTrangThai("STOP")?.Chu + "|" + BangDon.MauTrangThai("câu hỏi - xác nhận")?.Nen, "#A8262E|#FFFFFF|#F0908E");
+            Kiem("mau trang thai: gia tri la -> null", BangDon.MauTrangThai("切板") == null && BangDon.MauTrangThai(null) == null, true);
+            Kiem("tach nhan", string.Join("|", BangDon.TachNhan("切板, 曲げ,  ")), "切板|曲げ");
             Kiem("loc nhan vien: co trong cot nguoi bat ky", SuaDon.CoNguoi(dN[0], cs, "12") + "|" + SuaDon.CoNguoi(dN[1], cs, "55") + "|" + SuaDon.CoNguoi(dN[1], cs, "12"), "True|True|False");
             Kiem("nguoi body: 1 nguoi bo trong = null",bN.ContainsKey("Ng1LookupId") && bN.Get("Ng1LookupId") == null, true);
 
