@@ -1,6 +1,6 @@
 # 06_Teams — Tab Teams: xem đơn trong tab Lists của kênh Teams
 
-> Đang tách thành ứng dụng riêng **[OhtaTeams.exe](../_apps/OhtaTeams/README.md)** ([thiết kế](../_docs/specs/2026-11-10-ung-dung-teams-rieng.md)). Bước 1 xong: ứng dụng chạy được, dùng chung mã với tab này. Sau bước 3 tab CAD chỉ còn hiện đơn đang làm.
+> Đang tách thành ứng dụng riêng **[OhtaTeams.exe](../_apps/OhtaTeams/README.md)** ([thiết kế](../_docs/specs/2026-11-10-ung-dung-teams-rieng.md)). Bước 1–2 xong: ứng dụng chạy được, dùng chung mã với tab này; chi tiết đơn có nút **📌 Đang làm**, ⚙ có ô **Thư mục đơn**, mỗi lần tải xong đơn ghi `%LOCALAPPDATA%\OHTA_TOOL\teams\dang_lam.json` (đơn chưa xong + đơn 📌) cho tab CAD đọc. Sau bước 3 tab CAD chỉ còn hiện đơn đang làm.
 
 Đơn của công ty nằm trong **Microsoft Lists** gắn làm tab trong kênh Teams (ví dụ kênh `注文書 - 新規`, tab `注文書2026.1-VN`). Mỗi **dòng** của danh sách là một **đơn**. Tab Teams trên bảng OHTA đi theo đúng thứ tự trên Teams:
 

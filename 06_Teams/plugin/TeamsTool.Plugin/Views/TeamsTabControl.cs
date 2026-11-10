@@ -153,7 +153,11 @@ namespace TeamsTool.Views
                 _noiDung.Children.Clear();
                 BaoTrangThai("Đã đăng xuất.");
             }
-            else if (luu) BaoTrangThai("Đã lưu cài đặt.");
+            else if (luu)
+            {
+                if (_don.Count > 0) GhiDangLam(); // thư mục gốc có thể vừa đổi
+                BaoTrangThai("Đã lưu cài đặt." + _loiGhi);
+            }
             CapNhatMan();
         }
 
@@ -294,16 +298,34 @@ namespace TeamsTool.Views
             var tam = GraphTeams.DocTam(listId);
             if (tam != null)
             {
-                _don = await Task.Run(() => PhanTichTeams.DocToanBo(tam.Value.Tho));
+                var dsTam = await Task.Run(() => PhanTichTeams.DocToanBo(tam.Value.Tho));
                 if (_tab?[6] != listId) return;
+                DatDon(dsTam);
                 VeDon();
                 CapNhatNen(_tab[5], listId, tam.Value.Luc);
                 return;
             }
             BaoTrangThai("Đang tải đơn…");
             var tho = await GraphTeams.TaiList(_tab[5], listId, CancellationToken.None);
-            _don = await Task.Run(() => PhanTichTeams.DocToanBo(tho));
-            if (_tab?[6] == listId) VeDon();
+            var ds = await Task.Run(() => PhanTichTeams.DocToanBo(tho));
+            if (_tab?[6] != listId) return;
+            DatDon(ds);
+            VeDon();
+        }
+
+        private string _loiGhi = ""; // lỗi ghi dang_lam.json lần gần nhất, hiện kèm dòng trạng thái
+
+        /// <summary>Gán danh sách đơn mới và ghi dang_lam.json cho tab CAD.</summary>
+        private void DatDon(List<DonTeams> moi)
+        {
+            _don = moi;
+            GhiDangLam();
+        }
+
+        private void GhiDangLam()
+        {
+            try { CaiDatTeams.GhiDangLam(_don); _loiGhi = ""; }
+            catch (Exception ex) { _loiGhi = " — không ghi được đơn đang làm: " + ex.Message; }
         }
 
         private bool _dangCapNhat, _oDanhSach; // _oDanhSach: đang ở màn hình danh sách đơn
@@ -320,7 +342,7 @@ namespace TeamsTool.Views
                 var tho = await GraphTeams.TaiList(siteId, listId, CancellationToken.None);
                 var moi = await Task.Run(() => PhanTichTeams.DocToanBo(tho));
                 if (_tab?[6] != listId) return; // đã chuyển sang tab khác
-                _don = moi;
+                DatDon(moi);
                 if (_oDanhSach) VeDon();
             }
             catch (Exception ex) { if (_oDanhSach) BaoTrangThai(goc + ". Không cập nhật được: " + ex.Message); }
@@ -364,7 +386,7 @@ namespace TeamsTool.Views
                 foreach (DonTeams d in nhom.OrderBy(d => d.Title))
                     _noiDung.Children.Add(TheDon(d));
             }
-            BaoTrangThai(loc.Count + " / " + _don.Count + " đơn (" + DateTime.Now.ToString("HH:mm") + ")");
+            BaoTrangThai(loc.Count + " / " + _don.Count + " đơn (" + DateTime.Now.ToString("HH:mm") + ")" + _loiGhi);
             _oDanhSach = true;
         }
 
@@ -389,7 +411,7 @@ namespace TeamsTool.Views
             var dau = new DockPanel();
             Border nhan = NhanTrangThai(d);
             if (nhan != null) { nhan.Margin = new Thickness(6, 0, 0, 0); DockPanel.SetDock(nhan, Dock.Right); dau.Children.Add(nhan); }
-            dau.Children.Add(new TextBlock { Text = d.Title.Length > 0 ? d.Title : "(không tên)", FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
+            dau.Children.Add(new TextBlock { Text = (d.Id == CaiDatTeams.DonChon ? "📌 " : "") + (d.Title.Length > 0 ? d.Title : "(không tên)"), FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
             p.Children.Add(dau);
             if (d.TrienKhai.Length > 0) p.Children.Add(new TextBlock { Text = "Triển khai: " + d.TrienKhai, Foreground = KieuTeams.ChuPhu, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
             if (d.Check.Length > 0) p.Children.Add(new TextBlock { Text = "Check: " + d.Check, Foreground = KieuTeams.ChuPhu, TextWrapping = TextWrapping.Wrap });
@@ -428,12 +450,17 @@ namespace TeamsTool.Views
                 r++;
             }
             _noiDung.Children.Add(KieuTeams.The(luoi));
-            if (!string.IsNullOrEmpty(d.WebUrl))
+            var nut = new WrapPanel();
+            bool dangChon = d.Id == CaiDatTeams.DonChon;
+            nut.Children.Add(KieuTeams.Nut(dangChon ? "📌 Bỏ đang làm" : "📌 Đang làm", _mau, (s, e) =>
             {
-                var mo = KieuTeams.Nut("Mở trên Teams", _mau, (s, e) => MoNgoai(d.WebUrl));
-                mo.HorizontalAlignment = HorizontalAlignment.Left;
-                _noiDung.Children.Add(mo);
-            }
+                CaiDatTeams.DonChon = dangChon ? "" : d.Id;
+                GhiDangLam();
+                if (_loiGhi.Length > 0) MessageBox.Show(_loiGhi.TrimStart(' ', '—'), "Teams", MessageBoxButton.OK, MessageBoxImage.Warning);
+                HienChiTiet(d);
+            }, chinh: !dangChon));
+            if (!string.IsNullOrEmpty(d.WebUrl)) nut.Children.Add(KieuTeams.Nut("Mở trên Teams", _mau, (s, e) => MoNgoai(d.WebUrl), chinh: dangChon));
+            _noiDung.Children.Add(nut);
         }
 
         private static void MoNgoai(string duongDan)

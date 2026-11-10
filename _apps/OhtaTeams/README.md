@@ -4,6 +4,8 @@ Thiết kế: [_docs/specs/2026-11-10-ung-dung-teams-rieng.md](../../_docs/specs
 
 - Mở `_apps\OhtaTeams\bin\OhtaTeams.exe` (không cần mở CAD). Màn hình giống hệt tab Teams: đăng nhập Microsoft 365 → nhóm → kênh → tab Lists → đơn.
 - Dùng chung `06_Teams\data\teams.json`, phiên đăng nhập và bản lưu tạm với tab Teams → máy đã đăng nhập trên CAD không phải đăng nhập lại.
+- Chi tiết đơn → **📌 Đang làm** (bấm lại để bỏ); đơn đang chọn có 📌 trong danh sách. ⚙ → **Thư mục đơn**: thư mục chứa các thư mục đơn.
+- Mỗi lần tải xong đơn / bấm 📌 / lưu ⚙, ứng dụng ghi `%LOCALAPPDATA%\OHTA_TOOL\teams\dang_lam.json` (đơn chưa xong + đơn 📌, thư mục đơn, giờ ghi) — tab Teams trên CAD đọc file này (bước 3).
 - Exe tìm `06_Teams` bằng cách đi ngược lên từ thư mục của nó, nên phải nằm trong thư mục OHTA_TOOL.
 
 ## Mã

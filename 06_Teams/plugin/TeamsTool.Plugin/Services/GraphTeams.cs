@@ -64,6 +64,41 @@ namespace TeamsTool.Services
         }
 
         public static void GhiTabChon(params string[] giaTri) => Ghi("tab_chon", string.Join("\n", giaTri));
+
+        /// <summary>Thư mục chứa các thư mục đơn (⚙ của OhtaTeams) — CAD dùng để khớp bản vẽ ↔ đơn.</summary>
+        public static string ThuMucGoc
+        {
+            get => Doc("thu_muc_goc");
+            set => Ghi("thu_muc_goc", value);
+        }
+
+        /// <summary>Id đơn người dùng bấm 📌 Đang làm ("" = chưa chọn).</summary>
+        public static string DonChon
+        {
+            get => Doc("don_chon");
+            set => Ghi("don_chon", value);
+        }
+
+        public static string FileDangLam => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OHTA_TOOL", "teams", "dang_lam.json");
+
+        /// <summary>Ghi dang_lam.json: ghi file tạm rồi thay, CAD không bao giờ đọc phải file ghi dở.</summary>
+        public static void GhiDangLam(IEnumerable<DonTeams> tatCa)
+        {
+            string chon = DonChon;
+            string json = PhanTichDangLam.Ghi(new DangLam
+            {
+                Luc = DateTime.Now,
+                ThuMucGoc = ThuMucGoc,
+                DonChon = chon,
+                Don = PhanTichDangLam.ChonGhi(tatCa, chon),
+            });
+            string f = FileDangLam, tam = f + ".tmp";
+            Directory.CreateDirectory(Path.GetDirectoryName(f));
+            File.WriteAllText(tam, json, new UTF8Encoding(false));
+            if (File.Exists(f)) File.Replace(tam, f, null);
+            else File.Move(tam, f);
+        }
     }
 
     /// <summary>

@@ -135,6 +135,24 @@ namespace TeamsTool.Tests
             var thieu = PhanTichTeams.DocMa(@"{""tenantId"":""t""}");
             Kiem("teams.json thieu clientId -> rong", thieu.Tenant + "|" + thieu.Client, "t|");
 
+            // dang_lam.json (ung dung OhtaTeams ghi, tab CAD doc)
+            var dA = new DonTeams { Id = "1", Title = "2026-1234 \"A\"", Han = new DateTime(2026, 11, 12), TrangThai = "Đang triển khai", TrienKhai = "Nam", WebUrl = "https://x" };
+            dA.TatCa.Add(new KeyValuePair<string, string>("注意", "dòng 1\ndòng 2"));
+            var dB = new DonTeams { Id = "2", Title = "xong", DaXong = true };
+            var dC = new DonTeams { Id = "3", Title = "xong nhung dang chon", DaXong = true };
+            var chon = PhanTichDangLam.ChonGhi(new[] { dA, dB, dC }, "3");
+            Kiem("dang_lam: chi don chua xong + don dang chon", string.Join(",", chon.Select(x => x.Id)), "1,3");
+            Kiem("dang_lam: khong chon -> bo het don da xong", PhanTichDangLam.ChonGhi(new[] { dA, dB }, "").Count, 1);
+            var dl = PhanTichDangLam.Doc(PhanTichDangLam.Ghi(new DangLam { Luc = new DateTime(2026, 11, 10, 9, 30, 5), ThuMucGoc = @"D:\Don", DonChon = "3", Don = chon }));
+            Kiem("dang_lam ghi roi doc: luc, thu muc, don chon", dl.Luc.ToString("s") + "|" + dl.ThuMucGoc + "|" + dl.DonChon, @"2026-11-10T09:30:05|D:\Don|3");
+            var a2 = dl.Don[0];
+            Kiem("dang_lam ghi roi doc: don", a2.Title + "|" + a2.Han?.ToString("dd/MM") + "|" + a2.TrangThai + "|" + a2.TrienKhai + "|" + a2.WebUrl + "|" + a2.DaXong,
+                 "2026-1234 \"A\"|12/11|Đang triển khai|Nam|https://x|False");
+            Kiem("dang_lam ghi roi doc: cot (xuong dong, chu Nhat)", a2.TatCa.Count == 1 ? a2.TatCa[0].Key + "=" + a2.TatCa[0].Value : "?", "注意=dòng 1\ndòng 2");
+            Kiem("dang_lam ghi roi doc: don da xong, khong han", dl.Don[1].DaXong + "|" + (dl.Don[1].Han == null), "True|True");
+            Kiem("dang_lam file hong -> null", PhanTichDangLam.Doc("{ hong") == null, true);
+            Kiem("dang_lam thieu mang don -> null", PhanTichDangLam.Doc(@"{""luc"":""x""}") == null, true);
+
             Console.WriteLine();
             Console.WriteLine("Tong: {0} OK, {1} FAIL", _ok, _fail);
             return _fail == 0 ? 0 : 1;
