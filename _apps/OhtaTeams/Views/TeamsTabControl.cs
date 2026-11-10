@@ -285,6 +285,7 @@ namespace TeamsTool.Views
                     BaoTrangThai("Đang mở danh sách " + t.Ten + "…");
                     var (siteId, listId) = await GraphTeams.MoList(t.ListUrl, CancellationToken.None);
                     _tab = new[] { nhomId, nhomTen, kenhId, kenhTen, t.Ten, siteId, listId, t.ListUrl };
+                    _chon.Clear();
                     CaiDatTeams.GhiTabChon(_tab);
                     await TaiDon();
                 })));
@@ -396,8 +397,100 @@ namespace TeamsTool.Views
             var loc = _don.Where(d => (_caDaXong.IsChecked == true || !d.DaXong) && (_cuaToi.IsChecked != true || d.CuaToi(_toiTen))
                                       && (idNv == null || SuaDon.CoNguoi(d, _cots, idNv))).ToList();
             _noiDung.Children.Add(VeBang(loc));
+            CapNhatThanhNhanh();
             BaoTrangThai(loc.Count + " / " + _don.Count + " đơn (" + DateTime.Now.ToString("HH:mm") + ")" + _loiGhi);
             _oDanhSach = true;
+        }
+
+        // ---------- Sửa nhanh nhiều đơn ----------
+
+        private readonly HashSet<string> _chon = new HashSet<string>();                       // id đơn đang tích (giữ qua lọc / vẽ lại)
+        private readonly Dictionary<string, CheckBox> _oChon = new Dictionary<string, CheckBox>(); // ô tích của các dòng đang vẽ
+        private readonly Border _thanhNhanh = new Border { Margin = new Thickness(0, 0, 0, 6), CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 8, 10, 8),
+                                                            Background = KieuTeams.Mau("#EEF0FA"), Visibility = Visibility.Collapsed };
+        private string _cotNhanh;                 // cột đang chọn ở thanh sửa nhanh
+        private Func<object> _docNhanh;           // đọc giá trị ô nhập của thanh
+        private bool _dongBoChon;                 // đang tích / bỏ tích hàng loạt: chưa vẽ lại thanh
+
+        /// <summary>Thanh "Đã chọn N đơn": chọn cột + giá trị → Áp dụng cho mọi đơn đã tích. Vẽ lại khi số đơn chọn đổi (không vẽ lại bảng).</summary>
+        private void CapNhatThanhNhanh()
+        {
+            Tach(_thanhNhanh);
+            if (_chon.Count == 0) { _thanhNhanh.Visibility = Visibility.Collapsed; return; }
+            _thanhNhanh.Visibility = Visibility.Visible;
+            var cotSua = _cots.Where(c => c.SuaDuoc && c.Ten != "Title").ToList();
+            if (_cotNhanh == null || cotSua.All(c => c.Ten != _cotNhanh))
+                _cotNhanh = (cotSua.FirstOrDefault(c => PhanTichTeams.BoDau(c.TieuDe).Contains("han hoan thanh")) ?? cotSua.FirstOrDefault())?.Ten;
+
+            var hang = new WrapPanel();
+            hang.Children.Add(new TextBlock { Text = "Đã chọn " + _chon.Count + " đơn — gán", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
+            var cb = new ComboBox { MinWidth = 180, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
+            foreach (CotList c in cotSua) cb.Items.Add(new ComboBoxItem { Content = c.TieuDe, Tag = c.Ten });
+            cb.SelectedItem = cb.Items.Cast<ComboBoxItem>().FirstOrDefault(x => (string)x.Tag == _cotNhanh);
+            hang.Children.Add(cb);
+            hang.Children.Add(new TextBlock { Text = "=", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
+            CotList cot = cotSua.FirstOrDefault(c => c.Ten == _cotNhanh);
+            if (cot != null)
+            {
+                var (o, doc) = TaoONhap(cot, SuaDon.GiaTriForm(cot, null));
+                o.MinWidth = 200;
+                o.VerticalAlignment = VerticalAlignment.Center;
+                o.Margin = new Thickness(0, 0, 8, 0);
+                _docNhanh = doc;
+                hang.Children.Add(o);
+            }
+            hang.Children.Add(KieuTeams.Nut("Áp dụng", _mau, (s, e) => ApDungNhanh(cot)));
+            hang.Children.Add(KieuTeams.Nut("Bỏ chọn", _mau, (s, e) =>
+            {
+                _dongBoChon = true;
+                _chon.Clear();
+                foreach (CheckBox x in _oChon.Values) x.IsChecked = false;
+                _dongBoChon = false;
+                CapNhatThanhNhanh();
+            }, chinh: false));
+            cb.SelectionChanged += (s, e) => { _cotNhanh = (cb.SelectedItem as ComboBoxItem)?.Tag as string; CapNhatThanhNhanh(); };
+            _thanhNhanh.Child = hang;
+            _noiDung.Children.Insert(Math.Min(2, _noiDung.Children.Count), _thanhNhanh); // ngay dưới đường dẫn + khung ⟳ / lọc, trên bảng
+        }
+
+        /// <summary>Gán cùng một giá trị cho cột của mọi đơn đã tích: xác nhận 1 lần, gửi từng đơn (kèm eTag), báo kết quả, tải lại danh sách.</summary>
+        private void ApDungNhanh(CotList cot)
+        {
+            if (cot == null || _docNhanh == null) return;
+            object moi;
+            try { moi = _docNhanh(); }
+            catch (FormatException ex) { BaoTrangThai(ex.Message); return; }
+            string loi = SuaDon.KiemTra(cot, moi);
+            if (loi != null) { BaoTrangThai(loi); return; }
+            var don = _don.Where(d => _chon.Contains(d.Id)).ToList();
+            if (don.Count == 0) return;
+            if (MessageBox.Show("Gán " + cot.TieuDe + " = " + HienGiaTri(cot, moi) + "\ncho " + don.Count + " đơn: " + string.Join(", ", don.Take(15).Select(d => d.Title))
+                                + (don.Count > 15 ? "…" : "") + "\n\nLưu lên Teams?", "Sửa nhanh", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
+
+            string siteId = _tab[5], listId = _tab[6];
+            string body = SuaDon.Body(new[] { new KeyValuePair<CotList, object>(cot, moi) });
+            Chay(async () =>
+            {
+                var hong = new List<string>();
+                int xong = 0;
+                foreach (DonTeams d in don)
+                {
+                    BaoTrangThai("Đang lưu " + (xong + hong.Count + 1) + " / " + don.Count + "…");
+                    try { await GraphTeams.SuaDon(siteId, listId, d.Id, d.ETag, body, CancellationToken.None); xong++; }
+                    catch (DonDaDoiException) { hong.Add(d.Title + " (vừa bị người khác sửa)"); }
+                    catch (InvalidOperationException ex) when (!ex.Message.StartsWith("Chưa")) { hong.Add(d.Title + " (" + ex.Message + ")"); } // thiếu quyền / chưa đăng nhập: dừng hẳn, Chay báo lỗi
+                }
+                BaoTrangThai("Đang tải lại danh sách…");
+                var tho = await GraphTeams.TaiList(siteId, listId, CancellationToken.None);
+                var ds = await Task.Run(() => PhanTichTeams.DocToanBo(tho));
+                if (_tab?[6] != listId) return;
+                DatDon(tho, ds);
+                _chon.Clear();
+                VeDon();
+                string kq = "Đã gán " + cot.TieuDe + " cho " + xong + " / " + don.Count + " đơn.";
+                BaoTrangThai(kq + (hong.Count > 0 ? " Lỗi: " + string.Join("; ", hong) : ""));
+                if (hong.Count > 0) MessageBox.Show(kq + "\n\nKhông lưu được:\n" + string.Join("\n", hong), "Sửa nhanh", MessageBoxButton.OK, MessageBoxImage.Warning);
+            });
         }
 
         // ---------- Bảng đơn ----------
@@ -424,7 +517,7 @@ namespace TeamsTool.Views
         private static Grid HangBang(List<CotList> cots, Brush nen)
         {
             var g = new Grid { Background = nen, HorizontalAlignment = HorizontalAlignment.Left };
-            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(5) });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(30) }); // vạch "đơn của tôi" + ô tích chọn
             foreach (CotList c in cots) g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(DoRong(c)) });
             return g;
         }
@@ -532,7 +625,21 @@ namespace TeamsTool.Views
             var tieu = HangBang(cots, KieuTeams.Mau("#E9ECF2"));
             for (int i = 0; i < cots.Count; i++)
                 DatO(tieu, OTieuDe(cots, i), i + 1);
+            var tatCa = new CheckBox { IsChecked = loc.Count > 0 && loc.All(d => _chon.Contains(d.Id)), HorizontalAlignment = HorizontalAlignment.Center,
+                                       VerticalAlignment = VerticalAlignment.Center, ToolTip = "Chọn / bỏ chọn mọi đơn đang hiện" };
+            void ChonHet(bool co)
+            {
+                _dongBoChon = true; // tích hàng loạt: vẽ thanh 1 lần ở cuối
+                foreach (DonTeams d in loc) { if (co) _chon.Add(d.Id); else _chon.Remove(d.Id); }
+                foreach (CheckBox o in _oChon.Values) o.IsChecked = _chon.Contains((string)o.Tag);
+                _dongBoChon = false;
+                CapNhatThanhNhanh();
+            }
+            tatCa.Checked += (s, e) => ChonHet(true);
+            tatCa.Unchecked += (s, e) => ChonHet(false);
+            DatO(tieu, tatCa, 0);
             bang.Children.Add(tieu);
+            _oChon.Clear();
 
             DateTime homNay = DateTime.Today;
             int daVe = 0;
@@ -558,7 +665,13 @@ namespace TeamsTool.Views
                     h.MinHeight = 30;
                     h.Margin = new Thickness(0, 0, 0, 1);
                     h.Cursor = Cursors.Hand;
-                    if (d.CuaToi(_toiTen)) DatO(h, new Border { Background = _mau }, 0); // đơn của tôi: vạch màu trái
+                    if (d.CuaToi(_toiTen)) DatO(h, new Border { Background = _mau, Width = 4, HorizontalAlignment = HorizontalAlignment.Left }, 0); // đơn của tôi: vạch màu trái
+                    var chon = new CheckBox { IsChecked = _chon.Contains(d.Id), Tag = d.Id, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+                    // Checked/Unchecked (không dùng Click): ăn cả chuột, phím cách, công cụ trợ năng; bấm ô tích không mở chi tiết (nút tự Handled)
+                    chon.Checked += (s, e) => { _chon.Add(d.Id); if (!_dongBoChon) CapNhatThanhNhanh(); };
+                    chon.Unchecked += (s, e) => { _chon.Remove(d.Id); if (!_dongBoChon) CapNhatThanhNhanh(); };
+                    _oChon[d.Id] = chon;
+                    DatO(h, chon, 0);
                     for (int i = 0; i < cots.Count; i++)
                     {
                         FrameworkElement o = O(cots[i], d);
