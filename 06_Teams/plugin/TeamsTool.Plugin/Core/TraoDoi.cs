@@ -83,6 +83,43 @@ namespace TeamsTool.Core
             "u!" + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(url ?? "")).TrimEnd('=').Replace('/', '_').Replace('+', '-');
 
         /// <summary>Một tin (object) hoặc một trang {"value":[...]} → các tin, cũ trước. Tin đã xoá (deletedDateTime) bỏ qua.</summary>
+        /// <summary>
+        /// Các kênh chat dùng nhiều nhất trong các đơn (đếm theo kênh, nhiều trước) — trang chi tiết luôn hiện đủ các kênh này,
+        /// kênh đơn chưa có chuỗi thì cho tạo. HoiThoai trả về chỉ có ChannelId + TeamInternalId (ConvId = null).
+        /// </summary>
+        public static List<HoiThoai> KenhPhoBien(IEnumerable<DonTeams> don, int soKenh = 2) =>
+            don.SelectMany(d => DocHoiThoai(d.HoiThoaiMeta))
+               .GroupBy(h => h.ChannelId + "|" + h.TeamInternalId)
+               .OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal)
+               .Take(soKenh)
+               .Select(g => new HoiThoai { ChannelId = g.First().ChannelId, TeamInternalId = g.First().TeamInternalId })
+               .ToList();
+
+        /// <summary>Metadata cũ + một chuỗi mới (giữ nguyên các chuỗi cũ) → chuỗi JSON để ghi lại cột ẩn của đơn.</summary>
+        public static string ThemHoiThoai(string meta, HoiThoai moi)
+        {
+            var ds = new List<object>();
+            foreach (HoiThoai h in DocHoiThoai(meta).Concat(new[] { moi }))
+            {
+                var o = new JsonObject();
+                o.Set("conversationId", h.ConvId);
+                o.Set("channelId", h.ChannelId);
+                o.Set("teamId", h.TeamInternalId);
+                ds.Add(o);
+            }
+            var goc = new JsonObject();
+            goc.Set("v1", ds);
+            return JsonLite.Serialize(goc).Trim();
+        }
+
+        /// <summary>HTML tin mở đầu trao đổi về đơn: "Về đơn &lt;Title&gt;" (link tới đơn trên Lists) + nội dung người gõ.</summary>
+        public static string HtmlMoDau(string title, string webUrl, string chu)
+        {
+            string ve = string.IsNullOrEmpty(webUrl) ? "<b>Về đơn " + HtmlTraLoi(title) + "</b>"
+                                                     : "<b>Về đơn <a href=\"" + webUrl.Replace("\"", "%22") + "\">" + HtmlTraLoi(title) + "</a></b>";
+            return "<p>" + ve + "</p><p>" + HtmlTraLoi(chu) + "</p>";
+        }
+
         public static List<TinNhan> DocTin(string json)
         {
             var goc = JsonLite.Parse(json) as JsonObject;

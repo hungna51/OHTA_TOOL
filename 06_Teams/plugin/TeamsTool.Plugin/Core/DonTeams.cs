@@ -46,6 +46,7 @@ namespace TeamsTool.Core
         /// <summary>Giá trị thô theo tên nội bộ cột (chuỗi / số / bool / mảng) — điền sẵn vào form sửa.</summary>
         public Dictionary<string, object> Tho = new Dictionary<string, object>();
         public string HoiThoaiMeta = ""; // cột ẩn teamsConversationMetadata_*: các chuỗi chat Teams gắn với đơn (TraoDoi.DocHoiThoai)
+        public string HoiThoaiCot = "";  // tên nội bộ cột ẩn đó (ghi thêm chuỗi khi tạo trao đổi mới); "" = đơn chưa có giá trị
         public bool CoTep;               // Attachments = true: đơn có tệp đính kèm
         /// <summary>Mọi cột có giá trị, theo thứ tự cột của danh sách: (tên hiển thị, giá trị).</summary>
         public List<KeyValuePair<string, string>> TatCa = new List<KeyValuePair<string, string>>();
@@ -264,6 +265,7 @@ namespace TeamsTool.Core
                     ETag = it.GetString("eTag"),
                     WebUrl = it.GetString("webUrl"),
                     HoiThoaiMeta = f.Items.FirstOrDefault(kv => kv.Key.StartsWith("teamsConversationMetadata", StringComparison.Ordinal)).Value as string ?? "",
+                    HoiThoaiCot = f.Items.FirstOrDefault(kv => kv.Key.StartsWith("teamsConversationMetadata", StringComparison.Ordinal)).Key ?? "",
                     CoTep = Equals(f.Get("Attachments"), true),
                     Title = f.GetString("Title") ?? "",
                     TrangThai = Gt(chinh.TrangThai),

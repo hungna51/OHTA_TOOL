@@ -394,7 +394,7 @@ namespace TeamsTool.Services
         private static Dictionary<string, (string Id, string Ten)> _nhomTheoInternal; // "19:…@thread.tacv2" → (id nhóm, tên)
 
         /// <summary>Metadata chat ghi nhóm bằng internalId → tra id nhóm (Graph cần id) qua các nhóm đã tham gia; nhớ cả phiên.</summary>
-        private static async Task<(string Id, string Ten)?> NhomCuaInternal(string internalId, CancellationToken ct)
+        public static async Task<(string Id, string Ten)?> NhomCuaInternal(string internalId, CancellationToken ct)
         {
             if (_nhomTheoInternal == null)
             {
@@ -447,6 +447,22 @@ namespace TeamsTool.Services
         }
 
         /// <summary>Gửi một tin trả lời vào chuỗi chat của đơn.</summary>
+        /// <summary>Mở chuỗi chat mới trong kênh (tin đầu chuỗi, HTML) → id tin = conversationId để gắn vào đơn.</summary>
+        public static async Task<string> TaoHoiThoai(string nhomId, string channelId, string html, CancellationToken ct)
+        {
+            var b = new JsonObject();
+            b.Set("contentType", "html");
+            b.Set("content", html);
+            var o = new JsonObject();
+            o.Set("body", b);
+            using (HttpResponseMessage res = await Gui(HttpMethod.Post, "/teams/" + nhomId + "/channels/" + Uri.EscapeDataString(channelId) + "/messages",
+                                                       JsonLite.Serialize(o), ct, ScopeChat))
+            {
+                string id = (JsonLite.Parse(await res.Content.ReadAsStringAsync()) as JsonObject)?.GetString("id");
+                return !string.IsNullOrEmpty(id) ? id : throw new InvalidOperationException("Teams không trả id tin vừa tạo.");
+            }
+        }
+
         public static async Task TraLoi(string nhomId, HoiThoai h, string chu, CancellationToken ct)
         {
             string url = "/teams/" + nhomId + "/channels/" + Uri.EscapeDataString(h.ChannelId) + "/messages/" + Uri.EscapeDataString(h.ConvId) + "/replies";

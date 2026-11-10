@@ -1006,25 +1006,50 @@ namespace TeamsTool.Views
             return b;
         }
 
+        /// <summary>
+        /// Trao đổi trên Teams: luôn hiện các kênh dùng nhiều nhất (2 kênh) + các kênh khác đơn có chuỗi chat; mỗi kênh một cột,
+        /// thanh trượt riêng. Kênh đơn chưa có chuỗi → ô nhập + nút Tạo trao đổi.
+        /// </summary>
         private Border KhoiChat(DonTeams d, int phien)
         {
             var p = new StackPanel();
             p.Children.Add(new TextBlock { Text = "💬 Trao đổi trên Teams", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) });
-            List<HoiThoai> hts = TraoDoi.DocHoiThoai(d.HoiThoaiMeta);
-            if (hts.Count == 0) p.Children.Add(ChuPhu("Đơn chưa có chuỗi chat nào trên Teams."));
-            // mỗi chuỗi chat (mỗi kênh) một cột, xếp ngang nhau
-            var ngang = new System.Windows.Controls.Primitives.UniformGrid { Rows = 1, Columns = Math.Max(1, hts.Count) };
-            for (int i = 0; i < hts.Count; i++)
+            List<HoiThoai> cua = TraoDoi.DocHoiThoai(d.HoiThoaiMeta);
+            var daDung = new HashSet<HoiThoai>();
+            var cot = new List<(HoiThoai Kenh, HoiThoai Chuoi)>();
+            foreach (HoiThoai k in TraoDoi.KenhPhoBien(_don).OrderBy(k => k.ChannelId == _tab?[2] ? 0 : 1)) // kênh có tab danh sách đơn đứng trước
             {
-                var khung = new StackPanel { Margin = new Thickness(i == 0 ? 0 : 5, 0, i == hts.Count - 1 ? 0 : 5, 0) };
+                HoiThoai c = cua.FirstOrDefault(h => !daDung.Contains(h) && h.ChannelId == k.ChannelId && h.TeamInternalId == k.TeamInternalId);
+                if (c != null) daDung.Add(c);
+                cot.Add((k, c));
+            }
+            foreach (HoiThoai c in cua.Where(h => !daDung.Contains(h))) cot.Add((c, c)); // chuỗi ở kênh khác: thêm cột
+            if (cot.Count == 0) p.Children.Add(ChuPhu("Đơn chưa có chuỗi chat nào trên Teams."));
+
+            var ngang = new System.Windows.Controls.Primitives.UniformGrid { Rows = 1, Columns = Math.Max(1, cot.Count) };
+            for (int i = 0; i < cot.Count; i++)
+            {
+                var khung = new StackPanel { Margin = new Thickness(i == 0 ? 0 : 5, 0, i == cot.Count - 1 ? 0 : 5, 0) };
                 khung.Children.Add(ChuPhu("Đang tải chat…"));
                 ngang.Children.Add(khung);
-                TaiChuoiVao(khung, hts[i], phien);
+                if (cot[i].Chuoi != null) TaiChuoiVao(khung, cot[i].Chuoi, phien);
+                else KhungTaoChuoi(khung, d, cot[i].Kenh, phien);
             }
             p.Children.Add(ngang);
             var the = KieuTeams.The(p);
             the.Margin = new Thickness(0, 0, 0, 8);
             return the;
+        }
+
+        private TextBlock TieuDeNhom(string ten) =>
+            new TextBlock { Text = "Nhóm " + ten, Foreground = _mau, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) };
+
+        /// <summary>Khung tin có thanh trượt riêng (cao cố định), tự cuộn xuống tin mới nhất khi mở.</summary>
+        private static ScrollViewer KhungCuonTin(UIElement ds)
+        {
+            var sv = new ScrollViewer { Content = ds, Height = 460, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+            sv.Loaded += (s, e) => sv.ScrollToEnd();
+            return sv;
         }
 
         private async void TaiChuoiVao(StackPanel khung, HoiThoai h, int phien)
@@ -1035,7 +1060,8 @@ namespace TeamsTool.Views
                 if (phien != _phienChiTiet) return;
                 khung.Children.Clear();
                 if (kq == null) { khung.Children.Add(ChuPhu("Chuỗi chat nằm ở nhóm Teams bạn chưa tham gia.")); return; }
-                khung.Children.Add(new TextBlock { Text = "Nhóm " + kq.Value.NhomTen, Foreground = _mau, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) });
+                khung.Children.Add(TieuDeNhom(kq.Value.NhomTen));
+                var ds = new StackPanel { Margin = new Thickness(0, 0, 4, 0) };
                 foreach (TinNhan t in kq.Value.Tin)
                 {
                     var tin = new StackPanel();
@@ -1049,10 +1075,11 @@ namespace TeamsTool.Views
                         foreach (TepDinhKem f in t.Tep) tep.Children.Add(NutTepChat(f));
                         tin.Children.Add(tep);
                     }
-                    khung.Children.Add(new Border { Child = tin, Background = KieuTeams.Mau("#EEF0FA"), CornerRadius = new CornerRadius(6),
-                                                    Padding = new Thickness(8, 5, 8, 5), Margin = new Thickness(0, 0, 0, 4) });
+                    ds.Children.Add(new Border { Child = tin, Background = KieuTeams.Mau("#EEF0FA"), CornerRadius = new CornerRadius(6),
+                                                 Padding = new Thickness(8, 5, 8, 5), Margin = new Thickness(0, 0, 0, 4) });
                 }
-                var o = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 44, Margin = new Thickness(0, 4, 0, 4), ToolTip = "Trả lời trong chuỗi hội thoại" };
+                khung.Children.Add(KhungCuonTin(ds));
+                var o = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 44, Margin = new Thickness(0, 6, 0, 4), ToolTip = "Trả lời trong chuỗi hội thoại" };
                 Button gui = null;
                 gui = KieuTeams.Nut("Gửi trả lời", _mau, async (s, e) =>
                 {
@@ -1073,6 +1100,79 @@ namespace TeamsTool.Views
                 khung.Children.Add(gui);
             }
             catch (Exception ex) { if (phien == _phienChiTiet) { khung.Children.Clear(); khung.Children.Add(ChuPhu(ex.Message, true)); } }
+        }
+
+        /// <summary>Kênh đơn chưa có chuỗi chat: tên nhóm + ô nhập + nút Tạo trao đổi (tin đầu chuỗi có link tới đơn).</summary>
+        private async void KhungTaoChuoi(StackPanel khung, DonTeams d, HoiThoai kenh, int phien)
+        {
+            try
+            {
+                var nhom = await GraphTeams.NhomCuaInternal(kenh.TeamInternalId, CancellationToken.None);
+                if (phien != _phienChiTiet) return;
+                khung.Children.Clear();
+                if (nhom == null) { khung.Children.Add(ChuPhu("Kênh nằm ở nhóm Teams bạn chưa tham gia.")); return; }
+                khung.Children.Add(TieuDeNhom(nhom.Value.Ten));
+                khung.Children.Add(new Border
+                {
+                    Height = 460, BorderBrush = KieuTeams.Mau("#D0D5DD"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6),
+                    Child = new TextBlock { Text = "Chưa có trao đổi về đơn " + d.Title + " trong kênh này.\nGõ nội dung bên dưới rồi bấm Tạo trao đổi.",
+                                            Foreground = KieuTeams.ChuPhu, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap,
+                                            VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12) },
+                });
+                var o = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 44, Margin = new Thickness(0, 6, 0, 4), ToolTip = "Nội dung tin đầu tiên" };
+                var tao = KieuTeams.Nut("Tạo trao đổi", _mau, (s, e) => TaoTraoDoi(d, kenh, nhom.Value.Id, nhom.Value.Ten, o.Text));
+                tao.HorizontalAlignment = HorizontalAlignment.Left;
+                khung.Children.Add(o);
+                khung.Children.Add(tao);
+            }
+            catch (Exception ex) { if (phien == _phienChiTiet) { khung.Children.Clear(); khung.Children.Add(ChuPhu(ex.Message, true)); } }
+        }
+
+        /// <summary>
+        /// Tạo trao đổi: gửi tin đầu chuỗi vào kênh ("Về đơn …" + nội dung), rồi ghi chuỗi mới vào cột ẩn teamsConversationMetadata
+        /// của đơn (giữ chuỗi cũ) để Lists và OhtaTeams cùng thấy; đơn vừa bị sửa → đọc lại rồi ghi lại 1 lần.
+        /// </summary>
+        private void TaoTraoDoi(DonTeams d, HoiThoai kenh, string nhomId, string nhomTen, string chu)
+        {
+            if (chu.Trim().Length == 0) { BaoTrangThai("Gõ nội dung trao đổi trước khi tạo."); return; }
+            if (MessageBox.Show("Gửi tin mở trao đổi về đơn " + d.Title + " vào nhóm " + nhomTen + "?\n\n" + chu.Trim(), "Tạo trao đổi",
+                                MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
+            string siteId = _tab[5], listId = _tab[6];
+            string cotMeta = d.HoiThoaiCot.Length > 0 ? d.HoiThoaiCot : _don.Select(x => x.HoiThoaiCot).FirstOrDefault(x => x.Length > 0);
+            Chay(async () =>
+            {
+                BaoTrangThai("Đang tạo trao đổi…");
+                string conv = await GraphTeams.TaoHoiThoai(nhomId, kenh.ChannelId, TraoDoi.HtmlMoDau(d.Title, d.WebUrl, chu), CancellationToken.None);
+                var chuoi = new HoiThoai { ConvId = conv, ChannelId = kenh.ChannelId, TeamInternalId = kenh.TeamInternalId };
+                string thongBao = "Đã tạo trao đổi trong nhóm " + nhomTen + ".";
+                DonTeams moi = d;
+                if (cotMeta == null) thongBao += " Chưa gắn được vào đơn (danh sách chưa có cột chat ẩn) — xem trong kênh.";
+                else
+                    for (int lan = 0; lan < 2; lan++)
+                    {
+                        var body = new OhtaTool.Plugin.Core.JsonObject();
+                        body.Set(cotMeta, TraoDoi.ThemHoiThoai(moi.HoiThoaiMeta, chuoi));
+                        try { await GraphTeams.SuaDon(siteId, listId, d.Id, moi.ETag, OhtaTool.Plugin.Core.JsonLite.Serialize(body), CancellationToken.None); break; }
+                        catch (DonDaDoiException) when (lan == 0) { moi = await TaiLaiMotDon(siteId, listId, d.Id) ?? moi; } // người khác vừa sửa: đọc bản mới rồi ghi lại
+                    }
+                DonTeams sau = await TaiLaiMotDon(siteId, listId, d.Id);
+                if (_tab?[6] != listId) return;
+                if (sau == null) { VeDon(); return; }
+                HienChiTiet(sau, thongBao);
+            });
+        }
+
+        /// <summary>Đọc lại một đơn từ Teams, thay vào danh sách đang có (ghi dang_lam.json). Không thấy → null.</summary>
+        private async Task<DonTeams> TaiLaiMotDon(string siteId, string listId, string id)
+        {
+            string json = await GraphTeams.TaiMotDon(siteId, listId, id, CancellationToken.None);
+            var ten = _danhBaDu.ToDictionary(kv => kv.Key, kv => kv.Value);
+            DonTeams sau = PhanTichTeams.DocDon(json, _cots, PhanTichTeams.KhopCot(_cots), x => x != null && ten.TryGetValue(x, out string t) ? t : "#" + x).FirstOrDefault();
+            if (sau == null || _tab?[6] != listId) return sau;
+            int vt = _don.FindIndex(x => x.Id == id);
+            if (vt >= 0) _don[vt] = sau; else _don.Add(sau);
+            GhiDangLam();
+            return sau;
         }
 
         /// <summary>Biểu tượng loại cột (font Segoe MDL2 Assets có sẵn trên Windows 10/11).</summary>

@@ -280,6 +280,15 @@ namespace TeamsTool.Tests
             Kiem("chat: anh dan trong tin, bo emoji CDN, giai ma &amp;", string.Join(" | ", anh),
                  "https://graph.microsoft.com/v1.0/teams/t/channels/c/messages/1/replies/2/hostedContents/aWQ9eF8w/$value | https://graph.microsoft.com/v1.0/x/hostedContents/b/$value?a=1&b=2");
             Kiem("chat: ma share cho Graph /shares", TraoDoi.MaShare("https://h/a b?"), "u!aHR0cHM6Ly9oL2EgYj8");
+            string M(params string[] kenh) => "{\"v1\":[" + string.Join(",", kenh.Select((k, i) => "{\"conversationId\":\"" + i + "\",\"channelId\":\"" + k + "\",\"teamId\":\"T" + k + "\"}")) + "]}";
+            var dKenh = new[] { new DonTeams { HoiThoaiMeta = M("jp", "ju") }, new DonTeams { HoiThoaiMeta = M("jp") }, new DonTeams { HoiThoaiMeta = M("khac", "ju") }, new DonTeams() };
+            Kiem("kenh pho bien: 2 kenh nhieu nhat", string.Join(",", TraoDoi.KenhPhoBien(dKenh).Select(h => h.ChannelId + "@" + h.TeamInternalId)), "jp@Tjp,ju@Tju");
+            string metaMoi = TraoDoi.ThemHoiThoai(M("jp"), new HoiThoai { ConvId = "999", ChannelId = "ju", TeamInternalId = "Tju" });
+            Kiem("them hoi thoai: giu chuoi cu + chuoi moi", string.Join(",", TraoDoi.DocHoiThoai(metaMoi).Select(h => h.ConvId + "@" + h.ChannelId)), "0@jp,999@ju");
+            Kiem("them hoi thoai: don chua co metadata", TraoDoi.DocHoiThoai(TraoDoi.ThemHoiThoai("", new HoiThoai { ConvId = "1", ChannelId = "c", TeamInternalId = "t" })).Count, 1);
+            Kiem("tin mo dau: link don + ma hoa", TraoDoi.HtmlMoDau("130825", "https://x/y?a=1", "xin <xác nhận>"), "<p><b>Về đơn <a href=\"https://x/y?a=1\">130825</a></b></p><p>xin &lt;xác nhận&gt;</p>");
+            var dCot = PhanTichTeams.DocDon(@"{""value"":[{""id"":""1"",""fields"":{""Title"":""a"",""teamsConversationMetadata_D86AE2"":""{}""}}]}", cs, PhanTichTeams.KhopCot(cs), id => id)[0];
+            Kiem("don nho ten cot metadata", dCot.HoiThoaiCot, "teamsConversationMetadata_D86AE2");
             Kiem("tep: doc AttachmentFiles", string.Join(",", TraoDoi.DocTep(@"{""value"":[{""FileName"":""130819.pdf"",""ServerRelativeUrl"":""/sites/x/Lists/y/Attachments/2758/130819.pdf""},{""FileName"":""""}]}").Select(t => t.Ten + "=" + t.DuongDan)), "130819.pdf=/sites/x/Lists/y/Attachments/2758/130819.pdf");
             Kiem("tep: URL tai qua _api, ma hoa dau cach + nhay don", TraoDoi.UrlTaiTep("https://h/sites/x", "/sites/x/Lists/Tt c/Attachments/1/a'b.pdf"),
                  "https://h/sites/x/_api/web/GetFileByServerRelativePath(decodedurl='%2Fsites%2Fx%2FLists%2FTt%20c%2FAttachments%2F1%2Fa%27%27b.pdf')/$value");
