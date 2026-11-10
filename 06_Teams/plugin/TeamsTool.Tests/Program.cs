@@ -289,6 +289,12 @@ namespace TeamsTool.Tests
             Kiem("tin mo dau: link don + ma hoa", TraoDoi.HtmlMoDau("130825", "https://x/y?a=1", "xin <xác nhận>"), "<p><b>Về đơn <a href=\"https://x/y?a=1\">130825</a></b></p><p>xin &lt;xác nhận&gt;</p>");
             var dCot = PhanTichTeams.DocDon(@"{""value"":[{""id"":""1"",""fields"":{""Title"":""a"",""teamsConversationMetadata_D86AE2"":""{}""}}]}", cs, PhanTichTeams.KhopCot(cs), id => id)[0];
             Kiem("don nho ten cot metadata", dCot.HoiThoaiCot, "teamsConversationMetadata_D86AE2");
+            var bThe = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyMoDau("<p>x</p>", "009936cf", "130828"));
+            var aThe = (OhtaTool.Plugin.Core.JsonObject)((List<object>)bThe.Get("attachments"))[0];
+            Kiem("tin mo dau kem the: tabReference + the attachment trong noi dung",
+                 aThe.GetString("id") + "|" + aThe.GetString("contentType") + "|" + aThe.GetString("name") + "|" + ((OhtaTool.Plugin.Core.JsonObject)bThe.Get("body")).GetString("content"),
+                 "tab::009936cf|tabReference|Về: 130828|<p>x</p><attachment id=\"tab::009936cf\"></attachment>");
+            Kiem("tin mo dau khong the", ((OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyMoDau("<p>x</p>", null, "a"))).ContainsKey("attachments"), false);
             Kiem("tep: doc AttachmentFiles", string.Join(",", TraoDoi.DocTep(@"{""value"":[{""FileName"":""130819.pdf"",""ServerRelativeUrl"":""/sites/x/Lists/y/Attachments/2758/130819.pdf""},{""FileName"":""""}]}").Select(t => t.Ten + "=" + t.DuongDan)), "130819.pdf=/sites/x/Lists/y/Attachments/2758/130819.pdf");
             Kiem("tep: URL tai qua _api, ma hoa dau cach + nhay don", TraoDoi.UrlTaiTep("https://h/sites/x", "/sites/x/Lists/Tt c/Attachments/1/a'b.pdf"),
                  "https://h/sites/x/_api/web/GetFileByServerRelativePath(decodedurl='%2Fsites%2Fx%2FLists%2FTt%20c%2FAttachments%2F1%2Fa%27%27b.pdf')/$value");

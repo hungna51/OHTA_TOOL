@@ -120,6 +120,32 @@ namespace TeamsTool.Core
             return "<p>" + ve + "</p><p>" + HtmlTraLoi(chu) + "</p>";
         }
 
+        /// <summary>
+        /// Body POST tin mở trao đổi. tabId != null: kèm thẻ "Về: &lt;đơn&gt;" như Lists tạo — đính kèm loại tabReference,
+        /// id "tab::&lt;id tab Lists&gt;", thẻ đặt ở cuối nội dung bằng thẻ &lt;attachment&gt;.
+        /// </summary>
+        public static string BodyMoDau(string html, string tabId, string title)
+        {
+            var b = new JsonObject();
+            b.Set("contentType", "html");
+            var o = new JsonObject();
+            if (string.IsNullOrEmpty(tabId))
+            {
+                b.Set("content", html);
+                o.Set("body", b);
+                return JsonLite.Serialize(o);
+            }
+            string id = "tab::" + tabId;
+            b.Set("content", html + "<attachment id=\"" + id + "\"></attachment>");
+            var the = new JsonObject();
+            the.Set("id", id);
+            the.Set("contentType", "tabReference");
+            the.Set("name", "Về: " + title);
+            o.Set("body", b);
+            o.Set("attachments", new List<object> { the });
+            return JsonLite.Serialize(o);
+        }
+
         public static List<TinNhan> DocTin(string json)
         {
             var goc = JsonLite.Parse(json) as JsonObject;

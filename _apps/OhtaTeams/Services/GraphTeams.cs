@@ -446,22 +446,43 @@ namespace TeamsTool.Services
             return f;
         }
 
-        /// <summary>Gửi một tin trả lời vào chuỗi chat của đơn.</summary>
-        /// <summary>Mở chuỗi chat mới trong kênh (tin đầu chuỗi, HTML) → id tin = conversationId để gắn vào đơn.</summary>
-        public static async Task<string> TaoHoiThoai(string nhomId, string channelId, string html, CancellationToken ct)
+        private static readonly Dictionary<string, string> _idTab = new Dictionary<string, string>(); // "nhóm|kênh|tên tab" → id tab
+
+        /// <summary>Id tab Lists (theo tên) trong kênh — để gắn thẻ "Về: &lt;đơn&gt;" vào tin mở trao đổi. Không thấy → null.</summary>
+        public static async Task<string> IdTabDon(string nhomId, string kenhId, string tenTab, CancellationToken ct)
         {
-            var b = new JsonObject();
-            b.Set("contentType", "html");
-            b.Set("content", html);
-            var o = new JsonObject();
-            o.Set("body", b);
-            using (HttpResponseMessage res = await Gui(HttpMethod.Post, "/teams/" + nhomId + "/channels/" + Uri.EscapeDataString(channelId) + "/messages",
-                                                       JsonLite.Serialize(o), ct, ScopeChat))
-            {
-                string id = (JsonLite.Parse(await res.Content.ReadAsStringAsync()) as JsonObject)?.GetString("id");
-                return !string.IsNullOrEmpty(id) ? id : throw new InvalidOperationException("Teams không trả id tin vừa tạo.");
-            }
+            string khoa = nhomId + "|" + kenhId + "|" + tenTab;
+            if (_idTab.TryGetValue(khoa, out string id)) return id;
+            id = (await TabCuaKenh(nhomId, kenhId, ct)).FirstOrDefault(t => t.Ten == tenTab)?.Id;
+            if (id != null) _idTab[khoa] = id;
+            return id;
         }
+
+        /// <summary>
+        /// Mở chuỗi chat mới trong kênh → (id tin = conversationId để gắn vào đơn, có thẻ hay không).
+        /// Thử kèm thẻ "Về: &lt;đơn&gt;" như Lists (đính kèm tabReference); Graph không nhận thì gửi lại không thẻ,
+        /// dòng đầu là "Về đơn …" có link (bị từ chối thì Teams không tạo tin, không có tin thừa).
+        /// </summary>
+        public static async Task<(string Id, bool CoThe)> TaoHoiThoai(string nhomId, string channelId, string chu, string title, string webUrl, string tabId, CancellationToken ct)
+        {
+            string url = "/teams/" + nhomId + "/channels/" + Uri.EscapeDataString(channelId) + "/messages";
+            async Task<string> Dang(string body)
+            {
+                using (HttpResponseMessage res = await Gui(HttpMethod.Post, url, body, ct, ScopeChat))
+                {
+                    string id = (JsonLite.Parse(await res.Content.ReadAsStringAsync()) as JsonObject)?.GetString("id");
+                    return !string.IsNullOrEmpty(id) ? id : throw new InvalidOperationException("Teams không trả id tin vừa tạo.");
+                }
+            }
+            if (!string.IsNullOrEmpty(tabId))
+            {
+                try { return (await Dang(TraoDoi.BodyMoDau("<p>" + TraoDoi.HtmlTraLoi(chu) + "</p>", tabId, title)), true); }
+                catch (InvalidOperationException ex) when (ex.Message.StartsWith("Graph 400")) { } // không nhận thẻ → gửi kiểu thường
+            }
+            return (await Dang(TraoDoi.BodyMoDau(TraoDoi.HtmlMoDau(title, webUrl, chu), null, title)), false);
+        }
+
+        /// <summary>Gửi một tin trả lời vào chuỗi chat của đơn.</summary>
 
         public static async Task TraLoi(string nhomId, HoiThoai h, string chu, CancellationToken ct)
         {
