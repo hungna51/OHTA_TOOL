@@ -20,14 +20,14 @@ namespace TeamsTool.Core
     {
         public string Ten, TieuDe, Loai; // Loai: personOrGroup | dateTime | choice | lookup | boolean | number | text | khac
         public List<string> LuaChon = new List<string>(); // choice: các lựa chọn
-        public bool ChonNhieu;  // choice hiện dạng ô tích (checkBoxes) = chọn nhiều giá trị
+        public bool ChonNhieu;  // choice hiện dạng ô tích (checkBoxes) / người allowMultipleSelection = chọn nhiều
         public bool CoGio;      // dateTime có giờ (format = dateTime)
         public bool ChuHtml;    // text dạng richText — chưa sửa được (sẽ mất định dạng)
         public bool NhieuDong;  // text nhiều dòng
 
-        /// <summary>Cột OhtaTeams sửa được. Người / tra cứu / chữ có định dạng: chỉ xem (sửa trên Teams).</summary>
+        /// <summary>Cột OhtaTeams sửa được. Tra cứu / chữ có định dạng: chỉ xem (sửa trên Teams).</summary>
         public bool SuaDuoc =>
-            Loai == "number" || Loai == "choice" || Loai == "boolean" || Loai == "dateTime" || (Loai == "text" && !ChuHtml);
+            Loai == "number" || Loai == "choice" || Loai == "boolean" || Loai == "dateTime" || Loai == "personOrGroup" || (Loai == "text" && !ChuHtml);
     }
 
     /// <summary>Tên nội bộ các cột chính của danh sách đơn (null = danh sách không có cột đó).</summary>
@@ -177,6 +177,7 @@ namespace TeamsTool.Core
                     cot.ChonNhieu = Equals(ch.Get("allowMultiple"), true) || ch.GetString("displayAs") == "checkBoxes";
                 }
                 if (c.Get("dateTime") is JsonObject dt) cot.CoGio = dt.GetString("format") == "dateTime";
+                if (c.Get("personOrGroup") is JsonObject ng) cot.ChonNhieu = Equals(ng.Get("allowMultipleSelection"), true);
                 if (c.Get("text") is JsonObject tx)
                 {
                     cot.ChuHtml = tx.GetString("textType") == "richText";
@@ -273,7 +274,9 @@ namespace TeamsTool.Core
                         || d.StatusJp.Split(',').Any(x => x.Trim() == "完了" || x.Trim() == "キャンセル");
                 foreach (CotList c in cots)
                 {
-                    if (c.SuaDuoc && f.Get(c.Ten) != null) d.Tho[c.Ten] = f.Get(c.Ten);
+                    // cột người: [{LookupId, LookupValue, Email}] hoặc chỉ có <tên>LookupId
+                    object tho = f.Get(c.Ten) ?? (c.Loai == "personOrGroup" ? f.Get(c.Ten + "LookupId") : null);
+                    if (c.SuaDuoc && tho != null) d.Tho[c.Ten] = tho;
                     string g = GiaTri(f, c, tenNguoi);
                     if (g.Length > 0) d.TatCa.Add(new KeyValuePair<string, string>(c.TieuDe, g));
                 }

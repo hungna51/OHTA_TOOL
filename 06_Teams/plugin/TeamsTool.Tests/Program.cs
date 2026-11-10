@@ -184,12 +184,13 @@ namespace TeamsTool.Tests
   { ""name"": ""HT"", ""displayName"": ""Ghi chú HTML"", ""text"": { ""allowMultipleLines"": true, ""textType"": ""richText"" } },
   { ""name"": ""So"", ""displayName"": ""Số tấm"", ""number"": {} },
   { ""name"": ""Sao"", ""displayName"": ""Ngôi sao"", ""boolean"": {} },
-  { ""name"": ""Ng"", ""displayName"": ""Người"", ""personOrGroup"": {} }
+  { ""name"": ""Ng"", ""displayName"": ""Người"", ""personOrGroup"": { ""allowMultipleSelection"": true } },
+  { ""name"": ""Ng1"", ""displayName"": ""Người 1"", ""personOrGroup"": { ""allowMultipleSelection"": false } }
 ]}");
             CotList C(string ten) => cs.First(x => x.Ten == ten);
             Kiem("sua: checkBoxes = chon nhieu, dropDown = 1", C("TT").ChonNhieu + "|" + C("MD").ChonNhieu + "|" + C("TT").LuaChon.Count, "True|False|3");
             Kiem("sua: dateTime co gio, dateOnly khong", C("BD").CoGio + "|" + C("Han").CoGio, "True|False");
-            Kiem("sua: cot sua duoc", string.Join(",", cs.Where(x => x.SuaDuoc).Select(x => x.Ten)), "Title,TT,MD,BD,Han,CY,So,Sao");
+            Kiem("sua: cot sua duoc", string.Join(",", cs.Where(x => x.SuaDuoc).Select(x => x.Ten)), "Title,TT,MD,BD,Han,CY,So,Sao,Ng,Ng1");
             var dS = PhanTichTeams.DocDon(@"{""value"":[{""id"":""7"",""eTag"":""\""abc,24\"""",""fields"":{""Title"":""C1"",""TT"":[""Đang check""],""BD"":""2026-11-10T01:30:00Z"",""So"":12.5,""Sao"":true,""HT"":""<b>x</b>""}}]}",
                                             cs, PhanTichTeams.KhopCot(cs), id => id)[0];
             Kiem("sua: doc eTag va gia tri tho", dS.ETag + "|" + dS.Tho.Count + "|" + dS.Tho.ContainsKey("HT"), "\"abc,24\"|5|False");
@@ -217,6 +218,22 @@ namespace TeamsTool.Tests
             Kiem("sua body: cot chi ngay = 0 gio may doi UTC", b.GetString("Han"), new DateTime(2026, 11, 20).ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
             Kiem("sua body: so, bool, choice rong = null, chu bo cach cuoi", b.Get("So") + "|" + b.Get("Sao") + "|" + (b.ContainsKey("MD") && b.Get("MD") == null) + "|" + b.GetString("CY"), "3|False|True|dong 1\ndong 2");
             Kiem("sua body: chi cot doi", b.Items.Count, 7);
+
+            // Cot nguoi: danh ba nhan vien + giao don
+            var dN = PhanTichTeams.DocDon(@"{""value"":[
+  {""id"":""1"",""eTag"":""e1"",""fields"":{""Title"":""A"",""Ng"":[{""LookupId"":28,""LookupValue"":""Bùi Hoàng Vũ""},{""LookupId"":40,""LookupValue"":""Nguyễn Văn Hoàng""}],""Ng1"":{""LookupId"":12,""LookupValue"":""Mai Trung Nam""}}},
+  {""id"":""2"",""eTag"":""e2"",""fields"":{""Title"":""B"",""NgLookupId"":[""28"",""55""]}}]}", cs, PhanTichTeams.KhopCot(cs), id => "#" + id);
+            var db = SuaDon.DanhBa(dN, cs);
+            Kiem("danh ba: moi nguoi co ten, xep theo ten", string.Join(",", db.Select(x => x.Key + "=" + x.Value)), "28=Bùi Hoàng Vũ,12=Mai Trung Nam,40=Nguyễn Văn Hoàng");
+            Kiem("nguoi: form = danh sach LookupId", string.Join("+", (List<string>)SuaDon.GiaTriForm(C("Ng"), dN[0].Tho["Ng"])) + "|" + string.Join("+", (List<string>)SuaDon.GiaTriForm(C("Ng1"), dN[0].Tho["Ng1"])), "28+40|12");
+            Kiem("nguoi: chi co LookupId van doc duoc", string.Join("+", (List<string>)SuaDon.GiaTriForm(C("Ng"), dN[1].Tho["Ng"])), "28+55");
+            Kiem("nguoi: cot 1 nguoi chon 2 -> loi", SuaDon.KiemTra(C("Ng1"), new List<string> { "1", "2" }) != null && SuaDon.KiemTra(C("Ng"), new List<string> { "1", "2" }) == null, true);
+            var bN = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(SuaDon.Body(new[] {
+                new KeyValuePair<CotList, object>(C("Ng"), new List<string> { "12", "40" }),
+                new KeyValuePair<CotList, object>(C("Ng1"), new List<string>()) }));
+            Kiem("nguoi body: nhieu nguoi = LookupId collection", bN.GetString("NgLookupId@odata.type") + "|" + string.Join("+", (List<object>)bN.Get("NgLookupId")), "Collection(Edm.String)|12+40");
+            Kiem("loc nhan vien: co trong cot nguoi bat ky", SuaDon.CoNguoi(dN[0], cs, "12") + "|" + SuaDon.CoNguoi(dN[1], cs, "55") + "|" + SuaDon.CoNguoi(dN[1], cs, "12"), "True|True|False");
+            Kiem("nguoi body: 1 nguoi bo trong = null",bN.ContainsKey("Ng1LookupId") && bN.Get("Ng1LookupId") == null, true);
 
             Console.WriteLine();
             Console.WriteLine("Tong: {0} OK, {1} FAIL", _ok, _fail);

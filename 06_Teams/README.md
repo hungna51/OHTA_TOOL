@@ -20,7 +20,8 @@ Mã: `Views/DangLamControl.cs` (tab CAD), `Core/DangLam.cs` (đọc/ghi file, kh
 - Danh sách đơn gom theo **Hạn hoàn thành** (gần nhất trên cùng). Thẻ đơn: Title, Trạng thái, Người triển khai, Người check.
 - Mặc định **ẩn đơn đã xong / dừng**: TRẠNG THÁI có "Đã hoàn thành" hoặc "STOP", hoặc ステータス = "完了" / "キャンセル". Ô tích **Xem cả đơn đã xong**, **Chỉ đơn của tôi** (tên người đăng nhập nằm trong Người triển khai / Người check).
 - Bấm thẻ → mọi cột của đơn + nút **Mở trên Teams** (xem file).
-- **✏ Sửa đơn** (trong chi tiết đơn): form theo loại cột — chữ (cả nhiều dòng), số, lựa chọn (ô tích nếu chọn nhiều), ngày (+ giờ nếu cột có giờ), có/không. Cột người / tra cứu / chữ có định dạng chỉ xem (sửa trên Teams). **💾 Lưu** hiện bảng *cũ → mới* để xác nhận, chỉ gửi các ô đã đổi, kèm phiên bản đơn: ai đó vừa sửa đơn trên Teams thì không ghi đè mà báo và tải lại. Lưu xong tự tải lại danh sách.
+- **✏ Sửa đơn** (trong chi tiết đơn): form theo loại cột — chữ (cả nhiều dòng), số, lựa chọn (ô tích nếu chọn nhiều), ngày (+ giờ nếu cột có giờ), có/không, **người** (giao đơn: ô gõ tên để lọc + danh sách nhân viên tích chọn; cột 1 người thì tích người mới là bỏ người cũ). Cột tra cứu / chữ có định dạng chỉ xem (sửa trên Teams). Danh sách nhân viên = mọi người từng có trong cột người của các đơn đã tải — người chưa từng được giao đơn nào thì giao lần đầu trên Teams. **💾 Lưu** hiện bảng *cũ → mới* để xác nhận, chỉ gửi các ô đã đổi, kèm phiên bản đơn: ai đó vừa sửa đơn trên Teams thì không ghi đè mà báo và tải lại. Lưu xong tự tải lại danh sách.
+- Ô **Nhân viên** trên danh sách đơn: chỉ hiện đơn có người đó ở bất kỳ cột người nào (triển khai, check 1/2, phụ trách…).
 - Tab Lists chọn lần trước được nhớ: mở lại là vào thẳng và tự tải đơn.
 
 Cột được nhận theo **tên hiển thị** (không phân biệt hoa thường / dấu): "Hạn hoàn thành", "Trạng thái", "ステータス", "…triển khai", "…check…".

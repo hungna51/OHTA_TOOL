@@ -13,11 +13,43 @@ namespace TeamsTool.Core
     /// </summary>
     public static class SuaDon
     {
+        /// <summary>Phần tử thô của cột người → (LookupId, tên hoặc null nếu chỉ có id).</summary>
+        private static IEnumerable<(string Id, string Ten)> NguoiTho(object tho)
+        {
+            foreach (object x in tho as List<object> ?? (tho == null ? new List<object>() : new List<object> { tho }))
+            {
+                if (x is JsonObject o && o.Get("LookupId") != null) yield return (o.Get("LookupId").ToString(), o.GetString("LookupValue"));
+                else if (x != null && !(x is JsonObject) && x.ToString().Length > 0) yield return (x.ToString(), null);
+            }
+        }
+
+        /// <summary>
+        /// Danh bạ nhân viên: mọi người từng có trong cột người của các đơn (LookupId → tên), xếp theo tên.
+        /// shortcut: người chưa từng được giao đơn nào không có ở đây — giao lần đầu trên Teams; cần đủ thì tải User Information List của site.
+        /// </summary>
+        public static List<KeyValuePair<string, string>> DanhBa(IEnumerable<DonTeams> don, IEnumerable<CotList> cots)
+        {
+            var cotNguoi = cots.Where(c => c.Loai == "personOrGroup").Select(c => c.Ten).ToList();
+            var kq = new Dictionary<string, string>();
+            foreach (DonTeams d in don)
+                foreach (string ten in cotNguoi)
+                    if (d.Tho.TryGetValue(ten, out object tho))
+                        foreach (var (id, tenNguoi) in NguoiTho(tho))
+                            if (!string.IsNullOrEmpty(tenNguoi)) kq[id] = tenNguoi;
+            return kq.OrderBy(kv => kv.Value, StringComparer.CurrentCulture).ToList();
+        }
+
+        /// <summary>Đơn có người (LookupId) ở bất kỳ cột người nào — lọc danh sách theo nhân viên.</summary>
+        public static bool CoNguoi(DonTeams d, IEnumerable<CotList> cots, string id) =>
+            cots.Where(c => c.Loai == "personOrGroup")
+                .Any(c => d.Tho.TryGetValue(c.Ten, out object tho) && NguoiTho(tho).Any(x => x.Id == id));
+
         /// <summary>Giá trị thô của Graph → giá trị form.</summary>
         public static object GiaTriForm(CotList c, object tho)
         {
             switch (c.Loai)
             {
+                case "personOrGroup": return NguoiTho(tho).Select(x => x.Id).ToList(); // danh sách LookupId (cột 1 người: 0–1 phần tử)
                 case "dateTime": return PhanTichTeams.DocNgay(tho as string);
                 case "number": return tho is JsonNumber n && double.TryParse(n.Raw, NumberStyles.Float, CultureInfo.InvariantCulture, out double so) ? so : (double?)null;
                 case "boolean": return tho is bool b && b;
@@ -61,6 +93,12 @@ namespace TeamsTool.Core
         /// <summary>Lỗi của giá trị (null = hợp lệ): choice ngoài danh sách lựa chọn.</summary>
         public static string KiemTra(CotList c, object v)
         {
+            if (c.Loai == "personOrGroup")
+            {
+                var ids = v as List<string> ?? new List<string>();
+                if (!c.ChonNhieu && ids.Count > 1) return c.TieuDe + ": chỉ chọn được 1 người";
+                return ids.Any(x => !int.TryParse(x, out _)) ? c.TieuDe + ": mã người không hợp lệ" : null;
+            }
             if (c.Loai != "choice" || c.LuaChon.Count == 0) return null;
             var ds = v as List<string> ?? (string.IsNullOrEmpty(v as string) ? new List<string>() : new List<string> { (string)v });
             string la = ds.FirstOrDefault(x => !c.LuaChon.Contains(x));
@@ -77,6 +115,17 @@ namespace TeamsTool.Core
             foreach (var kv in thayDoi)
             {
                 CotList c = kv.Key;
+                if (c.Loai == "personOrGroup") // ghi theo LookupId (mã người trong site), không theo tên
+                {
+                    var ids = kv.Value as List<string> ?? new List<string>();
+                    if (c.ChonNhieu)
+                    {
+                        o.Set(c.Ten + "LookupId@odata.type", "Collection(Edm.String)");
+                        o.Set(c.Ten + "LookupId", ids.Cast<object>().ToList());
+                    }
+                    else o.Set(c.Ten + "LookupId", ids.FirstOrDefault());
+                    continue;
+                }
                 object v = kv.Value is string s && s.Trim().Length == 0 && c.Loai != "text" ? null : kv.Value;
                 switch (v)
                 {

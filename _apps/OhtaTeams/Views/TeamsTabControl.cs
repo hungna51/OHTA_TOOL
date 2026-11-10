@@ -41,6 +41,9 @@ namespace TeamsTool.Views
         private readonly TextBlock _trangThai = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = KieuTeams.ChuPhu, Margin = new Thickness(0, 6, 0, 0) };
         private readonly CheckBox _caDaXong = new CheckBox { Content = "Xem cả đơn đã xong", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 8, 0) };
         private readonly CheckBox _cuaToi = new CheckBox { Content = "Chỉ đơn của tôi", VerticalAlignment = VerticalAlignment.Center };
+        private readonly ComboBox _nhanVien = new ComboBox { MinWidth = 150, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, ToolTip = "Chỉ hiện đơn có nhân viên này ở cột người bất kỳ" };
+        private const string MoiNhanVien = "(Mọi nhân viên)";
+        private List<KeyValuePair<string, string>> _danhBa = new List<KeyValuePair<string, string>>(); // LookupId → tên, xếp theo tên
 
         /// <summary>Tab Lists đang mở: nhómId, tên nhóm, kênhId, tên kênh, tên tab, siteId, listId, URL list.</summary>
         private string[] _tab;
@@ -88,6 +91,7 @@ namespace TeamsTool.Views
             // Màn hình chính
             _caDaXong.Click += (s, e) => VeDon();
             _cuaToi.Click += (s, e) => VeDon();
+            _nhanVien.SelectionChanged += (s, e) => { if (_oDanhSach) VeDon(); };
             _cuon.Content = _noiDung;
 
             var than = new Grid();
@@ -215,6 +219,7 @@ namespace TeamsTool.Views
             Tach(_trangThai);
             Tach(_caDaXong);
             Tach(_cuaToi);
+            Tach(_nhanVien);
             var hang = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
             if (lui != null)
             {
@@ -321,6 +326,12 @@ namespace TeamsTool.Views
         {
             _don = moi;
             _cots = PhanTichTeams.DocCot(tho.Cot);
+            _danhBa = SuaDon.DanhBa(moi, _cots);
+            string dangChon = _nhanVien.SelectedItem as string;
+            _nhanVien.Items.Clear();
+            _nhanVien.Items.Add(MoiNhanVien);
+            foreach (var kv in _danhBa) _nhanVien.Items.Add(kv.Value);
+            _nhanVien.SelectedItem = dangChon != null && _nhanVien.Items.Contains(dangChon) ? dangChon : MoiNhanVien;
             GhiDangLam();
         }
 
@@ -365,6 +376,7 @@ namespace TeamsTool.Views
             hang.Children.Add(KieuTeams.Nut("⟳ Làm mới", _mau, (s, e) => CapNhatNen(_tab[5], _tab[6], null)));
             hang.Children.Add(_caDaXong);
             hang.Children.Add(_cuaToi);
+            hang.Children.Add(_nhanVien);
             var dk = new StackPanel();
             dk.Children.Add(hang);
             dk.Children.Add(_trangThai);
@@ -376,7 +388,10 @@ namespace TeamsTool.Views
         {
             if (_tab == null) return;
             HienKhungDon();
-            var loc = _don.Where(d => (_caDaXong.IsChecked == true || !d.DaXong) && (_cuaToi.IsChecked != true || d.CuaToi(_toiTen))).ToList();
+            string tenNv = _nhanVien.SelectedItem as string;
+            string idNv = tenNv == null || tenNv == MoiNhanVien ? null : _danhBa.FirstOrDefault(kv => kv.Value == tenNv).Key;
+            var loc = _don.Where(d => (_caDaXong.IsChecked == true || !d.DaXong) && (_cuaToi.IsChecked != true || d.CuaToi(_toiTen))
+                                      && (idNv == null || SuaDon.CoNguoi(d, _cots, idNv))).ToList();
             // Gom theo Hạn hoàn thành, ngày gần nhất trên cùng; đơn không có hạn xuống cuối
             foreach (var nhom in loc.GroupBy(d => d.Han?.Date).OrderBy(g => g.Key ?? DateTime.MaxValue))
             {
@@ -469,8 +484,12 @@ namespace TeamsTool.Views
 
         // ---------- Sửa đơn ----------
 
-        private static string HienGiaTri(object v)
+        private string TenNguoi(string id) => _danhBa.FirstOrDefault(kv => kv.Key == id).Value ?? "#" + id;
+
+        private string HienGiaTri(CotList c, object v)
         {
+            if (c.Loai == "personOrGroup")
+                return v is List<string> ids && ids.Count > 0 ? string.Join(", ", ids.Select(TenNguoi)) : "(trống)";
             switch (v)
             {
                 case null: return "(trống)";
@@ -483,10 +502,12 @@ namespace TeamsTool.Views
         }
 
         /// <summary>Ô nhập theo loại cột + hàm đọc lại giá trị (ném FormatException kèm lời báo khi nhập sai).</summary>
-        private static (FrameworkElement O, Func<object> Doc) TaoONhap(CotList c, object cu)
+        private (FrameworkElement O, Func<object> Doc) TaoONhap(CotList c, object cu)
         {
             switch (c.Loai)
             {
+                case "personOrGroup":
+                    return ONguoi(c, cu as List<string> ?? new List<string>());
                 case "boolean":
                 {
                     var cb = new CheckBox { IsChecked = cu is bool b && b, VerticalAlignment = VerticalAlignment.Center };
@@ -540,6 +561,53 @@ namespace TeamsTool.Views
             }
         }
 
+        /// <summary>
+        /// Chọn nhân viên: ô gõ tên để lọc (bỏ dấu) + danh sách tích chọn; người đang giao xếp đầu.
+        /// Cột 1 người: tích người mới thì bỏ người cũ.
+        /// </summary>
+        private (FrameworkElement O, Func<object> Doc) ONguoi(CotList c, List<string> dang)
+        {
+            var ds = dang.Select(id => new KeyValuePair<string, string>(id, TenNguoi(id)))
+                         .Concat(_danhBa.Where(kv => !dang.Contains(kv.Key))).ToList();
+            var hop = ds.Select(kv => new CheckBox { Content = kv.Value, Tag = kv.Key, IsChecked = dang.Contains(kv.Key), Margin = new Thickness(0, 1, 0, 1) }).ToList();
+            var tom = new TextBlock { TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 3) };
+            void CapNhatTom()
+            {
+                var chon = hop.Where(h => h.IsChecked == true).Select(h => (string)h.Content).ToList();
+                tom.Text = chon.Count == 0 ? "(chưa giao ai)" : string.Join(", ", chon);
+            }
+            foreach (CheckBox h in hop)
+            {
+                h.Checked += (s, e) => { if (!c.ChonNhieu) foreach (CheckBox k in hop) if (k != h) k.IsChecked = false; CapNhatTom(); };
+                h.Unchecked += (s, e) => CapNhatTom();
+            }
+            CapNhatTom();
+
+            var loc = new TextBox { ToolTip = "Gõ tên để lọc", Margin = new Thickness(0, 0, 0, 3) };
+            loc.TextChanged += (s, e) =>
+            {
+                string k = PhanTichTeams.BoDau(loc.Text);
+                foreach (CheckBox h in hop)
+                    h.Visibility = k.Length == 0 || h.IsChecked == true || PhanTichTeams.BoDau((string)h.Content).Contains(k) ? Visibility.Visible : Visibility.Collapsed;
+            };
+            var dsPanel = new StackPanel();
+            hop.ForEach(h => dsPanel.Children.Add(h));
+            var p = new StackPanel();
+            p.Children.Add(tom);
+            var hangLoc = new DockPanel();
+            var nhan = new TextBlock { Text = "🔍 ", VerticalAlignment = VerticalAlignment.Center };
+            DockPanel.SetDock(nhan, Dock.Left);
+            hangLoc.Children.Add(nhan);
+            hangLoc.Children.Add(loc);
+            p.Children.Add(hangLoc);
+            p.Children.Add(new Border
+            {
+                BorderBrush = KieuTeams.Mau("#D0D5DD"), BorderThickness = new Thickness(1), Padding = new Thickness(4, 2, 4, 2),
+                Child = new ScrollViewer { Content = dsPanel, MaxHeight = 150, VerticalScrollBarVisibility = ScrollBarVisibility.Auto },
+            });
+            return (p, () => hop.Where(h => h.IsChecked == true).Select(h => (string)h.Tag).ToList());
+        }
+
         private void HienSua(DonTeams d)
         {
             DauTrang("Sửa: " + d.Title, "Chi tiết đơn", () => HienChiTiet(d));
@@ -588,7 +656,7 @@ namespace TeamsTool.Views
             string loi = doi.Select(x => SuaDon.KiemTra(x.Cot, x.Moi)).FirstOrDefault(x => x != null);
             if (loi != null) { BaoTrangThai(loi); return; }
 
-            string ds = string.Join("\n", doi.Select(x => "• " + x.Cot.TieuDe + ": " + HienGiaTri(x.Cu) + "  →  " + HienGiaTri(x.Moi)));
+            string ds = string.Join("\n", doi.Select(x => "• " + x.Cot.TieuDe + ": " + HienGiaTri(x.Cot, x.Cu) + "  →  " + HienGiaTri(x.Cot, x.Moi)));
             if (MessageBox.Show("Lưu " + doi.Count + " thay đổi của đơn " + d.Title + " lên Teams?\n\n" + ds, "Sửa đơn",
                                 MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
 
