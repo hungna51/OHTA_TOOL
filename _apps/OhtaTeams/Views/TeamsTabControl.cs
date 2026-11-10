@@ -447,10 +447,11 @@ namespace TeamsTool.Views
                 BorderThickness = new Thickness(nguoi ? 1 : 0),
                 CornerRadius = new CornerRadius(nguoi ? 4 : 9),
                 Padding = new Thickness(6, 1, 6, 1),
-                Margin = new Thickness(0, 0, 3, 0),
+                Margin = new Thickness(0, 1, 3, 1),
+                MaxWidth = DoRong(c) - 12, // nhãn dài hơn cột: cắt "…", rê chuột xem đủ (ToolTip của ô)
                 VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock { Text = nguoi ? "👤 " + chu : chu, FontSize = 11, Foreground = nguoi ? vien : KieuTeams.Mau(MauChu[i]),
-                                        FontWeight = nguoi ? FontWeights.SemiBold : FontWeights.Normal },
+                                        FontWeight = nguoi ? FontWeights.SemiBold : FontWeights.Normal, TextTrimming = TextTrimming.CharacterEllipsis },
             };
         }
 
@@ -460,7 +461,8 @@ namespace TeamsTool.Views
                                          : d.TatCa.FirstOrDefault(kv => kv.Key == c.TieuDe).Value ?? "";
             if (gt.Length > 0 && (c.Loai == "personOrGroup" || c.Loai == "choice"))
             {
-                var p = new StackPanel { Orientation = Orientation.Horizontal, ToolTip = gt };
+                // WrapPanel: nhãn không vừa bề rộng cột thì xuống dòng (vd "Đang check" + "Câu hỏi - xác nhận" = 2 dòng), dòng đơn tự cao lên
+                var p = new WrapPanel { ToolTip = gt, VerticalAlignment = VerticalAlignment.Center };
                 foreach (string x in BangDon.TachNhan(gt)) p.Children.Add(Nhan(x, c));
                 return p;
             }
