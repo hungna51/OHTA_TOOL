@@ -22,16 +22,23 @@ namespace OhtaTeams
             CaiDatTeams.ThuMucModule = thuMuc;
 
             var app = new Application();
-            var cuaSo = new Window
+            // Lỗi không bắt được → hiện chữ thay vì tắt im lặng
+            app.DispatcherUnhandledException += (s, e) => { BaoLoi(e.Exception); e.Handled = true; };
+            AppDomain.CurrentDomain.UnhandledException += (s, e) => BaoLoi(e.ExceptionObject as Exception);
+            // Tạo màn hình trong Startup: lúc đó Dispatcher đã chạy nên các await (tải đơn ngay khi mở) quay về đúng luồng giao diện
+            app.Startup += (s, e) => new Window
             {
                 Title = "OHTA Teams",
                 Width = 520,
                 Height = 800,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 Content = new TeamsTabControl("Teams", "Nhận đơn từ Microsoft Teams", "#4B53BC"),
-            };
-            return app.Run(cuaSo);
+            }.Show();
+            return app.Run();
         }
+
+        private static void BaoLoi(Exception ex) =>
+            MessageBox.Show("Lỗi: " + ex, "OHTA Teams", MessageBoxButton.OK, MessageBoxImage.Error);
 
         /// <summary>Đi ngược từ thư mục exe lên tới khi gặp thư mục con 06_Teams (chứa data\teams.json).</summary>
         public static string TimThuMucTeams(string tu)
