@@ -45,6 +45,7 @@ namespace TeamsTool.Views
         /// <summary>Tab Lists đang mở: nhómId, tên nhóm, kênhId, tên kênh, tên tab, siteId, listId, URL list.</summary>
         private string[] _tab;
         private List<DonTeams> _don = new List<DonTeams>();
+        private List<CotList> _cots = new List<CotList>(); // cột của danh sách đang mở (form sửa)
         private string _toiTen;
         private CancellationTokenSource _huyDangNhap;
         private bool _ban;
@@ -300,7 +301,7 @@ namespace TeamsTool.Views
             {
                 var dsTam = await Task.Run(() => PhanTichTeams.DocToanBo(tam.Value.Tho));
                 if (_tab?[6] != listId) return;
-                DatDon(dsTam);
+                DatDon(tam.Value.Tho, dsTam);
                 VeDon();
                 CapNhatNen(_tab[5], listId, tam.Value.Luc);
                 return;
@@ -309,16 +310,17 @@ namespace TeamsTool.Views
             var tho = await GraphTeams.TaiList(_tab[5], listId, CancellationToken.None);
             var ds = await Task.Run(() => PhanTichTeams.DocToanBo(tho));
             if (_tab?[6] != listId) return;
-            DatDon(ds);
+            DatDon(tho, ds);
             VeDon();
         }
 
         private string _loiGhi = ""; // lỗi ghi dang_lam.json lần gần nhất, hiện kèm dòng trạng thái
 
         /// <summary>Gán danh sách đơn mới và ghi dang_lam.json cho tab CAD.</summary>
-        private void DatDon(List<DonTeams> moi)
+        private void DatDon(PhanTichTeams.ThoList tho, List<DonTeams> moi)
         {
             _don = moi;
+            _cots = PhanTichTeams.DocCot(tho.Cot);
             GhiDangLam();
         }
 
@@ -342,7 +344,7 @@ namespace TeamsTool.Views
                 var tho = await GraphTeams.TaiList(siteId, listId, CancellationToken.None);
                 var moi = await Task.Run(() => PhanTichTeams.DocToanBo(tho));
                 if (_tab?[6] != listId) return; // đã chuyển sang tab khác
-                DatDon(moi);
+                DatDon(tho, moi);
                 if (_oDanhSach) VeDon();
             }
             catch (Exception ex) { if (_oDanhSach) BaoTrangThai(goc + ". Không cập nhật được: " + ex.Message); }
@@ -425,10 +427,11 @@ namespace TeamsTool.Views
             return the;
         }
 
-        private void HienChiTiet(DonTeams d)
+        private void HienChiTiet(DonTeams d, string thongBao = null)
         {
             DauTrang(d.Title, "Danh sách đơn", VeDon);
             _noiDung.Children.Remove(_trangThai);
+            if (thongBao != null) _noiDung.Children.Add(new TextBlock { Text = thongBao, Foreground = KieuTeams.Mau("#1F7A4D"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6) });
             Border nhan = NhanTrangThai(d);
             if (nhan != null) { nhan.Margin = new Thickness(0, 0, 0, 6); _noiDung.Children.Add(nhan); }
 
@@ -459,8 +462,152 @@ namespace TeamsTool.Views
                 if (_loiGhi.Length > 0) MessageBox.Show(_loiGhi.TrimStart(' ', '—'), "Teams", MessageBoxButton.OK, MessageBoxImage.Warning);
                 HienChiTiet(d);
             }, chinh: !dangChon));
+            if (_cots.Any(c => c.SuaDuoc) && !string.IsNullOrEmpty(d.ETag)) nut.Children.Add(KieuTeams.Nut("✏ Sửa đơn", _mau, (s, e) => HienSua(d), chinh: false));
             if (!string.IsNullOrEmpty(d.WebUrl)) nut.Children.Add(KieuTeams.Nut("Mở trên Teams", _mau, (s, e) => MoNgoai(d.WebUrl), chinh: dangChon));
             _noiDung.Children.Add(nut);
+        }
+
+        // ---------- Sửa đơn ----------
+
+        private static string HienGiaTri(object v)
+        {
+            switch (v)
+            {
+                case null: return "(trống)";
+                case List<string> ds: return ds.Count == 0 ? "(trống)" : string.Join(", ", ds);
+                case DateTime t: return t.ToString(t.TimeOfDay == TimeSpan.Zero ? "dd/MM/yyyy" : "dd/MM/yyyy HH:mm");
+                case bool b: return b ? "Có" : "Không";
+                case double n: return n.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                default: return v.ToString().Length == 0 ? "(trống)" : v.ToString();
+            }
+        }
+
+        /// <summary>Ô nhập theo loại cột + hàm đọc lại giá trị (ném FormatException kèm lời báo khi nhập sai).</summary>
+        private static (FrameworkElement O, Func<object> Doc) TaoONhap(CotList c, object cu)
+        {
+            switch (c.Loai)
+            {
+                case "boolean":
+                {
+                    var cb = new CheckBox { IsChecked = cu is bool b && b, VerticalAlignment = VerticalAlignment.Center };
+                    return (cb, () => cb.IsChecked == true);
+                }
+                case "choice" when c.ChonNhieu:
+                {
+                    var p = new WrapPanel();
+                    var dang = cu as List<string> ?? new List<string>();
+                    var o = c.LuaChon.Concat(dang.Where(x => !c.LuaChon.Contains(x)))
+                                     .Select(x => new CheckBox { Content = x, IsChecked = dang.Contains(x), Margin = new Thickness(0, 2, 10, 2) }).ToList();
+                    o.ForEach(x => p.Children.Add(x));
+                    return (p, () => o.Where(x => x.IsChecked == true).Select(x => (string)x.Content).ToList());
+                }
+                case "choice":
+                {
+                    var cb = new ComboBox { IsEditable = false };
+                    cb.Items.Add("");
+                    foreach (string x in c.LuaChon) cb.Items.Add(x);
+                    if (cu is string s && s.Length > 0 && !c.LuaChon.Contains(s)) cb.Items.Add(s);
+                    cb.SelectedItem = cu as string ?? "";
+                    return (cb, () => cb.SelectedItem as string ?? "");
+                }
+                case "dateTime":
+                {
+                    var t = cu as DateTime?;
+                    var dp = new DatePicker { SelectedDate = t?.Date, SelectedDateFormat = DatePickerFormat.Short };
+                    if (!c.CoGio) return (dp, () => dp.SelectedDate?.Date);
+                    var gio = new TextBox { Text = t?.ToString("HH:mm") ?? "", Width = 56, Margin = new Thickness(6, 0, 0, 0), VerticalContentAlignment = VerticalAlignment.Center, ToolTip = "Giờ, dạng HH:mm" };
+                    var p = new StackPanel { Orientation = Orientation.Horizontal };
+                    p.Children.Add(dp);
+                    p.Children.Add(gio);
+                    return (p, () =>
+                    {
+                        if (dp.SelectedDate == null) return null;
+                        if (!SuaDon.DocGio(gio.Text, out TimeSpan g)) throw new FormatException(c.TieuDe + ": giờ phải dạng HH:mm (vd 08:30)");
+                        return dp.SelectedDate.Value.Date + g;
+                    });
+                }
+                case "number":
+                {
+                    var tb = new TextBox { Text = (cu as double?)?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "" };
+                    return (tb, () => SuaDon.DocSo(tb.Text, out double? so) ? (object)so : throw new FormatException(c.TieuDe + ": phải là số"));
+                }
+                default:
+                {
+                    var tb = new TextBox { Text = cu as string ?? "", TextWrapping = TextWrapping.Wrap, AcceptsReturn = c.NhieuDong, MinHeight = c.NhieuDong ? 60 : 0,
+                                           VerticalScrollBarVisibility = ScrollBarVisibility.Auto, MaxHeight = 200 };
+                    return (tb, () => tb.Text);
+                }
+            }
+        }
+
+        private void HienSua(DonTeams d)
+        {
+            DauTrang("Sửa: " + d.Title, "Chi tiết đơn", () => HienChiTiet(d));
+            var luoi = new Grid();
+            luoi.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.38, GridUnitType.Star) });
+            luoi.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.62, GridUnitType.Star) });
+            var o = new List<(CotList Cot, object Cu, Func<object> Doc)>();
+            int r = 0;
+            foreach (CotList c in _cots)
+            {
+                luoi.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                var ten = new TextBlock { Text = c.TieuDe, Foreground = KieuTeams.ChuPhu, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 5, 8, 5), VerticalAlignment = VerticalAlignment.Center };
+                FrameworkElement oNhap;
+                if (c.SuaDuoc)
+                {
+                    object cu = SuaDon.GiaTriForm(c, d.Tho.TryGetValue(c.Ten, out object tho) ? tho : null);
+                    var (oN, doc) = TaoONhap(c, cu);
+                    oNhap = oN;
+                    o.Add((c, cu, doc));
+                }
+                else // người / tra cứu / chữ có định dạng: chỉ xem, sửa trên Teams
+                    oNhap = new TextBlock { Text = (d.TatCa.FirstOrDefault(x => x.Key == c.TieuDe).Value ?? "") + "  (sửa trên Teams)", Foreground = KieuTeams.ChuPhu, TextWrapping = TextWrapping.Wrap };
+                oNhap.Margin = new Thickness(0, 3, 0, 3);
+                Grid.SetRow(ten, r);
+                Grid.SetRow(oNhap, r);
+                Grid.SetColumn(oNhap, 1);
+                luoi.Children.Add(ten);
+                luoi.Children.Add(oNhap);
+                r++;
+            }
+            _noiDung.Children.Add(KieuTeams.The(luoi));
+
+            var nut = new WrapPanel();
+            nut.Children.Add(KieuTeams.Nut("💾 Lưu lên Teams", _mau, (s, e) => LuuSua(d, o)));
+            nut.Children.Add(KieuTeams.Nut("Huỷ", _mau, (s, e) => HienChiTiet(d), chinh: false));
+            _noiDung.Children.Add(nut);
+            BaoTrangThai("Sửa xong bấm Lưu — chỉ các ô đã đổi được gửi lên Teams.");
+        }
+
+        private void LuuSua(DonTeams d, List<(CotList Cot, object Cu, Func<object> Doc)> o)
+        {
+            List<(CotList Cot, object Cu, object Moi)> doi;
+            try { doi = o.Select(x => (x.Cot, x.Cu, Moi: x.Doc())).Where(x => !SuaDon.GiongNhau(x.Cu, x.Moi)).ToList(); }
+            catch (FormatException ex) { BaoTrangThai(ex.Message); return; }
+            if (doi.Count == 0) { BaoTrangThai("Chưa có ô nào thay đổi."); return; }
+            string loi = doi.Select(x => SuaDon.KiemTra(x.Cot, x.Moi)).FirstOrDefault(x => x != null);
+            if (loi != null) { BaoTrangThai(loi); return; }
+
+            string ds = string.Join("\n", doi.Select(x => "• " + x.Cot.TieuDe + ": " + HienGiaTri(x.Cu) + "  →  " + HienGiaTri(x.Moi)));
+            if (MessageBox.Show("Lưu " + doi.Count + " thay đổi của đơn " + d.Title + " lên Teams?\n\n" + ds, "Sửa đơn",
+                                MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
+
+            string siteId = _tab[5], listId = _tab[6];
+            string body = SuaDon.Body(doi.Select(x => new KeyValuePair<CotList, object>(x.Cot, x.Moi)));
+            Chay(async () =>
+            {
+                BaoTrangThai("Đang lưu lên Teams…");
+                string thongBao = "Đã lưu " + doi.Count + " thay đổi lên Teams (" + DateTime.Now.ToString("HH:mm") + ").";
+                try { await GraphTeams.SuaDon(siteId, listId, d.Id, d.ETag, body, CancellationToken.None); }
+                catch (DonDaDoiException ex) { thongBao = ex.Message; } // vẫn tải lại bên dưới để có bản mới
+                BaoTrangThai("Đang tải lại đơn…");
+                var tho = await GraphTeams.TaiList(siteId, listId, CancellationToken.None);
+                var moi = await Task.Run(() => PhanTichTeams.DocToanBo(tho));
+                if (_tab?[6] != listId) return;
+                DatDon(tho, moi);
+                DonTeams sau = _don.FirstOrDefault(x => x.Id == d.Id);
+                if (sau != null) HienChiTiet(sau, thongBao); else VeDon();
+            });
         }
 
         private static void MoNgoai(string duongDan)

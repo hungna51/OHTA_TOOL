@@ -100,6 +100,12 @@ namespace TeamsTool.Services
         }
     }
 
+    /// <summary>Đơn đã bị người khác sửa sau lúc tải (Graph 412) — phải tải lại rồi sửa.</summary>
+    public sealed class DonDaDoiException : Exception
+    {
+        public DonDaDoiException() : base("Đơn vừa được người khác sửa trên Teams. Đã tải lại — mở lại đơn rồi sửa tiếp.") { }
+    }
+
     /// <summary>
     /// Đăng nhập Microsoft 365 bằng mã thiết bị (device code) + gọi Microsoft Graph bằng HttpClient thẳng
     /// (không NuGet, như ADR 0006). Refresh token mã hoá DPAPI theo tài khoản Windows ở
@@ -154,6 +160,7 @@ namespace TeamsTool.Services
         public static void DangXuat()
         {
             _access = null;
+            _accessGhi = null;
             try { File.Delete(FileToken); } catch { }
             XoaTam(); // dữ liệu đơn lưu tạm theo phiên, đăng xuất thì xoá
         }
@@ -245,12 +252,41 @@ namespace TeamsTool.Services
             return _access;
         }
 
-        private static async Task<HttpResponseMessage> Gui(HttpMethod method, string url, string body, CancellationToken ct)
+        // Quyền ghi xin riêng, chỉ khi sửa đơn: admin chưa cấp Sites.ReadWrite.All thì chỉ lúc lưu báo lỗi, phần xem vẫn chạy
+        private const string ScopeGhi = "offline_access Sites.ReadWrite.All";
+        private static string _accessGhi;
+        private static DateTime _hetHanGhi = DateTime.MinValue;
+
+        private static async Task<string> LayAccessGhi(CancellationToken ct)
+        {
+            if (_accessGhi != null && DateTime.UtcNow < _hetHanGhi) return _accessGhi;
+            KiemCaiDat();
+            string refresh = DocRefresh();
+            if (refresh == null) throw new InvalidOperationException("Chưa đăng nhập Microsoft 365 — bấm Đăng nhập.");
+            var (ok, json) = await PostForm(UrlDangNhap("token"), new Dictionary<string, string>
+            {
+                ["grant_type"] = "refresh_token",
+                ["client_id"] = CaiDatTeams.ClientId,
+                ["refresh_token"] = refresh,
+                ["scope"] = ScopeGhi,
+            }, ct);
+            if (!ok) // không đăng xuất: thường là admin chưa cấp quyền ghi
+                throw new InvalidOperationException("Chưa có quyền sửa đơn. Admin Microsoft 365 cần thêm quyền Delegated Sites.ReadWrite.All cho ứng dụng OHTA TOOL và bấm Grant admin consent, rồi thử lại.\n(" + LoiOAuth(json) + ")");
+            var t = PhanTichTeams.DocToken(json);
+            _accessGhi = t.Access;
+            _hetHanGhi = DateTime.UtcNow.AddSeconds(Math.Max(t.HetSau - 120, 60));
+            GhiRefresh(t.Refresh);
+            return _accessGhi;
+        }
+
+        private static async Task<HttpResponseMessage> Gui(HttpMethod method, string url, string body, CancellationToken ct, bool ghi = false, string ifMatch = null)
         {
             var req = new HttpRequestMessage(method, url.StartsWith("http") ? url : Graph + url);
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await LayAccess(ct));
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ghi ? await LayAccessGhi(ct) : await LayAccess(ct));
+            if (!string.IsNullOrEmpty(ifMatch)) req.Headers.TryAddWithoutValidation("If-Match", ifMatch.StartsWith("\"") ? ifMatch : "\"" + ifMatch + "\"");
             if (body != null) req.Content = new StringContent(body, new UTF8Encoding(false), "application/json");
             HttpResponseMessage res = await Http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+            if ((int)res.StatusCode == 412) { res.Dispose(); throw new DonDaDoiException(); }
             if (!res.IsSuccessStatusCode)
             {
                 string text = await res.Content.ReadAsStringAsync();
@@ -293,6 +329,16 @@ namespace TeamsTool.Services
             string listId = PhanTichTeams.TimListId(await GetJson("/sites/" + siteId + "/lists?$select=id,displayName,webUrl&$top=999", ct), listUrl);
             if (listId == null) throw new InvalidOperationException("Không tìm thấy danh sách " + listUrl);
             return (siteId, listId);
+        }
+
+        /// <summary>
+        /// Ghi các cột đổi của một đơn (body từ SuaDon.Body). eTag: phiên bản lúc mở form —
+        /// người khác đã sửa đơn trong lúc đó thì Graph trả 412 → DonDaDoiException, không ghi đè.
+        /// </summary>
+        public static async Task SuaDon(string siteId, string listId, string itemId, string eTag, string body, CancellationToken ct)
+        {
+            string url = "/sites/" + siteId + "/lists/" + listId + "/items/" + Uri.EscapeDataString(itemId) + "/fields";
+            using (await Gui(new HttpMethod("PATCH"), url, body, ct, ghi: true, ifMatch: eTag)) { }
         }
 
         /// <summary>Tải hết các trang theo @odata.nextLink (tối đa soTrang trang).</summary>

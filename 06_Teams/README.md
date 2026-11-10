@@ -19,8 +19,9 @@ Mã: `Views/DangLamControl.cs` (tab CAD), `Core/DangLam.cs` (đọc/ghi file, kh
 - Chỉ tab **Lists** mở được; tab khác (Bài đăng, File, Wiki, web…) hiện mờ "chưa hỗ trợ".
 - Danh sách đơn gom theo **Hạn hoàn thành** (gần nhất trên cùng). Thẻ đơn: Title, Trạng thái, Người triển khai, Người check.
 - Mặc định **ẩn đơn đã xong / dừng**: TRẠNG THÁI có "Đã hoàn thành" hoặc "STOP", hoặc ステータス = "完了" / "キャンセル". Ô tích **Xem cả đơn đã xong**, **Chỉ đơn của tôi** (tên người đăng nhập nằm trong Người triển khai / Người check).
-- Bấm thẻ → mọi cột của đơn + nút **Mở trên Teams** (xem file, sửa đơn ở đó).
-- **Chỉ xem**, không sửa đơn. Tab Lists chọn lần trước được nhớ: mở lại CAD là vào thẳng và tự tải đơn.
+- Bấm thẻ → mọi cột của đơn + nút **Mở trên Teams** (xem file).
+- **✏ Sửa đơn** (trong chi tiết đơn): form theo loại cột — chữ (cả nhiều dòng), số, lựa chọn (ô tích nếu chọn nhiều), ngày (+ giờ nếu cột có giờ), có/không. Cột người / tra cứu / chữ có định dạng chỉ xem (sửa trên Teams). **💾 Lưu** hiện bảng *cũ → mới* để xác nhận, chỉ gửi các ô đã đổi, kèm phiên bản đơn: ai đó vừa sửa đơn trên Teams thì không ghi đè mà báo và tải lại. Lưu xong tự tải lại danh sách.
+- Tab Lists chọn lần trước được nhớ: mở lại là vào thẳng và tự tải đơn.
 
 Cột được nhận theo **tên hiển thị** (không phân biệt hoa thường / dấu): "Hạn hoàn thành", "Trạng thái", "ステータス", "…triển khai", "…check…".
 
@@ -31,7 +32,7 @@ Graph + màn hình duyệt đơn nằm trong `_apps/OhtaTeams` ([ADR 0008](../_d
 Entra admin center → **App registrations → New registration** (`OHTA TOOL`, single tenant):
 
 1. **Authentication** → *Allow public client flows* = **Yes**.
-2. **API permissions** → Microsoft Graph → *Delegated*: `User.Read`, `Team.ReadBasic.All`, `Channel.ReadBasic.All`, `TeamsTab.Read.All`, `Sites.Read.All` → **Grant admin consent**.
+2. **API permissions** → Microsoft Graph → *Delegated*: `User.Read`, `Team.ReadBasic.All`, `Channel.ReadBasic.All`, `TeamsTab.Read.All`, `Sites.Read.All` → **Grant admin consent**. Muốn **sửa đơn** thì thêm `Sites.ReadWrite.All` (Delegated) → Grant admin consent — chưa có quyền này thì chỉ nút Lưu báo lỗi, phần xem vẫn chạy; cấp xong không cần đăng nhập lại.
 3. Lấy **Directory (tenant) ID** và **Application (client) ID** ở trang Overview, ghi vào file `teams.json`:
 
 ```json

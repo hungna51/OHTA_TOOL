@@ -173,6 +173,51 @@ namespace TeamsTool.Tests
             Kiem("dang lam: khong khop, khong ghim -> null", PhanTichDangLam.DonDangLam(@"E:\x.dwg", kh).Don == null, true);
             Kiem("dang lam: chua co file -> null", PhanTichDangLam.DonDangLam(@"E:\x.dwg", null).Don == null, true);
 
+            // Sua don: cot thuc te cua Lists (displayAs checkBoxes = chon nhieu, format dateTime/dateOnly)
+            var cs = PhanTichTeams.DocCot(@"{ ""value"": [
+  { ""name"": ""Title"", ""displayName"": ""Title"", ""text"": { ""allowMultipleLines"": false } },
+  { ""name"": ""TT"", ""displayName"": ""Trạng thái đơn hàng"", ""choice"": { ""choices"": [""Đang triển khai"",""Đang check"",""Đã hoàn thành""], ""displayAs"": ""checkBoxes"" } },
+  { ""name"": ""MD"", ""displayName"": ""Mức độ"", ""choice"": { ""choices"": [""Đơn thường"",""Đơn chất lượng cao""], ""displayAs"": ""dropDownMenu"" } },
+  { ""name"": ""BD"", ""displayName"": ""Bắt đầu"", ""dateTime"": { ""format"": ""dateTime"" } },
+  { ""name"": ""Han"", ""displayName"": ""Hạn"", ""dateTime"": { ""format"": ""dateOnly"" } },
+  { ""name"": ""CY"", ""displayName"": ""Chú ý"", ""text"": { ""allowMultipleLines"": true, ""textType"": ""plain"" } },
+  { ""name"": ""HT"", ""displayName"": ""Ghi chú HTML"", ""text"": { ""allowMultipleLines"": true, ""textType"": ""richText"" } },
+  { ""name"": ""So"", ""displayName"": ""Số tấm"", ""number"": {} },
+  { ""name"": ""Sao"", ""displayName"": ""Ngôi sao"", ""boolean"": {} },
+  { ""name"": ""Ng"", ""displayName"": ""Người"", ""personOrGroup"": {} }
+]}");
+            CotList C(string ten) => cs.First(x => x.Ten == ten);
+            Kiem("sua: checkBoxes = chon nhieu, dropDown = 1", C("TT").ChonNhieu + "|" + C("MD").ChonNhieu + "|" + C("TT").LuaChon.Count, "True|False|3");
+            Kiem("sua: dateTime co gio, dateOnly khong", C("BD").CoGio + "|" + C("Han").CoGio, "True|False");
+            Kiem("sua: cot sua duoc", string.Join(",", cs.Where(x => x.SuaDuoc).Select(x => x.Ten)), "Title,TT,MD,BD,Han,CY,So,Sao");
+            var dS = PhanTichTeams.DocDon(@"{""value"":[{""id"":""7"",""eTag"":""\""abc,24\"""",""fields"":{""Title"":""C1"",""TT"":[""Đang check""],""BD"":""2026-11-10T01:30:00Z"",""So"":12.5,""Sao"":true,""HT"":""<b>x</b>""}}]}",
+                                            cs, PhanTichTeams.KhopCot(cs), id => id)[0];
+            Kiem("sua: doc eTag va gia tri tho", dS.ETag + "|" + dS.Tho.Count + "|" + dS.Tho.ContainsKey("HT"), "\"abc,24\"|5|False");
+            Kiem("sua: hien gio cho cot co gio", dS.TatCa.First(x => x.Key == "Bắt đầu").Value, PhanTichTeams.DocNgay("2026-11-10T01:30:00Z")?.ToString("dd/MM/yyyy HH:mm"));
+            Kiem("sua: form chon nhieu = list", string.Join("+", (List<string>)SuaDon.GiaTriForm(C("TT"), dS.Tho["TT"])), "Đang check");
+            Kiem("sua: form so", SuaDon.GiaTriForm(C("So"), dS.Tho["So"]), (object)12.5);
+            Kiem("sua: form ngay = gio may", SuaDon.GiaTriForm(C("BD"), dS.Tho["BD"]), (object)PhanTichTeams.DocNgay("2026-11-10T01:30:00Z"));
+            Kiem("sua: form cot trong", SuaDon.GiaTriForm(C("CY"), null), "");
+            Kiem("sua: giong nhau list khac thu tu", SuaDon.GiongNhau(new List<string> { "a", "b" }, new List<string> { "b", "a" }), true);
+            Kiem("sua: giong nhau chu bo khoang trang, null = rong", SuaDon.GiongNhau(" x ", "x") + "|" + SuaDon.GiongNhau(null, ""), "True|True");
+            Kiem("sua: khac ngay", SuaDon.GiongNhau(new DateTime(2026, 1, 1, 8, 0, 0), new DateTime(2026, 1, 1, 8, 1, 0)), false);
+            Kiem("sua: doc so 1,5 / rong / chu", (SuaDon.DocSo("1,5", out double? s1) ? s1?.ToString(System.Globalization.CultureInfo.InvariantCulture) : "x") + "|" + (SuaDon.DocSo("", out double? s2) && s2 == null) + "|" + SuaDon.DocSo("abc", out _), "1.5|True|False");
+            Kiem("sua: doc gio", (SuaDon.DocGio("8:30", out TimeSpan g1) ? g1.ToString() : "x") + "|" + SuaDon.DocGio("25:00", out _) + "|" + SuaDon.DocGio("", out _), "08:30:00|False|True");
+            Kiem("sua: choice ngoai lua chon -> loi", SuaDon.KiemTra(C("MD"), "Lạ") != null && SuaDon.KiemTra(C("TT"), new List<string> { "Đang check" }) == null && SuaDon.KiemTra(C("MD"), "") == null, true);
+            var ngayHan = new DateTime(2026, 11, 20, 15, 45, 0);
+            string body = SuaDon.Body(new[] {
+                new KeyValuePair<CotList, object>(C("TT"), new List<string> { "Đang check", "Đã hoàn thành" }),
+                new KeyValuePair<CotList, object>(C("Han"), ngayHan),
+                new KeyValuePair<CotList, object>(C("So"), 3.0),
+                new KeyValuePair<CotList, object>(C("Sao"), false),
+                new KeyValuePair<CotList, object>(C("MD"), ""),
+                new KeyValuePair<CotList, object>(C("CY"), "dong 1\ndong 2  ") });
+            var b = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(body);
+            Kiem("sua body: chon nhieu kem @odata.type", b.GetString("TT@odata.type") + "|" + string.Join("+", (List<object>)b.Get("TT")), "Collection(Edm.String)|Đang check+Đã hoàn thành");
+            Kiem("sua body: cot chi ngay = 0 gio may doi UTC", b.GetString("Han"), new DateTime(2026, 11, 20).ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+            Kiem("sua body: so, bool, choice rong = null, chu bo cach cuoi", b.Get("So") + "|" + b.Get("Sao") + "|" + (b.ContainsKey("MD") && b.Get("MD") == null) + "|" + b.GetString("CY"), "3|False|True|dong 1\ndong 2");
+            Kiem("sua body: chi cot doi", b.Items.Count, 7);
+
             Console.WriteLine();
             Console.WriteLine("Tong: {0} OK, {1} FAIL", _ok, _fail);
             return _fail == 0 ? 0 : 1;

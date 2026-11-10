@@ -57,7 +57,7 @@ _apps/OhtaTeams/                      (có _ nên không thành tab CAD)
 1. ✅ Tạo ứng dụng, dùng màn hình duyệt đơn (link nguồn, chưa xoá khỏi plugin), chạy được độc lập.
 2. ✅ Ghi `dang_lam.json` (mỗi lần tải xong đơn, bấm 📌, lưu ⚙) + nút 📌 trong chi tiết đơn + ô **Thư mục đơn** ở ⚙ (registry `thu_muc_goc`, đơn chọn ở `don_chon`).
 3. ✅ Thu tab CAD về thẻ đơn đang làm (`Views/DangLamControl.cs`), Graph + màn duyệt chuyển hẳn sang `_apps/OhtaTeams`.
-4. (Sau) Tính năng mới trong ứng dụng: đổi trạng thái (cần quyền `Sites.ReadWrite.All`), mở thư mục / bản vẽ…
+4. Tính năng mới trong ứng dụng: ✅ **sửa đơn** (`Core/SuaDon.cs`, `GraphTeams.SuaDon` — quyền `Sites.ReadWrite.All` xin riêng lúc lưu, PATCH kèm `If-Match` eTag); còn: sửa cột người, mở bản vẽ…
 
 ## Test
 

@@ -19,6 +19,15 @@ namespace TeamsTool.Core
     public sealed class CotList
     {
         public string Ten, TieuDe, Loai; // Loai: personOrGroup | dateTime | choice | lookup | boolean | number | text | khac
+        public List<string> LuaChon = new List<string>(); // choice: các lựa chọn
+        public bool ChonNhieu;  // choice hiện dạng ô tích (checkBoxes) = chọn nhiều giá trị
+        public bool CoGio;      // dateTime có giờ (format = dateTime)
+        public bool ChuHtml;    // text dạng richText — chưa sửa được (sẽ mất định dạng)
+        public bool NhieuDong;  // text nhiều dòng
+
+        /// <summary>Cột OhtaTeams sửa được. Người / tra cứu / chữ có định dạng: chỉ xem (sửa trên Teams).</summary>
+        public bool SuaDuoc =>
+            Loai == "number" || Loai == "choice" || Loai == "boolean" || Loai == "dateTime" || (Loai == "text" && !ChuHtml);
     }
 
     /// <summary>Tên nội bộ các cột chính của danh sách đơn (null = danh sách không có cột đó).</summary>
@@ -31,8 +40,11 @@ namespace TeamsTool.Core
     public sealed class DonTeams
     {
         public string Id, WebUrl, Title, TrangThai, StatusJp, TrienKhai, Check;
+        public string ETag; // phiên bản dòng — gửi kèm khi sửa để không ghi đè sửa của người khác
         public DateTime? Han;
         public bool DaXong;
+        /// <summary>Giá trị thô theo tên nội bộ cột (chuỗi / số / bool / mảng) — điền sẵn vào form sửa.</summary>
+        public Dictionary<string, object> Tho = new Dictionary<string, object>();
         /// <summary>Mọi cột có giá trị, theo thứ tự cột của danh sách: (tên hiển thị, giá trị).</summary>
         public List<KeyValuePair<string, string>> TatCa = new List<KeyValuePair<string, string>>();
 
@@ -157,8 +169,20 @@ namespace TeamsTool.Core
                 if (string.IsNullOrEmpty(ten) || Equals(c.Get("hidden"), true) || CotHeThong.Contains(ten)
                     || ten.StartsWith("teamsConversationMetadata", StringComparison.Ordinal) || ten.StartsWith("_FormSourceId", StringComparison.Ordinal)) continue;
                 if (Equals(c.Get("readOnly"), true) && ten != "Title") continue;
-                kq.Add(new CotList { Ten = ten, TieuDe = c.GetString("displayName") ?? ten,
-                                     Loai = LoaiCot.FirstOrDefault(l => c.Get(l) != null) ?? "khac" });
+                var cot = new CotList { Ten = ten, TieuDe = c.GetString("displayName") ?? ten,
+                                        Loai = LoaiCot.FirstOrDefault(l => c.Get(l) != null) ?? "khac" };
+                if (c.Get("choice") is JsonObject ch)
+                {
+                    cot.LuaChon = (ch.Get("choices") as List<object> ?? new List<object>()).OfType<string>().ToList();
+                    cot.ChonNhieu = Equals(ch.Get("allowMultiple"), true) || ch.GetString("displayAs") == "checkBoxes";
+                }
+                if (c.Get("dateTime") is JsonObject dt) cot.CoGio = dt.GetString("format") == "dateTime";
+                if (c.Get("text") is JsonObject tx)
+                {
+                    cot.ChuHtml = tx.GetString("textType") == "richText";
+                    cot.NhieuDong = Equals(tx.Get("allowMultipleLines"), true);
+                }
+                kq.Add(cot);
             }
             return kq;
         }
@@ -208,7 +232,7 @@ namespace TeamsTool.Core
                 case bool b:
                     return b ? "Có" : "Không";
                 case string s when c.Loai == "dateTime":
-                    return DocNgay(s)?.ToString("dd/MM/yyyy") ?? s;
+                    return DocNgay(s)?.ToString(c.CoGio ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy") ?? s;
                 case string s:
                     return s.Contains("<") ? BoHtml(s) : s.Trim();
                 default:
@@ -234,6 +258,7 @@ namespace TeamsTool.Core
                 var d = new DonTeams
                 {
                     Id = it.GetString("id"),
+                    ETag = it.GetString("eTag"),
                     WebUrl = it.GetString("webUrl"),
                     Title = f.GetString("Title") ?? "",
                     TrangThai = Gt(chinh.TrangThai),
@@ -248,6 +273,7 @@ namespace TeamsTool.Core
                         || d.StatusJp.Split(',').Any(x => x.Trim() == "完了" || x.Trim() == "キャンセル");
                 foreach (CotList c in cots)
                 {
+                    if (c.SuaDuoc && f.Get(c.Ten) != null) d.Tho[c.Ten] = f.Get(c.Ten);
                     string g = GiaTri(f, c, tenNguoi);
                     if (g.Length > 0) d.TatCa.Add(new KeyValuePair<string, string>(c.TieuDe, g));
                 }
