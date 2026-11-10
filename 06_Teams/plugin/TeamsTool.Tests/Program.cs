@@ -294,6 +294,13 @@ namespace TeamsTool.Tests
             Kiem("tin mo dau kem the: tabReference + the attachment trong noi dung",
                  aThe.GetString("id") + "|" + aThe.GetString("contentType") + "|" + aThe.GetString("name") + "|" + ((OhtaTool.Plugin.Core.JsonObject)bThe.Get("body")).GetString("content"),
                  "tab::009936cf|tabReference|Về: 130828|<p>x</p><attachment id=\"tab::009936cf\"></attachment>");
+            var bCard = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyMoDauThe("<p>x</p>", "130808", "https://don/1", "the1"));
+            var aCard = (OhtaTool.Plugin.Core.JsonObject)((List<object>)bCard.Get("attachments"))[0];
+            var card = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(aCard.GetString("content"));
+            Kiem("the adaptive: loai, chu Ve: don, bam mo don, the trong noi dung",
+                 aCard.GetString("contentType") + "|" + ((OhtaTool.Plugin.Core.JsonObject)((List<object>)card.Get("body"))[0]).GetString("text") + "|"
+                 + ((OhtaTool.Plugin.Core.JsonObject)card.Get("selectAction")).GetString("url") + "|" + ((OhtaTool.Plugin.Core.JsonObject)bCard.Get("body")).GetString("content"),
+                 "application/vnd.microsoft.card.adaptive|📋 Về: 130808|https://don/1|<p>x</p><attachment id=\"the1\"></attachment>");
             Kiem("tin mo dau khong the", ((OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyMoDau("<p>x</p>", null, "a"))).ContainsKey("attachments"), false);
             Kiem("tep: doc AttachmentFiles", string.Join(",", TraoDoi.DocTep(@"{""value"":[{""FileName"":""130819.pdf"",""ServerRelativeUrl"":""/sites/x/Lists/y/Attachments/2758/130819.pdf""},{""FileName"":""""}]}").Select(t => t.Ten + "=" + t.DuongDan)), "130819.pdf=/sites/x/Lists/y/Attachments/2758/130819.pdf");
             Kiem("tep: URL tai qua _api, ma hoa dau cach + nhay don", TraoDoi.UrlTaiTep("https://h/sites/x", "/sites/x/Lists/Tt c/Attachments/1/a'b.pdf"),

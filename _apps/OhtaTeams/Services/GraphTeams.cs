@@ -463,7 +463,8 @@ namespace TeamsTool.Services
         /// Thử kèm thẻ "Về: &lt;đơn&gt;" như Lists (đính kèm tabReference); Graph không nhận thì gửi lại không thẻ,
         /// dòng đầu là "Về đơn …" có link (bị từ chối thì Teams không tạo tin, không có tin thừa).
         /// </summary>
-        public static async Task<(string Id, bool CoThe)> TaoHoiThoai(string nhomId, string channelId, string chu, string title, string webUrl, string tabId, CancellationToken ct)
+        /// <returns>Id tin; Kieu = "lists" (thẻ gốc của Lists) / "the" (thẻ Adaptive Card) / "" (tin có link); Loi = lỗi Graph của các lần bị từ chối.</returns>
+        public static async Task<(string Id, string Kieu, string Loi)> TaoHoiThoai(string nhomId, string channelId, string chu, string title, string webUrl, string tabId, CancellationToken ct)
         {
             string url = "/teams/" + nhomId + "/channels/" + Uri.EscapeDataString(channelId) + "/messages";
             async Task<string> Dang(string body)
@@ -474,12 +475,17 @@ namespace TeamsTool.Services
                     return !string.IsNullOrEmpty(id) ? id : throw new InvalidOperationException("Teams không trả id tin vừa tạo.");
                 }
             }
+            string htmlChu = "<p>" + TraoDoi.HtmlTraLoi(chu) + "</p>";
+            var loi = new List<string>();
+            // Graph từ chối (400) thì Teams không tạo tin → thử kiểu kế tiếp, không có tin thừa
             if (!string.IsNullOrEmpty(tabId))
             {
-                try { return (await Dang(TraoDoi.BodyMoDau("<p>" + TraoDoi.HtmlTraLoi(chu) + "</p>", tabId, title)), true); }
-                catch (InvalidOperationException ex) when (ex.Message.StartsWith("Graph 400")) { } // không nhận thẻ → gửi kiểu thường
+                try { return (await Dang(TraoDoi.BodyMoDau(htmlChu, tabId, title)), "lists", ""); }
+                catch (InvalidOperationException ex) when (ex.Message.StartsWith("Graph 400")) { loi.Add("thẻ Lists: " + ex.Message); }
             }
-            return (await Dang(TraoDoi.BodyMoDau(TraoDoi.HtmlMoDau(title, webUrl, chu), null, title)), false);
+            try { return (await Dang(TraoDoi.BodyMoDauThe(htmlChu, title, webUrl, Guid.NewGuid().ToString("N"))), "the", string.Join("; ", loi)); }
+            catch (InvalidOperationException ex) when (ex.Message.StartsWith("Graph 400")) { loi.Add("thẻ Adaptive: " + ex.Message); }
+            return (await Dang(TraoDoi.BodyMoDau(TraoDoi.HtmlMoDau(title, webUrl, chu), null, title)), "", string.Join("; ", loi));
         }
 
         /// <summary>Gửi một tin trả lời vào chuỗi chat của đơn.</summary>

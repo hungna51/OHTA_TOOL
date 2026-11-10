@@ -146,6 +146,41 @@ namespace TeamsTool.Core
             return JsonLite.Serialize(o);
         }
 
+        /// <summary>
+        /// Body tin mở trao đổi kèm thẻ Adaptive Card "📋 Về: &lt;đơn&gt;" (bấm mở đơn) — thay thẻ tabReference của Lists khi Graph
+        /// không cho gửi loại đó. idThe: chuỗi bất kỳ duy nhất trong tin (nối thẻ &lt;attachment&gt; với phần đính kèm).
+        /// </summary>
+        public static string BodyMoDauThe(string html, string title, string webUrl, string idThe)
+        {
+            var chu = new JsonObject();
+            chu.Set("type", "TextBlock");
+            chu.Set("text", "📋 Về: " + title);
+            chu.Set("weight", "Bolder");
+            chu.Set("wrap", true);
+            var the = new JsonObject();
+            the.Set("type", "AdaptiveCard");
+            the.Set("version", "1.4");
+            the.Set("body", new List<object> { chu });
+            if (!string.IsNullOrEmpty(webUrl))
+            {
+                var mo = new JsonObject();
+                mo.Set("type", "Action.OpenUrl");
+                mo.Set("url", webUrl);
+                the.Set("selectAction", mo);
+            }
+            var dk = new JsonObject();
+            dk.Set("id", idThe);
+            dk.Set("contentType", "application/vnd.microsoft.card.adaptive");
+            dk.Set("content", JsonLite.Serialize(the).Trim()); // Graph nhận nội dung thẻ dạng chuỗi JSON
+            var b = new JsonObject();
+            b.Set("contentType", "html");
+            b.Set("content", html + "<attachment id=\"" + idThe + "\"></attachment>");
+            var o = new JsonObject();
+            o.Set("body", b);
+            o.Set("attachments", new List<object> { dk });
+            return JsonLite.Serialize(o);
+        }
+
         public static List<TinNhan> DocTin(string json)
         {
             var goc = JsonLite.Parse(json) as JsonObject;

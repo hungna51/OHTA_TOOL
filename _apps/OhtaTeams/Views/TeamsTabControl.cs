@@ -1145,9 +1145,11 @@ namespace TeamsTool.Views
                 string tabId = null;
                 try { tabId = await GraphTeams.IdTabDon(_tab[0], _tab[2], _tab[4], CancellationToken.None); }
                 catch (InvalidOperationException) { } // không đọc được tab: tạo tin không thẻ
-                var (conv, coThe) = await GraphTeams.TaoHoiThoai(nhomId, kenh.ChannelId, chu, d.Title, d.WebUrl, tabId, CancellationToken.None);
+                var (conv, kieu, loiThe) = await GraphTeams.TaoHoiThoai(nhomId, kenh.ChannelId, chu, d.Title, d.WebUrl, tabId, CancellationToken.None);
                 var chuoi = new HoiThoai { ConvId = conv, ChannelId = kenh.ChannelId, TeamInternalId = kenh.TeamInternalId };
-                string thongBao = "Đã tạo trao đổi trong nhóm " + nhomTen + (coThe ? " (kèm thẻ Về: " + d.Title + ")." : " (Teams không nhận thẻ Về: đơn — tin có link tới đơn).");
+                string thongBao = "Đã tạo trao đổi trong nhóm " + nhomTen
+                    + (kieu == "lists" ? " (kèm thẻ Về: " + d.Title + " của Lists)." : kieu == "the" ? " (kèm thẻ 📋 Về: " + d.Title + ")." : " (tin có link tới đơn).")
+                    + (loiThe.Length > 0 ? "\nTeams không nhận: " + loiThe : "");
                 DonTeams moi = d;
                 if (cotMeta == null) thongBao += " Chưa gắn được vào đơn (danh sách chưa có cột chat ẩn) — xem trong kênh.";
                 else
