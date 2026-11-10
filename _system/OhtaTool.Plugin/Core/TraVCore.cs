@@ -451,7 +451,14 @@ namespace OhtaTool.Plugin.Core
                 if (r90 != null)
                     parts.AddRange(BuildDetailParts(r90, includeR: false));
                 else
-                    parts.Add("Chưa có thông số dao (最長 / Ｌ最低 / Ｚ最低 / Rend) — bổ sung ở Cài đặt → Góc bẻ thử");
+                    parts.Add("Chưa có thông số dao (Ｌ最低 / Ｚ最低 / Rend) — bổ sung ở Cài đặt → Góc bẻ thử");
+            }
+            // 最長 chỉ theo dao V (không phụ thuộc loại / T): thiếu thì lấy của V tương ứng
+            if (!parts.Any(p => p.StartsWith("最長", StringComparison.Ordinal)))
+            {
+                string sai = SaichouByDao(dao, out _);
+                if (sai.Length > 0)
+                    parts.Insert(0, "最長 " + sai);
             }
 
             return new TraVCandidate
@@ -685,10 +692,43 @@ namespace OhtaTool.Plugin.Core
         /// Dòng bảng 90° ứng với dao của bảng góc nhọn ("V12" / "U18" -> cột V = "12" / "18").
         /// </summary>
         /// <summary>
+        /// 最長 chỉ phụ thuộc dao V (không theo loại / độ dày): giá trị gặp nhiều nhất trong góc bẻ thử + trav_90 cùng dao. "" nếu chưa có.
+        /// </summary>
+        public static string SaichouByDao(string dao, out string source)
+        {
+            string d = TraVThuData.NormalizeDao(dao);
+            var values = TableThu.Where(r => r.Saichou.Length > 0 && string.Equals(r.Dao, d, StringComparison.OrdinalIgnoreCase)).Select(r => r.Saichou)
+                .Concat(Table90.Where(r => !string.IsNullOrEmpty(r.C8) && string.Equals(TraVThuData.NormalizeDao(r.V), d, StringComparison.OrdinalIgnoreCase))
+                    .Select(r => r.C8.Trim()))
+                .ToList();
+            string best = values.GroupBy(v => v).OrderByDescending(g => g.Count()).Select(g => g.Key).FirstOrDefault() ?? string.Empty;
+            source = best.Length > 0 ? $"最長 theo dao {d}" : string.Empty;
+            return best;
+        }
+
+        /// <summary>
         /// Thông số dao có sẵn cho form góc bẻ thử (最長 / Ｌ最低 / Ｚ最低 / Rend): góc bẻ thử khác cùng loại + T + dao đã có số,
-        /// rồi dòng trav_90 đúng loại + T + dao. Không có -> null (người dùng tự nhập kèm bằng chứng).
+        /// rồi dòng trav_90 đúng loại + T + dao. 最長 thiếu thì lấy theo dao V (SaichouByDao). Không có gì -> null.
         /// </summary>
         public static TraVThuRecord SuggestDieParams(string loai, double thick, string dao, out string source)
+        {
+            TraVThuRecord s = SuggestDieParamsExact(loai, thick, dao, out source);
+            if (s != null && s.Saichou.Length > 0)
+                return s;
+            string sai = SaichouByDao(dao, out string saiSource);
+            if (sai.Length == 0)
+                return s;
+            if (s == null)
+            {
+                source = saiSource;
+                return new TraVThuRecord { Saichou = sai };
+            }
+            s.Saichou = sai;
+            source += ", " + saiSource;
+            return s;
+        }
+
+        private static TraVThuRecord SuggestDieParamsExact(string loai, double thick, string dao, out string source)
         {
             source = string.Empty;
             string d = TraVThuData.NormalizeDao(dao);

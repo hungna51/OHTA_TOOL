@@ -103,12 +103,15 @@ namespace OhtaTool.Plugin.Views
             }
 
             bool known = loai.Length > 0 && t.HasValue && dao.Length > 1;
-            TxtDieHint.Text = s != null
-                ? $"Lấy theo {source}. Sửa khác đi thì cần người xác nhận + ảnh."
-                : known
-                    ? $"⚠ Chưa có thông số dao cho {loai} T={TxtT.Text.Trim()} {dao} — nhập nếu có (kèm người xác nhận + ảnh), để trống cũng được."
-                    : "Tuỳ chọn — thông số dao lúc bẻ thử, hiện dưới dòng V= như bẻ thường.";
-            TxtDieHint.Foreground = (Brush)new BrushConverter().ConvertFrom(s == null && known ? "#B45309" : "#64748B");
+            // 最長 lấy theo dao V; Ｌ最低 / Ｚ最低 / Rend phải đúng loại + T + dao
+            bool missingRest = known && (s == null || s.LSaitei.Length + s.ZSaitei.Length + s.Rend.Length == 0);
+            string from = s != null ? $"Lấy theo {source}. " : string.Empty;
+            TxtDieHint.Text = missingRest
+                ? $"{from}⚠ Chưa có Ｌ最低 / Ｚ最低 / Rend cho {loai} T={TxtT.Text.Trim()} {dao} — nhập nếu có (kèm người xác nhận + ảnh), để trống cũng được."
+                : s != null
+                    ? $"{from}Sửa khác đi thì cần người xác nhận + ảnh."
+                    : "Tuỳ chọn — thông số dao lúc bẻ thử, hiện dưới dòng V= như bẻ thường. 最長 tự lấy theo dao V.";
+            TxtDieHint.Foreground = (Brush)new BrushConverter().ConvertFrom(missingRest ? "#B45309" : "#64748B");
             UpdateEvidenceVisibility();
         }
 

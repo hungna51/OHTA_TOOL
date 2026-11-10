@@ -665,15 +665,19 @@ namespace OhtaTool.Tests
                 var s2 = TraVCalculator.SuggestDieParams("SUS", 6, "V40", out string src2);
                 Check("Goi y: khong co be thu -> dong trav_90 DUNG loai + T + dao (SUS T=6 V40)",
                     s2 != null && s2.HasDieParams && src2.Contains("SUS T=6 V40"), src2);
-                Check("Goi y: khong muon do day khac (SUS T=7 V40 khong co dong nao) -> null",
-                    TraVCalculator.SuggestDieParams("SUS", 7, "V40", out _) == null);
+                var s3 = TraVCalculator.SuggestDieParams("SUS", 7, "V40", out string src3);
+                Check("Goi y: SUS T=7 V40 khong co dong -> chi 最長 theo dao V40, L/Z/Rend de trong",
+                    s3 != null && s3.Saichou.Length > 0 && s3.LSaitei.Length == 0 && s3.Rend.Length == 0 && src3.Contains("V40"), src3);
+                Check("最長 theo dao: khac loai + T van lay duoc",
+                    TraVCalculator.SuggestDieParams("SPCC", 1.2, "V40", out _)?.Saichou == s3.Saichou);
                 Check("Goi y: dao khong co trong du lieu -> null",
                     TraVCalculator.SuggestDieParams("SUS", 9, "V999", out _) == null);
 
                 // Goc be thu khong co thong so dao + trav_90 khong co dong -> bao thieu
                 var c70 = TraVCalculator.GetBendOptionsForFname("SUS304 2B", "9", 70).Find(c => c.DieLabel == "V40");
-                Check("Be thu thieu thong so dao -> dong thong tin bao 'Chua co thong so dao'",
-                    c70 != null && c70.DetailParts.Count == 1 && c70.DetailParts[0].StartsWith("Chưa có thông số dao"), c70?.DetailInfo);
+                Check("Be thu thieu thong so dao -> 最長 theo dao V40 + bao 'Chua co thong so dao' cho L/Z/Rend",
+                    c70 != null && c70.DetailParts.Count == 2 && c70.DetailParts[0].StartsWith("最長 ")
+                    && c70.DetailParts[1].StartsWith("Chưa có thông số dao"), c70?.DetailInfo);
 
                 // Bang chung cua thong so dao di cung dong (chep sang dong noi suy, khu hoi qua Thong_so)
                 var ev = new TraVThuRecord { Loai = "SUS", T = "9", Goc = 60, Dao = "V40", Denta = "15", Saichou = "2600",
