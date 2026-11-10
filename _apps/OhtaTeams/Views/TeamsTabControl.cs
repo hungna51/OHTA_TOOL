@@ -858,12 +858,12 @@ namespace TeamsTool.Views
             if (thongBao != null) _noiDung.Children.Add(new TextBlock { Text = thongBao, Foreground = KieuTeams.Mau("#1F7A4D"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6) });
             _noiDung.Children.Add(NutChiTiet(d));
 
-            // 2 cột: chat bên trái, form + tệp đính kèm bên phải
+            // 2 cột: form + tệp đính kèm bên trái, chat bên phải (các chuỗi chat xếp ngang nhau)
             var trai = new StackPanel { Margin = new Thickness(0, 0, 8, 0) };
             var phai = new StackPanel();
             var hai = new Grid();
-            hai.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.36, GridUnitType.Star), MinWidth = 320 });
-            hai.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.64, GridUnitType.Star) });
+            hai.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.55, GridUnitType.Star) });
+            hai.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.45, GridUnitType.Star), MinWidth = 360 });
             Grid.SetColumn(phai, 1);
             hai.Children.Add(trai);
             hai.Children.Add(phai);
@@ -891,12 +891,12 @@ namespace TeamsTool.Views
                 khoi.Children.Add(luoi);
                 var the = KieuTeams.The(khoi);
                 the.Margin = new Thickness(0, 0, 0, 8);
-                phai.Children.Add(the);
+                trai.Children.Add(the);
             }
 
             int phien = ++_phienChiTiet;
-            phai.Children.Add(KhoiTep(d, phien));
-            trai.Children.Add(KhoiChat(d, phien));
+            trai.Children.Add(KhoiTep(d, phien));
+            phai.Children.Add(KhoiChat(d, phien));
         }
 
         // ---------- Tệp đính kèm + chat kèm đơn (tải sau khi form đã hiện) ----------
@@ -951,13 +951,16 @@ namespace TeamsTool.Views
             p.Children.Add(new TextBlock { Text = "💬 Trao đổi trên Teams", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) });
             List<HoiThoai> hts = TraoDoi.DocHoiThoai(d.HoiThoaiMeta);
             if (hts.Count == 0) p.Children.Add(ChuPhu("Đơn chưa có chuỗi chat nào trên Teams."));
-            foreach (HoiThoai h in hts)
+            // mỗi chuỗi chat (mỗi kênh) một cột, xếp ngang nhau
+            var ngang = new System.Windows.Controls.Primitives.UniformGrid { Rows = 1, Columns = Math.Max(1, hts.Count) };
+            for (int i = 0; i < hts.Count; i++)
             {
-                var khung = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
+                var khung = new StackPanel { Margin = new Thickness(i == 0 ? 0 : 5, 0, i == hts.Count - 1 ? 0 : 5, 0) };
                 khung.Children.Add(ChuPhu("Đang tải chat…"));
-                p.Children.Add(khung);
-                TaiChuoiVao(khung, h, phien);
+                ngang.Children.Add(khung);
+                TaiChuoiVao(khung, hts[i], phien);
             }
+            p.Children.Add(ngang);
             var the = KieuTeams.The(p);
             the.Margin = new Thickness(0, 0, 0, 8);
             return the;
