@@ -279,6 +279,11 @@ namespace TeamsTool.Tests
                  "https://h/sites/x/_api/web/GetFileByServerRelativePath(decodedurl='%2Fsites%2Fx%2FLists%2FTt%20c%2FAttachments%2F1%2Fa%27%27b.pdf')/$value");
             Kiem("tra loi: ma hoa HTML + xuong dong", TraoDoi.HtmlTraLoi(" Đã xong <1>\r\ndòng 2 "), "Đã xong &lt;1&gt;<br>dòng 2");
             Kiem("tra loi: body", ((OhtaTool.Plugin.Core.JsonObject)((OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyTraLoi("hi"))).Get("body")).GetString("content"), "hi");
+            var dTim = new DonTeams { Title = "130819" };
+            dTim.TatCa.Add(new KeyValuePair<string, string>("Người triển khai", "Mai Trung Nam"));
+            dTim.TatCa.Add(new KeyValuePair<string, string>("注意", "赤丸箇所、3種とも"));
+            Kiem("tim: so don / ten khong dau / chu Nhat", BangDon.KhopTim(dTim, "0819") + "|" + BangDon.KhopTim(dTim, "trung NAM") + "|" + BangDon.KhopTim(dTim, "赤丸"), "True|True|True");
+            Kiem("tim: moi tu phai co, rong = khop het", BangDon.KhopTim(dTim, "130819 vinh") + "|" + BangDon.KhopTim(dTim, "   "), "False|True");
             Kiem("tach nhan", string.Join("|", BangDon.TachNhan("切板, 曲げ,  ")), "切板|曲げ");
             Kiem("loc nhan vien: co trong cot nguoi bat ky", SuaDon.CoNguoi(dN[0], cs, "12") + "|" + SuaDon.CoNguoi(dN[1], cs, "55") + "|" + SuaDon.CoNguoi(dN[1], cs, "12"), "True|True|False");
             Kiem("nguoi body: 1 nguoi bo trong = null",bN.ContainsKey("Ng1LookupId") && bN.Get("Ng1LookupId") == null, true);

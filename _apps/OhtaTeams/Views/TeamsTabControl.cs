@@ -41,6 +41,18 @@ namespace TeamsTool.Views
         private readonly TextBlock _trangThai = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = KieuTeams.ChuPhu, Margin = new Thickness(0, 6, 0, 0) };
         private readonly CheckBox _caDaXong = new CheckBox { Content = "Xem cả đơn đã xong", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 8, 0) };
         private readonly CheckBox _cuaToi = new CheckBox { Content = "Chỉ đơn của tôi", VerticalAlignment = VerticalAlignment.Center };
+        private readonly TextBox _tim = new TextBox { Width = 220, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center,
+                                                     Padding = new Thickness(4, 2, 4, 2), ToolTip = "Tìm đơn: số đơn, tên, ghi chú… (mọi cột, không dấu). Đang tìm thì tìm cả đơn đã xong." };
+        private StackPanel _timKhungTam;
+        private StackPanel _timKhung => _timKhungTam ?? (_timKhungTam = TaoKhungTim());
+        private StackPanel TaoKhungTim()
+        {
+            var k = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            k.Children.Add(new TextBlock { Text = "  🔍", VerticalAlignment = VerticalAlignment.Center });
+            k.Children.Add(_tim);
+            return k;
+        }
+        private readonly System.Windows.Threading.DispatcherTimer _henTim = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) }; // gõ xong mới lọc
         private readonly ComboBox _nhanVien = new ComboBox { MinWidth = 150, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, ToolTip = "Chỉ hiện đơn có nhân viên này ở cột người bất kỳ" };
         private const string MoiNhanVien = "(Mọi nhân viên)";
         private List<KeyValuePair<string, string>> _danhBa = new List<KeyValuePair<string, string>>(); // LookupId → tên, xếp theo tên
@@ -92,6 +104,17 @@ namespace TeamsTool.Views
             _caDaXong.Click += (s, e) => VeDon();
             _cuaToi.Click += (s, e) => VeDon();
             _nhanVien.SelectionChanged += (s, e) => { if (_oDanhSach) VeDon(); };
+            _tim.TextChanged += (s, e) => { _henTim.Stop(); _henTim.Start(); };
+            _tim.KeyDown += (s, e) => { if (e.Key == Key.Escape) _tim.Clear(); };
+            _henTim.Tick += (s, e) =>
+            {
+                _henTim.Stop();
+                if (!_oDanhSach) return;
+                int caret = _tim.CaretIndex;
+                VeDon();
+                _tim.Focus(); // vẽ lại gỡ ô tìm khỏi cây giao diện → trả lại con trỏ để gõ tiếp
+                _tim.CaretIndex = caret;
+            };
             _cuon.Content = _noiDung;
 
             var than = new Grid();
@@ -221,6 +244,7 @@ namespace TeamsTool.Views
             Tach(_caDaXong);
             Tach(_cuaToi);
             Tach(_nhanVien);
+            Tach(_timKhung);
             var hang = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
             if (lui != null)
             {
@@ -379,6 +403,7 @@ namespace TeamsTool.Views
             hang.Children.Add(_caDaXong);
             hang.Children.Add(_cuaToi);
             hang.Children.Add(_nhanVien);
+            hang.Children.Add(_timKhung);
             hang.Children.Add(KieuTeams.Nut("☰ Cột", _mau, (s2, e2) => ChonCot(), chinh: false));
             var dk = new StackPanel();
             dk.Children.Add(hang);
@@ -394,11 +419,13 @@ namespace TeamsTool.Views
             _cuon.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto; // bảng rộng: kéo ngang
             string tenNv = _nhanVien.SelectedItem as string;
             string idNv = tenNv == null || tenNv == MoiNhanVien ? null : _danhBa.FirstOrDefault(kv => kv.Value == tenNv).Key;
-            var loc = _don.Where(d => (_caDaXong.IsChecked == true || !d.DaXong) && (_cuaToi.IsChecked != true || d.CuaToi(_toiTen))
+            bool dangTim = _tim.Text.Trim().Length > 0; // đang tìm: tìm cả đơn đã xong (tìm đơn cũ theo số)
+            var loc = _don.Where(d => (dangTim || _caDaXong.IsChecked == true || !d.DaXong) && (_cuaToi.IsChecked != true || d.CuaToi(_toiTen))
+                                      && BangDon.KhopTim(d, _tim.Text)
                                       && (idNv == null || SuaDon.CoNguoi(d, _cots, idNv))).ToList();
             _noiDung.Children.Add(VeBang(loc));
             CapNhatThanhNhanh();
-            BaoTrangThai(loc.Count + " / " + _don.Count + " đơn (" + DateTime.Now.ToString("HH:mm") + ")" + _loiGhi);
+            BaoTrangThai(loc.Count + " / " + _don.Count + " đơn (" + DateTime.Now.ToString("HH:mm") + ")" + (dangTim ? " — kết quả tìm, gồm cả đơn đã xong (Esc để xoá)" : "") + _loiGhi);
             _oDanhSach = true;
         }
 

@@ -84,6 +84,18 @@ namespace TeamsTool.Core
         public static string PhanForm(CotList c) =>
             c.Ten == "Title" || (c.TieuDe ?? "").Any(ch => (ch >= '\u3040' && ch <= '\u30FF') || (ch >= '\u4E00' && ch <= '\u9FFF')) ? PhanNhat : PhanViet;
 
+        /// <summary>
+        /// Tìm đơn: mọi từ (cách nhau bởi khoảng trắng) đều phải có trong Title hoặc giá trị một cột bất kỳ —
+        /// bỏ dấu, không phân biệt hoa thường. Ô tìm trống = khớp hết.
+        /// </summary>
+        public static bool KhopTim(DonTeams d, string tuKhoa)
+        {
+            string[] tu = PhanTichTeams.BoDau(tuKhoa ?? "").Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            if (tu.Length == 0) return true;
+            string chu = PhanTichTeams.BoDau(d.Title + "\n" + string.Join("\n", d.TatCa.Select(kv => kv.Value)));
+            return tu.All(chu.Contains);
+        }
+
         /// <summary>Kéo cột tu thả vào chỗ cột den: tu chiếm vị trí của den, các cột giữa dịch một bậc. Không đổi → null.</summary>
         public static List<string> DoiCho(List<string> cot, string tu, string den)
         {
