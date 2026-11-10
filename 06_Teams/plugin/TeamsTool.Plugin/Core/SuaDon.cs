@@ -39,6 +39,38 @@ namespace TeamsTool.Core
             return kq.OrderBy(kv => kv.Value, StringComparer.CurrentCulture).ToList();
         }
 
+        /// <summary>Tiền tố khoá danh bạ của người chưa có mã trên site: "upn:&lt;email&gt;" → lúc lưu xin mã (ensureuser) rồi thay.</summary>
+        public const string ChuaCoMa = "upn:";
+
+        /// <summary>Graph /users → (tên, email đăng nhập) của tài khoản đang bật.</summary>
+        public static List<KeyValuePair<string, string>> DocNguoiCongTy(string json) =>
+            ((JsonLite.Parse(json) as JsonObject)?.Get("value") as List<object> ?? new List<object>()).OfType<JsonObject>()
+                .Where(u => !Equals(u.Get("accountEnabled"), false))
+                .Select(u => new KeyValuePair<string, string>(u.GetString("displayName") ?? "", u.GetString("userPrincipalName") ?? u.GetString("mail") ?? ""))
+                .Where(kv => kv.Key.Length > 0 && kv.Value.Length > 0).ToList();
+
+        /// <summary>SharePoint /_api/web/siteusers (nometadata) → (LookupId, email). Email trống bỏ qua.</summary>
+        public static List<KeyValuePair<string, string>> DocNguoiSite(string json) =>
+            ((JsonLite.Parse(json) as JsonObject)?.Get("value") as List<object> ?? new List<object>()).OfType<JsonObject>()
+                .Select(u => new KeyValuePair<string, string>(u.Get("Id")?.ToString() ?? "", u.GetString("Email") ?? ""))
+                .Where(kv => kv.Key.Length > 0 && kv.Value.Length > 0).ToList();
+
+        /// <summary>
+        /// Danh bạ đầy đủ: mọi người trong công ty (khoá = LookupId của site nếu email khớp, không thì "upn:&lt;email&gt;")
+        /// + người đã có trong đơn mà không thuộc công ty (khách, tài khoản cũ). Xếp theo tên.
+        /// </summary>
+        public static List<KeyValuePair<string, string>> GopDanhBa(List<KeyValuePair<string, string>> tuDon,
+            List<KeyValuePair<string, string>> congTy, List<KeyValuePair<string, string>> site)
+        {
+            var maTheoEmail = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kv in site) maTheoEmail[kv.Value] = kv.Key;
+            var kq = new Dictionary<string, string>();
+            foreach (var kv in tuDon) kq[kv.Key] = kv.Value;
+            foreach (var ng in congTy)
+                kq[maTheoEmail.TryGetValue(ng.Value, out string id) ? id : ChuaCoMa + ng.Value] = ng.Key;
+            return kq.OrderBy(kv => kv.Value, StringComparer.CurrentCulture).ToList();
+        }
+
         /// <summary>Đơn có người (LookupId) ở bất kỳ cột người nào — lọc danh sách theo nhân viên.</summary>
         public static bool CoNguoi(DonTeams d, IEnumerable<CotList> cots, string id) =>
             cots.Where(c => c.Loai == "personOrGroup")
@@ -97,7 +129,7 @@ namespace TeamsTool.Core
             {
                 var ids = v as List<string> ?? new List<string>();
                 if (!c.ChonNhieu && ids.Count > 1) return c.TieuDe + ": chỉ chọn được 1 người";
-                return ids.Any(x => !int.TryParse(x, out _)) ? c.TieuDe + ": mã người không hợp lệ" : null;
+                return ids.Any(x => !int.TryParse(x, out _) && !x.StartsWith(ChuaCoMa, StringComparison.Ordinal)) ? c.TieuDe + ": mã người không hợp lệ" : null;
             }
             if (c.Loai != "choice" || c.LuaChon.Count == 0) return null;
             var ds = v as List<string> ?? (string.IsNullOrEmpty(v as string) ? new List<string>() : new List<string> { (string)v });

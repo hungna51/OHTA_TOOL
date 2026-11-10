@@ -310,6 +310,7 @@ namespace TeamsTool.Views
                     var (siteId, listId) = await GraphTeams.MoList(t.ListUrl, CancellationToken.None);
                     _tab = new[] { nhomId, nhomTen, kenhId, kenhTen, t.Ten, siteId, listId, t.ListUrl };
                     _chon.Clear();
+                    _congTy = _nguoiSite = null; // site khác: mã người khác
                     CaiDatTeams.GhiTabChon(_tab);
                     await TaiDon();
                 })));
@@ -352,12 +353,9 @@ namespace TeamsTool.Views
         {
             _don = moi;
             _cots = PhanTichTeams.DocCot(tho.Cot);
-            _danhBa = SuaDon.DanhBa(moi, _cots);
-            string dangChon = _nhanVien.SelectedItem as string;
-            _nhanVien.Items.Clear();
-            _nhanVien.Items.Add(MoiNhanVien);
-            foreach (var kv in _danhBa) _nhanVien.Items.Add(kv.Value);
-            _nhanVien.SelectedItem = dangChon != null && _nhanVien.Items.Contains(dangChon) ? dangChon : MoiNhanVien;
+            _danhBaDon = SuaDon.DanhBa(moi, _cots);
+            GopDanhBa();
+            if (_congTy == null) TaiDanhBaCongTy();
             GhiDangLam();
         }
 
@@ -429,6 +427,66 @@ namespace TeamsTool.Views
             _oDanhSach = true;
         }
 
+        // ---------- Danh bạ nhân viên đầy đủ ----------
+
+        private List<KeyValuePair<string, string>> _danhBaDon = new List<KeyValuePair<string, string>>(); // người đã có trong các đơn
+        private List<KeyValuePair<string, string>> _congTy, _nguoiSite; // (tên, email) công ty / (mã, email) site — null = chưa tải
+        private bool _dangTaiDanhBa;
+
+        /// <summary>_danhBa = người trong đơn + cả công ty (khi đã tải); nạp lại ô Nhân viên, giữ lựa chọn.</summary>
+        private void GopDanhBa()
+        {
+            _danhBa = _congTy == null ? _danhBaDon : SuaDon.GopDanhBa(_danhBaDon, _congTy, _nguoiSite);
+            string dangChon = _nhanVien.SelectedItem as string;
+            _nhanVien.Items.Clear();
+            _nhanVien.Items.Add(MoiNhanVien);
+            foreach (var kv in _danhBa) _nhanVien.Items.Add(kv.Value);
+            _nhanVien.SelectedItem = dangChon != null && _nhanVien.Items.Contains(dangChon) ? dangChon : MoiNhanVien;
+        }
+
+        /// <summary>Tải danh bạ công ty (1 lần mỗi phiên) để giao đơn được cho cả người chưa từng có trong đơn. Lỗi → giữ danh bạ từ đơn.</summary>
+        private async void TaiDanhBaCongTy()
+        {
+            if (_dangTaiDanhBa || _tab == null) return;
+            _dangTaiDanhBa = true;
+            try
+            {
+                var (congTy, site) = await GraphTeams.NguoiCongTyVaSite(_tab[7], CancellationToken.None);
+                _congTy = congTy;
+                _nguoiSite = site;
+                GopDanhBa();
+            }
+            catch (Exception ex) { _loiGhi += " — chưa tải được danh bạ công ty: " + ex.Message.Split('\n')[0]; }
+            finally { _dangTaiDanhBa = false; }
+        }
+
+        /// <summary>
+        /// Người chọn từ danh bạ công ty mà chưa có mã trên site ("upn:…") → xin mã (ensureuser) trước khi ghi đơn;
+        /// nhớ mã để lần sau không xin lại.
+        /// </summary>
+        private async Task<List<KeyValuePair<CotList, object>>> GiaiMaNguoi(List<KeyValuePair<CotList, object>> doi)
+        {
+            var kq = new List<KeyValuePair<CotList, object>>();
+            foreach (var kv in doi)
+            {
+                if (kv.Key.Loai != "personOrGroup" || !(kv.Value is List<string> ids) || !ids.Any(x => x.StartsWith(SuaDon.ChuaCoMa, StringComparison.Ordinal)))
+                { kq.Add(kv); continue; }
+                var moi = new List<string>();
+                foreach (string id in ids)
+                {
+                    if (!id.StartsWith(SuaDon.ChuaCoMa, StringComparison.Ordinal)) { moi.Add(id); continue; }
+                    string email = id.Substring(SuaDon.ChuaCoMa.Length);
+                    BaoTrangThai("Đang thêm " + TenNguoi(id) + " vào danh sách người của site…");
+                    string ma = await GraphTeams.MaNguoi(_tab[7], email, CancellationToken.None);
+                    _nguoiSite?.Add(new KeyValuePair<string, string>(ma, email));
+                    moi.Add(ma);
+                }
+                kq.Add(new KeyValuePair<CotList, object>(kv.Key, moi));
+            }
+            if (_congTy != null) GopDanhBa();
+            return kq;
+        }
+
         // ---------- Sửa nhanh nhiều đơn ----------
 
         private readonly HashSet<string> _chon = new HashSet<string>();                       // id đơn đang tích (giữ qua lọc / vẽ lại)
@@ -495,9 +553,9 @@ namespace TeamsTool.Views
                                 + (don.Count > 15 ? "…" : "") + "\n\nLưu lên Teams?", "Sửa nhanh", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
 
             string siteId = _tab[5], listId = _tab[6];
-            string body = SuaDon.Body(new[] { new KeyValuePair<CotList, object>(cot, moi) });
             Chay(async () =>
             {
+                string body = SuaDon.Body(await GiaiMaNguoi(new List<KeyValuePair<CotList, object>> { new KeyValuePair<CotList, object>(cot, moi) }));
                 var hong = new List<string>();
                 int xong = 0;
                 foreach (DonTeams d in don)
@@ -1211,9 +1269,9 @@ namespace TeamsTool.Views
         private void GuiSua(DonTeams d, List<KeyValuePair<CotList, object>> doi)
         {
             string siteId = _tab[5], listId = _tab[6];
-            string body = SuaDon.Body(doi);
             Chay(async () =>
             {
+                string body = SuaDon.Body(await GiaiMaNguoi(doi));
                 BaoTrangThai("Đang lưu lên Teams…");
                 string thongBao = "Đã lưu " + string.Join(", ", doi.Select(x => x.Key.TieuDe)) + " lên Teams (" + DateTime.Now.ToString("HH:mm") + ").";
                 try { await GraphTeams.SuaDon(siteId, listId, d.Id, d.ETag, body, CancellationToken.None); }

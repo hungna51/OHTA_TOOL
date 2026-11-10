@@ -285,6 +285,13 @@ namespace TeamsTool.Tests
             Kiem("tim: so don / ten khong dau / chu Nhat", BangDon.KhopTim(dTim, "0819") + "|" + BangDon.KhopTim(dTim, "trung NAM") + "|" + BangDon.KhopTim(dTim, "赤丸"), "True|True|True");
             Kiem("tim: moi tu phai co, rong = khop het", BangDon.KhopTim(dTim, "130819 vinh") + "|" + BangDon.KhopTim(dTim, "   "), "False|True");
             Kiem("tach nhan", string.Join("|", BangDon.TachNhan("切板, 曲げ,  ")), "切板|曲げ");
+            var ct = SuaDon.DocNguoiCongTy(@"{""value"":[{""displayName"":""Lê Gia Vinh"",""userPrincipalName"":""vinh@oft.com"",""accountEnabled"":true},
+  {""displayName"":""Người Mới"",""userPrincipalName"":""moi@oft.com""},{""displayName"":""Nghỉ việc"",""userPrincipalName"":""x@oft.com"",""accountEnabled"":false}]}");
+            Kiem("danh ba cong ty: bo tai khoan da tat", string.Join(",", ct.Select(x => x.Key)), "Lê Gia Vinh,Người Mới");
+            var siteNg = SuaDon.DocNguoiSite(@"{""value"":[{""Id"":40,""Title"":""Lê Gia Vinh"",""Email"":""VINH@oft.com""},{""Id"":7,""Email"":""""}]}");
+            var gop = SuaDon.GopDanhBa(new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("99", "Khách Cũ"), new KeyValuePair<string, string>("40", "Lê Gia Vinh") }, ct, siteNg);
+            Kiem("danh ba gop: co ma site / chua co ma / nguoi cu", string.Join(",", gop.Select(x => x.Key + "=" + x.Value)), "99=Khách Cũ,40=Lê Gia Vinh,upn:moi@oft.com=Người Mới");
+            Kiem("nguoi chua co ma hop le khi kiem tra", SuaDon.KiemTra(C("Ng"), new List<string> { "40", "upn:moi@oft.com" }) == null && SuaDon.KiemTra(C("Ng"), new List<string> { "abc" }) != null, true);
             Kiem("loc nhan vien: co trong cot nguoi bat ky", SuaDon.CoNguoi(dN[0], cs, "12") + "|" + SuaDon.CoNguoi(dN[1], cs, "55") + "|" + SuaDon.CoNguoi(dN[1], cs, "12"), "True|True|False");
             Kiem("nguoi body: 1 nguoi bo trong = null",bN.ContainsKey("Ng1LookupId") && bN.Get("Ng1LookupId") == null, true);
 

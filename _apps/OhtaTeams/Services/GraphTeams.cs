@@ -256,7 +256,9 @@ namespace TeamsTool.Services
         // Quyền thêm xin riêng từng nhóm, chỉ khi dùng tới: admin chưa cấp quyền nào thì chỉ tính năng đó báo lỗi, phần xem vẫn chạy
         private const string ScopeGhi = "offline_access Sites.ReadWrite.All";                          // sửa đơn
         private const string ScopeChat = "offline_access ChannelMessage.Read.All ChannelMessage.Send";  // chat kèm đơn
-        private static string ScopeSharePoint(string host) => "offline_access https://" + host + "/AllSites.Read"; // tệp đính kèm (SharePoint REST)
+        private static string ScopeSharePoint(string host) => "offline_access https://" + host + "/AllSites.Read"; // tệp đính kèm, người của site (SharePoint REST)
+        private static string ScopeSharePointGhi(string host) => "offline_access https://" + host + "/AllSites.Write"; // xin mã người (ensureuser)
+        private const string ScopeDanhBa = "offline_access User.ReadBasic.All";                                       // danh bạ công ty
 
         private static readonly Dictionary<string, (string Access, DateTime Het)> _tokenPhu = new Dictionary<string, (string, DateTime)>();
 
@@ -264,6 +266,7 @@ namespace TeamsTool.Services
         {
             [ScopeGhi] = "sửa đơn (Microsoft Graph · Sites.ReadWrite.All)",
             [ScopeChat] = "chat kèm đơn (Microsoft Graph · ChannelMessage.Read.All, ChannelMessage.Send)",
+            [ScopeDanhBa] = "đọc danh bạ công ty (Microsoft Graph · User.ReadBasic.All)",
         };
 
         private static async Task<string> LayAccessPhu(string scope, CancellationToken ct)
@@ -345,6 +348,38 @@ namespace TeamsTool.Services
             using (var ra = File.Create(f))
                 await res.Content.CopyToAsync(ra);
             return f;
+        }
+
+        // ---------- Danh bạ nhân viên (giao đơn) ----------
+
+        /// <summary>
+        /// Người trong công ty (Graph /users, tài khoản đang bật) + người của site có sẵn mã (siteusers) — để SuaDon.GopDanhBa ghép.
+        /// Công ty nhỏ (~42 người) nên tải hết 1 lần.
+        /// </summary>
+        public static async Task<(List<KeyValuePair<string, string>> CongTy, List<KeyValuePair<string, string>> Site)> NguoiCongTyVaSite(string listUrl, CancellationToken ct)
+        {
+            var (host, web) = WebCuaList(listUrl);
+            Task<string> congTy = GetJson("/users?$select=displayName,userPrincipalName,mail,accountEnabled&$top=999", ct, ScopeDanhBa);
+            Task<string> site = GetJson(web + "/_api/web/siteusers?$select=Id,Email,PrincipalType&$filter=PrincipalType eq 1&$top=5000",
+                                        ct, ScopeSharePoint(host), "application/json;odata=nometadata");
+            return (TeamsTool.Core.SuaDon.DocNguoiCongTy(await congTy), TeamsTool.Core.SuaDon.DocNguoiSite(await site));
+        }
+
+        /// <summary>
+        /// Mã người (LookupId) trên site cho một email: người chưa từng vào site thì SharePoint thêm vào danh sách người của site
+        /// (ensureuser — đúng việc Lists làm khi chọn người trong ô người).
+        /// </summary>
+        public static async Task<string> MaNguoi(string listUrl, string email, CancellationToken ct)
+        {
+            var (host, web) = WebCuaList(listUrl);
+            var o = new JsonObject();
+            o.Set("logonName", "i:0#.f|membership|" + email);
+            using (HttpResponseMessage res = await Gui(HttpMethod.Post, web + "/_api/web/ensureuser", JsonLite.Serialize(o), ct, ScopeSharePointGhi(host),
+                                                       accept: "application/json;odata=nometadata"))
+            {
+                string id = (JsonLite.Parse(await res.Content.ReadAsStringAsync()) as JsonObject)?.Get("Id")?.ToString();
+                return !string.IsNullOrEmpty(id) ? id : throw new InvalidOperationException("SharePoint không trả mã người cho " + email);
+            }
         }
 
         // ---------- Chat kèm đơn (tin nhắn kênh Teams) ----------
