@@ -232,6 +232,26 @@ namespace TeamsTool.Tests
                 new KeyValuePair<CotList, object>(C("Ng"), new List<string> { "12", "40" }),
                 new KeyValuePair<CotList, object>(C("Ng1"), new List<string>()) }));
             Kiem("nguoi body: nhieu nguoi = LookupId collection", bN.GetString("NgLookupId@odata.type") + "|" + string.Join("+", (List<object>)bN.Get("NgLookupId")), "Collection(Edm.String)|12+40");
+            // Bang don kieu Lists
+            var homNay = new DateTime(2026, 11, 10);
+            string Mau(string tt, DateTime? han, bool xong = false) => BangDon.MauDong(new DonTeams { TrangThai = tt, Han = han, DaXong = xong }, homNay) ?? "-";
+            Kiem("mau dong: qua han / chua gan han = hong", Mau("Đang triển khai", new DateTime(2026, 11, 9)) + "|" + Mau("Đang check", null), "hong|hong");
+            Kiem("mau dong: dung han theo trang thai", Mau("Đang check", homNay) + "|" + Mau("Đang triển khai", homNay) + "|" + Mau("Chưa triển khai", homNay), "vang|xanh|-");
+            Kiem("mau dong: da xong khong to", Mau("Đã hoàn thành", null, true), "-");
+            Kiem("mau nhan: co dinh, trong khoang", BangDon.MauNhan("切板", 8) == BangDon.MauNhan("切板", 8) && BangDon.MauNhan("x", 8) < 8 && BangDon.MauNhan("", 8) >= 0, true);
+            var dBang = new List<DonTeams> { new DonTeams { Han = new DateTime(2026, 11, 22) }, new DonTeams(), new DonTeams { Han = new DateTime(2026, 10, 22, 7, 0, 0) } };
+            dBang[0].TatCa.Add(new KeyValuePair<string, string>("Mức độ", "x"));
+            Kiem("nhom han: chua gan truoc, ngay tang", string.Join(",", BangDon.NhomTheoHan(dBang).Select(g => g.Key?.ToString("dd/MM") ?? "none")), "none,22/10,22/11");
+            Kiem("cot mac dinh: Title + cot co gia tri, theo thu tu", string.Join(",", BangDon.CotMacDinh(cs, dBang)), "Title,TT,MD");
+            var csView = PhanTichTeams.DocCot(@"{ ""value"": [
+  { ""name"": ""Title"", ""displayName"": ""Title"", ""text"": {} },
+  { ""name"": ""Cty"", ""displayName"": ""CÔNG TY"", ""choice"": {} },
+  { ""name"": ""NK"", ""displayName"": ""納期 (Ngày Giao)"", ""dateTime"": {} },
+  { ""name"": ""CD"", ""displayName"": ""切断スタート納期"", ""dateTime"": {} },
+  { ""name"": ""TK"", ""displayName"": ""NGƯỜI TRIỂN KHAI"", ""personOrGroup"": {} },
+  { ""name"": ""Khac"", ""displayName"": ""Khác"", ""text"": {} } ]}");
+            Kiem("cot mac dinh: theo thu tu view tien do", string.Join(",", BangDon.CotMacDinh(csView, new List<DonTeams>())), "Title,TK,CD,NK,Cty");
+            Kiem("tach nhan", string.Join("|", BangDon.TachNhan("切板, 曲げ,  ")), "切板|曲げ");
             Kiem("loc nhan vien: co trong cot nguoi bat ky", SuaDon.CoNguoi(dN[0], cs, "12") + "|" + SuaDon.CoNguoi(dN[1], cs, "55") + "|" + SuaDon.CoNguoi(dN[1], cs, "12"), "True|True|False");
             Kiem("nguoi body: 1 nguoi bo trong = null",bN.ContainsKey("Ng1LookupId") && bN.Get("Ng1LookupId") == null, true);
 

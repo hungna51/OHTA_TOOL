@@ -29,8 +29,8 @@ namespace OhtaTeams
             app.Startup += (s, e) => new Window
             {
                 Title = "OHTA Teams",
-                Width = 520,
-                Height = 800,
+                Width = 1400, // bảng đơn nhiều cột như view Lists
+                Height = 860,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 Content = new TeamsTabControl("Teams", "Nhận đơn từ Microsoft Teams", "#4B53BC"),
             }.Show();

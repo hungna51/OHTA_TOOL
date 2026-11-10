@@ -216,6 +216,7 @@ namespace TeamsTool.Views
         {
             _oDanhSach = false;
             _noiDung.Children.Clear();
+            _cuon.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled; // chi tiết / sửa: chữ tự xuống dòng
             Tach(_trangThai);
             Tach(_caDaXong);
             Tach(_cuaToi);
@@ -377,34 +378,183 @@ namespace TeamsTool.Views
             hang.Children.Add(_caDaXong);
             hang.Children.Add(_cuaToi);
             hang.Children.Add(_nhanVien);
+            hang.Children.Add(KieuTeams.Nut("☰ Cột", _mau, (s2, e2) => ChonCot(), chinh: false));
             var dk = new StackPanel();
             dk.Children.Add(hang);
             dk.Children.Add(_trangThai);
             _noiDung.Children.Add(KieuTeams.The(dk));
         }
 
-        /// <summary>Vẽ danh sách đơn từ _don (không tải lại) — dùng khi lọc và khi quay về từ chi tiết.</summary>
+        /// <summary>Vẽ danh sách đơn từ _don (không tải lại) — dùng khi lọc và khi quay về từ chi tiết. Dạng bảng như view Lists trên Teams.</summary>
         private void VeDon()
         {
             if (_tab == null) return;
             HienKhungDon();
+            _cuon.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto; // bảng rộng: kéo ngang
             string tenNv = _nhanVien.SelectedItem as string;
             string idNv = tenNv == null || tenNv == MoiNhanVien ? null : _danhBa.FirstOrDefault(kv => kv.Value == tenNv).Key;
             var loc = _don.Where(d => (_caDaXong.IsChecked == true || !d.DaXong) && (_cuaToi.IsChecked != true || d.CuaToi(_toiTen))
                                       && (idNv == null || SuaDon.CoNguoi(d, _cots, idNv))).ToList();
-            // Gom theo Hạn hoàn thành, ngày gần nhất trên cùng; đơn không có hạn xuống cuối
-            foreach (var nhom in loc.GroupBy(d => d.Han?.Date).OrderBy(g => g.Key ?? DateTime.MaxValue))
-            {
-                _noiDung.Children.Add(new TextBlock
-                {
-                    Text = (nhom.Key == null ? "Không có hạn" : "Hạn hoàn thành: " + nhom.Key.Value.ToString("dd/MM/yyyy")) + " (" + nhom.Count() + ")",
-                    FontWeight = FontWeights.SemiBold, Foreground = _mau, Margin = new Thickness(2, 6, 0, 4),
-                });
-                foreach (DonTeams d in nhom.OrderBy(d => d.Title))
-                    _noiDung.Children.Add(TheDon(d));
-            }
+            _noiDung.Children.Add(VeBang(loc));
             BaoTrangThai(loc.Count + " / " + _don.Count + " đơn (" + DateTime.Now.ToString("HH:mm") + ")" + _loiGhi);
             _oDanhSach = true;
+        }
+
+        // ---------- Bảng đơn ----------
+
+        private readonly HashSet<string> _nhomDong = new HashSet<string>(); // nhóm hạn đang thu gọn ("" = Chưa được gán)
+        // shortcut: vẽ tối đa 500 dòng (StackPanel không ảo hoá); nhiều hơn thì lọc / thu gọn nhóm — cần hơn thì chuyển sang ListView ảo hoá
+        private const int DongToiDa = 500;
+        private static readonly string[] MauNen = { "#DCEBFF", "#FFE3D6", "#DDF3DC", "#F1E1FF", "#FFF0C2", "#D6F2F2", "#FFDDE8", "#E6E6F5" };
+        private static readonly string[] MauChu = { "#1F4E99", "#9A3B10", "#1F6B2A", "#6B2C91", "#7A5B00", "#0F6466", "#9B1E4A", "#3D3D7A" };
+
+        /// <summary>Cột đang hiện: chọn ở ☰ Cột (registry cot_hien_&lt;listId&gt;), chưa chọn thì mặc định.</summary>
+        private List<CotList> CotHien()
+        {
+            string luu = CaiDatTeams.Doc("cot_hien_" + _tab[6]);
+            var kq = luu.Split('\n').Select(t => _cots.FirstOrDefault(c => c.Ten == t)).Where(c => c != null).ToList();
+            return kq.Count > 0 ? kq : BangDon.CotMacDinh(_cots, _don).Select(t => _cots.First(c => c.Ten == t)).ToList();
+        }
+
+        private static double DoRong(CotList c) =>
+            c.Ten == "Title" ? 110 : c.Loai == "personOrGroup" ? 150 : c.Loai == "dateTime" ? (c.CoGio ? 118 : 92)
+            : c.Loai == "choice" ? 120 : c.Loai == "boolean" ? 64 : c.Loai == "number" ? 80 : 170;
+
+        /// <summary>Một hàng bảng: cột 0 là vạch màu trái, các cột sau rộng cố định để mọi hàng thẳng cột.</summary>
+        private static Grid HangBang(List<CotList> cots, Brush nen)
+        {
+            var g = new Grid { Background = nen, HorizontalAlignment = HorizontalAlignment.Left };
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(5) });
+            foreach (CotList c in cots) g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(DoRong(c)) });
+            return g;
+        }
+
+        private static void DatO(Grid g, UIElement o, int cot)
+        {
+            Grid.SetColumn(o, cot);
+            g.Children.Add(o);
+        }
+
+        private static Border Nhan(string chu, CotList c)
+        {
+            bool nguoi = c.Loai == "personOrGroup";
+            int i = BangDon.MauNhan(chu, MauNen.Length);
+            Brush vien = nguoi ? KieuTeams.Mau(PhanTichTeams.BoDau(c.TieuDe).Contains("trien khai") ? "#D0528A" : "#2E9C76") : null;
+            return new Border
+            {
+                Background = nguoi ? Brushes.White : KieuTeams.Mau(MauNen[i]),
+                BorderBrush = vien,
+                BorderThickness = new Thickness(nguoi ? 1 : 0),
+                CornerRadius = new CornerRadius(nguoi ? 4 : 9),
+                Padding = new Thickness(6, 1, 6, 1),
+                Margin = new Thickness(0, 0, 3, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Child = new TextBlock { Text = nguoi ? "👤 " + chu : chu, FontSize = 11, Foreground = nguoi ? vien : KieuTeams.Mau(MauChu[i]),
+                                        FontWeight = nguoi ? FontWeights.SemiBold : FontWeights.Normal },
+            };
+        }
+
+        private static FrameworkElement O(CotList c, DonTeams d)
+        {
+            string gt = c.Ten == "Title" ? (d.Id == CaiDatTeams.DonChon ? "📌 " : "") + d.Title
+                                         : d.TatCa.FirstOrDefault(kv => kv.Key == c.TieuDe).Value ?? "";
+            if (gt.Length > 0 && (c.Loai == "personOrGroup" || c.Loai == "choice"))
+            {
+                var p = new StackPanel { Orientation = Orientation.Horizontal, ToolTip = gt };
+                foreach (string x in BangDon.TachNhan(gt)) p.Children.Add(Nhan(x, c));
+                return p;
+            }
+            return new TextBlock
+            {
+                Text = gt.Replace('\n', ' '), TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center,
+                ToolTip = gt.Length > 20 ? gt : null, FontSize = 11.5, FontWeight = c.Ten == "Title" ? FontWeights.SemiBold : FontWeights.Normal,
+            };
+        }
+
+        private UIElement VeBang(List<DonTeams> loc)
+        {
+            List<CotList> cots = CotHien();
+            var bang = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 4, 0, 0) };
+
+            var tieu = HangBang(cots, KieuTeams.Mau("#E9ECF2"));
+            for (int i = 0; i < cots.Count; i++)
+                DatO(tieu, new TextBlock { Text = cots[i].TieuDe.ToUpperInvariant(), FontSize = 10.5, FontWeight = FontWeights.SemiBold, Foreground = KieuTeams.ChuPhu,
+                                           Margin = new Thickness(6, 7, 6, 7), TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = cots[i].TieuDe }, i + 1);
+            bang.Children.Add(tieu);
+
+            DateTime homNay = DateTime.Today;
+            int daVe = 0;
+            foreach (var nhom in BangDon.NhomTheoHan(loc))
+            {
+                string khoa = nhom.Key?.ToString("dd/MM/yyyy") ?? "";
+                bool dong = _nhomDong.Contains(khoa);
+                var dau = new TextBlock
+                {
+                    Text = (dong ? "▸  " : "▾  ") + "HẠN HOÀN THÀNH: " + (khoa.Length == 0 ? "Chưa được gán" : khoa) + " (" + nhom.Count() + ")",
+                    FontWeight = FontWeights.SemiBold, FontSize = 13, Margin = new Thickness(4, 12, 0, 6), Cursor = Cursors.Hand,
+                };
+                dau.MouseLeftButtonUp += (s, e) => { if (!_nhomDong.Remove(khoa)) _nhomDong.Add(khoa); VeDon(); };
+                bang.Children.Add(dau);
+                if (dong) continue;
+
+                foreach (DonTeams d in nhom.OrderBy(x => x.Title))
+                {
+                    if (daVe >= DongToiDa) break;
+                    string mau = BangDon.MauDong(d, homNay);
+                    Brush nen = KieuTeams.Mau(mau == "hong" ? "#F6D3DA" : mau == "vang" ? "#F7E2B0" : mau == "xanh" ? "#CBE3FA" : "#FFFFFF");
+                    var h = HangBang(cots, nen);
+                    h.MinHeight = 30;
+                    h.Margin = new Thickness(0, 0, 0, 1);
+                    h.Cursor = Cursors.Hand;
+                    if (d.CuaToi(_toiTen)) DatO(h, new Border { Background = _mau }, 0); // đơn của tôi: vạch màu trái
+                    for (int i = 0; i < cots.Count; i++)
+                    {
+                        FrameworkElement o = O(cots[i], d);
+                        o.Margin = new Thickness(6, 3, 6, 3);
+                        DatO(h, new Border { ClipToBounds = true, Child = o }, i + 1);
+                    }
+                    h.MouseLeftButtonUp += (s, e) => HienChiTiet(d);
+                    bang.Children.Add(h);
+                    daVe++;
+                }
+                bang.Children.Add(new TextBlock { Text = nhom.Count().ToString(), FontWeight = FontWeights.SemiBold, Margin = new Thickness(16, 4, 0, 4) });
+            }
+            if (daVe >= DongToiDa)
+                bang.Children.Add(new TextBlock { Text = "Chỉ hiện " + DongToiDa + " dòng đầu — lọc theo nhân viên hoặc thu gọn nhóm để xem các đơn khác.",
+                                                  Foreground = KieuTeams.Mau("#B42318"), Margin = new Thickness(4, 6, 0, 0) });
+            bang.Children.Add(new TextBlock { Text = "Số lượng " + loc.Count, FontWeight = FontWeights.SemiBold, Margin = new Thickness(4, 10, 0, 10) });
+            return bang;
+        }
+
+        /// <summary>☰ Cột: tích cột muốn hiện (theo thứ tự cột của danh sách), nhớ riêng từng danh sách.</summary>
+        private void ChonCot()
+        {
+            var dang = new HashSet<string>(CotHien().Select(c => c.Ten));
+            var hop = _cots.Select(c => new CheckBox { Content = c.TieuDe, Tag = c.Ten, IsChecked = dang.Contains(c.Ten), Margin = new Thickness(0, 2, 0, 2) }).ToList();
+            var ds = new StackPanel();
+            hop.ForEach(h => ds.Children.Add(h));
+            var w = new Window
+            {
+                Title = "Chọn cột hiện", Width = 340, Height = 520, WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = Window.GetWindow(this), ShowInTaskbar = false, Background = KieuTeams.Nen, FontFamily = KieuTeams.Font,
+            };
+            var nut = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0) };
+            nut.Children.Add(KieuTeams.Nut("Mặc định", _mau, (s, e) => { CaiDatTeams.Ghi("cot_hien_" + _tab[6], ""); w.Close(); VeDon(); }, chinh: false));
+            nut.Children.Add(KieuTeams.Nut("Huỷ", _mau, (s, e) => w.Close(), chinh: false));
+            nut.Children.Add(KieuTeams.Nut("Lưu", _mau, (s, e) =>
+            {
+                var chon = hop.Where(h => h.IsChecked == true).Select(h => (string)h.Tag).ToList();
+                if (chon.Count == 0) return;
+                CaiDatTeams.Ghi("cot_hien_" + _tab[6], string.Join("\n", chon));
+                w.Close();
+                VeDon();
+            }));
+            var goc = new DockPanel { Margin = new Thickness(12) };
+            DockPanel.SetDock(nut, Dock.Bottom);
+            goc.Children.Add(nut);
+            goc.Children.Add(new ScrollViewer { Content = ds, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
+            w.Content = goc;
+            w.ShowDialog();
         }
 
         private Border NhanTrangThai(DonTeams d)
@@ -420,26 +570,6 @@ namespace TeamsTool.Views
                 VerticalAlignment = VerticalAlignment.Top,
                 Child = new TextBlock { Text = chu, FontSize = 11, Foreground = d.DaXong ? KieuTeams.Mau("#1F7A4D") : _mau },
             };
-        }
-
-        private Border TheDon(DonTeams d)
-        {
-            var p = new StackPanel();
-            var dau = new DockPanel();
-            Border nhan = NhanTrangThai(d);
-            if (nhan != null) { nhan.Margin = new Thickness(6, 0, 0, 0); DockPanel.SetDock(nhan, Dock.Right); dau.Children.Add(nhan); }
-            dau.Children.Add(new TextBlock { Text = (d.Id == CaiDatTeams.DonChon ? "📌 " : "") + (d.Title.Length > 0 ? d.Title : "(không tên)"), FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
-            p.Children.Add(dau);
-            if (d.TrienKhai.Length > 0) p.Children.Add(new TextBlock { Text = "Triển khai: " + d.TrienKhai, Foreground = KieuTeams.ChuPhu, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
-            if (d.Check.Length > 0) p.Children.Add(new TextBlock { Text = "Check: " + d.Check, Foreground = KieuTeams.ChuPhu, TextWrapping = TextWrapping.Wrap });
-
-            var the = KieuTeams.The(p);
-            the.Padding = new Thickness(10, 7, 10, 7);
-            the.Margin = new Thickness(0, 0, 0, 4);
-            the.Cursor = Cursors.Hand;
-            if (d.CuaToi(_toiTen)) { the.BorderBrush = _mau; the.BorderThickness = new Thickness(3, 1, 1, 1); } // đơn của tôi nổi bật
-            the.MouseLeftButtonUp += (s, e) => HienChiTiet(d);
-            return the;
         }
 
         private void HienChiTiet(DonTeams d, string thongBao = null)
