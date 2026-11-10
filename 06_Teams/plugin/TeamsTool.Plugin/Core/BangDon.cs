@@ -56,6 +56,17 @@ namespace TeamsTool.Core
         public static List<IGrouping<DateTime?, DonTeams>> NhomTheoHan(IEnumerable<DonTeams> don) =>
             don.GroupBy(d => d.Han?.Date).OrderBy(g => g.Key ?? DateTime.MinValue).ToList();
 
+        /// <summary>Kéo cột tu thả vào chỗ cột den: tu chiếm vị trí của den, các cột giữa dịch một bậc. Không đổi → null.</summary>
+        public static List<string> DoiCho(List<string> cot, string tu, string den)
+        {
+            int a = cot.IndexOf(tu), b = cot.IndexOf(den);
+            if (a < 0 || b < 0 || a == b) return null;
+            var kq = new List<string>(cot);
+            kq.RemoveAt(a);
+            kq.Insert(b, tu);
+            return kq;
+        }
+
         /// <summary>Giá trị ô "a, b" → từng nhãn (choice nhiều / nhiều người).</summary>
         public static List<string> TachNhan(string giaTri) =>
             (giaTri ?? "").Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).Where(x => x.Length > 0).ToList();

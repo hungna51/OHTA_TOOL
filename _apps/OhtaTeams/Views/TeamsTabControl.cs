@@ -471,6 +471,56 @@ namespace TeamsTool.Views
             };
         }
 
+        /// <summary>
+        /// Ô tiêu đề cột kéo thả được: nhấn giữ rồi kéo sang tiêu đề khác, thả = cột chiếm chỗ cột đó.
+        /// Lúc kéo, vạch màu ở cạnh trái / phải ô đích cho biết cột sẽ nằm trước / sau. Thứ tự lưu như ☰ Cột.
+        /// </summary>
+        private Border OTieuDe(List<CotList> cots, int i)
+        {
+            CotList c = cots[i];
+            var o = new Border
+            {
+                Background = Brushes.Transparent, // để nhận chuột trên cả ô
+                BorderThickness = new Thickness(3, 0, 3, 0), BorderBrush = Brushes.Transparent,
+                AllowDrop = true, Cursor = Cursors.SizeAll, ToolTip = c.TieuDe + " — kéo để đổi vị trí cột",
+                Child = new TextBlock { Text = c.TieuDe.ToUpperInvariant(), FontSize = 10.5, FontWeight = FontWeights.SemiBold, Foreground = KieuTeams.ChuPhu,
+                                        Margin = new Thickness(3, 7, 3, 7), TextTrimming = TextTrimming.CharacterEllipsis },
+            };
+            Point? batDau = null;
+            o.PreviewMouseLeftButtonDown += (s, e) => batDau = e.GetPosition(o);
+            o.PreviewMouseLeftButtonUp += (s, e) => batDau = null;
+            o.MouseMove += (s, e) =>
+            {
+                if (batDau == null || e.LeftButton != MouseButtonState.Pressed) return;
+                Vector d = e.GetPosition(o) - batDau.Value;
+                if (Math.Abs(d.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(d.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+                batDau = null;
+                o.Opacity = 0.5;
+                DragDrop.DoDragDrop(o, new DataObject("ohta-cot", c.Ten), DragDropEffects.Move);
+                o.Opacity = 1;
+            };
+            o.DragOver += (s, e) =>
+            {
+                string tu = e.Data.GetData("ohta-cot") as string;
+                int a = cots.FindIndex(x => x.Ten == tu);
+                e.Effects = a < 0 || a == i ? DragDropEffects.None : DragDropEffects.Move;
+                o.BorderBrush = e.Effects == DragDropEffects.None ? Brushes.Transparent : _mau;
+                o.BorderThickness = a < i ? new Thickness(0, 0, 3, 0) : new Thickness(3, 0, 0, 0); // kéo sang phải: cột sẽ nằm sau ô này
+                e.Handled = true;
+            };
+            o.DragLeave += (s, e) => o.BorderBrush = Brushes.Transparent;
+            o.Drop += (s, e) =>
+            {
+                o.BorderBrush = Brushes.Transparent;
+                List<string> moi = BangDon.DoiCho(cots.Select(x => x.Ten).ToList(), e.Data.GetData("ohta-cot") as string, c.Ten);
+                if (moi == null) return;
+                CaiDatTeams.Ghi("cot_hien_" + _tab[6], string.Join("\n", moi));
+                double ngang = _cuon.HorizontalOffset;
+                Dispatcher.BeginInvoke(new Action(() => { VeDon(); _cuon.ScrollToHorizontalOffset(ngang); })); // vẽ lại sau khi kéo thả kết thúc
+            };
+            return o;
+        }
+
         private UIElement VeBang(List<DonTeams> loc)
         {
             List<CotList> cots = CotHien();
@@ -478,8 +528,7 @@ namespace TeamsTool.Views
 
             var tieu = HangBang(cots, KieuTeams.Mau("#E9ECF2"));
             for (int i = 0; i < cots.Count; i++)
-                DatO(tieu, new TextBlock { Text = cots[i].TieuDe.ToUpperInvariant(), FontSize = 10.5, FontWeight = FontWeights.SemiBold, Foreground = KieuTeams.ChuPhu,
-                                           Margin = new Thickness(6, 7, 6, 7), TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = cots[i].TieuDe }, i + 1);
+                DatO(tieu, OTieuDe(cots, i), i + 1);
             bang.Children.Add(tieu);
 
             DateTime homNay = DateTime.Today;

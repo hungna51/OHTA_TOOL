@@ -253,7 +253,11 @@ namespace TeamsTool.Tests
   { ""name"": ""TK"", ""displayName"": ""NGƯỜI TRIỂN KHAI"", ""personOrGroup"": {} },
   { ""name"": ""Khac"", ""displayName"": ""Khác"", ""text"": {} } ]}");
             Kiem("cot mac dinh: theo thu tu view tien do", string.Join(",", BangDon.CotMacDinh(csView, new List<DonTeams>())), "Title,TK,CD,NK,Cty");
-            Kiem("tach nhan", string.Join("|", BangDon.TachNhan("切板, 曲げ,  ")), "切板|曲げ");
+            var cotK = new List<string> { "A", "B", "C", "D" };
+            Kiem("keo cot: sang phai chiem cho cot dich", string.Join("", BangDon.DoiCho(cotK, "A", "C")), "BCAD");
+            Kiem("keo cot: sang trai chiem cho cot dich", string.Join("", BangDon.DoiCho(cotK, "D", "B")), "ADBC");
+            Kiem("keo cot: tha cho cu / cot la -> null", BangDon.DoiCho(cotK, "B", "B") == null && BangDon.DoiCho(cotK, "X", "A") == null, true);
+            Kiem("tach nhan",string.Join("|", BangDon.TachNhan("切板, 曲げ,  ")), "切板|曲げ");
             Kiem("loc nhan vien: co trong cot nguoi bat ky", SuaDon.CoNguoi(dN[0], cs, "12") + "|" + SuaDon.CoNguoi(dN[1], cs, "55") + "|" + SuaDon.CoNguoi(dN[1], cs, "12"), "True|True|False");
             Kiem("nguoi body: 1 nguoi bo trong = null",bN.ContainsKey("Ng1LookupId") && bN.Get("Ng1LookupId") == null, true);
 
