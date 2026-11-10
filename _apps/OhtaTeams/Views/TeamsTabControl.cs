@@ -526,16 +526,52 @@ namespace TeamsTool.Views
             return bang;
         }
 
-        /// <summary>☰ Cột: tích cột muốn hiện (theo thứ tự cột của danh sách), nhớ riêng từng danh sách.</summary>
+        /// <summary>
+        /// ☰ Cột: tích cột muốn hiện và sắp thứ tự bằng ▲ ▼ (cột đang hiện ở đầu, đúng thứ tự trên bảng),
+        /// nhớ riêng từng danh sách.
+        /// </summary>
         private void ChonCot()
         {
-            var dang = new HashSet<string>(CotHien().Select(c => c.Ten));
-            var hop = _cots.Select(c => new CheckBox { Content = c.TieuDe, Tag = c.Ten, IsChecked = dang.Contains(c.Ten), Margin = new Thickness(0, 2, 0, 2) }).ToList();
+            List<CotList> hien = CotHien();
+            var hop = hien.Concat(_cots.Where(c => !hien.Contains(c)))
+                          .Select(c => new CheckBox { Content = c.TieuDe, Tag = c.Ten, IsChecked = hien.Contains(c), VerticalAlignment = VerticalAlignment.Center })
+                          .ToList();
             var ds = new StackPanel();
-            hop.ForEach(h => ds.Children.Add(h));
+            void Ve()
+            {
+                ds.Children.Clear();
+                for (int i = 0; i < hop.Count; i++)
+                {
+                    int vt = i;
+                    var hang = new DockPanel { Margin = new Thickness(0, 1, 0, 1) };
+                    Button Doi(string chu, int buoc, bool duoc)
+                    {
+                        var b = new Button { Content = chu, Width = 26, Height = 22, Margin = new Thickness(0, 0, 3, 0), IsEnabled = duoc, Padding = new Thickness(0),
+                                             ToolTip = buoc < 0 ? "Đưa lên (sang trái trên bảng)" : "Đưa xuống (sang phải trên bảng)" };
+                        b.Click += (s, e) =>
+                        {
+                            CheckBox h = hop[vt];
+                            hop.RemoveAt(vt);
+                            hop.Insert(vt + buoc, h);
+                            Ve();
+                        };
+                        return b;
+                    }
+                    var len = Doi("▲", -1, vt > 0);
+                    var xuong = Doi("▼", 1, vt < hop.Count - 1);
+                    DockPanel.SetDock(len, Dock.Left);
+                    DockPanel.SetDock(xuong, Dock.Left);
+                    hang.Children.Add(len);
+                    hang.Children.Add(xuong);
+                    (hop[vt].Parent as Panel)?.Children.Remove(hop[vt]);
+                    hang.Children.Add(hop[vt]);
+                    ds.Children.Add(hang);
+                }
+            }
+            Ve();
             var w = new Window
             {
-                Title = "Chọn cột hiện", Width = 340, Height = 520, WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Title = "Chọn và sắp xếp cột", Width = 380, Height = 600, WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 Owner = Window.GetWindow(this), ShowInTaskbar = false, Background = KieuTeams.Nen, FontFamily = KieuTeams.Font,
             };
             var nut = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0) };
