@@ -75,6 +75,15 @@ namespace TeamsTool.Core
         public static List<IGrouping<DateTime?, DonTeams>> NhomTheoHan(IEnumerable<DonTeams> don) =>
             don.GroupBy(d => d.Han?.Date).OrderBy(g => g.Key ?? DateTime.MinValue).ToList();
 
+        public const string PhanNhat = "OHTA COMPANY", PhanViet = "OFT BY OHTA";
+
+        /// <summary>
+        /// Phần của form chi tiết: Title và cột tên có chữ Nhật (bên OHTA nhập) → OHTA COMPANY, còn lại (bên OFT) → OFT BY OHTA.
+        /// shortcut: Graph không trả cấu hình phần của form Lists — chia theo tên cột; xưởng đổi cách chia thì sửa ở đây.
+        /// </summary>
+        public static string PhanForm(CotList c) =>
+            c.Ten == "Title" || (c.TieuDe ?? "").Any(ch => (ch >= '\u3040' && ch <= '\u30FF') || (ch >= '\u4E00' && ch <= '\u9FFF')) ? PhanNhat : PhanViet;
+
         /// <summary>Kéo cột tu thả vào chỗ cột den: tu chiếm vị trí của den, các cột giữa dịch một bậc. Không đổi → null.</summary>
         public static List<string> DoiCho(List<string> cot, string tu, string den)
         {

@@ -435,7 +435,7 @@ namespace TeamsTool.Views
             g.Children.Add(o);
         }
 
-        private static Border Nhan(string chu, CotList c)
+        private static Border Nhan(string chu, CotList c, double rong = 0)
         {
             bool nguoi = c.Loai == "personOrGroup";
             int i = BangDon.MauNhan(chu, MauNen.Length);
@@ -449,7 +449,7 @@ namespace TeamsTool.Views
                 CornerRadius = new CornerRadius(nguoi ? 4 : 9),
                 Padding = new Thickness(6, 1, 6, 1),
                 Margin = new Thickness(0, 1, 3, 1),
-                MaxWidth = DoRong(c) - 12, // nhãn dài hơn cột: cắt "…", rê chuột xem đủ (ToolTip của ô)
+                MaxWidth = rong > 0 ? rong : DoRong(c) - 12, // nhãn dài hơn cột: cắt "…", rê chuột xem đủ (ToolTip của ô)
                 VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock { Text = nguoi ? "👤 " + chu : chu, FontSize = 11, Foreground = nguoi ? vien : KieuTeams.Mau(tt?.Chu ?? MauChu[i]),
                                         FontWeight = nguoi ? FontWeights.SemiBold : FontWeights.Normal, TextTrimming = TextTrimming.CharacterEllipsis },
@@ -645,48 +645,134 @@ namespace TeamsTool.Views
             w.ShowDialog();
         }
 
-        private Border NhanTrangThai(DonTeams d)
-        {
-            string chu = d.TrangThai.Length > 0 ? d.TrangThai : d.StatusJp;
-            if (chu.Length == 0) return null;
-            return new Border
-            {
-                Background = KieuTeams.Mau(d.DaXong ? "#E3F4EA" : "#EEF0FA"),
-                CornerRadius = new CornerRadius(9),
-                Padding = new Thickness(8, 1, 8, 1),
-                HorizontalAlignment = HorizontalAlignment.Left,
-                VerticalAlignment = VerticalAlignment.Top,
-                Child = new TextBlock { Text = chu, FontSize = 11, Foreground = d.DaXong ? KieuTeams.Mau("#1F7A4D") : _mau },
-            };
-        }
-
-        private void HienChiTiet(DonTeams d, string thongBao = null)
+        /// <summary>
+        /// Chi tiết đơn dạng form Lists: 2 phần (OHTA COMPANY / OFT BY OHTA), mỗi phần lưới 3 cột.
+        /// Bấm một ô sửa được → ô nhập + ✓ Lưu / ✕ Huỷ ngay tại chỗ; ✓ gửi riêng cột đó lên Teams. dangSua = tên cột đang mở ô nhập.
+        /// </summary>
+        private void HienChiTiet(DonTeams d, string thongBao = null, string dangSua = null)
         {
             DauTrang(d.Title, "Danh sách đơn", VeDon);
-            _noiDung.Children.Remove(_trangThai);
+            BaoTrangThai("");
             if (thongBao != null) _noiDung.Children.Add(new TextBlock { Text = thongBao, Foreground = KieuTeams.Mau("#1F7A4D"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6) });
-            Border nhan = NhanTrangThai(d);
-            if (nhan != null) { nhan.Margin = new Thickness(0, 0, 0, 6); _noiDung.Children.Add(nhan); }
+            _noiDung.Children.Add(NutChiTiet(d));
 
-            var luoi = new Grid();
-            luoi.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.42, GridUnitType.Star) });
-            luoi.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.58, GridUnitType.Star) });
-            int r = 0;
-            foreach (var kv in d.TatCa)
+            bool sua = !string.IsNullOrEmpty(d.ETag);
+            List<CotList> cots = _cots.Count > 0 ? _cots
+                : d.TatCa.Select(kv => new CotList { Ten = kv.Key, TieuDe = kv.Key, Loai = "khac" }).ToList(); // chưa có cột (hiếm): chỉ xem
+            foreach (string phan in new[] { BangDon.PhanNhat, BangDon.PhanViet })
             {
-                luoi.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                var ten = new TextBlock { Text = kv.Key, Foreground = KieuTeams.ChuPhu, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 8, 3) };
-                var gt = new TextBox { Text = kv.Value, IsReadOnly = true, BorderThickness = new Thickness(0), Background = Brushes.Transparent,
-                                       TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 3) }; // TextBox để chọn + chép được
-                Grid.SetRow(ten, r);
-                Grid.SetRow(gt, r);
-                Grid.SetColumn(gt, 1);
-                luoi.Children.Add(ten);
-                luoi.Children.Add(gt);
-                r++;
+                var cotPhan = cots.Where(c => BangDon.PhanForm(c) == phan).ToList();
+                if (cotPhan.Count == 0) continue;
+                var khoi = new StackPanel();
+                khoi.Children.Add(new TextBlock { Text = phan, FontWeight = FontWeights.Bold, FontSize = 14, Margin = new Thickness(0, 0, 0, 10) });
+                var luoi = new Grid();
+                for (int k = 0; k < 3; k++) luoi.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                for (int i = 0; i < cotPhan.Count; i++)
+                {
+                    if (i % 3 == 0) luoi.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                    FrameworkElement o = OTruong(d, cotPhan[i], sua, cotPhan[i].Ten == dangSua);
+                    Grid.SetRow(o, i / 3);
+                    Grid.SetColumn(o, i % 3);
+                    luoi.Children.Add(o);
+                }
+                khoi.Children.Add(luoi);
+                var the = KieuTeams.The(khoi);
+                the.Margin = new Thickness(0, 0, 0, 8);
+                _noiDung.Children.Add(the);
             }
-            _noiDung.Children.Add(KieuTeams.The(luoi));
-            var nut = new WrapPanel();
+
+            var tep = new StackPanel();
+            tep.Children.Add(new TextBlock { Text = "📎 Tệp đính kèm", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) });
+            tep.Children.Add(new TextBlock { Text = "Graph chưa cho đọc tệp đính kèm của đơn — xem trên Teams.", Foreground = KieuTeams.ChuPhu });
+            if (!string.IsNullOrEmpty(d.WebUrl))
+            {
+                var mo = KieuTeams.Nut("Mở đơn trên Teams để xem tệp", _mau, (s, e) => MoNgoai(d.WebUrl), chinh: false);
+                mo.HorizontalAlignment = HorizontalAlignment.Left;
+                mo.Margin = new Thickness(0, 6, 0, 0);
+                tep.Children.Add(mo);
+            }
+            _noiDung.Children.Add(KieuTeams.The(tep));
+        }
+
+        /// <summary>Biểu tượng loại cột (font Segoe MDL2 Assets có sẵn trên Windows 10/11).</summary>
+        private static string BieuTuong(CotList c) =>
+            c.Ten == "Title" ? "\uE8A5" : c.Loai == "dateTime" ? "\uE787" : c.Loai == "personOrGroup" ? "\uE77B"
+            : c.Loai == "choice" ? (c.ChonNhieu ? "\uE8FD" : "\uE73E") : c.Loai == "number" ? "\uE8EF" : c.Loai == "boolean" ? "\uE73A" : "\uE8D2";
+
+        /// <summary>Một ô của form: tên cột + giá trị (bấm để sửa) hoặc ô nhập đang mở.</summary>
+        private FrameworkElement OTruong(DonTeams d, CotList c, bool choSua, bool dangSua)
+        {
+            var p = new StackPanel { Margin = new Thickness(0, 0, 16, 14) };
+            var nhan = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 4) };
+            nhan.Children.Add(new TextBlock { Text = BieuTuong(c), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 11, Foreground = KieuTeams.ChuPhu,
+                                              VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) });
+            nhan.Children.Add(new TextBlock { Text = c.TieuDe, FontWeight = FontWeights.SemiBold, FontSize = 11.5, TextWrapping = TextWrapping.Wrap });
+            p.Children.Add(nhan);
+            bool suaDuoc = choSua && c.SuaDuoc;
+
+            if (dangSua && suaDuoc)
+            {
+                object cu = SuaDon.GiaTriForm(c, d.Tho.TryGetValue(c.Ten, out object tho) ? tho : null);
+                var (oNhap, doc) = TaoONhap(c, cu);
+                p.Children.Add(oNhap);
+                var nut = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
+                nut.Children.Add(KieuTeams.Nut("✓ Lưu", _mau, (s, e) => LuuMotCot(d, c, cu, doc)));
+                nut.Children.Add(KieuTeams.Nut("✕ Huỷ", _mau, (s, e) => HienChiTiet(d), chinh: false));
+                p.Children.Add(nut);
+                Dispatcher.BeginInvoke(new Action(() => (oNhap as Control ?? FindFirstControl(oNhap))?.Focus()));
+                return p;
+            }
+
+            string gt = c.Ten == "Title" ? d.Title : d.TatCa.FirstOrDefault(kv => kv.Key == c.TieuDe).Value ?? "";
+            FrameworkElement giaTri;
+            if (gt.Length == 0)
+                giaTri = new TextBlock { Text = suaDuoc ? "Nhập giá trị tại đây" : "", Foreground = KieuTeams.Mau("#9AA3AF") };
+            else if (c.Loai == "personOrGroup" || c.Loai == "choice")
+            {
+                var w = new WrapPanel();
+                foreach (string x in BangDon.TachNhan(gt)) w.Children.Add(Nhan(x, c, 400));
+                giaTri = w;
+            }
+            else giaTri = new TextBlock { Text = gt, TextWrapping = TextWrapping.Wrap, FontWeight = c.Ten == "Title" ? FontWeights.SemiBold : FontWeights.Normal };
+
+            if (!suaDuoc) { p.Children.Add(giaTri); return p; }
+            var vung = new Border { Child = giaTri, Padding = new Thickness(4, 3, 4, 3), Margin = new Thickness(-4, 0, 0, 0), CornerRadius = new CornerRadius(4),
+                                    Background = Brushes.Transparent, Cursor = Cursors.Hand, ToolTip = "Bấm để sửa" };
+            vung.MouseEnter += (s, e) => vung.Background = KieuTeams.Mau("#EEF0F6");
+            vung.MouseLeave += (s, e) => vung.Background = Brushes.Transparent;
+            vung.MouseLeftButtonUp += (s, e) => HienChiTiet(d, null, c.Ten);
+            p.Children.Add(vung);
+            return p;
+        }
+
+        private static Control FindFirstControl(DependencyObject goc)
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(goc); i++)
+            {
+                DependencyObject con = VisualTreeHelper.GetChild(goc, i);
+                if (con is TextBox || con is ComboBox || con is DatePicker || con is CheckBox) return (Control)con;
+                Control sau = FindFirstControl(con);
+                if (sau != null) return sau;
+            }
+            return null;
+        }
+
+        /// <summary>✓ Lưu một ô: đọc ô nhập, không đổi thì đóng ô, sai thì báo, đúng thì gửi ngay cột đó lên Teams.</summary>
+        private void LuuMotCot(DonTeams d, CotList c, object cu, Func<object> doc)
+        {
+            object moi;
+            try { moi = doc(); }
+            catch (FormatException ex) { BaoTrangThai(ex.Message); return; }
+            if (SuaDon.GiongNhau(cu, moi)) { HienChiTiet(d); return; }
+            string loi = SuaDon.KiemTra(c, moi);
+            if (loi != null) { BaoTrangThai(loi); return; }
+            GuiSua(d, new List<KeyValuePair<CotList, object>> { new KeyValuePair<CotList, object>(c, moi) });
+        }
+
+        /// <summary>Hàng nút trên đầu chi tiết: 📌, ✏ Sửa nhiều ô, Mở trên Teams.</summary>
+        private WrapPanel NutChiTiet(DonTeams d)
+        {
+            var nut = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
             bool dangChon = d.Id == CaiDatTeams.DonChon;
             nut.Children.Add(KieuTeams.Nut(dangChon ? "📌 Bỏ đang làm" : "📌 Đang làm", _mau, (s, e) =>
             {
@@ -695,9 +781,9 @@ namespace TeamsTool.Views
                 if (_loiGhi.Length > 0) MessageBox.Show(_loiGhi.TrimStart(' ', '—'), "Teams", MessageBoxButton.OK, MessageBoxImage.Warning);
                 HienChiTiet(d);
             }, chinh: !dangChon));
-            if (_cots.Any(c => c.SuaDuoc) && !string.IsNullOrEmpty(d.ETag)) nut.Children.Add(KieuTeams.Nut("✏ Sửa đơn", _mau, (s, e) => HienSua(d), chinh: false));
+            if (_cots.Any(c => c.SuaDuoc) && !string.IsNullOrEmpty(d.ETag)) nut.Children.Add(KieuTeams.Nut("✏ Sửa nhiều ô", _mau, (s, e) => HienSua(d), chinh: false));
             if (!string.IsNullOrEmpty(d.WebUrl)) nut.Children.Add(KieuTeams.Nut("Mở trên Teams", _mau, (s, e) => MoNgoai(d.WebUrl), chinh: dangChon));
-            _noiDung.Children.Add(nut);
+            return nut;
         }
 
         // ---------- Sửa đơn ----------
@@ -878,21 +964,34 @@ namespace TeamsTool.Views
             if (MessageBox.Show("Lưu " + doi.Count + " thay đổi của đơn " + d.Title + " lên Teams?\n\n" + ds, "Sửa đơn",
                                 MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
 
+            GuiSua(d, doi.Select(x => new KeyValuePair<CotList, object>(x.Cot, x.Moi)).ToList());
+        }
+
+        /// <summary>
+        /// Gửi các cột đổi lên Teams (kèm eTag chống ghi đè), rồi tải lại đúng đơn đó (~0,3 s, không tải cả danh sách)
+        /// và hiện lại chi tiết. Người khác vừa sửa đơn → không ghi, vẫn tải bản mới để sửa tiếp.
+        /// </summary>
+        private void GuiSua(DonTeams d, List<KeyValuePair<CotList, object>> doi)
+        {
             string siteId = _tab[5], listId = _tab[6];
-            string body = SuaDon.Body(doi.Select(x => new KeyValuePair<CotList, object>(x.Cot, x.Moi)));
+            string body = SuaDon.Body(doi);
             Chay(async () =>
             {
                 BaoTrangThai("Đang lưu lên Teams…");
-                string thongBao = "Đã lưu " + doi.Count + " thay đổi lên Teams (" + DateTime.Now.ToString("HH:mm") + ").";
+                string thongBao = "Đã lưu " + string.Join(", ", doi.Select(x => x.Key.TieuDe)) + " lên Teams (" + DateTime.Now.ToString("HH:mm") + ").";
                 try { await GraphTeams.SuaDon(siteId, listId, d.Id, d.ETag, body, CancellationToken.None); }
                 catch (DonDaDoiException ex) { thongBao = ex.Message; } // vẫn tải lại bên dưới để có bản mới
                 BaoTrangThai("Đang tải lại đơn…");
-                var tho = await GraphTeams.TaiList(siteId, listId, CancellationToken.None);
-                var moi = await Task.Run(() => PhanTichTeams.DocToanBo(tho));
+                string json = await GraphTeams.TaiMotDon(siteId, listId, d.Id, CancellationToken.None);
                 if (_tab?[6] != listId) return;
-                DatDon(tho, moi);
-                DonTeams sau = _don.FirstOrDefault(x => x.Id == d.Id);
-                if (sau != null) HienChiTiet(sau, thongBao); else VeDon();
+                var ten = _danhBa.ToDictionary(kv => kv.Key, kv => kv.Value);
+                DonTeams sau = PhanTichTeams.DocDon(json, _cots, PhanTichTeams.KhopCot(_cots),
+                                                    id => id != null && ten.TryGetValue(id, out string t) ? t : "#" + id).FirstOrDefault();
+                if (sau == null) { VeDon(); return; }
+                int vt = _don.FindIndex(x => x.Id == d.Id);
+                if (vt >= 0) _don[vt] = sau; else _don.Add(sau);
+                GhiDangLam();
+                HienChiTiet(sau, thongBao);
             });
         }
 

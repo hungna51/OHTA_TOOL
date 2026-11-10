@@ -341,6 +341,10 @@ namespace TeamsTool.Services
             using (await Gui(new HttpMethod("PATCH"), url, body, ct, ghi: true, ifMatch: eTag)) { }
         }
 
+        /// <summary>Một đơn (sau khi sửa) dạng một trang {"value":[item]} để PhanTichTeams.DocDon đọc như danh sách.</summary>
+        public static async Task<string> TaiMotDon(string siteId, string listId, string itemId, CancellationToken ct) =>
+            "{\"value\":[" + await GetJson("/sites/" + siteId + "/lists/" + listId + "/items/" + Uri.EscapeDataString(itemId) + "?$expand=fields", ct) + "]}";
+
         /// <summary>Tải hết các trang theo @odata.nextLink (tối đa soTrang trang).</summary>
         private static async Task<List<string>> TaiTrang(string url, int soTrang, CancellationToken ct)
         {
