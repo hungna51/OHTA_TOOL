@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using OhtaTool.Plugin.Core;
 
@@ -19,6 +20,10 @@ namespace TeamsTool.Core
 
     public static class PhanTichDangLam
     {
+        /// <summary>%LOCALAPPDATA%\OHTA_TOOL\teams\dang_lam.json (ngoài OneDrive / repo).</summary>
+        public static string FileMacDinh => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OHTA_TOOL", "teams", "dang_lam.json");
+
         private const string KieuNgay = "yyyy-MM-dd";
         private const string KieuLuc = "yyyy-MM-ddTHH:mm:ss";
 
@@ -50,6 +55,42 @@ namespace TeamsTool.Core
             goc.Set("don_chon", dl.DonChon ?? "");
             goc.Set("don", ds);
             return JsonLite.Serialize(goc);
+        }
+
+        public const int SauToiDa = 3;  // thư mục đơn nằm tối đa 3 cấp dưới thư mục gốc
+        public const int TitleToiThieu = 3; // Title quá ngắn ("1", "A") khớp bừa mọi thư mục
+
+        /// <summary>Tên thư mục có chứa Title đơn (bỏ dấu, không phân biệt hoa thường).</summary>
+        public static bool TenKhop(string tenThuMuc, string title)
+        {
+            string t = PhanTichTeams.BoDau(title ?? "");
+            return t.Length >= TitleToiThieu && PhanTichTeams.BoDau(tenThuMuc ?? "").Contains(t);
+        }
+
+        /// <summary>
+        /// Đơn mà bản vẽ thuộc về: một trong ≤ 3 thư mục đầu tiên dưới thư mục gốc (trên đường tới file) có tên chứa Title đơn.
+        /// Nhiều đơn khớp → Title dài nhất. Bản vẽ ngoài thư mục gốc / chưa lưu → null.
+        /// </summary>
+        public static DonTeams KhopBanVe(string banVe, DangLam dl)
+        {
+            if (dl == null || string.IsNullOrWhiteSpace(banVe) || string.IsNullOrWhiteSpace(dl.ThuMucGoc)) return null;
+            string goc = dl.ThuMucGoc.Replace('/', '\\').TrimEnd('\\') + "\\";
+            string f = banVe.Replace('/', '\\');
+            if (!f.StartsWith(goc, StringComparison.OrdinalIgnoreCase)) return null;
+            string[] phan = f.Substring(goc.Length).Split('\\');
+            var thuMuc = phan.Take(phan.Length - 1).Take(SauToiDa).ToList(); // bỏ tên file
+            return dl.Don.Where(d => thuMuc.Any(t => TenKhop(t, d.Title)))
+                         .OrderByDescending(d => PhanTichTeams.BoDau(d.Title).Length)
+                         .FirstOrDefault();
+        }
+
+        /// <summary>Đơn tab CAD hiện: khớp bản vẽ trước, không có thì đơn 📌; TheoBanVe cho biết lấy theo cách nào.</summary>
+        public static (DonTeams Don, bool TheoBanVe) DonDangLam(string banVe, DangLam dl)
+        {
+            DonTeams khop = KhopBanVe(banVe, dl);
+            if (khop != null) return (khop, true);
+            if (dl == null || string.IsNullOrEmpty(dl.DonChon)) return (null, false);
+            return (dl.Don.FirstOrDefault(d => d.Id == dl.DonChon), false);
         }
 
         /// <summary>File hỏng / không phải dạng dang_lam → null (CAD hiện "chưa có đơn đang làm").</summary>

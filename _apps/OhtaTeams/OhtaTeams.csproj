@@ -2,7 +2,7 @@
   <!--
     OhtaTeams.exe - ung dung rieng xem don Microsoft Teams, chay ngoai CAD
     (_docs/specs/2026-11-10-ung-dung-teams-rieng.md).
-    Buoc 1: dung lai nguyen ma Core/Services/Views cua 06_Teams bang LINK NGUON, tab CAD van chay nhu cu.
+    Graph + man hinh duyet don (Services/, Views/) nam o day; Core/ + KieuTeams.cs link nguon tu 06_Teams (dung chung voi tab CAD).
     Ra thang _apps/OhtaTeams/bin/OhtaTeams.exe. Build bang OHTA_TOOL\build_ohta.ps1.
   -->
   <PropertyGroup>
@@ -30,8 +30,7 @@
 
   <ItemGroup>
     <Compile Include="..\..\06_Teams\plugin\TeamsTool.Plugin\Core\*.cs" Link="Teams\Core\%(Filename)%(Extension)" />
-    <Compile Include="..\..\06_Teams\plugin\TeamsTool.Plugin\Services\*.cs" Link="Teams\Services\%(Filename)%(Extension)" />
-    <Compile Include="..\..\06_Teams\plugin\TeamsTool.Plugin\Views\*.cs" Link="Teams\Views\%(Filename)%(Extension)" />
+    <Compile Include="..\..\06_Teams\plugin\TeamsTool.Plugin\Views\KieuTeams.cs" Link="Teams\Views\KieuTeams.cs" />
     <Compile Include="..\..\_system\OhtaTool.Plugin\Core\JsonLite.cs" Link="Shared\JsonLite.cs" />
     <EmbeddedResource Include="..\..\06_Teams\plugin\TeamsTool.Plugin\Assets\settings_logo.png" LogicalName="TeamsTool.Assets.settings_logo.png" />
   </ItemGroup>

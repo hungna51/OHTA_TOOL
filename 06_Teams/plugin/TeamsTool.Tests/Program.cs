@@ -153,6 +153,26 @@ namespace TeamsTool.Tests
             Kiem("dang_lam file hong -> null", PhanTichDangLam.Doc("{ hong") == null, true);
             Kiem("dang_lam thieu mang don -> null", PhanTichDangLam.Doc(@"{""luc"":""x""}") == null, true);
 
+            // Khop ban ve <-> don
+            var kh = new DangLam { ThuMucGoc = @"D:\Don\", DonChon = "9", Don = new List<DonTeams> {
+                new DonTeams { Id = "1", Title = "C1291" }, new DonTeams { Id = "2", Title = "C129192" },
+                new DonTeams { Id = "3", Title = "Tấm Đế" }, new DonTeams { Id = "4", Title = "A" }, new DonTeams { Id = "9", Title = "Don ghim" } } };
+            string Khop(string f) => PhanTichDangLam.KhopBanVe(f, kh)?.Id ?? "-";
+            Kiem("khop: thu muc cap 1 chua Title", Khop(@"D:\Don\C129192_ABC\ban ve.dwg"), "2");
+            Kiem("khop: nhieu don khop -> Title dai nhat", Khop(@"d:/don/2026/c129192 x/a.dwg"), "2");
+            Kiem("khop: bo dau, khong phan biet hoa thuong", Khop(@"D:\Don\tam de 01\a.dwg"), "3");
+            Kiem("khop: cap 3 van khop", Khop(@"D:\Don\a\b\C1291\x.dwg"), "1");
+            Kiem("khop: cap 4 khong khop", Khop(@"D:\Don\a\b\c\C1291\x.dwg"), "-");
+            Kiem("khop: ten file khong tinh", Khop(@"D:\Don\khac\C129192.dwg"), "-");
+            Kiem("khop: ngoai thu muc goc", Khop(@"D:\Donkhac\C129192\x.dwg"), "-");
+            Kiem("khop: Title qua ngan bi bo", Khop(@"D:\Don\ABC\x.dwg"), "-");
+            Kiem("khop: ban ve chua luu", Khop(""), "-");
+            Kiem("dang lam: khop ban ve truoc", PhanTichDangLam.DonDangLam(@"D:\Don\C129192\x.dwg", kh).Don.Id + "|" + PhanTichDangLam.DonDangLam(@"D:\Don\C129192\x.dwg", kh).TheoBanVe, "2|True");
+            Kiem("dang lam: khong khop -> don ghim", PhanTichDangLam.DonDangLam(@"E:\x.dwg", kh).Don.Id + "|" + PhanTichDangLam.DonDangLam(@"E:\x.dwg", kh).TheoBanVe, "9|False");
+            kh.DonChon = "";
+            Kiem("dang lam: khong khop, khong ghim -> null", PhanTichDangLam.DonDangLam(@"E:\x.dwg", kh).Don == null, true);
+            Kiem("dang lam: chua co file -> null", PhanTichDangLam.DonDangLam(@"E:\x.dwg", null).Don == null, true);
+
             Console.WriteLine();
             Console.WriteLine("Tong: {0} OK, {1} FAIL", _ok, _fail);
             return _fail == 0 ? 0 : 1;

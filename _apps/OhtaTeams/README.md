@@ -10,6 +10,6 @@ Thiết kế: [_docs/specs/2026-11-10-ung-dung-teams-rieng.md](../../_docs/specs
 
 ## Mã
 
-Bước 1 chưa có mã riêng ngoài `Program.cs` (cửa sổ chứa `TeamsTabControl`). Core / Services / Views lấy bằng **link nguồn** từ `06_Teams\plugin\TeamsTool.Plugin` → sửa ở đó là cả tab CAD lẫn ứng dụng cùng nhận. WPF net48, không gói NuGet nào chạy kèm.
+`Program.cs` (cửa sổ), `Services/GraphTeams.cs` (đăng nhập, Graph, cài đặt), `Views/TeamsTabControl.cs` + `TeamsCaiDatWindow.cs` (màn duyệt đơn, ⚙). `Core/*` và `KieuTeams.cs` lấy bằng **link nguồn** ([ADR 0009](../../_docs/adr/0009-ung-dung-ohtateams-rieng.md)) từ `06_Teams\plugin\TeamsTool.Plugin` → sửa ở đó là cả tab CAD lẫn ứng dụng cùng nhận. WPF net48, không gói NuGet nào chạy kèm.
 
 Build: `powershell -ExecutionPolicy Bypass -File OHTA_TOOL\build_ohta.ps1` (hoặc `dotnet build _apps\OhtaTeams -c Release`). Đang mở OhtaTeams thì tắt trước khi build. `release_ohta.ps1` đưa `OhtaTeams.exe` + `.exe.config` vào zip.

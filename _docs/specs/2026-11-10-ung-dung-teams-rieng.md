@@ -1,6 +1,6 @@
 # Tách tab Teams thành ứng dụng riêng `OhtaTeams.exe`
 
-> Trạng thái: **đã duyệt — xong bước 2** · 2026-11-10 · Thay một phần [ADR 0008](../adr/0008-tab-teams-graph-api.md) (sẽ viết ADR 0009 khi duyệt).
+> Trạng thái: **đã duyệt — xong bước 3** ([ADR 0009](../adr/0009-ung-dung-ohtateams-rieng.md)) · 2026-11-10 · Thay một phần [ADR 0008](../adr/0008-tab-teams-graph-api.md) (sẽ viết ADR 0009 khi duyệt).
 
 ## Mục tiêu
 
@@ -56,7 +56,7 @@ _apps/OhtaTeams/                      (có _ nên không thành tab CAD)
 
 1. ✅ Tạo ứng dụng, dùng màn hình duyệt đơn (link nguồn, chưa xoá khỏi plugin), chạy được độc lập.
 2. ✅ Ghi `dang_lam.json` (mỗi lần tải xong đơn, bấm 📌, lưu ⚙) + nút 📌 trong chi tiết đơn + ô **Thư mục đơn** ở ⚙ (registry `thu_muc_goc`, đơn chọn ở `don_chon`).
-3. Thu tab CAD về thẻ đơn đang làm, bỏ Graph khỏi plugin.
+3. ✅ Thu tab CAD về thẻ đơn đang làm (`Views/DangLamControl.cs`), Graph + màn duyệt chuyển hẳn sang `_apps/OhtaTeams`.
 4. (Sau) Tính năng mới trong ứng dụng: đổi trạng thái (cần quyền `Sites.ReadWrite.All`), mở thư mục / bản vẽ…
 
 ## Test

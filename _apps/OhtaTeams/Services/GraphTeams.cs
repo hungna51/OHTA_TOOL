@@ -79,8 +79,7 @@ namespace TeamsTool.Services
             set => Ghi("don_chon", value);
         }
 
-        public static string FileDangLam => Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OHTA_TOOL", "teams", "dang_lam.json");
+        public static string FileDangLam => PhanTichDangLam.FileMacDinh;
 
         /// <summary>Ghi dang_lam.json: ghi file tạm rồi thay, CAD không bao giờ đọc phải file ghi dở.</summary>
         public static void GhiDangLam(IEnumerable<DonTeams> tatCa)
