@@ -1808,6 +1808,30 @@
   (list bang mocoi)
 )
 
+;;; Muc 213: ban nghich (GYAKUZU) = co U+9006 (GYAKU), hoac cum U+88CF U+56F3 (URA-ZU).
+;;; U+88CF (URA - mat sau) dung MOT MINH khong tinh: "URA-kaisaki t=9mm" (vat mat sau), "URA-men CPL"
+;;; - truoc day tinh -> ghi chu bi xem la ban nghich: bao trung so luong sai, tach mirror sai.
+;;; Giong C# CadDrawingScanner (chi GYAKU-ZU / URA-ZU).
+(defun gro--gyaku-p (codes)
+  (or (member 36870 codes) (bg--chua codes '(35023 22259)))
+)
+
+;;; Vi tri dau tien cua day con sub trong danh sach L, nil neu khong co.
+(defun gro--vi-tri-day (L sub / i n kq)
+  (setq i 0
+        n (length sub)
+  )
+  (while (and L (null kq))
+    (if (equal (gro--dau-ds L n) sub)
+      (setq kq i)
+      (setq L (cdr L)
+            i (1+ i)
+      )
+    )
+  )
+  kq
+)
+
 ;;; Nhan dien loai dong so luong: "HONZU" hoac "GYAKUZU"
 (defun gro--it-loai-sl (it / codes)
   (setq codes (gro--it-codes it))
@@ -1818,13 +1842,7 @@
      )
      "HONZU"
     )
-    ((or (bg--chua codes '(36870 22259)) ; U+9006U+56F3
-         (member 36870 codes)            ; U+9006
-         (bg--chua codes '(35023 22259)) ; U+88CFU+56F3
-         (member 35023 codes)            ; U+88CF
-     )
-     "GYAKUZU"
-    )
+    ((gro--gyaku-p codes) "GYAKUZU")     ; muc 213
     (t nil)
   )
 )
@@ -2511,13 +2529,7 @@
        )
        (setq n-hon (1+ n-hon))
       )
-      ((or (bg--chua codes '(36870 22259))
-           (member 36870 codes)
-           (bg--chua codes '(35023 22259))
-           (member 35023 codes)
-       )
-       (setq n-gyak (1+ n-gyak))
-      )
+      ((gro--gyaku-p codes) (setq n-gyak (1+ n-gyak))) ; muc 213
     )
     ;; Dem so luong tren cac dong phu
     (foreach d dp
@@ -7746,6 +7758,116 @@
   )
 )
 
+;;; Muc 214: khoang cach chieu tia ngan nhat tu hinh b-s toi cac hinh cua mot cum
+;;; (cl-shapes), nil neu khong chieu duoc. Vat can = moi hinh tru b-s va hinh cua cum.
+;;; Thu truoc KHONG vat can (re, chi so hinh hoc): khong hinh nao trong cum chieu duoc thi
+;;; bo qua luon - co vat can chi lam ket qua it di, nen ket qua y het ban cu. Ban cu loc toan
+;;; bo hinh ban ve thanh danh sach vat can cho MOI cap hinh-cum (130837-1: ~6 phut).
+(defun gro--d-hinh-cum (b-s cl-shapes all-shapes max-ray-dist / co a-s ids obstacles d m)
+  (foreach a-s cl-shapes
+    (if (and (null co) (gro--ray-chieu-duoc-p (nth 2 b-s) (nth 2 a-s) nil max-ray-dist))
+      (setq co T)
+    )
+  )
+  (if co
+    (progn
+      (setq ids       (mapcar 'car cl-shapes)
+            obstacles (vl-remove-if
+                        '(lambda (s) (or (= (nth 0 s) (nth 0 b-s)) (member (nth 0 s) ids)))
+                        all-shapes
+                      )
+      )
+      (foreach a-s cl-shapes
+        (setq d (gro--ray-chieu-duoc-p (nth 2 b-s) (nth 2 a-s) obstacles max-ray-dist))
+        (if (and d (or (null m) (< d m))) (setq m d))
+      )
+    )
+  )
+  m
+)
+
+;;; Muc 214: buoc 3B - ghep not cac hinh chieu con lai (sau Hungarian) vao cum tam be: moi
+;;; luot lay cap (hinh, cum) co khoang cach chieu tia nho nhat, ghep, lap lai. Chi ghep cung
+;;; vung khi co-vung. Bang khoang cach tinh 1 LAN; sau moi luot chi tinh lai cot cua cum vua
+;;; nhan them hinh (vat can cua cac cum khac khong doi). Ban cu (gro--tim-ghep-hinh-chieu-tot-nhat)
+;;; tinh lai toan bo moi luot. Tra (list pending-shapes bent-clusters).
+(defun gro--ghep-hinh-chieu-phu (pending bent all-shapes max-ray-dist co-vung
+                                 / bang b-s cl k d best r p tid cl-moi)
+  ;; bang: ((hinh ((tid . d) ...)) ...) - chi luu cap chieu duoc, theo thu tu bent
+  (foreach b-s pending
+    (setq k nil)
+    (if (or (null co-vung) (nth 4 b-s))
+      (foreach cl bent
+        (if (and (or (null co-vung) (equal (nth 4 b-s) (nth 3 cl)))
+                 (setq d (gro--d-hinh-cum b-s (nth 1 cl) all-shapes max-ray-dist))
+            )
+          (setq k (cons (cons (nth 0 cl) d) k))
+        )
+      )
+    )
+    (setq bang (cons (list b-s (reverse k)) bang))
+  )
+  (setq bang (reverse bang))
+  (while
+    (progn
+      (setq best nil)
+      (foreach r bang
+        (foreach p (cadr r)
+          (if (or (null best) (< (cdr p) (nth 2 best)))
+            (setq best (list (car r) (car p) (cdr p)))
+          )
+        )
+      )
+      best
+    )
+    (setq b-s     (nth 0 best)
+          tid     (nth 1 best)
+          pending (vl-remove-if '(lambda (s) (= (nth 0 s) (nth 0 b-s))) pending)
+          bent    (mapcar
+                    '(lambda (cl)
+                       (if (= (nth 0 cl) tid)
+                         (list (nth 0 cl)
+                               (cons b-s (nth 1 cl))
+                               (gro--bb-gop-2 (nth 2 cl) (nth 2 b-s))
+                               (nth 3 cl)
+                         )
+                         cl
+                       )
+                     )
+                    bent
+                  )
+          bang    (vl-remove-if '(lambda (r) (= (nth 0 (car r)) (nth 0 b-s))) bang)
+          cl-moi  nil
+    )
+    (foreach cl bent (if (= (nth 0 cl) tid) (setq cl-moi cl)))
+    (gro--princ
+      (strcat "\n  [CHIEU TIA] Da ghep Hinh chieu/Mat cat #"
+              (itoa (nth 0 b-s))
+              " vao Tam #"
+              (itoa tid)
+              " (khoang cach: "
+              (rtos (nth 2 best) 2 1)
+              "mm)"
+      )
+    )
+    ;; Chi cum tid vua them hinh -> tinh lai khoang cach cua moi hinh con lai toi cum do
+    (setq bang
+      (mapcar
+        '(lambda (r / ds d2)
+           (setq ds (vl-remove-if '(lambda (p) (= (car p) tid)) (cadr r))
+                 d2 (if (and (or (null co-vung) (equal (nth 4 (car r)) (nth 3 cl-moi))) (or (null co-vung) (nth 4 (car r))))
+                      (gro--d-hinh-cum (car r) (nth 1 cl-moi) all-shapes max-ray-dist)
+                    )
+           )
+           (list (car r) (if d2 (append ds (list (cons tid d2))) ds))
+         )
+        bang
+      )
+    )
+  )
+  (list pending bent)
+)
+
 ;;; Tim ung vien ghep hinh chieu tot nhat tu pending-shapes vao bent-clusters
 ;;; Them tham so co-vung: neu co-vung=T thi CHI GHEP KHI CUNG VUNG (b-vid == cl-vid)
 (defun gro--tim-ghep-hinh-chieu-tot-nhat (pending-shapes bent-clusters all-shapes 
@@ -7768,22 +7890,11 @@
           ;; CHI CHIEU TIA NEU CUNG THUOC MOT VUNG!
           (if (or (null co-vung) (equal b-vid cl-vid)) 
             (progn 
-              (setq cl-shapes (nth 1 cl)
-                    obstacles (vl-remove-if 
-                                '(lambda (s) 
-                                   (or (= (nth 0 s) (nth 0 b-s)) 
-                                       (member (nth 0 s) (mapcar 'car cl-shapes))
-                                   )
-                                 )
-                                all-shapes
-                              )
-              )
-              (foreach a-s cl-shapes 
-                (setq d (gro--ray-chieu-duoc-p b-bb (nth 2 a-s) obstacles max-ray-dist))
-                (if (and d (< d min-d)) 
-                  (setq min-d   d
-                        best-cl cl
-                  )
+              ;; Muc 214: gro--d-hinh-cum (thu khong vat can truoc) - ket qua nhu cu, nhanh hon
+              (setq d (gro--d-hinh-cum b-s (nth 1 cl) all-shapes max-ray-dist))
+              (if (and d (< d min-d))
+                (setq min-d   d
+                      best-cl cl
                 )
               )
             )
@@ -7863,26 +7974,11 @@
               (while (< c n) 
                 (if (and (< r m) (< c k)) 
                   (progn 
-                    (setq cl (nth r cl-cur)
-                          s  (nth c s-cur)
-                          cl-shapes (nth 1 cl)
-                          obstacles (vl-remove-if 
-                                      '(lambda (obs) 
-                                         (or (= (nth 0 obs) (nth 0 s)) 
-                                             (member (nth 0 obs) (mapcar 'car cl-shapes))
-                                         )
-                                       )
-                                      all-shapes
-                                    )
-                          best-d nil
+                    (setq cl     (nth r cl-cur)
+                          s      (nth c s-cur)
+                          best-d (gro--d-hinh-cum s (nth 1 cl) all-shapes max-ray-dist) ; muc 214
                     )
-                    (foreach a-s cl-shapes 
-                      (setq d (gro--ray-chieu-duoc-p (nth 2 s) (nth 2 a-s) obstacles max-ray-dist))
-                      (if (and d (or (null best-d) (< d best-d))) 
-                        (setq best-d d)
-                      )
-                    )
-                    (if best-d 
+                    (if best-d
                       (setq row (cons best-d row))
                       (setq row (cons 10000000.0 row)) ; Bi chan vat can hoac vuot max-ray-dist
                     )
@@ -10634,54 +10730,11 @@
       )
 
       ;; BUOC 3B: QUET PHU CHO TAM CO TU 2 HINH CHIEU TRO LEN (NEU CON PENDING-SHAPES)
-      (setq changed T)
-      (while (and changed pending-shapes bent-clusters) 
-        (setq best-match (gro--tim-ghep-hinh-chieu-tot-nhat pending-shapes 
-                                                            bent-clusters
-                                                            shapes
-                                                            max-ray-dist
-                                                            co-vung
-                         )
-        )
-        (if best-match 
-          (progn 
-            (setq b-shape    (nth 0 best-match)
-                  target-cl  (nth 1 best-match)
-                  target-tid (nth 0 target-cl)
-                  match-d    (nth 2 best-match)
-            )
-            (setq pending-shapes (vl-remove-if 
-                                   '(lambda (s) (= (nth 0 s) (nth 0 b-shape)))
-                                   pending-shapes
-                                 )
-            )
-            (setq bent-clusters 
-                  (mapcar 
-                    '(lambda (cl) 
-                       (if (= (nth 0 cl) target-tid) 
-                         (list (nth 0 cl) 
-                               (cons b-shape (nth 1 cl))
-                               (gro--bb-gop-2 (nth 2 cl) (nth 2 b-shape))
-                               (nth 3 cl)
-                         )
-                         cl
-                       )
-                     )
-                    bent-clusters
-                  )
-            )
-            (gro--princ 
-              (strcat "\n  [CHIEU TIA] Da ghep Hinh chieu/Mat cat #" 
-                      (itoa (nth 0 b-shape))
-                      " vao Tam #"
-                      (itoa target-tid)
-                      " (khoang cach: "
-                      (rtos match-d 2 1)
-                      "mm)"
-              )
-            )
-          )
-          (setq changed nil)
+      ;; Muc 214: bang khoang cach tinh 1 lan, moi luot chi tinh lai cum vua nhan hinh.
+      (if (and pending-shapes bent-clusters)
+        (setq res-hg         (gro--ghep-hinh-chieu-phu pending-shapes bent-clusters shapes max-ray-dist co-vung)
+              pending-shapes (nth 0 res-hg)
+              bent-clusters  (nth 1 res-hg)
         )
       )
 
@@ -12533,9 +12586,7 @@
 ;;; dong la Honzu HAY Gyakuzu (Hon thang) -> cap khong duoc nhan mirror, khong tach ban nghich,
 ;;; va 2 bango chung 1 muc -> buoc dat ma khac bo qua ca cap.
 (defun gro--dong-chung-p (codes)
-  (and (member 26412 codes)
-       (or (bg--chua codes '(36870 22259)) (bg--chua codes '(35023 22259))
-           (member 36870 codes) (member 35023 codes)))
+  (and (member 26412 codes) (gro--gyaku-p codes)) ; muc 213
 )
 
 ;;; So -> 4 chu so hex (cho \U+XXXX).
@@ -12574,7 +12625,7 @@
         e     (gro--it-ename ln)
         ed    (if e (entget e) nil)
         i-h   (vl-position 26412 codes)
-        i-g   (cond ((vl-position 36870 codes)) ((vl-position 35023 codes)))
+        i-g   (cond ((vl-position 36870 codes)) ((gro--vi-tri-day codes '(35023 22259)))) ; muc 213
   )
   (if (and ed i-h i-g (/= i-h i-g) (member (cdr (assoc 0 ed)) '("TEXT" "MTEXT")))
     (progn
