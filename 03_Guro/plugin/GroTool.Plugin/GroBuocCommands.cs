@@ -103,6 +103,7 @@ namespace ZwCadPlugin
                 string dong = kq.InRa();
                 p.NhatKyAB.Add(dong);
                 ed?.WriteMessage("\n" + dong);
+                ZwCadPlugin.OhtaBugBridge.Info("GRO", dong);   // muc 220: dong lenh bi cat -> doc lai trong ohta.log
                 return kq.KhopHet ? (object)true : null;
             }
             catch (System.Exception ex)

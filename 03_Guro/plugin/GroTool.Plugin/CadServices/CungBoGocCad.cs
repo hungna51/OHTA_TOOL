@@ -87,6 +87,8 @@ namespace ZwCadPlugin.CadServices
             foreach (string h in bo) rb.Add(new TypedValue((int)LispDataType.ObjectId, idTheoHandle[h]));
             rb.Add(new TypedValue((int)LispDataType.ListEnd));
             rb.Add(new TypedValue((int)LispDataType.ListEnd));
+            ZwCadPlugin.OhtaBugBridge.Info("GRO", string.Format(Inv, "cung bo goc C# ({0}): {1} cung, {2} dau net, bo {3}, {4} ms",
+                cheDo, cungs.Count, daus.Count, bo.Count, sw.ElapsedMilliseconds));
             doc.Editor?.WriteMessage(string.Format(Inv, "\n[GRO] Cung bo goc (.NET): {0} cung, {1} dau net, {2} text, bo {3}, {4} ms{5}.",
                 cungs.Count, daus.Count, texts.Count, bo.Count, sw.ElapsedMilliseconds, cheDo == "cs" ? "" : " (chi tinh de so A/B)"));
             return rb;

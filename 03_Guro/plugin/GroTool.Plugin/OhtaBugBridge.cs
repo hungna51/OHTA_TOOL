@@ -42,6 +42,27 @@ namespace ZwCadPlugin
             }
         }
 
+        private static MethodInfo _info;
+
+        /// <summary>Mục 220: ghi một dòng thông tin vào ohta.log (BugLog.Write(string, string)). Không bao giờ ném.</summary>
+        public static void Info(string nguon, string dong)
+        {
+            try
+            {
+                if (_info == null)
+                {
+                    Assembly ohta = AppDomain.CurrentDomain.GetAssemblies()
+                        .FirstOrDefault(a => string.Equals(a.GetName().Name, "OHTATOOL", StringComparison.OrdinalIgnoreCase));
+                    _info = ohta?.GetType("OhtaTool.Plugin.Core.BugLog")
+                        ?.GetMethod("Write", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(string), typeof(string) }, null);
+                }
+                _info?.Invoke(null, new object[] { nguon, dong });
+            }
+            catch
+            {
+            }
+        }
+
         public static void Run(string lenh, Action body)
         {
             try

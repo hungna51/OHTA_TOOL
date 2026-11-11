@@ -55,9 +55,11 @@ namespace ZwCadPlugin.CadServices
                 if (soLoiMau > 0)
                     ed.WriteMessage("\n[GRO .NET] !!! " + soLoiMau + " net (0-KAKOU/3-KEGAKI/TAPU_TMT) khong lay mau duoc - xem file du lieu.");
                 string fileDump = GhiDump(duLieu, net, chanDoan);
+                double tDump = sw.Elapsed.TotalSeconds;
                 if (fileDump != null) ed.WriteMessage("\n[GRO .NET] Du lieu dat ma khac (de phat lai): " + fileDump);
 
                 KetQuaDatMk kq = DatMaKhac.ChayHet(tams, net, vatCan);
+                double tTinh = sw.Elapsed.TotalSeconds;
 
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
@@ -80,12 +82,17 @@ namespace ZwCadPlugin.CadServices
                     }
                     tr.Commit();
                 }
+                double tGhi = sw.Elapsed.TotalSeconds;
 
                 ed.WriteMessage("\n[GRO] Dat ma khac (.NET): " + kq.Tong + " tam, " +
                                 sw.Elapsed.TotalSeconds.ToString("0.0", CultureInfo.InvariantCulture) +
                                 " giay (lay mau net " + tLayMau.ToString("0.0", CultureInfo.InvariantCulture) +
                                 " giay, " + net.Count + " net)");
                 if (kq.ThongBao != null) ed.WriteMessage("\n[GRO] " + kq.ThongBao);
+                // muc 220: tach thoi gian tung phan vao ohta.log (dong lenh hay bi cat)
+                ZwCadPlugin.OhtaBugBridge.Info("GRO", string.Format(CultureInfo.InvariantCulture,
+                    "dat ma khac C#: lay mau net {0:0.00} s ({1} net, {2} chan doan), ghi dump {3:0.00} s, tinh {4:0.00} s, doi cum + in {5:0.00} s ({6} tam)",
+                    tLayMau, net.Count, chanDoan.Count, tDump - tLayMau, tTinh - tDump, tGhi - tTinh, kq.Tams.Count));
                 return kq.ThongBao;
             }
             finally
