@@ -1,0 +1,289 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Win32;
+using TeamsTool.Core;
+
+namespace TeamsTool.Services
+{
+    /// <summary>
+    /// Phòng 1 + 2 của khu 🤖 AI (spec 2026-11-11, ADR 0010): tải tệp đơn về thư mục đơn, gộp bản nháp 番号.PDF,
+    /// gọi Claude đọc từng bản vẽ. Kết quả ở &lt;thư mục đơn&gt;\ai\*.json.
+    /// </summary>
+    public static class AiDon
+    {
+        private static readonly UTF8Encoding Utf8 = new UTF8Encoding(false);
+
+        /// <summary>Thư mục OHTA_TOOL (cha của 06_Teams).</summary>
+        public static string Goc => Path.GetDirectoryName(CaiDatTeams.ThuMucModule.TrimEnd('\\', '/'));
+        public static string ThuMucQuyChuan => Path.Combine(Goc, "_apps", "OhtaTeams", "data", "quy_chuan");
+
+        // ---------- Cài đặt ----------
+
+        /// <summary>Key Claude dùng chung với tab AI: dòng đầu không rỗng, không bắt đầu bằng # của 05_AI\data\ai.key.</summary>
+        public static string DocKey()
+        {
+            string f = Path.Combine(Goc, "05_AI", "data", "ai.key");
+            if (!File.Exists(f)) return null;
+            return File.ReadAllLines(f).Select(s => s.Trim()).FirstOrDefault(s => s.Length > 0 && !s.StartsWith("#", StringComparison.Ordinal));
+        }
+
+        /// <summary>Model chọn ở tab AI (registry); không phải Claude (vd. Ling) → mặc định Opus 5.5.</summary>
+        public static string Model()
+        {
+            string m = null;
+            try { using (RegistryKey k = Registry.CurrentUser.OpenSubKey(@"Software\OFT_Lisp\OhtaTool\AI")) m = k?.GetValue("model") as string; }
+            catch (Exception) { }
+            return m != null && m.StartsWith("claude-", StringComparison.Ordinal) ? m : PhongDocBanVe.ModelMacDinh;
+        }
+
+        /// <summary>Đã đồng ý gửi tệp đơn lên Claude API trên máy này chưa (hỏi 1 lần).</summary>
+        public static bool DaDongY
+        {
+            get => CaiDatTeams.Doc("ai_dong_y") == "1";
+            set => CaiDatTeams.Ghi("ai_dong_y", value ? "1" : "");
+        }
+
+        /// <summary>Toàn bộ quy chuẩn (*.md trong quy_chuan, gitignore) gửi kèm lời dặn; thiếu → rỗng.</summary>
+        public static string QuyChuan()
+        {
+            if (!Directory.Exists(ThuMucQuyChuan)) return "";
+            return string.Join("\n\n", Directory.GetFiles(ThuMucQuyChuan, "*.md").OrderBy(f => f).Select(f => File.ReadAllText(f, Encoding.UTF8)));
+        }
+
+        public static string[] DongCongTy()
+        {
+            string f = Path.Combine(ThuMucQuyChuan, "cong_ty.txt");
+            return File.Exists(f) ? File.ReadAllLines(f, Encoding.UTF8) : new string[0];
+        }
+
+        // ---------- Đọc / ghi kết quả ----------
+
+        public static string FileTiepNhan(string tm) => Path.Combine(tm, PhongTiepNhan.ThuMucAi, "tiep_nhan.json");
+        public static string FileChiTiet(string tm) => Path.Combine(tm, PhongTiepNhan.ThuMucAi, "chi_tiet.json");
+        public static string ThuMucTep(string tm) => Path.Combine(tm, PhongTiepNhan.ThuMucAi, PhongTiepNhan.ThuMucGocTep);
+
+        public static TiepNhan DocTiepNhan(string tm) => File.Exists(FileTiepNhan(tm)) ? PhongTiepNhan.Doc(File.ReadAllText(FileTiepNhan(tm), Encoding.UTF8)) : null;
+        public static ChiTiet DocChiTiet(string tm) => File.Exists(FileChiTiet(tm)) ? PhongDocBanVe.Doc(File.ReadAllText(FileChiTiet(tm), Encoding.UTF8)) : null;
+        public static void Ghi(string tm, TiepNhan tn) => GhiAnToan(FileTiepNhan(tm), PhongTiepNhan.Ghi(tn));
+        public static void Ghi(string tm, ChiTiet ct) => GhiAnToan(FileChiTiet(tm), PhongDocBanVe.Ghi(ct));
+
+        /// <summary>Ghi file tạm rồi thay — tắt máy giữa chừng không làm hỏng kết quả cũ.</summary>
+        private static void GhiAnToan(string f, string noiDung)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(f));
+            string tam = f + ".tmp";
+            File.WriteAllText(tam, noiDung, Utf8);
+            if (File.Exists(f)) File.Replace(tam, f, null); else File.Move(tam, f);
+        }
+
+        // ---------- Phòng 1 ----------
+
+        /// <summary>
+        /// Tải tệp đính kèm của dòng + tệp gửi trong các chuỗi chat của đơn vào ai\goc\ (giữ tên gốc; trùng tên khác nội dung → thêm (2)).
+        /// Giữ loại tệp người dùng đã sửa ở lần trước. Gộp bản nháp 番号.PDF.
+        /// </summary>
+        public static async Task<TiepNhan> TiepNhan(DonTeams d, string listUrl, string listId, string tm, Action<string> bao, CancellationToken ct)
+        {
+            TiepNhan cu = DocTiepNhan(tm);
+            var tn = new TiepNhan
+            {
+                LoaiDon = cu?.LoaiDon ?? PhongTiepNhan.DoanLoaiDon(d.TatCa),
+                CongTy = cu?.CongTy ?? PhongTiepNhan.DoanCongTy(d.TatCa, DongCongTy()),
+            };
+            string dir = ThuMucTep(tm);
+            Directory.CreateDirectory(dir);
+
+            var nguon = new List<(TepDinhKem Tep, string Nguon)>();
+            if (d.CoTep)
+            {
+                bao("Phòng 1: đọc danh sách tệp đính kèm…");
+                foreach (TepDinhKem t in await GraphTeams.TepCuaDon(listUrl, listId, d.Id, ct)) nguon.Add((t, "don"));
+            }
+            foreach (HoiThoai h in TraoDoi.DocHoiThoai(d.HoiThoaiMeta))
+            {
+                bao("Phòng 1: đọc tệp trong chat…");
+                try
+                {
+                    var chuoi = await GraphTeams.TaiChuoi(h, ct);
+                    if (chuoi != null) foreach (TinNhan tin in chuoi.Value.Tin) foreach (TepDinhKem t in tin.Tep) nguon.Add((t, "chat"));
+                }
+                catch (Exception ex) { bao("Không đọc được một chuỗi chat: " + ex.Message); } // chưa cấp quyền chat → vẫn làm tiếp với tệp đính kèm
+            }
+
+            int i = 0;
+            foreach (var (t, loaiNguon) in nguon)
+            {
+                ct.ThrowIfCancellationRequested();
+                bao("Phòng 1: tải " + (++i) + "/" + nguon.Count + " — " + t.Ten);
+                string tamF = loaiNguon == "don" ? await GraphTeams.TaiTep(listUrl, d.Id, t, ct) : await GraphTeams.TaiTepChat(t, ct);
+                string ma = PhongTiepNhan.MaBam(tamF);
+                if (tn.Tep.Any(x => x.MaBam == ma)) continue; // cùng tệp gửi cả đính kèm lẫn chat
+                string ten = TenKhongTrung(dir, PhongTiepNhan.TenAnToan(t.Ten), ma);
+                File.Copy(tamF, Path.Combine(dir, ten), true);
+                TepDon cuT = cu?.Tep.FirstOrDefault(x => x.Ten == ten);
+                tn.Tep.Add(new TepDon { Ten = ten, Nguon = loaiNguon, MaBam = ma, Loai = cuT?.Loai ?? PhongTiepNhan.XepLoai(ten) });
+            }
+
+            GopBango(tn, tm, d.Title, bao);
+            Ghi(tm, tn);
+            return tn;
+        }
+
+        private static string TenKhongTrung(string dir, string ten, string ma)
+        {
+            string ext = Path.GetExtension(ten), than = Path.GetFileNameWithoutExtension(ten);
+            for (int k = 1; ; k++)
+            {
+                string thu = k == 1 ? ten : than + " (" + k + ")" + ext;
+                string f = Path.Combine(dir, thu);
+                if (!File.Exists(f) || PhongTiepNhan.MaBam(f) == ma) return thu;
+            }
+        }
+
+        /// <summary>Gộp lại bản nháp &lt;mã&gt;-番号.PDF theo loại tệp hiện tại (gọi lại khi người dùng đổi loại tệp).</summary>
+        public static void GopBango(TiepNhan tn, string tm, string title, Action<string> bao)
+        {
+            var ds = PhongTiepNhan.ThuTuBango(tn.Tep).Select(t => Path.Combine(ThuMucTep(tm), t.Ten)).Where(File.Exists).ToList();
+            tn.BanNhapBango = "";
+            if (ds.Count == 0) return;
+            string ra = Path.Combine(tm, PhongTiepNhan.ThuMucAi, PhongTiepNhan.TenBango(title));
+            try
+            {
+                GopPdf(ds, ra);
+                tn.BanNhapBango = Path.GetFileName(ra);
+            }
+            catch (Exception ex) { bao("Không gộp được 番号.PDF: " + ex.Message); }
+        }
+
+        // ---------- PDF (PdfSharp nạp từ _system\bin\ZwCAD, như tab PRINT — ADR 0005) ----------
+
+        private static bool _resolver;
+
+        public static void GopPdf(IList<string> vao, string ra)
+        {
+            if (!_resolver)
+            {
+                _resolver = true;
+                string dll = Path.Combine(Goc, "_system", "bin", "ZwCAD");
+                AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
+                {
+                    string ten = new AssemblyName(e.Name).Name;
+                    Assembly da = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => string.Equals(a.GetName().Name, ten, StringComparison.OrdinalIgnoreCase));
+                    if (da != null) return da;
+                    string f = Path.Combine(dll, ten + ".dll");
+                    return File.Exists(f) ? Assembly.LoadFrom(f) : null;
+                };
+            }
+            GopPdfLoi(vao, ra);
+        }
+
+        // NoInlining: JIT chỉ nạp PdfSharp khi vào hàm này, lúc resolver đã đăng ký
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void GopPdfLoi(IList<string> vao, string ra)
+        {
+            using (var dich = new PdfSharp.Pdf.PdfDocument())
+            {
+                foreach (string f in vao)
+                    using (var nguon = PdfSharp.Pdf.IO.PdfReader.Open(f, PdfSharp.Pdf.IO.PdfDocumentOpenMode.Import))
+                        for (int i = 0; i < nguon.PageCount; i++) dich.AddPage(nguon.Pages[i]);
+                dich.Save(ra);
+            }
+        }
+
+        // ---------- Phòng 2 ----------
+
+        /// <summary>
+        /// Gửi từng bản vẽ (PDF / DXF) chưa đọc hoặc đã đổi nội dung lên Claude; tệp không đổi giữ kết quả cũ.
+        /// tatCa = true: đọc lại mọi tệp (↻ Chạy lại). DWG / STEP bỏ qua (spec: chưa đọc hình học).
+        /// </summary>
+        public static async Task<ChiTiet> DocBanVe(TiepNhan tn, string tm, bool tatCa, Action<string> bao, CancellationToken ct)
+        {
+            string key = DocKey() ?? throw new InvalidOperationException("Chưa có key Claude: tab AI trên CAD → ⚙ → API key (lưu ở 05_AI\\data\\ai.key)");
+            string model = Model(), quyChuan = QuyChuan();
+            ChiTiet cu = DocChiTiet(tm) ?? new ChiTiet();
+            var ct2 = new ChiTiet { TokenVao = cu.TokenVao, TokenRa = cu.TokenRa, Tien = cu.Tien, MaBamDaDoc = new Dictionary<string, string>(cu.MaBamDaDoc) };
+
+            var canDoc = tn.Tep.Where(t => t.Loai == PhongTiepNhan.BanVe && (t.Ten.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) || t.Ten.EndsWith(".dxf", StringComparison.OrdinalIgnoreCase)))
+                               .Where(t => tatCa || !ct2.MaBamDaDoc.TryGetValue(t.Ten, out string mb) || mb != t.MaBam).ToList();
+            var moi = new List<TamAi>();
+            var docLai = new HashSet<string>();
+            var loi = new List<string>();
+            int i = 0;
+            foreach (TepDon t in canDoc)
+            {
+                ct.ThrowIfCancellationRequested();
+                bao("Phòng 2: AI đọc " + (++i) + "/" + canDoc.Count + " — " + t.Ten + " (mỗi tệp khoảng 1 phút)");
+                string f = Path.Combine(ThuMucTep(tm), t.Ten);
+                string pdf = null, dxf = null;
+                if (t.Ten.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (new FileInfo(f).Length > PhongDocBanVe.PdfToiDa) { loi.Add(t.Ten + ": PDF quá lớn (> 22 MB), tách nhỏ rồi chạy lại"); continue; }
+                    pdf = Convert.ToBase64String(File.ReadAllBytes(f));
+                }
+                else
+                {
+                    try { dxf = DocDxf.TomTat(t.Ten, DocDxf.DocFile(f)); }
+                    catch (Exception ex) { loi.Add(t.Ten + ": " + ex.Message); continue; }
+                }
+                string body = PhongDocBanVe.Body(model, PhongDocBanVe.LoiDan, quyChuan, t.Ten, pdf, dxf);
+                PhongDocBanVe.PhanHoi ph = PhongDocBanVe.DocPhanHoi(await GuiClaude(key, PhongDocBanVe.CoFallback(model), body, ct));
+                ct2.TokenVao += ph.Vao + ph.GhiCache + ph.DocCache;
+                ct2.TokenRa += ph.Ra;
+                ct2.Tien += PhongDocBanVe.Tien(model, ph.Vao, ph.GhiCache, ph.DocCache, ph.Ra);
+                if (ph.Loi != null) { loi.Add(t.Ten + ": " + ph.Loi); continue; }
+                foreach (TamAi tam in ph.Tam) tam.Tep = t.Ten;
+                moi.AddRange(ph.Tam);
+                docLai.Add(t.Ten);
+                ct2.MaBamDaDoc[t.Ten] = t.MaBam;
+            }
+            // Tệp đã bị bỏ khỏi đơn / đổi sang loại khác → bỏ tấm của nó
+            var conLai = new HashSet<string>(tn.Tep.Where(t => t.Loai == PhongTiepNhan.BanVe).Select(t => t.Ten));
+            ct2.Tam = PhongDocBanVe.Gop(cu.Tam.Where(x => conLai.Contains(x.Tep)).ToList(), moi, docLai);
+            Ghi(tm, ct2);
+            if (loi.Count > 0) bao("Có tệp chưa đọc được:\n" + string.Join("\n", loi));
+            return ct2;
+        }
+
+        private static readonly HttpClient Http = TaoHttp();
+
+        private static HttpClient TaoHttp()
+        {
+            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12; // net48 có thể chưa bật TLS 1.2
+            return new HttpClient { Timeout = TimeSpan.FromMinutes(10) }; // PDF nhiều trang + effort high: một lần gọi có thể vài phút
+        }
+
+        /// <summary>POST /v1/messages như ClaudeHttp của tab AI: 429 / 5xx thử lại 2 lần; trả body kể cả JSON lỗi.</summary>
+        private static async Task<string> GuiClaude(string key, bool fallback, string body, CancellationToken ct)
+        {
+            for (int lan = 0; ; lan++)
+            {
+                using (var req = new HttpRequestMessage(HttpMethod.Post, PhongDocBanVe.Url))
+                {
+                    if (!req.Headers.TryAddWithoutValidation("x-api-key", key)) throw new InvalidOperationException("API key trong ai.key có ký tự không hợp lệ");
+                    req.Headers.TryAddWithoutValidation("anthropic-version", PhongDocBanVe.PhienBanApi);
+                    if (fallback) req.Headers.TryAddWithoutValidation("anthropic-beta", PhongDocBanVe.BetaFallback);
+                    req.Content = new StringContent(body, Utf8, "application/json");
+                    using (HttpResponseMessage res = await Http.SendAsync(req, ct))
+                    {
+                        string text = await res.Content.ReadAsStringAsync();
+                        int ma = (int)res.StatusCode;
+                        if (!(ma == 429 || ma >= 500) || lan >= 2)
+                            return res.IsSuccessStatusCode || text.TrimStart().StartsWith("{", StringComparison.Ordinal)
+                                ? text : "{\"type\":\"error\",\"error\":{\"type\":\"http_error\",\"message\":\"Máy chủ AI trả lỗi HTTP " + ma + "\"}}";
+                        TimeSpan cho = res.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(2 << lan);
+                        await Task.Delay(cho > TimeSpan.FromSeconds(60) ? TimeSpan.FromSeconds(60) : cho, ct);
+                    }
+                }
+            }
+        }
+    }
+}

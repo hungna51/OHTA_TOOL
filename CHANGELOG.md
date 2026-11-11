@@ -2,6 +2,10 @@
 
 Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_ohta.ps1` lấy nội dung mục đó làm ghi chú Release trên GitHub, và hộp thoại "Có bản mới" trên máy đội cũng hiện đúng nội dung này — viết ngắn, cho người dùng xưởng đọc.
 
+## Chưa phát hành
+
+- **OhtaTeams** — khu **🤖 AI** trong chi tiết đơn (máy Admin, đang thử): **▶ Bắt đầu** tải mọi tệp của đơn (đính kèm + chat) về thư mục đơn, gộp bản nháp `<mã>-番号.PDF`, rồi AI đọc từng bản vẽ PDF / DXF ra bảng tấm (vật liệu, độ dày, số lượng, kích thước, bẻ, lỗ, ghi chú JP + VI). Sửa thẳng trong bảng; ô ⚠ là AI không chắc. Phòng Kiểm tra và Triển khai ở bản sau.
+
 ## v1.4.2
 
 - Tab **Guro v1.6.3** — **GRO chạy nhanh hơn nhiều**: bản vẽ lớn từ ~67 giây còn ~27 giây (ghép hình chiếu, cung bo góc, đọc text số, khớp dim, chuyển layer nay chạy bằng C#).

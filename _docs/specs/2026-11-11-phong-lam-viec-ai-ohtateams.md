@@ -99,7 +99,8 @@ _apps/OhtaTeams/
 
 ## Đợt làm
 
-1. Khu 🤖 AI + phòng 1 + phòng 2 (PDF + DXF). Chạy thử trên 3 đơn thật (có trong `Tài liệu\OHTA_DonTeams\`).
+1. ✅ (mã xong 11/11, **chờ chạy thử trên đơn thật**) Khu 🤖 AI + phòng 1 + phòng 2 (PDF + DXF). Chạy thử trên 3 đơn thật (có trong `Tài liệu\OHTA_DonTeams\`).
+   Khác spec: chưa xoay trang 番号.PDF (không biết chiều trang khi chưa đọc nội dung — để AI báo ở đợt sau); ảnh chưa gộp vào 番号; công ty đặc biệt đoán theo `quy_chuan/cong_ty.txt` (gitignore) thay vì chữ trong 注文書; bảng chỉ sửa ô chữ, bẻ / lỗ sửa ở đợt 3.
 2. Phòng 3: luật C# + nhóm vấn đề + お問い合わせ / 連絡します + gửi lên chuỗi đơn.
 3. Phòng 4: trải phẳng qua TraV + dòng CSV + gửi lên chuỗi đơn.
 

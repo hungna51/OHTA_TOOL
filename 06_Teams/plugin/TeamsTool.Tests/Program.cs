@@ -47,6 +47,95 @@ namespace TeamsTool.Tests
   { ""id"": ""3"", ""fields"": { ""Title"": ""130651"", ""Status"": ""完了"", ""NguoiCheck1"": [ { ""LookupId"": 13, ""LookupValue"": ""Lê Gia Vinh"" } ] } }
 ]}";
 
+        private const string Dxf = "  0\nSECTION\n  2\nHEADER\n  0\nENDSEC\n  0\nSECTION\n  2\nENTITIES\n" +
+            "  0\nLINE\n  8\n0-KAKOU\n 10\n0\n 20\n0\n 11\n200\n 21\n0\n" +
+            "  0\nLWPOLYLINE\n 90\n2\n 10\n0\n 20\n0\n 10\n200\n 20\n100\n" +
+            "  0\nCIRCLE\n 10\n50\n 20\n50\n 40\n5.5\n" +
+            "  0\nCIRCLE\n 10\n150\n 20\n50\n 40\n5.5\n" +
+            "  0\nTEXT\n  1\nSS400 t=4.5 \\U+6570\\U+91CF 2\n" +
+            "  0\nMTEXT\n  3\n{\\fArial|b0;\\U+66F2}\n  1\n\\PR5\n" +
+            "  0\nENDSEC\n  0\nEOF\n";
+
+        private static void TestPhongAi()
+        {
+            Console.WriteLine("-- Phong AI (tiep nhan / doc ban ve) --");
+            Kiem("loai tep: dxf / step / anh / la", PhongTiepNhan.XepLoai("A.DXF") + "|" + PhongTiepNhan.XepLoai("x.stp") + "|" + PhongTiepNhan.XepLoai("a.JPG") + "|" + PhongTiepNhan.XepLoai("a.zip"), "ban_ve|3d|don_hang|khac");
+            Kiem("loai tep: pdf theo ten", PhongTiepNhan.XepLoai("注文書_081106.pdf") + "|" + PhongTiepNhan.XepLoai("081106-15.pdf") + "|" + PhongTiepNhan.XepLoai("Đơn Hàng 1.pdf"), "don_hang|ban_ve|don_hang");
+            KeyValuePair<string, string> C2(string k, string v) => new KeyValuePair<string, string>(k, v);
+            Kiem("loai don: repeat / nua / pitchi / moi",
+                 PhongTiepNhan.DoanLoaiDon(new[] { C2("Loại đơn", "Repeat") }) + "|" + PhongTiepNhan.DoanLoaiDon(new[] { C2("Loại đơn", "Repeat + mới") }) + "|" +
+                 PhongTiepNhan.DoanLoaiDon(new[] { C2("加工", "ピッチ曲げ") }) + "|" + PhongTiepNhan.DoanLoaiDon(new[] { C2("Loại đơn", "Mới") }), "repeat|nua_repeat|can_lien_lac|moi");
+            var ctDs = new[] { "# khoa|ten", "abc co,ABC|ABC Co", "xyz|XYZ" };
+            Kiem("cong ty: khop khoa khong dau / khong khop",
+                 PhongTiepNhan.DoanCongTy(new[] { C2("Công ty", "Công ty ABC Cơ khí") }, ctDs) + "|" + PhongTiepNhan.DoanCongTy(new[] { C2("Công ty", "khác") }, ctDs), "ABC Co|");
+            Kiem("dung sau tiep nhan chi khi repeat", PhongTiepNhan.DungSauTiepNhan("repeat") + "|" + PhongTiepNhan.DungSauTiepNhan("nua_repeat"), "True|False");
+            var tepB = new List<TepDon> { new TepDon { Ten = "b.pdf", Loai = "ban_ve" }, new TepDon { Ten = "a.pdf", Loai = "ban_ve" }, new TepDon { Ten = "z.pdf", Loai = "don_hang" }, new TepDon { Ten = "c.dxf", Loai = "ban_ve" }, new TepDon { Ten = "k.pdf", Loai = "khac" } };
+            Kiem("thu tu bango: don hang truoc, chi pdf", string.Join(",", PhongTiepNhan.ThuTuBango(tepB).Select(t => t.Ten)), "z.pdf,a.pdf,b.pdf");
+            Kiem("ten bango", PhongTiepNhan.TenBango("081106/15"), "08110615-番号.PDF");
+
+            string goc = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ohta_test_tm_" + Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(System.IO.Path.Combine(goc, "2026", "11", "Don 081106-15 Kozai"));
+            Kiem("thu muc don: tim san (3 cap)", PhongTiepNhan.ThuMucDon(goc, "081106-15"), System.IO.Path.Combine(goc, "2026", "11", "Don 081106-15 Kozai"));
+            Kiem("thu muc don: chua co -> goc\\title", PhongTiepNhan.ThuMucDon(goc, "999999"), System.IO.Path.Combine(goc, "999999"));
+            Kiem("thu muc don: goc rong / title ngan", (PhongTiepNhan.ThuMucDon("", "999999") == null) + "|" + (PhongTiepNhan.ThuMucDon(goc, "1") == null), "True|True");
+            string fBam = System.IO.Path.Combine(goc, "a.txt");
+            System.IO.File.WriteAllText(fBam, "abc");
+            Kiem("ma bam sha256", PhongTiepNhan.MaBam(fBam), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+            System.IO.Directory.Delete(goc, true);
+
+            var tn = new TiepNhan { LoaiDon = "nua_repeat", CongTy = "Cty 合田" };
+            tn.Tep.Add(new TepDon { Ten = "図面.pdf", Nguon = "chat", Loai = "ban_ve", MaBam = "ab" });
+            var tn2 = PhongTiepNhan.Doc(PhongTiepNhan.Ghi(tn));
+            Kiem("tiep_nhan.json ghi roi doc", tn2.LoaiDon + "|" + tn2.CongTy + "|" + tn2.Tep[0].Ten + "|" + tn2.Tep[0].Nguon + "|" + tn2.Tep[0].MaBam, "nua_repeat|Cty 合田|図面.pdf|chat|ab");
+            Kiem("tiep_nhan.json hong -> null", PhongTiepNhan.Doc("{x") == null && PhongTiepNhan.Doc("") == null, true);
+
+            KetQuaDxf dx = DocDxf.Doc(Dxf);
+            Kiem("dxf: 2 lo O11", string.Join(",", dx.Lo.Select(l => l.D)), "11,11");
+            Kiem("dxf: kich thuoc bao", (dx.MaxX - dx.MinX) + "x" + (dx.MaxY - dx.MinY), "200x100");
+            Kiem("dxf: chu + giai ma \\U+ + bo ma mtext", string.Join(" / ", dx.Chu), "SS400 t=4.5 数量 2 / 曲\nR5");
+            Kiem("dxf: tom tat gom lo", DocDxf.TomTat("a.dxf", dx).Contains("Lo O11: 2 cai"), true);
+            Kiem("dxf: CP932", string.Join("", DocDxf.Doc(DocDxf.DocChu(new byte[] { 0x30, 0x0A })).Chu), "");
+            bool nhiPhan = false;
+            try { DocDxf.DocChu(System.Text.Encoding.ASCII.GetBytes("AutoCAD Binary DXF\r\n\u001a\0xxxxx")); } catch (System.IO.InvalidDataException) { nhiPhan = true; }
+            Kiem("dxf nhi phan -> bao loi", nhiPhan, true);
+
+            const string phanHoi = @"{""stop_reason"":""end_turn"",""usage"":{""input_tokens"":100,""cache_read_input_tokens"":2000,""output_tokens"":50},
+ ""content"":[{""type"":""text"",""text"":""{\""tam\"":[{\""so_ban_ve\"":\""A-1\"",\""ten\"":\""ブラケット\"",\""M\"":\""SS400\"",\""Z\"":\""SS400\"",\""T\"":4.5,\""Q\"":\""2\"",\""mat\"":\""\"",\""kich_thuoc\"":\""200 x 100\"",\""dung_sai\"":\""\"",\""ghi_chu_jp\"":\""\"",\""ghi_chu_vi\"":\""\"",\""trang\"":\""1\"",\""canh\"":[{\""dai_ngoai\"":[100,50],\""goc\"":90,\""r_trong\"":0,\""kieu\"":\""be\"",\""huong\"":\""V\""}],\""lo\"":[],\""khong_chac\"":[\""M\""]}]}""}]}";
+            var ph = PhongDocBanVe.DocPhanHoi(phanHoi);
+            Kiem("phan hoi: 1 tam, T so -> chu, khong chac", ph.Loi + "|" + ph.Tam.Count + "|" + ph.Tam[0].T + "|" + ph.Tam[0].CanhBao + "|" + ph.Tam[0].TomTatCanh, "|1|4.5|⚠ M|1 chỗ bẻ");
+            Kiem("phan hoi: token", ph.Vao + "/" + ph.DocCache + "/" + ph.Ra, "100/2000/50");
+            Kiem("phan hoi: tu choi / cat / loi key",
+                 PhongDocBanVe.DocPhanHoi(@"{""stop_reason"":""refusal"",""content"":[]}").Loi + "|" + PhongDocBanVe.DocPhanHoi(@"{""stop_reason"":""max_tokens"",""content"":[]}").Loi.StartsWith("Phản hồi bị cắt") + "|" +
+                 PhongDocBanVe.DocPhanHoi(@"{""type"":""error"",""error"":{""type"":""authentication_error"",""message"":""x""}}").Loi.StartsWith("API key"), "AI từ chối đọc tệp này|True|True");
+            Kiem("phan hoi hong", PhongDocBanVe.DocPhanHoi("<html>").Loi, "Phản hồi AI không đọc được");
+            Kiem("tien opus: 1M vao + 1M ra", PhongDocBanVe.Tien("claude-opus-5-5", 1000000, 0, 0, 1000000), 24m);
+
+            var body = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(PhongDocBanVe.Body("claude-opus-5-5", "dan", "qc", "a.pdf", "QUJD", null));
+            var nd = (List<object>)((OhtaTool.Plugin.Core.JsonObject)((List<object>)body.Get("messages"))[0]).Get("content");
+            Kiem("body: pdf truoc chu, fallback, cache quy chuan",
+                 ((OhtaTool.Plugin.Core.JsonObject)nd[0]).GetString("type") + "|" + body.GetString("fallbacks") + "|" + ((OhtaTool.Plugin.Core.JsonObject)((List<object>)body.Get("system"))[1]).ContainsKey("cache_control"), "document|default|True");
+            Kiem("body: haiku khong fallback, dxf chi co chu",
+                 ((OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(PhongDocBanVe.Body("claude-haiku-5-5", "d", "q", "a.dxf", null, "DXF: a"))).ContainsKey("fallbacks"), false);
+
+            // Gộp: giữ ô người dùng sửa, tấm của tệp không đọc lại giữ nguyên
+            var cu1 = new TamAi { Tep = "a.pdf", SoBanVe = "A-1", Ten = "X", M = "SPCC", Moi = false };
+            cu1.DaSua.Add("M");
+            var cu2 = new TamAi { Tep = "b.pdf", SoBanVe = "B-1" };
+            var cu3 = new TamAi { Tep = "a.pdf", SoBanVe = "A-9" };
+            var moi1 = new TamAi { Tep = "a.pdf", SoBanVe = "A-1", Ten = "X", M = "SS400" };
+            moi1.KhongChac.Add("M");
+            var gop = PhongDocBanVe.Gop(new List<TamAi> { cu1, cu2, cu3 }, new List<TamAi> { moi1 }, new HashSet<string> { "a.pdf" });
+            Kiem("gop: giu o da sua + tick Moi, bo tam cu da mat, giu tep khac",
+                 string.Join(",", gop.Select(t => t.SoBanVe)) + "|" + gop.First(t => t.SoBanVe == "A-1").M + "|" + gop.First(t => t.SoBanVe == "A-1").Moi + "|" + gop.First(t => t.SoBanVe == "A-1").CanhBao, "B-1,A-1|SPCC|False|");
+
+            var ct1 = new ChiTiet { TokenVao = 5, TokenRa = 7, Tien = 0.12m };
+            ct1.MaBamDaDoc["a.pdf"] = "h1";
+            ct1.Tam.Add(gop[1]);
+            var ct2 = PhongDocBanVe.Doc(PhongDocBanVe.Ghi(ct1));
+            Kiem("chi_tiet.json ghi roi doc", ct2.Tam[0].SoBanVe + "|" + ct2.Tam[0].M + "|" + string.Join(",", ct2.Tam[0].DaSua) + "|" + ct2.Tam[0].Moi + "|" + ct2.MaBamDaDoc["a.pdf"] + "|" + ct2.Tien + "|" + ct2.Tam[0].Tep, "A-1|SPCC|M|False|h1|0.12|a.pdf");
+            Kiem("chi_tiet.json hong -> null", PhongDocBanVe.Doc("[1]") == null, true);
+        }
+
         private static int Main()
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
@@ -389,6 +478,8 @@ namespace TeamsTool.Tests
             Kiem("nguoi chua co ma hop le khi kiem tra", SuaDon.KiemTra(C("Ng"), new List<string> { "40", "upn:moi@oft.com" }) == null && SuaDon.KiemTra(C("Ng"), new List<string> { "abc" }) != null, true);
             Kiem("loc nhan vien: co trong cot nguoi bat ky", SuaDon.CoNguoi(dN[0], cs, "12") + "|" + SuaDon.CoNguoi(dN[1], cs, "55") + "|" + SuaDon.CoNguoi(dN[1], cs, "12"), "True|True|False");
             Kiem("nguoi body: 1 nguoi bo trong = null",bN.ContainsKey("Ng1LookupId") && bN.Get("Ng1LookupId") == null, true);
+
+            TestPhongAi();
 
             Console.WriteLine();
             Console.WriteLine("Tong: {0} OK, {1} FAIL", _ok, _fail);

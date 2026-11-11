@@ -911,6 +911,7 @@ namespace TeamsTool.Views
             }
 
             int phien = ++_phienChiTiet;
+            trai.Children.Add(new AiPhongControl(d, _tab[7], _tab[6], _mau));
             trai.Children.Add(KhoiTep(d, phien));
             phai.Children.Add(KhoiChat(d, phien));
         }
