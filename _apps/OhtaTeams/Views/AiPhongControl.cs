@@ -87,7 +87,10 @@ namespace TeamsTool.Views
             ChiTiet ct = AiDon.DocChiTiet(_tm);
             _than.Children.Add(Phong1(tn, chay));
             _than.Children.Add(Phong2(tn, ct, chay));
-            _than.Children.Add(The("3 · Kiểm tra", Chu("Đợt 2: kiểm theo QUY CHUẨN, chia vấn đề 3 nhóm, soạn お問い合わせ / 連絡します.")));
+            bool daNhan = ct != null && ct.XacNhan.Length > 0;
+            _than.Children.Add(The("3 · Kiểm tra", Chu(daNhan
+                ? "Đã nhận " + ct.Tam.Count(t => t.Moi) + " tấm từ phòng 2 (xác nhận lúc " + ct.XacNhan + "). Kiểm tra tự động (thiếu kích thước, mâu thuẫn, lỗ gần đường bẻ, R uốn) có ở đợt 2."
+                : "Chờ xác nhận bảng ở phòng 2 (nút ✓ Xác nhận bảng → phòng 3).")));
             _than.Children.Add(The("4 · Triển khai", Chu("Đợt 3: trải phẳng theo bảng TV, dòng CSV, gửi lên chuỗi đơn.")));
         }
 
@@ -119,7 +122,7 @@ namespace TeamsTool.Views
                 {
                     ChiTiet ct = await AiDon.DocBanVe(tn, _tm, docLaiHet, Bao, _huy.Token);
                     if (!_trangThai.Text.StartsWith("Có tệp chưa đọc", StringComparison.Ordinal))
-                        Bao("Xong phòng 1–2: " + ct.Tam.Count + " tấm. Kiểm tra bảng, sửa ô sai (ô ⚠ là AI không chắc). Phòng 3 có ở đợt 2.");
+                        Bao("Xong phòng 1–2: " + ct.Tam.Count + " tấm. Kiểm tra bảng, sửa ô sai (ô ⚠ là AI không chắc), rồi bấm ✓ Xác nhận bảng → phòng 3.");
                 }
             }
             catch (OperationCanceledException) { Bao("Đã huỷ. Phần đã xong vẫn được lưu."); }
@@ -211,7 +214,7 @@ namespace TeamsTool.Views
             {
                 ItemsSource = ct.Tam, AutoGenerateColumns = false, CanUserAddRows = false, CanUserDeleteRows = false,
                 MaxHeight = 420, Margin = new Thickness(0, 6, 0, 6), HeadersVisibility = DataGridHeadersVisibility.Column,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, IsReadOnly = chay,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, IsReadOnly = chay || ct.XacNhan.Length > 0, // đã xác nhận: khoá, ↩ Bỏ xác nhận để sửa
             };
             if (nuaRepeat) g.Columns.Add(new DataGridCheckBoxColumn { Header = "Mới", Binding = new Binding("Moi") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged }, SortMemberPath = "moi" });
             Cot(g, "Tệp", "Tep", null);
@@ -247,7 +250,35 @@ namespace TeamsTool.Views
             nut.Children.Add(KieuTeams.Nut("↻ Đọc tệp mới / đã đổi", _mau, (s, e) => Chay(2, false), chinh: false).Also(b => b.IsEnabled = !chay));
             nut.Children.Add(KieuTeams.Nut("↻ Đọc lại tất cả", _mau, (s, e) => Chay(2, true), chinh: false).Also(b => b.IsEnabled = !chay));
             p.Children.Add(nut);
+            p.Children.Add(XacNhan(ct, chay));
             return The("2 · Đọc bản vẽ", p);
+        }
+
+        /// <summary>
+        /// ✓ Xác nhận bảng tấm → chuyển phòng 3 (spec: người dùng xác nhận trước khi dữ liệu đi tiếp).
+        /// Đã xác nhận: bảng khoá, muốn sửa phải ↩ Bỏ xác nhận; đọc lại bản vẽ cũng bỏ xác nhận.
+        /// </summary>
+        private UIElement XacNhan(ChiTiet ct, bool chay)
+        {
+            var hang = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+            if (ct.XacNhan.Length > 0)
+            {
+                hang.Children.Add(new TextBlock { Text = "✓ Đã xác nhận lúc " + ct.XacNhan + " — dữ liệu đã chuyển sang phòng 3.", Foreground = KieuTeams.Mau("#1F7A4D"),
+                                                  FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), TextWrapping = TextWrapping.Wrap });
+                hang.Children.Add(KieuTeams.Nut("↩ Bỏ xác nhận", _mau, (s, e) => { ct.XacNhan = ""; AiDon.Ghi(_tm, ct); Ve(); }, chinh: false)
+                    .Also(b => { b.IsEnabled = !chay; b.ToolTip = "Mở khoá bảng để sửa; sửa xong xác nhận lại"; }));
+                return hang;
+            }
+            hang.Children.Add(KieuTeams.Nut("✓ Xác nhận bảng → phòng 3", _mau, (s, e) =>
+            {
+                int canhBao = ct.Tam.Count(t => t.KhongChac.Count > 0);
+                if (canhBao > 0 && MessageBox.Show(canhBao + " tấm còn ô ⚠ (AI không chắc) chưa sửa.\nVẫn xác nhận và chuyển sang phòng 3?", "Xác nhận bảng tấm",
+                                                   MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+                ct.XacNhan = DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+                AiDon.Ghi(_tm, ct);
+                Ve();
+            }).Also(b => { b.IsEnabled = !chay && ct.Tam.Count > 0; b.ToolTip = "Kiểm tra bảng xong (sửa ô sai, ô ⚠) thì bấm để chuyển dữ liệu sang phòng 3"; }));
+            return hang;
         }
 
         /// <summary>o = tên ô JSON (null = chỉ xem) — giữ ở SortMemberPath để biết ô nào người dùng sửa.</summary>

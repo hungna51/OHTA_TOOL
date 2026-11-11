@@ -50,6 +50,8 @@ namespace TeamsTool.Core
         public Dictionary<string, string> MaBamDaDoc = new Dictionary<string, string>(); // tên tệp → mã băm lúc AI đọc
         public long TokenVao, TokenRa;
         public decimal Tien;
+        /// <summary>Lúc người dùng bấm ✓ Xác nhận bảng tấm → gửi phòng 3 ("yyyy-MM-dd HH:mm"); "" = chưa xác nhận.</summary>
+        public string XacNhan = "";
     }
 
     /// <summary>Phòng 2 — Đọc bản vẽ: model + JSON + dựng yêu cầu Claude + đọc phản hồi (logic thuần).</summary>
@@ -109,6 +111,7 @@ namespace TeamsTool.Core
             o.Set("token_vao", new JsonNumber(ct.TokenVao.ToString(CultureInfo.InvariantCulture)));
             o.Set("token_ra", new JsonNumber(ct.TokenRa.ToString(CultureInfo.InvariantCulture)));
             o.Set("tien", new JsonNumber(ct.Tien.ToString(CultureInfo.InvariantCulture)));
+            o.Set("xac_nhan", ct.XacNhan ?? "");
             var mb = new JsonObject();
             foreach (var kv in ct.MaBamDaDoc) mb.Set(kv.Key, kv.Value);
             o.Set("ma_bam_da_doc", mb);
@@ -132,7 +135,7 @@ namespace TeamsTool.Core
             JsonObject o;
             try { o = JsonLite.Parse(json ?? "") as JsonObject; } catch (Exception) { return null; }
             if (o == null) return null;
-            var ct = new ChiTiet { TokenVao = (long)So(o, "token_vao"), TokenRa = (long)So(o, "token_ra"), Tien = (decimal)So(o, "tien") };
+            var ct = new ChiTiet { TokenVao = (long)So(o, "token_vao"), TokenRa = (long)So(o, "token_ra"), Tien = (decimal)So(o, "tien"), XacNhan = Chu(o.Get("xac_nhan")) };
             if (o.Get("ma_bam_da_doc") is JsonObject mb)
                 foreach (var kv in mb.Items) ct.MaBamDaDoc[kv.Key] = kv.Value as string ?? "";
             foreach (JsonObject x in (o.Get("tam") as List<object> ?? new List<object>()).OfType<JsonObject>())

@@ -293,6 +293,8 @@ namespace TeamsTool.Services
             // Tệp đã bị bỏ khỏi đơn / đổi sang loại khác → bỏ tấm của nó
             var conLai = new HashSet<string>(tn.Tep.Where(t => t.Loai == PhongTiepNhan.BanVe).Select(t => t.Ten));
             ct2.Tam = PhongDocBanVe.Gop(cu.Tam.Where(x => conLai.Contains(x.Tep)).ToList(), moi, docLai);
+            // Bảng đổi (đọc lại / bỏ tệp) → phải xác nhận lại trước khi sang phòng 3
+            ct2.XacNhan = docLai.Count == 0 && ct2.Tam.Count == cu.Tam.Count ? cu.XacNhan : "";
             Ghi(tm, ct2);
             if (loi.Count > 0) bao("Có tệp chưa đọc được:\n" + string.Join("\n", loi));
             return ct2;

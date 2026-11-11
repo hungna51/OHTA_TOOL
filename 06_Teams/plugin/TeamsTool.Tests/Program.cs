@@ -128,11 +128,12 @@ namespace TeamsTool.Tests
             Kiem("gop: giu o da sua + tick Moi, bo tam cu da mat, giu tep khac",
                  string.Join(",", gop.Select(t => t.SoBanVe)) + "|" + gop.First(t => t.SoBanVe == "A-1").M + "|" + gop.First(t => t.SoBanVe == "A-1").Moi + "|" + gop.First(t => t.SoBanVe == "A-1").CanhBao, "B-1,A-1|SPCC|False|");
 
-            var ct1 = new ChiTiet { TokenVao = 5, TokenRa = 7, Tien = 0.12m };
+            var ct1 = new ChiTiet { TokenVao = 5, TokenRa = 7, Tien = 0.12m, XacNhan = "2026-11-11 17:50" };
             ct1.MaBamDaDoc["a.pdf"] = "h1";
             ct1.Tam.Add(gop[1]);
             var ct2 = PhongDocBanVe.Doc(PhongDocBanVe.Ghi(ct1));
-            Kiem("chi_tiet.json ghi roi doc", ct2.Tam[0].SoBanVe + "|" + ct2.Tam[0].M + "|" + string.Join(",", ct2.Tam[0].DaSua) + "|" + ct2.Tam[0].Moi + "|" + ct2.MaBamDaDoc["a.pdf"] + "|" + ct2.Tien + "|" + ct2.Tam[0].Tep, "A-1|SPCC|M|False|h1|0.12|a.pdf");
+            Kiem("chi_tiet.json ghi roi doc", ct2.Tam[0].SoBanVe + "|" + ct2.Tam[0].M + "|" + string.Join(",", ct2.Tam[0].DaSua) + "|" + ct2.Tam[0].Moi + "|" + ct2.MaBamDaDoc["a.pdf"] + "|" + ct2.Tien + "|" + ct2.Tam[0].Tep + "|" + ct2.XacNhan, "A-1|SPCC|M|False|h1|0.12|a.pdf|2026-11-11 17:50");
+            Kiem("chi_tiet.json cu (chua co xac_nhan) -> chua xac nhan", PhongDocBanVe.Doc("{\"tam\":[]}").XacNhan, "");
             Kiem("chi_tiet.json hong -> null", PhongDocBanVe.Doc("[1]") == null, true);
         }
 
