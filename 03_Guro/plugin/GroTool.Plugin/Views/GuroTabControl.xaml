@@ -167,7 +167,7 @@
                     <StackPanel>
                         <TextBlock Text="{Binding TienDoChu}" Foreground="#323639" FontSize="11.5" FontWeight="SemiBold"
                                    TextTrimming="CharacterEllipsis"/>
-                        <ProgressBar Height="10" Margin="0,6,0,0" Minimum="0" Maximum="100" Value="{Binding TienDo}"
+                        <ProgressBar Height="10" Margin="0,6,0,0" Minimum="0" Maximum="100" Value="{Binding TienDo, Mode=OneWay}"
                                      Foreground="{Binding AccentBrush}" Background="#ECEFF1" BorderThickness="0"/>
                     </StackPanel>
                 </Border>

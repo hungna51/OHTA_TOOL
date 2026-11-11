@@ -40,6 +40,9 @@ namespace OhtaTool.Plugin.Services
         {
             Devices = new List<string>();
             StyleSheets = new List<string>();
+            // Chỉ có tab Start (không bản vẽ): RefreshLists gây access violation làm sập CAD, try/catch không bắt được.
+            if (CadCompat.ActiveDocument == null)
+                return;
             try
             {
                 PlotSettingsValidator psv = PlotSettingsValidator.Current;
@@ -63,7 +66,7 @@ namespace OhtaTool.Plugin.Services
 
         public IList<string> MediaFor(string device)
         {
-            if (string.IsNullOrWhiteSpace(device))
+            if (string.IsNullOrWhiteSpace(device) || CadCompat.ActiveDocument == null)
                 return new List<string>();
             if (_mediaCache.TryGetValue(device, out var cached))
                 return cached;
