@@ -115,6 +115,7 @@ namespace TeamsTool.Core
         /// <summary>HTML tin mở đầu trao đổi về đơn: "Về đơn &lt;Title&gt;" (link tới đơn trên Lists) + nội dung người gõ.</summary>
         public static string HtmlMoDau(string title, string webUrl, string chu)
         {
+            webUrl = PhanTichTeams.UrlMoDon(webUrl);
             string ve = string.IsNullOrEmpty(webUrl) ? "<b>Về đơn " + HtmlTraLoi(title) + "</b>"
                                                      : "<b>Về đơn <a href=\"" + webUrl.Replace("\"", "%22") + "\">" + HtmlTraLoi(title) + "</a></b>";
             return "<p>" + ve + "</p><p>" + HtmlTraLoi(chu) + "</p>";
@@ -147,17 +148,19 @@ namespace TeamsTool.Core
         }
 
         /// <summary>
-        /// Body tin mở trao đổi kèm thẻ Adaptive Card "📋 Về: &lt;đơn&gt;" (bấm mở đơn) — thay thẻ tabReference của Lists khi Graph
-        /// không cho gửi loại đó. idThe: chuỗi bất kỳ duy nhất trong tin (nối thẻ &lt;attachment&gt; với phần đính kèm).
+        /// Body tin mở trao đổi kèm thẻ Adaptive Card "📋 Về: &lt;đơn&gt;" (bấm mở đơn) — thay thẻ tabReference của Lists vì Graph
+        /// nhận tabReference nhưng không gắn link mục đơn làm Teams ẩn thẻ. idThe: chuỗi bất kỳ duy nhất trong tin.
         /// </summary>
         public static string BodyMoDauThe(string html, string title, string webUrl, string idThe)
         {
+            webUrl = PhanTichTeams.UrlMoDon(webUrl);
             var chu = new JsonObject();
             chu.Set("type", "TextBlock");
             chu.Set("text", "📋 Về: " + title);
             chu.Set("weight", "Bolder");
             chu.Set("wrap", true);
             var the = new JsonObject();
+            the.Set("$schema", "http://adaptivecards.io/schemas/adaptive-card.json");
             the.Set("type", "AdaptiveCard");
             the.Set("version", "1.4");
             the.Set("body", new List<object> { chu });
@@ -165,12 +168,16 @@ namespace TeamsTool.Core
             {
                 var mo = new JsonObject();
                 mo.Set("type", "Action.OpenUrl");
+                mo.Set("title", "Mở đơn " + title);
                 mo.Set("url", webUrl);
                 the.Set("selectAction", mo);
+                the.Set("actions", new List<object> { mo });
             }
             var dk = new JsonObject();
             dk.Set("id", idThe);
             dk.Set("contentType", "application/vnd.microsoft.card.adaptive");
+            dk.Set("contentUrl", null);
+            dk.Set("name", null);
             dk.Set("content", JsonLite.Serialize(the).Trim()); // Graph nhận nội dung thẻ dạng chuỗi JSON
             var b = new JsonObject();
             b.Set("contentType", "html");

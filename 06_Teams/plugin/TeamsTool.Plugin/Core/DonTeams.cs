@@ -12,7 +12,7 @@ namespace TeamsTool.Core
     /// <summary>Một tab của kênh. ListUrl = URL danh sách Microsoft Lists, null = loại tab chưa hỗ trợ.</summary>
     public sealed class TabTeams
     {
-        public string Id, Ten, ListUrl;
+        public string Id, Ten, ListUrl, EntityId, WebUrl;
     }
 
     /// <summary>Một cột của danh sách: Ten = tên nội bộ (khoá trong fields), TieuDe = tên hiển thị.</summary>
@@ -94,7 +94,14 @@ namespace TeamsTool.Core
             {
                 var cfg = t.Get("configuration") as JsonObject;
                 string chuoi = string.Join(" ", cfg?.GetString("contentUrl"), cfg?.GetString("websiteUrl"), cfg?.GetString("entityId"), t.GetString("webUrl"));
-                kq.Add(new TabTeams { Id = t.GetString("id"), Ten = t.GetString("displayName") ?? "?", ListUrl = TimUrlList(chuoi) });
+                kq.Add(new TabTeams
+                {
+                    Id = t.GetString("id"),
+                    Ten = t.GetString("displayName") ?? "?",
+                    ListUrl = TimUrlList(chuoi),
+                    EntityId = cfg?.GetString("entityId"),
+                    WebUrl = t.GetString("webUrl"),
+                });
             }
             return kq;
         }
@@ -249,6 +256,60 @@ namespace TeamsTool.Core
             DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out DateTime d)
                 ? d.ToLocalTime() : (DateTime?)null;
 
+        /// <summary>
+        /// Graph trả webUrl của listItem dạng .../Lists/TenList/123_.000 (đường dẫn nội bộ SharePoint, mở trình duyệt bị 404)
+        /// → đổi đuôi /123_.000 thành /DispForm.aspx?ID=123 để mở thẳng đơn trên Microsoft Lists.
+        /// </summary>
+        public static string UrlMoDon(string webUrl) =>
+            string.IsNullOrEmpty(webUrl) ? webUrl : Regex.Replace(webUrl, @"/(\d+)_\.000$", "/DispForm.aspx?ID=$1");
+
+        /// <summary>
+        /// Deep link mở thẳng đơn trong ứng dụng Microsoft Teams (tab Lists của kênh, không bật trình duyệt ra SharePoint):
+        /// https://teams.microsoft.com/l/entity/&lt;appId&gt;/&lt;entityId&gt;?webUrl=...&amp;label=...&amp;context={"subEntityId":"&lt;itemId&gt;","channelId":"&lt;kenhId&gt;"}.
+        /// Thiếu thông tin tab hoặc id đơn → lùi về UrlMoDon(dispFormUrl).
+        /// </summary>
+        public static string UrlTeamsMoDon(TabTeams tab, string kenhId, string itemId, string dispFormUrl, string title = null)
+        {
+            string urlDon = UrlMoDon(dispFormUrl);
+            if (!string.IsNullOrEmpty(urlDon) && urlDon.StartsWith("https://teams.microsoft.com/l/entity/", StringComparison.OrdinalIgnoreCase))
+            {
+                Match mw = Regex.Match(urlDon, @"[?&]webUrl=([^&]+)", RegexOptions.IgnoreCase);
+                if (mw.Success) urlDon = UrlMoDon(Uri.UnescapeDataString(mw.Groups[1].Value));
+            }
+            if (tab == null || string.IsNullOrEmpty(itemId)) return urlDon;
+            string entityId = !string.IsNullOrEmpty(tab.EntityId) ? tab.EntityId : tab.Id;
+            string goc = null;
+            var ctx = new JsonObject();
+            if (!string.IsNullOrEmpty(tab.WebUrl) && tab.WebUrl.StartsWith("https://teams.microsoft.com/l/entity/", StringComparison.OrdinalIgnoreCase))
+            {
+                int hoi = tab.WebUrl.IndexOf('?');
+                goc = hoi >= 0 ? tab.WebUrl.Substring(0, hoi) : tab.WebUrl;
+                if (hoi >= 0)
+                {
+                    Match m = Regex.Match(tab.WebUrl.Substring(hoi + 1), @"(?:^|&)context=([^&]+)", RegexOptions.IgnoreCase);
+                    if (m.Success)
+                    {
+                        try { if (JsonLite.Parse(Uri.UnescapeDataString(m.Groups[1].Value)) is JsonObject cu) ctx = cu; }
+                        catch (Exception) { }
+                    }
+                }
+            }
+            else if (!string.IsNullOrEmpty(entityId))
+                goc = "https://teams.microsoft.com/l/entity/2a527703-1f6f-4559-a332-d8a7d288cd88/" + Uri.EscapeDataString(entityId);
+            if (string.IsNullOrEmpty(goc)) return urlDon;
+
+            ctx.Set("subEntityId", itemId);
+            if (!string.IsNullOrEmpty(kenhId) && string.IsNullOrEmpty(ctx.GetString("channelId")))
+                ctx.Set("channelId", kenhId);
+            string ctxJson = "{" + string.Join(",", ctx.Items.Where(kv => kv.Value != null)
+                .Select(kv => JsonLite.Serialize(kv.Key).Trim() + ":" + JsonLite.Serialize(kv.Value).Trim())) + "}";
+            string web = !string.IsNullOrEmpty(urlDon) ? urlDon : (tab.ListUrl ?? "");
+            string nhan = !string.IsNullOrEmpty(title) ? title : (tab.Ten ?? "");
+            return goc + "?webUrl=" + Uri.EscapeDataString(web)
+                       + "&label=" + Uri.EscapeDataString(nhan)
+                       + "&context=" + Uri.EscapeDataString(ctxJson);
+        }
+
         /// <summary>Một trang /items?$expand=fields → đơn.</summary>
         public static List<DonTeams> DocDon(string json, List<CotList> cots, CotChinh chinh, Func<string, string> tenNguoi)
         {
@@ -263,7 +324,7 @@ namespace TeamsTool.Core
                 {
                     Id = it.GetString("id"),
                     ETag = it.GetString("eTag"),
-                    WebUrl = it.GetString("webUrl"),
+                    WebUrl = UrlMoDon(it.GetString("webUrl")),
                     HoiThoaiMeta = f.Items.FirstOrDefault(kv => kv.Key.StartsWith("teamsConversationMetadata", StringComparison.Ordinal)).Value as string ?? "",
                     HoiThoaiCot = f.Items.FirstOrDefault(kv => kv.Key.StartsWith("teamsConversationMetadata", StringComparison.Ordinal)).Key ?? "",
                     CoTep = Equals(f.Get("Attachments"), true),

@@ -294,13 +294,22 @@ namespace TeamsTool.Tests
             Kiem("tin mo dau kem the: tabReference + the attachment trong noi dung",
                  aThe.GetString("id") + "|" + aThe.GetString("contentType") + "|" + aThe.GetString("name") + "|" + ((OhtaTool.Plugin.Core.JsonObject)bThe.Get("body")).GetString("content"),
                  "tab::009936cf|tabReference|Về: 130828|<p>x</p><attachment id=\"tab::009936cf\"></attachment>");
-            var bCard = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyMoDauThe("<p>x</p>", "130808", "https://don/1", "the1"));
+            var bCard = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyMoDauThe("<p>x</p>", "130808", "https://kohtavn.sharepoint.com/sites/OHTA/Lists/2026/2758_.000", "the1"));
             var aCard = (OhtaTool.Plugin.Core.JsonObject)((List<object>)bCard.Get("attachments"))[0];
             var card = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(aCard.GetString("content"));
             Kiem("the adaptive: loai, chu Ve: don, bam mo don, the trong noi dung",
                  aCard.GetString("contentType") + "|" + ((OhtaTool.Plugin.Core.JsonObject)((List<object>)card.Get("body"))[0]).GetString("text") + "|"
                  + ((OhtaTool.Plugin.Core.JsonObject)card.Get("selectAction")).GetString("url") + "|" + ((OhtaTool.Plugin.Core.JsonObject)bCard.Get("body")).GetString("content"),
-                 "application/vnd.microsoft.card.adaptive|📋 Về: 130808|https://don/1|<p>x</p><attachment id=\"the1\"></attachment>");
+                 "application/vnd.microsoft.card.adaptive|📋 Về: 130808|https://kohtavn.sharepoint.com/sites/OHTA/Lists/2026/DispForm.aspx?ID=2758|<p>x</p><attachment id=\"the1\"></attachment>");
+            string urlDeep = PhanTichTeams.UrlTeamsMoDon(tabs[1], "19:kenh@thread.tacv2", "2770", "https://kohtavn.sharepoint.com/sites/msteams_3bcaea/Lists/Tt%20c%20cc%20mc/2770_.000", "4444444");
+            Kiem("url teams mo don: deep link entity + subEntityId + channelId",
+                 urlDeep,
+                 "https://teams.microsoft.com/l/entity/x?webUrl=https%3A%2F%2Fkohtavn.sharepoint.com%2Fsites%2Fmsteams_3bcaea%2FLists%2FTt%2520c%2520cc%2520mc%2FDispForm.aspx%3FID%3D2770&label=4444444&context=%7B%22subEntityId%22%3A%222770%22%2C%22channelId%22%3A%2219%3Akenh%40thread.tacv2%22%7D");
+            Kiem("url teams mo don: goi lai 2 lan khong long nhau", PhanTichTeams.UrlTeamsMoDon(tabs[1], "19:kenh@thread.tacv2", "2770", urlDeep, "4444444"), urlDeep);
+            var tabKhongEntityUrl = new TabTeams { Id = "009936cf", Ten = "注文書", ListUrl = "https://kohtavn.sharepoint.com/sites/OHTA/Lists/2026" };
+            Kiem("url teams mo don: tab khong co webUrl /l/entity/ -> dung appId Lists",
+                 PhanTichTeams.UrlTeamsMoDon(tabKhongEntityUrl, "19:c@thread.tacv2", "99", "https://kohtavn.sharepoint.com/sites/OHTA/Lists/2026/99_.000", "C99"),
+                 "https://teams.microsoft.com/l/entity/2a527703-1f6f-4559-a332-d8a7d288cd88/009936cf?webUrl=https%3A%2F%2Fkohtavn.sharepoint.com%2Fsites%2FOHTA%2FLists%2F2026%2FDispForm.aspx%3FID%3D99&label=C99&context=%7B%22subEntityId%22%3A%2299%22%2C%22channelId%22%3A%2219%3Ac%40thread.tacv2%22%7D");
             Kiem("tin mo dau khong the", ((OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyMoDau("<p>x</p>", null, "a"))).ContainsKey("attachments"), false);
             Kiem("tep: doc AttachmentFiles", string.Join(",", TraoDoi.DocTep(@"{""value"":[{""FileName"":""130819.pdf"",""ServerRelativeUrl"":""/sites/x/Lists/y/Attachments/2758/130819.pdf""},{""FileName"":""""}]}").Select(t => t.Ten + "=" + t.DuongDan)), "130819.pdf=/sites/x/Lists/y/Attachments/2758/130819.pdf");
             Kiem("tep: URL tai qua _api, ma hoa dau cach + nhay don", TraoDoi.UrlTaiTep("https://h/sites/x", "/sites/x/Lists/Tt c/Attachments/1/a'b.pdf"),

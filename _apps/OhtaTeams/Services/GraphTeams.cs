@@ -447,15 +447,22 @@ namespace TeamsTool.Services
         }
 
         private static readonly Dictionary<string, string> _idTab = new Dictionary<string, string>(); // "nhóm|kênh|tên tab" → id tab
+        private static readonly Dictionary<string, TabTeams> _tabDon = new Dictionary<string, TabTeams>(); // "nhóm|kênh|tên tab" → tab Lists
 
         /// <summary>Id tab Lists (theo tên) trong kênh — để gắn thẻ "Về: &lt;đơn&gt;" vào tin mở trao đổi. Không thấy → null.</summary>
-        public static async Task<string> IdTabDon(string nhomId, string kenhId, string tenTab, CancellationToken ct)
+        public static async Task<string> IdTabDon(string nhomId, string kenhId, string tenTab, CancellationToken ct) =>
+            (await TabDon(nhomId, kenhId, tenTab, null, ct))?.Id;
+
+        /// <summary>Tab Lists (theo tên hoặc URL danh sách) trong kênh — để lấy id và dựng deep link mở thẳng đơn trong ứng dụng Teams. Không thấy → null.</summary>
+        public static async Task<TabTeams> TabDon(string nhomId, string kenhId, string tenTab, string listUrl, CancellationToken ct)
         {
             string khoa = nhomId + "|" + kenhId + "|" + tenTab;
-            if (_idTab.TryGetValue(khoa, out string id)) return id;
-            id = (await TabCuaKenh(nhomId, kenhId, ct)).FirstOrDefault(t => t.Ten == tenTab)?.Id;
-            if (id != null) _idTab[khoa] = id;
-            return id;
+            if (_tabDon.TryGetValue(khoa, out TabTeams daCo)) return daCo;
+            List<TabTeams> ds = await TabCuaKenh(nhomId, kenhId, ct);
+            TabTeams tab = ds.FirstOrDefault(t => t.Ten == tenTab)
+                        ?? (!string.IsNullOrEmpty(listUrl) ? ds.FirstOrDefault(t => string.Equals(t.ListUrl, listUrl, StringComparison.OrdinalIgnoreCase)) : null);
+            if (tab != null) { _tabDon[khoa] = tab; if (tab.Id != null) _idTab[khoa] = tab.Id; }
+            return tab;
         }
 
         /// <summary>
@@ -477,13 +484,9 @@ namespace TeamsTool.Services
             }
             string htmlChu = "<p>" + TraoDoi.HtmlTraLoi(chu) + "</p>";
             var loi = new List<string>();
-            // Graph từ chối (400) thì Teams không tạo tin → thử kiểu kế tiếp, không có tin thừa
-            if (!string.IsNullOrEmpty(tabId))
-            {
-                try { return (await Dang(TraoDoi.BodyMoDau(htmlChu, tabId, title)), "lists", ""); }
-                catch (InvalidOperationException ex) when (ex.Message.StartsWith("Graph 400")) { loi.Add("thẻ Lists: " + ex.Message); }
-            }
-            try { return (await Dang(TraoDoi.BodyMoDauThe(htmlChu, title, webUrl, Guid.NewGuid().ToString("N"))), "the", string.Join("; ", loi)); }
+            // Không gửi tabReference qua Graph: Graph nhận (201) nhưng không gắn được ngữ cảnh mục đơn của Lists nên Teams ẩn trắng thẻ.
+            // Gửi thẳng thẻ Adaptive Card "📋 Về: <đơn>" có nút bấm mở đơn; nếu Graph từ chối (400) mới lùi về tin có link HTML.
+            try { return (await Dang(TraoDoi.BodyMoDauThe(htmlChu, title, webUrl, Guid.NewGuid().ToString("N"))), "the", ""); }
             catch (InvalidOperationException ex) when (ex.Message.StartsWith("Graph 400")) { loi.Add("thẻ Adaptive: " + ex.Message); }
             return (await Dang(TraoDoi.BodyMoDau(TraoDoi.HtmlMoDau(title, webUrl, chu), null, title)), "", string.Join("; ", loi));
         }
@@ -509,8 +512,18 @@ namespace TeamsTool.Services
         public static async Task<List<KeyValuePair<string, string>>> KenhCuaNhom(string nhomId, CancellationToken ct) =>
             PhanTichTeams.DocDanhSach(await GetJson("/teams/" + nhomId + "/channels?$select=id,displayName", ct));
 
-        public static async Task<List<TabTeams>> TabCuaKenh(string nhomId, string kenhId, CancellationToken ct) =>
-            PhanTichTeams.DocTab(await GetJson("/teams/" + nhomId + "/channels/" + Uri.EscapeDataString(kenhId) + "/tabs", ct));
+        public static async Task<List<TabTeams>> TabCuaKenh(string nhomId, string kenhId, CancellationToken ct)
+        {
+            List<TabTeams> ds = PhanTichTeams.DocTab(await GetJson("/teams/" + nhomId + "/channels/" + Uri.EscapeDataString(kenhId) + "/tabs", ct));
+            foreach (TabTeams t in ds)
+                if (!string.IsNullOrEmpty(t.Ten))
+                {
+                    string khoa = nhomId + "|" + kenhId + "|" + t.Ten;
+                    _tabDon[khoa] = t;
+                    if (t.Id != null) _idTab[khoa] = t.Id;
+                }
+            return ds;
+        }
 
         /// <summary>URL danh sách của tab → (siteId, listId).</summary>
         public static async Task<(string SiteId, string ListId)> MoList(string listUrl, CancellationToken ct)

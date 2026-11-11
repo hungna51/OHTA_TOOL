@@ -85,6 +85,24 @@ if ($HasTeams) {
     }
 }
 if ($HasTeamsApp) {
+    $TeamsBinDir = Join-Path (Split-Path -Parent $TeamsAppProj) "bin"
+    if (Test-Path $TeamsBinDir) {
+        Get-ChildItem -Path $TeamsBinDir -Filter "*.old_*" -ErrorAction SilentlyContinue | ForEach-Object {
+            Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+        }
+        $stampExe = [DateTime]::Now.ToString("yyyyMMdd_HHmmss")
+        foreach ($ext in @("exe", "pdb")) {
+            $fExe = Join-Path $TeamsBinDir "OhtaTeams.$ext"
+            if (Test-Path $fExe) {
+                try {
+                    $fs = [IO.File]::Open($fExe, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+                    $fs.Close()
+                } catch {
+                    Move-Item -Path $fExe -Destination (Join-Path $TeamsBinDir "OhtaTeams.old_${stampExe}.$ext") -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+    }
     dotnet build $TeamsAppProj -c Release --nologo
     if ($LASTEXITCODE -ne 0) {
         throw "Bien dich OhtaTeams.exe (_apps) THAT BAI! (Dang mo OhtaTeams thi tat di roi build lai)"

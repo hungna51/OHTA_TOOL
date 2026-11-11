@@ -231,6 +231,10 @@ namespace TeamsTool.Views
 
         private static void MoNgoai(string duongDan)
         {
+            if (string.IsNullOrEmpty(duongDan)) return;
+            if (duongDan.StartsWith("https://teams.microsoft.com/l/", StringComparison.OrdinalIgnoreCase))
+                try { Process.Start(new ProcessStartInfo("msteams://" + duongDan.Substring("https://".Length)) { UseShellExecute = true }); return; }
+                catch { }
             try { Process.Start(new ProcessStartInfo(duongDan) { UseShellExecute = true }); }
             catch { }
         }

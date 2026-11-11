@@ -59,6 +59,7 @@ namespace TeamsTool.Views
 
         /// <summary>Tab Lists đang mở: nhómId, tên nhóm, kênhId, tên kênh, tên tab, siteId, listId, URL list.</summary>
         private string[] _tab;
+        private TabTeams _tabDon;
         private List<DonTeams> _don = new List<DonTeams>();
         private List<CotList> _cots = new List<CotList>(); // cột của danh sách đang mở (form sửa)
         private string _toiTen;
@@ -310,6 +311,7 @@ namespace TeamsTool.Views
                     BaoTrangThai("Đang mở danh sách " + t.Ten + "…");
                     var (siteId, listId) = await GraphTeams.MoList(t.ListUrl, CancellationToken.None);
                     _tab = new[] { nhomId, nhomTen, kenhId, kenhTen, t.Ten, siteId, listId, t.ListUrl };
+                    _tabDon = t;
                     _chon.Clear();
                     _congTy = _nguoiSite = null; // site khác: mã người khác
                     CaiDatTeams.GhiTabChon(_tab);
@@ -340,6 +342,9 @@ namespace TeamsTool.Views
                 return;
             }
             BaoTrangThai("Đang tải đơn…");
+            if (_tabDon == null)
+                try { _tabDon = await GraphTeams.TabDon(_tab[0], _tab[2], _tab[4], _tab[7], CancellationToken.None); }
+                catch (InvalidOperationException) { }
             var tho = await GraphTeams.TaiList(_tab[5], listId, CancellationToken.None);
             var ds = await Task.Run(() => PhanTichTeams.DocToanBo(tho));
             if (_tab?[6] != listId) return;
@@ -352,6 +357,9 @@ namespace TeamsTool.Views
         /// <summary>Gán danh sách đơn mới và ghi dang_lam.json cho tab CAD.</summary>
         private void DatDon(PhanTichTeams.ThoList tho, List<DonTeams> moi)
         {
+            if (_tabDon != null && _tab != null)
+                foreach (DonTeams d in moi)
+                    d.WebUrl = PhanTichTeams.UrlTeamsMoDon(_tabDon, _tab[2], d.Id, d.WebUrl, d.Title);
             _don = moi;
             _cots = PhanTichTeams.DocCot(tho.Cot);
             _danhBaDon = SuaDon.DanhBa(moi, _cots);
@@ -377,6 +385,9 @@ namespace TeamsTool.Views
             BaoTrangThai(goc + " — đang cập nhật…");
             try
             {
+                if (_tabDon == null && _tab != null)
+                    try { _tabDon = await GraphTeams.TabDon(_tab[0], _tab[2], _tab[4], _tab[7], CancellationToken.None); }
+                    catch (InvalidOperationException) { }
                 var tho = await GraphTeams.TaiList(siteId, listId, CancellationToken.None);
                 var moi = await Task.Run(() => PhanTichTeams.DocToanBo(tho));
                 if (_tab?[6] != listId) return; // đã chuyển sang tab khác
@@ -1142,10 +1153,11 @@ namespace TeamsTool.Views
             Chay(async () =>
             {
                 BaoTrangThai("Đang tạo trao đổi…");
-                string tabId = null;
-                try { tabId = await GraphTeams.IdTabDon(_tab[0], _tab[2], _tab[4], CancellationToken.None); }
-                catch (InvalidOperationException) { } // không đọc được tab: tạo tin không thẻ
-                var (conv, kieu, loiThe) = await GraphTeams.TaoHoiThoai(nhomId, kenh.ChannelId, chu, d.Title, d.WebUrl, tabId, CancellationToken.None);
+                if (_tabDon == null)
+                    try { _tabDon = await GraphTeams.TabDon(_tab[0], _tab[2], _tab[4], _tab[7], CancellationToken.None); }
+                    catch (InvalidOperationException) { } // không đọc được tab: dùng link SharePoint
+                string urlMo = PhanTichTeams.UrlTeamsMoDon(_tabDon, _tab[2], d.Id, d.WebUrl, d.Title);
+                var (conv, kieu, loiThe) = await GraphTeams.TaoHoiThoai(nhomId, kenh.ChannelId, chu, d.Title, urlMo, _tabDon?.Id, CancellationToken.None);
                 var chuoi = new HoiThoai { ConvId = conv, ChannelId = kenh.ChannelId, TeamInternalId = kenh.TeamInternalId };
                 string thongBao = "Đã tạo trao đổi trong nhóm " + nhomTen
                     + (kieu == "lists" ? " (kèm thẻ Về: " + d.Title + " của Lists)." : kieu == "the" ? " (kèm thẻ 📋 Về: " + d.Title + ")." : " (tin có link tới đơn).")
@@ -1174,6 +1186,7 @@ namespace TeamsTool.Views
             var ten = _danhBaDu.ToDictionary(kv => kv.Key, kv => kv.Value);
             DonTeams sau = PhanTichTeams.DocDon(json, _cots, PhanTichTeams.KhopCot(_cots), x => x != null && ten.TryGetValue(x, out string t) ? t : "#" + x).FirstOrDefault();
             if (sau == null || _tab?[6] != listId) return sau;
+            if (_tabDon != null) sau.WebUrl = PhanTichTeams.UrlTeamsMoDon(_tabDon, _tab[2], sau.Id, sau.WebUrl, sau.Title);
             int vt = _don.FindIndex(x => x.Id == id);
             if (vt >= 0) _don[vt] = sau; else _don.Add(sau);
             GhiDangLam();
@@ -1268,7 +1281,14 @@ namespace TeamsTool.Views
                 HienChiTiet(d);
             }, chinh: !dangChon));
             if (_cots.Any(c => c.SuaDuoc) && !string.IsNullOrEmpty(d.ETag)) nut.Children.Add(KieuTeams.Nut("✏ Sửa nhiều ô", _mau, (s, e) => HienSua(d), chinh: false));
-            if (!string.IsNullOrEmpty(d.WebUrl)) nut.Children.Add(KieuTeams.Nut("Mở trên Teams", _mau, (s, e) => MoNgoai(d.WebUrl), chinh: dangChon));
+            if (!string.IsNullOrEmpty(d.WebUrl))
+                nut.Children.Add(KieuTeams.Nut("Mở trên Teams", _mau, async (s, e) =>
+                {
+                    if (_tabDon == null && _tab != null)
+                        try { _tabDon = await GraphTeams.TabDon(_tab[0], _tab[2], _tab[4], _tab[7], CancellationToken.None); }
+                        catch (InvalidOperationException) { }
+                    MoNgoai(PhanTichTeams.UrlTeamsMoDon(_tabDon, _tab?[2], d.Id, d.WebUrl, d.Title));
+                }, chinh: dangChon));
             return nut;
         }
 
@@ -1474,6 +1494,7 @@ namespace TeamsTool.Views
                 DonTeams sau = PhanTichTeams.DocDon(json, _cots, PhanTichTeams.KhopCot(_cots),
                                                     id => id != null && ten.TryGetValue(id, out string t) ? t : "#" + id).FirstOrDefault();
                 if (sau == null) { VeDon(); return; }
+                if (_tabDon != null) sau.WebUrl = PhanTichTeams.UrlTeamsMoDon(_tabDon, _tab[2], sau.Id, sau.WebUrl, sau.Title);
                 int vt = _don.FindIndex(x => x.Id == d.Id);
                 if (vt >= 0) _don[vt] = sau; else _don.Add(sau);
                 GhiDangLam();
@@ -1483,6 +1504,10 @@ namespace TeamsTool.Views
 
         private static void MoNgoai(string duongDan)
         {
+            if (string.IsNullOrEmpty(duongDan)) return;
+            if (duongDan.StartsWith("https://teams.microsoft.com/l/", StringComparison.OrdinalIgnoreCase))
+                try { Process.Start(new ProcessStartInfo("msteams://" + duongDan.Substring("https://".Length)) { UseShellExecute = true }); return; }
+                catch { }
             try { Process.Start(new ProcessStartInfo(duongDan) { UseShellExecute = true }); }
             catch { }
         }
