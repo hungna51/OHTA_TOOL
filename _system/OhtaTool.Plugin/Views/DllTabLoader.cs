@@ -71,6 +71,9 @@ namespace OhtaTool.Plugin.Views
         /// </summary>
         private static Assembly TimHoacNap(string dll, string tenDll, string tenTab)
         {
+            if (string.Equals(tenDll, "GROTOOL", StringComparison.OrdinalIgnoreCase))
+                CanhBaoGuroCu();
+
             Assembly daNap = AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(a => string.Equals(a.GetName().Name, tenDll, StringComparison.OrdinalIgnoreCase));
             if (daNap != null)
@@ -89,6 +92,24 @@ namespace OhtaTool.Plugin.Views
             return AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(a => string.Equals(a.GetName().Name, tenDll, StringComparison.OrdinalIgnoreCase))
                 ?? Assembly.LoadFrom(dll);
+        }
+
+        /// <summary>
+        /// Mục 216 GURO: lisp GURO cũ trong Startup Suite NETLOAD GROZWCAD.dll (hoặc ZwCadPlugin.dll) mỗi lần mở CAD —
+        /// trùng mọi tên hàm GRO_NET_* với GROTOOL nên gọi hàm nào cũng "undefined function - nil".
+        /// </summary>
+        private static void CanhBaoGuroCu()
+        {
+            Assembly cu = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a =>
+                string.Equals(a.GetName().Name, "GROZWCAD", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(a.GetName().Name, "ZwCadPlugin", StringComparison.OrdinalIgnoreCase));
+            if (cu == null) return;
+            string noi;
+            try { noi = cu.Location; } catch { noi = cu.GetName().Name; }
+            BugLog.Write("DLL", "DLL GURO CU dang nap (trung ham GRO_NET_* voi GROTOOL): " + noi);
+            CadCompat.WriteMessage("\n*** [OHTA TOOL] DLL GURO CU dang nap: " + noi +
+                                   "\n*** Lenh GRO se loi 'undefined function'. Go APPLOAD -> Startup Suite (Contents...) -> xoa dong" +
+                                   " 'Guro ZWCAD(gro).lsp', roi dong va mo lai CAD.\n");
         }
 
         /// <summary>Chuyển lăn chuột của PaletteSet sang hàm ScrollByMouseWheel của giao diện trong DLL của tab.</summary>
