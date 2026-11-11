@@ -71,6 +71,7 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 | 216 | **"Buoc nhannet (C#) loi: undefined function - nil" lần nữa trên máy dev (11/11/2026)** — cùng gốc mục 212: `Guro ZWCAD(gro).lsp` cũ vẫn ở Startup Suite (dòng 4), dòng cuối file NETLOAD `C:\GROZWCAD\GROZWCAD.dll` mỗi lần mở ZWCAD → trùng mọi tên `GRO_NET_*` với GROTOOL. Nay `DllTabLoader` thấy assembly `GROZWCAD` / `ZwCadPlugin` đang nạp thì in cảnh báo `*** [OHTA TOOL] DLL GURO CU dang nap` + cách gỡ, ghi `ohta.log`. Sửa máy: gỡ dòng đó khỏi Startup Suite, mở lại CAD | [12-chan-doan-bao-loi.md](12-chan-doan-bao-loi.md) |
 | 217 | **Đo thời gian bước "đặt mã khắc vào hình"** (130837-1: 11.7 s dù phần nặng đã là C# mục 170): lisp ghi `C# gro_net_dat_mk (datmk): N s` vào `ohta.log` để tách phần lisp (chọn tấm) với phần C#. Ghi chú: bước "in bao cao" (12 s) gồm in PDF (~3 s) và **thời gian chờ người bấm OK** hộp cảnh báo khung cắt nhiều ghi chú (~7 s) — không phải code chậm | [16-chuyen-sang-csharp.md](16-chuyen-sang-csharp.md) |
 | 218 | **Bước "3b dim: cung bo góc" có bản C#** (130837-1: 4.5 s): lisp so mỗi cung gần text số với mọi đầu nét trên layer (`gro--cung-bo-goc-p`). `Core/CungBoGoc.cs` chép 1-1, đầu nét nằm trong lưới ô 1 mm; `GRO_NET_CUNG_BO_GOC`, bước `GROCS` mới **`cungbogoc`** (mặc định `lisp`; `ab` so `[AB cungbogoc]` theo handle cung bị bỏ; `cs` C# tính, lisp áp). **Chưa chạy AB trên bản vẽ thật** | [16-chuyen-sang-csharp.md](16-chuyen-sang-csharp.md) |
+| 219 | **Bước "đặt mã khắc vào hình" 7.7 s, riêng C# 7.24 s** (đo nhờ mục 217; phần tính toán phát lại ngoài CAD < 1 s): `DatMaKhacCad.QuetNet` lấy mẫu điểm (tới 64 điểm / nét) cho MỌI nét đúng loại trong bản vẽ — cả nét layer khác và 7024 nét bản chụp — chỉ để ghi dòng chẩn đoán. Nay chỉ lấy mẫu nét sẽ dùng (đúng layer, không có XData bản chụp); nét bị loại ghi chẩn đoán bằng hộp `GeometricExtents`. Danh sách nét dùng để đặt không đổi. **Chưa đo lại trên ZWCAD** | [16-chuyen-sang-csharp.md](16-chuyen-sang-csharp.md) |
 | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) | Hộp thoại DCL + **bản .NET** (dialog `gro`, bảng DST), **tab Guro** | 18, 19, 20, 52, 55, 56, 64, 86, 192, 193, 194, 195, 196, 197 |
 | [06-encoding-chuoi.md](06-encoding-chuoi.md) | Encoding và xử lý chuỗi (CP932 / Unicode) | 2, 9, 15, 16, 50, 57 |
 | [07-tach-du-lieu.md](07-tach-du-lieu.md) | Tách độ dày, số lượng, mã khắc, **ghép dòng số lượng** | 10, 11, 17, 23, 24, 32, 43, 54, 168 |
@@ -86,14 +87,14 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 
 ## Mục lục mục lỗi
 
-1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–218 tại đây.
+1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–219 tại đây.
 
 > ### ⚠ SỐ MỤC LÀ CỐ ĐỊNH, KHÔNG ĐƯỢC ĐÁNH SỐ LẠI
 > Mã nguồn `.lsp` tham chiếu tới chúng ở **17 chỗ** (`CLAUDE.md muc 13`, `muc 29`, `muc 85`, `muc 86`, …) và các file rule tham chiếu chéo nhau ở **59 chỗ**. Đổi số là hỏng cả 59 chỗ đó cùng lúc.
 >
 > Thêm mục mới thì **nối tiếp số lớn nhất hiện có + 1**, bỏ vào file theo chủ đề, rồi cập nhật bảng dưới.
 >
-> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **218**.
+> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **219**.
 
 > ### Lệnh chẩn đoán cũ
 > `grosort` / `grodbg` / `growp` / `grostyle` / `bgdbg` thuộc bản đầy đủ cũ `guro ZWCAD(BG MK FN).lsp`, không có trong `guro_gro.lsp`. Các mục bên dưới nhắc tới chúng là ghi chép lịch sử. Lịch sử thay đổi lisp nay nằm trong git của OHTA_TOOL.

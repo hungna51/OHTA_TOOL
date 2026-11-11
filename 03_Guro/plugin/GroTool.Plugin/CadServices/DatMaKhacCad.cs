@@ -149,8 +149,11 @@ namespace ZwCadPlugin.CadServices
                     // Lay mau moi net dung loai (ke ca layer khac - de chan doan). Hop bao TINH TU DIEM MAU
                     // (toa do hien tai), KHONG tin GeometricExtents: tren ZWCAD no co the tra hop CU cua
                     // net vua bi lisp sua trong cung lenh -> net bi coi la khong cham tam (canh tam mat).
+                    // Muc 219: chi lay mau net SE DUNG (dung loai + layer, khong phai ban chup). Truoc day
+                    // lay mau ca net layer khac + 7024 net ban chup chi de chan doan -> 7 s tren 130837-1;
+                    // net bi loai dung hop GeometricExtents cho dong chan doan.
                     string lechExt = null;
-                    if (cv != null && LaLoaiNet(cv))
+                    if (lydo == null)
                     {
                         try { pts = LayMau(cv, out kin); }
                         catch (System.Exception ex)
