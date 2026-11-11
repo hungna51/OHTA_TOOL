@@ -37,7 +37,7 @@
 | 3a | `nhannet` | Phân loại nét cho nhận Dim (phần chậm nhất của 3b, 6.4 s) | **Chạy C# (`cs`)**: AB khớp 1630/1630; 6.61 s → 0.09 s; GRO còn 14.8 s (mục 173). Bản lisp đã gỡ (mục 184) |
 | 3b | `dimdai3b` | Khớp Dim dài ở bước xử lý nét (`gro--geom-match-linear-dims`, 2.07 s) | **Chạy C# (`cs`)**: AB khớp 394/394; 2.14 s → < 0.05 s; GRO còn 10.8 s (mục 175). Bản lisp đã gỡ (mục 184) |
 | 3c | `vongkin` | Dò vòng kín biên dạng khi nhận Dim (bước 1b, 0.91 s) | **Chạy C# (`cs`)**: AB khớp 557/557; ~0.95 s → < 0.05 s (mục 177). Bản lisp đã gỡ (mục 184) |
-| 3d | `cungbogoc` | Bỏ cung bo góc biên dạng (nối tiếp tuyến) khi khớp dim góc (`gro--cung-bo-goc-p`, 4.5 s) | **AB khớp 12/12** (524 cung, 10654 đầu nét); lisp 4.4 s → C# 26 ms (mục 218). Chờ người dùng bật `cs` |
+| 3d | `cungbogoc` | Bỏ cung bo góc biên dạng (nối tiếp tuyến) khi khớp dim góc (`gro--cung-bo-goc-p`, 4.5 s) | **AB khớp 12/12** (524 cung, 10654 đầu nét); lisp 4.4 s → C# 24–26 ms (mục 218). **Chạy C# (`cs`)** từ 11/11, GRO còn 28.4 s |
 | 4 | `datbango` | Đặt bango + tên bản vẽ + kiểu chữ; chỉ mục không gian thay `ssget "_C"` | Chưa |
 | 5a | `quethinh` | Quét + gom hình cắt | **Chạy C# (`cs`)**: AB khớp 100%; 2 lần quét 4.27 s → < 0.05 s; GRO 29.9 s → 20.7 s (mục 172). Bản lisp đã gỡ (mục 184) |
 | 5b | `ghephinh` | Ghép hình ↔ text (chính, chiếu tia, Hungarian) | Chưa |
