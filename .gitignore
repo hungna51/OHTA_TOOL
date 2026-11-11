@@ -33,3 +33,6 @@ module.json.bak
 
 # Ban sao luu du lieu Sheet truoc khi chuyen doi
 _backup/
+
+# Quy chuan noi bo cong ty (repo PUBLIC) - gui rieng, khong len GitHub
+_apps/OhtaTeams/data/quy_chuan/
