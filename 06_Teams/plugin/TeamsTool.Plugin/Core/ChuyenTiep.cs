@@ -95,11 +95,28 @@ namespace TeamsTool.Core
             return "image/png";
         }
 
-        /// <summary>Body POST tin chuyển tiếp: dòng đầu in đậm + nội dung (đã qua HtmlChuyen) + ảnh (hostedContents) + tệp (reference).</summary>
-        public static string BodyChuyen(string dau, string htmlNoiDung, IEnumerable<AnhChuyen> anh, IEnumerable<TepChuyen> tep)
+        /// <summary>
+        /// Người cần tag khi chuyển tiếp: người ở mọi cột người tên chứa "triển khai" / "check" của đơn (Người triển khai, Người check 1, 2…),
+        /// lấy trong danh bạ tag được (khớp tên hiển thị); trùng người chỉ lấy một lần.
+        /// </summary>
+        public static List<NguoiTag> NguoiCanTag(DonTeams d, IEnumerable<CotList> cots, IEnumerable<NguoiTag> danhBa)
         {
+            var ten = new HashSet<string>(cots.Where(c => c.Loai == "personOrGroup"
+                                                         && (PhanTichTeams.BoDau(c.TieuDe).Contains("trien khai") || PhanTichTeams.BoDau(c.TieuDe).Contains("check")))
+                                              .SelectMany(c => BangDon.TachNhan(d.TatCa.FirstOrDefault(kv => kv.Key == c.TieuDe).Value)));
+            return danhBa.Where(n => ten.Contains(n.Ten)).GroupBy(n => n.Id).Select(g => g.First()).ToList();
+        }
+
+        /// <summary>
+        /// Body POST tin chuyển tiếp: dòng đầu in đậm + dòng tag (người triển khai / check, tag thật — nhận thông báo)
+        /// + nội dung (đã qua HtmlChuyen) + ảnh (hostedContents) + tệp (reference).
+        /// </summary>
+        public static string BodyChuyen(string dau, string htmlNoiDung, IEnumerable<AnhChuyen> anh, IEnumerable<TepChuyen> tep, IEnumerable<NguoiTag> tag = null)
+        {
+            var dsTag = (tag ?? Enumerable.Empty<NguoiTag>()).ToList();
+            var (htmlTag, mentions) = TraoDoi.TagHtml(string.Join(" ", dsTag.Select(t => "@" + t.Ten)), dsTag);
             var dsTep = (tep ?? Enumerable.Empty<TepChuyen>()).Select(t => (Id: !string.IsNullOrEmpty(t.Id) ? t.Id : Guid.NewGuid().ToString(), t)).ToList();
-            string html = "<p><b>" + TraoDoi.HtmlTraLoi(dau) + "</b></p>" + htmlNoiDung
+            string html = "<p><b>" + TraoDoi.HtmlTraLoi(dau) + "</b></p>" + (mentions.Count > 0 ? "<p>" + htmlTag + "</p>" : "") + htmlNoiDung
                         + string.Concat(dsTep.Select(x => "<attachment id=\"" + x.Id + "\"></attachment>"));
             var b = new JsonObject();
             b.Set("contentType", "html");
@@ -126,7 +143,7 @@ namespace TeamsTool.Core
                     a.Set("name", x.t.Ten);
                     return (object)a;
                 }).ToList());
-            return JsonLite.Serialize(o);
+            return TraoDoi.GanMentions(JsonLite.Serialize(o), mentions);
         }
 
         /// <summary>

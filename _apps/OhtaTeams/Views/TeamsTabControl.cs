@@ -1239,6 +1239,10 @@ namespace TeamsTool.Views
                 if (sau != null) d = sau;
             }
             List<TinNhan> daCo = (await GraphTeams.TaiChuoi(chuoiDich, CancellationToken.None))?.Tin ?? new List<TinNhan>();
+            if (_nguoiTag.Count == 0) // lần quét đầu có thể chạy trước khi danh bạ công ty tải xong
+                try { _nguoiTag = (await GraphTeams.NguoiCongTyVaSite(_tab[7], CancellationToken.None)).Tag; }
+                catch (Exception) { } // không có danh bạ: chuyển không tag
+            List<NguoiTag> tag = ChuyenTiep.NguoiCanTag(d, _cots, _nguoiTag); // người triển khai + người check của đơn
             int so = 0;
             foreach (TinNhan t in tin.OrderBy(x => x.Luc))
             {
@@ -1253,7 +1257,7 @@ namespace TeamsTool.Views
                 foreach (TepDinhKem f in t.Tep)
                     tep.Add(await GraphTeams.ChepTepSangKenh(nhomDich.Id, kenhDich.ChannelId, ChuyenTiep.ThuMucTep(nhomNguonTen, d.Title), f.Ten,
                                                             await GraphTeams.ByteTepChat(f, CancellationToken.None), CancellationToken.None));
-                string body = ChuyenTiep.BodyChuyen(ChuyenTiep.DauChuyen(nhomNguonTen, t), ChuyenTiep.HtmlChuyen(t.Html, t.Anh), anh, tep);
+                string body = ChuyenTiep.BodyChuyen(ChuyenTiep.DauChuyen(nhomNguonTen, t), ChuyenTiep.HtmlChuyen(t.Html, t.Anh), anh, tep, tag);
                 await GraphTeams.DangTraLoi(nhomDich.Id, chuoiDich, body, CancellationToken.None);
                 so++;
             }

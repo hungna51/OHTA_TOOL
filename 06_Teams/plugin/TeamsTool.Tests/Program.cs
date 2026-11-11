@@ -350,6 +350,23 @@ namespace TeamsTool.Tests
             var bEt = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(ChuyenTiep.BodyChuyen("d", "", null, new[] { new TepChuyen { Ten = "a", Url = "u", Id = "153fa47a-18c9-4179-be08-9879815a9c90" }, new TepChuyen { Ten = "b", Url = "v" } }));
             var dsEt = ((List<object>)bEt.Get("attachments")).Cast<OhtaTool.Plugin.Core.JsonObject>().Select(x => x.GetString("id")).ToList();
             Kiem("chuyen: dinh kem dung ma eTag, thieu thi GUID moi", dsEt[0] + "|" + Guid.TryParse(dsEt[1], out _), "153fa47a-18c9-4179-be08-9879815a9c90|True");
+            var csTag = PhanTichTeams.DocCot(@"{ ""value"": [
+  { ""name"": ""TK"", ""displayName"": ""NGƯỜI TRIỂN KHAI"", ""personOrGroup"": {} },
+  { ""name"": ""C1"", ""displayName"": ""NGƯỜI CHECK 1"", ""personOrGroup"": {} },
+  { ""name"": ""C2"", ""displayName"": ""NGƯỜI CHECK 2"", ""personOrGroup"": {} },
+  { ""name"": ""PT"", ""displayName"": ""Người phụ trách"", ""personOrGroup"": {} } ]}");
+            var dTag = new DonTeams();
+            dTag.TatCa.Add(new KeyValuePair<string, string>("NGƯỜI TRIỂN KHAI", "Mai Trung Nam"));
+            dTag.TatCa.Add(new KeyValuePair<string, string>("NGƯỜI CHECK 1", "Lê Gia Vinh, Mai Trung Nam"));
+            dTag.TatCa.Add(new KeyValuePair<string, string>("NGƯỜI CHECK 2", "Người Ngoài"));
+            dTag.TatCa.Add(new KeyValuePair<string, string>("Người phụ trách", "Đỗ Văn Quang"));
+            var dbTag = new List<NguoiTag> { new NguoiTag { Id = "m", Ten = "Mai Trung Nam" }, new NguoiTag { Id = "v", Ten = "Lê Gia Vinh" }, new NguoiTag { Id = "q", Ten = "Đỗ Văn Quang" } };
+            Kiem("chuyen tag: trien khai + check, trung 1 lan, bo nguoi ngoai danh ba, bo phu trach",
+                 string.Join(",", ChuyenTiep.NguoiCanTag(dTag, csTag, dbTag).Select(n => n.Id)), "m,v");
+            var bTagCt = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(ChuyenTiep.BodyChuyen("[OHTA-受注] 岡田 · 11/11 07:41", "<p>x</p>", null, null,
+                ChuyenTiep.NguoiCanTag(dTag, csTag, dbTag)));
+            Kiem("chuyen tag: dong tag duoi dong dau + mentions", ((OhtaTool.Plugin.Core.JsonObject)bTagCt.Get("body")).GetString("content") + "|" + ((List<object>)bTagCt.Get("mentions")).Count,
+                 "<p><b>[OHTA-受注] 岡田 · 11/11 07:41</b></p><p><at id=\"0\">Mai Trung Nam</at> <at id=\"1\">Lê Gia Vinh</at></p><p>x</p>|2");
             Kiem("chuyen: thu muc tep", ChuyenTiep.ThuMucTep("OHTA-受注", "C081105/5"), "Chuyển từ OHTA-受注/C081105_5");
             Kiem("tin mo dau khong the", ((OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyMoDau("<p>x</p>", null, "a"))).ContainsKey("attachments"), false);
             Kiem("tep: doc AttachmentFiles", string.Join(",", TraoDoi.DocTep(@"{""value"":[{""FileName"":""130819.pdf"",""ServerRelativeUrl"":""/sites/x/Lists/y/Attachments/2758/130819.pdf""},{""FileName"":""""}]}").Select(t => t.Ten + "=" + t.DuongDan)), "130819.pdf=/sites/x/Lists/y/Attachments/2758/130819.pdf");
