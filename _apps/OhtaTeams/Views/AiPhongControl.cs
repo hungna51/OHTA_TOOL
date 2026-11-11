@@ -124,7 +124,7 @@ namespace TeamsTool.Views
                 {
                     KiemTra kt = await AiDon.KiemTraDon(tn, AiDon.DocChiTiet(_tm), _tm, true, Bao, _huy.Token);
                     if (!_trangThai.Text.StartsWith("Kiểm xong, có chỗ", StringComparison.Ordinal))
-                        Bao("Xong phòng 3: " + kt.VanDe.Count + " vấn đề, " + kt.DoConMo + " 🔴 chưa xử lý. Xử lý / bỏ qua từng mục, gửi câu hỏi khách, rồi ✓ Xác nhận → phòng 4.");
+                        Bao("Xong phòng 3: " + kt.VanDe.Count + " vấn đề, " + kt.DoConMo + " mục đỏ chưa xử lý. Xử lý / bỏ qua từng mục, gửi câu hỏi khách, rồi ✓ Xác nhận → phòng 4.");
                     return;
                 }
                 if (tu == 1 || tn == null) tn = await AiDon.TiepNhan(_d, _listUrl, _listId, _tm, Bao, _huy.Token);
@@ -317,7 +317,7 @@ namespace TeamsTool.Views
                 return The("3 · Kiểm tra", p);
             }
             if (cu) p.Children.Add(Chu("Bảng phòng 2 đã đổi sau lần kiểm (" + kt.Luc + ") — bấm ↻ Kiểm tra lại.", true));
-            p.Children.Add(Chu(string.Format(CultureInfo.InvariantCulture, "🔴 {0} · 🟡 {1} · ℹ {2} — còn {3} 🔴 chưa xử lý · kiểm lúc {4} · AI ≈ ${5:0.00}",
+            p.Children.Add(Chu(string.Format(CultureInfo.InvariantCulture, "● đỏ (chặn) {0} · ● vàng (xác nhận) {1} · ℹ ghi chú {2} — còn {3} mục đỏ chưa xử lý · kiểm lúc {4} · AI ≈ ${5:0.00}",
                 kt.VanDe.Count(v => v.Muc == VanDe.Do), kt.VanDe.Count(v => v.Muc == VanDe.Vang), kt.VanDe.Count(v => v.Muc == VanDe.ThongTin), kt.DoConMo, kt.Luc, kt.Tien)));
 
             foreach (var (nhom, ten) in NhomVanDe)
@@ -382,7 +382,7 @@ namespace TeamsTool.Views
                 }).Also(b =>
                 {
                     b.IsEnabled = !chay && !cu && kt.DoConMo == 0;
-                    b.ToolTip = cu ? "Bảng phòng 2 đã đổi — kiểm tra lại trước" : kt.DoConMo > 0 ? "Còn " + kt.DoConMo + " 🔴 chưa xử lý (✓ Đã xử lý hoặc Bỏ qua kèm lý do)" : "Chuyển dữ liệu sang phòng 4";
+                    b.ToolTip = cu ? "Bảng phòng 2 đã đổi — kiểm tra lại trước" : kt.DoConMo > 0 ? "Còn " + kt.DoConMo + " mục đỏ chưa xử lý (✓ Đã xử lý hoặc Bỏ qua kèm lý do)" : "Chuyển dữ liệu sang phòng 4";
                 }));
             p.Children.Add(hang);
             return The("3 · Kiểm tra", p);
@@ -392,13 +392,35 @@ namespace TeamsTool.Views
         private UIElement DongVanDe(KiemTra kt, VanDe v, bool suaDuoc)
         {
             var p = new StackPanel();
-            p.Children.Add(new TextBlock
+            // WPF (net48) không vẽ emoji màu → chấm tròn tô màu thật: đỏ / vàng / xanh
+            var dau = new TextBlock { TextWrapping = TextWrapping.Wrap };
+            dau.Inlines.Add(new System.Windows.Documents.Run(v.Muc == VanDe.ThongTin ? "ℹ " : "● ")
             {
-                Text = v.BieuTuong + " " + (v.Tam.Length > 0 ? "[" + v.Tam + "] " : "") + v.NoiDung + (v.MucQc.Length > 0 ? "  (QC " + v.MucQc + ")" : "") + (v.Nguon == "ai" ? "  · AI" : ""),
-                TextWrapping = TextWrapping.Wrap,
+                Foreground = KieuTeams.Mau(v.Muc == VanDe.Do ? "#D92D20" : v.Muc == VanDe.Vang ? "#F79009" : "#2E90FA"), FontWeight = FontWeights.Bold,
             });
-            if (v.CauHoiJp.Length > 0) p.Children.Add(Chu("🇯🇵 " + v.CauHoiJp));
-            var nut = new WrapPanel();
+            dau.Inlines.Add(new System.Windows.Documents.Run((v.Tam.Length > 0 ? "[" + v.Tam + "] " : "") + v.NoiDung + (v.MucQc.Length > 0 ? "  (QC " + v.MucQc + ")" : "") + (v.Nguon == "ai" ? "  · AI" : "")));
+            p.Children.Add(dau);
+            if (v.CauHoiJp.Length > 0) p.Children.Add(Chu("JP  " + v.CauHoiJp));
+
+            // Ô trả lời: câu trả lời của khách / quản lý hoặc cách xử lý — lưu khi rời ô, kiểm lại gửi kèm AI, phòng 4 dùng
+            p.Children.Add(new TextBlock { Text = v.Nhom == VanDe.TuXuLy ? "Cách xử lý / ghi chú:" : "Trả lời (khách / quản lý):", Foreground = KieuTeams.ChuPhu, FontSize = 11, Margin = new Thickness(0, 4, 0, 1) });
+            var traLoi = new TextBox
+            {
+                Text = v.TraLoi, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 24, MaxHeight = 140, IsReadOnly = !suaDuoc,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new Thickness(3, 2, 3, 2), Background = Brushes.White,
+                ToolTip = "Gõ câu trả lời / quyết định. Lưu khi bấm ra ngoài ô. Bấm ✓ Đã xử lý khi xong.",
+            };
+            void LuuTraLoi()
+            {
+                if (traLoi.Text.Trim() == v.TraLoi) return;
+                v.TraLoi = traLoi.Text.Trim();
+                try { AiDon.Ghi(_tm, kt); } catch (IOException ex) { _trangThai.Text = "Không lưu được câu trả lời: " + ex.Message; }
+            }
+            traLoi.LostFocus += (s, e) => LuuTraLoi();
+            traLoi.Unloaded += (s, e) => LuuTraLoi(); // đóng khung / vẽ lại khi con trỏ còn trong ô
+
+            p.Children.Add(traLoi);
+            var nut = new WrapPanel { Margin = new Thickness(0, 3, 0, 0) };
             if (v.ConMo)
             {
                 nut.Children.Add(NutNho("✓ Đã xử lý", suaDuoc, () => { v.TrangThai = VanDe.Xong; v.LyDo = ""; }, kt));

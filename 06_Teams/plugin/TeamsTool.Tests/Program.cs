@@ -104,8 +104,14 @@ namespace TeamsTool.Tests
             var lan1 = PhongKiemTra.Luat(new[] { tam }, tv, catalog);
             lan1.First(x => x.Ma.EndsWith("|canh_1")).TrangThai = VanDe.Xong;
             lan1.First(x => x.Ma.EndsWith("|canh_1")).DaGui = true;
+            lan1.First(x => x.Ma.EndsWith("|canh_1")).TraLoi = "Khách đồng ý thêm phần thừa 5 mm";
             var lan2 = PhongKiemTra.Gop(lan1, PhongKiemTra.Luat(new[] { tam }, tv, catalog));
-            Kiem("gop: giu trang thai + da gui", lan2.First(x => x.Ma.EndsWith("|canh_1")).TrangThai + "|" + lan2.First(x => x.Ma.EndsWith("|canh_1")).DaGui + "|" + lan2.Count(x => x.ConMo), "xong|True|" + (lan2.Count - 1));
+            Kiem("gop: giu trang thai + da gui + tra loi", lan2.First(x => x.Ma.EndsWith("|canh_1")).TrangThai + "|" + lan2.First(x => x.Ma.EndsWith("|canh_1")).DaGui + "|" + lan2.Count(x => x.ConMo) + "|" + lan2.First(x => x.Ma.EndsWith("|canh_1")).TraLoi,
+                 "xong|True|" + (lan2.Count - 1) + "|Khách đồng ý thêm phần thừa 5 mm");
+            string dv = PhongKiemTra.DauVao("a.pdf", "", new[] { tam }, new VanDe[0], lan2);
+            Kiem("dau vao AI: gui cau tra loi da co, bo van de chua tra loi",
+                 dv.Contains("KHÔNG hỏi lại") + "|" + dv.Contains("trả lời: Khách đồng ý thêm phần thừa 5 mm") + "|" + PhongKiemTra.DauVao("a.pdf", "", new[] { tam }, new VanDe[0], lan1.Where(x => x.TraLoi.Length == 0)).Contains("KHÔNG hỏi lại"),
+                 "True|True|False");
 
             // bản nháp
             var khach = new List<VanDe>
@@ -122,8 +128,8 @@ namespace TeamsTool.Tests
             // JSON + phản hồi AI
             var kt = new KiemTra { TuXacNhan = "2026-11-11 17:47", Tien = 0.05m, VanDe = lan2 };
             var kt2 = PhongKiemTra.Doc(PhongKiemTra.Ghi(kt));
-            Kiem("kiem_tra.json ghi roi doc", kt2.TuXacNhan + "|" + kt2.Tien + "|" + kt2.VanDe.Count + "|" + kt2.VanDe.First(x => x.Ma.EndsWith("|canh_1")).TrangThai + "|" + kt2.DoConMo,
-                 "2026-11-11 17:47|0.05|" + lan2.Count + "|xong|" + lan2.Count(x => x.Muc == VanDe.Do && x.ConMo));
+            Kiem("kiem_tra.json ghi roi doc", kt2.TuXacNhan + "|" + kt2.Tien + "|" + kt2.VanDe.Count + "|" + kt2.VanDe.First(x => x.Ma.EndsWith("|canh_1")).TrangThai + "|" + kt2.DoConMo + "|" + kt2.VanDe.First(x => x.Ma.EndsWith("|canh_1")).TraLoi,
+                 "2026-11-11 17:47|0.05|" + lan2.Count + "|xong|" + lan2.Count(x => x.Muc == VanDe.Do && x.ConMo) + "|Khách đồng ý thêm phần thừa 5 mm");
             Kiem("kiem_tra.json hong -> null", PhongKiemTra.Doc("[]") == null, true);
             string text = "{\"van_de\":[{\"tam\":\"A-1\",\"muc\":\"do\",\"nhom\":\"khach\",\"muc_qc\":\"B-2\",\"noi_dung\":\"Thiếu kích thước lỗ\",\"cau_hoi_jp\":\"穴位置をご指示ください。\",\"lien_lac\":false}," +
                           "{\"tam\":\"\",\"muc\":\"la\",\"nhom\":\"la\",\"muc_qc\":\"\",\"noi_dung\":\"x\",\"cau_hoi_jp\":\"\",\"lien_lac\":false},{\"tam\":\"\",\"muc\":\"info\",\"nhom\":\"tu_xu_ly\",\"muc_qc\":\"\",\"noi_dung\":\" \",\"cau_hoi_jp\":\"\",\"lien_lac\":false}]," +

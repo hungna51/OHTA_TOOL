@@ -350,7 +350,7 @@ namespace TeamsTool.Services
                     }
                     catch (Exception ex) { loi.Add(nhom.Key + ": " + ex.Message); continue; }
                     var luatTep = luat.Where(v => nhom.Any(t => v.Ma.StartsWith("luat|" + t.Khoa + "|", StringComparison.Ordinal))).ToList();
-                    string body = PhongKiemTra.Body(model, quyChuan, pdf, PhongKiemTra.DauVao(nhom.Key, tn?.CongTy, nhom, luatTep), dxf);
+                    string body = PhongKiemTra.Body(model, quyChuan, pdf, PhongKiemTra.DauVao(nhom.Key, tn?.CongTy, nhom, luatTep, cu?.VanDe), dxf);
                     PhongKiemTra.PhanHoi ph = PhongKiemTra.DocPhanHoi(await GuiClaude(key, PhongDocBanVe.CoFallback(model), body, huy), nhom.Key);
                     kt.TokenVao += ph.Vao + ph.GhiCache + ph.DocCache;
                     kt.TokenRa += ph.Ra;

@@ -22,6 +22,8 @@ namespace TeamsTool.Core
         public bool LienLac;
         public string Nguon = "luat"; // luat | ai
         public string TrangThai = ChuaXong, LyDo = "";
+        /// <summary>Câu trả lời của khách / quản lý, hoặc cách xử lý người dùng ghi — phòng 4 và lần kiểm lại dùng.</summary>
+        public string TraLoi = "";
         public bool DaGui;
 
         public bool ConMo => TrangThai == ChuaXong;
@@ -287,7 +289,7 @@ namespace TeamsTool.Core
             foreach (VanDe v in moi)
                 if (theoMa.TryGetValue(v.Ma, out VanDe c))
                 {
-                    v.TrangThai = c.TrangThai; v.LyDo = c.LyDo; v.DaGui = c.DaGui;
+                    v.TrangThai = c.TrangThai; v.LyDo = c.LyDo; v.DaGui = c.DaGui; v.TraLoi = c.TraLoi;
                     if (v.CauHoiJp.Length == 0) v.CauHoiJp = c.CauHoiJp;
                 }
             return moi;
@@ -346,7 +348,7 @@ Mỗi vấn đề: tam (số bản vẽ hoặc tên tấm, rỗng nếu chung), 
 dich: với MỖI vấn đề luật có nhom = khach trong danh sách đầu vào, trả cau_hoi_jp (tiếng Nhật lịch sự) theo ma.";
 
         /// <summary>Phần chữ gửi kèm bản vẽ: bảng tấm của tệp + vấn đề luật (mã, nhóm, nội dung) + công ty.</summary>
-        public static string DauVao(string tenTep, string congTy, IEnumerable<TamAi> tam, IEnumerable<VanDe> luat)
+        public static string DauVao(string tenTep, string congTy, IEnumerable<TamAi> tam, IEnumerable<VanDe> luat, IEnumerable<VanDe> daTraLoi = null)
         {
             var sb = new StringBuilder();
             sb.Append("Tệp: ").Append(tenTep).Append('\n');
@@ -359,6 +361,12 @@ dich: với MỖI vấn đề luật có nhom = khach trong danh sách đầu v�
             var ds = luat.ToList();
             if (ds.Count == 0) sb.Append("(không có)\n");
             foreach (VanDe v in ds) sb.Append("- ma=").Append(v.Ma).Append(" | ").Append(v.Nhom).Append(" | ").Append(v.Tam).Append(" | ").Append(v.NoiDung).Append('\n');
+            var tl = (daTraLoi ?? Enumerable.Empty<VanDe>()).Where(v => v.TraLoi.Trim().Length > 0).ToList();
+            if (tl.Count > 0)
+            {
+                sb.Append("\nĐã có câu trả lời (khách / quản lý / người triển khai) — coi là dữ liệu đúng, KHÔNG hỏi lại các ý này:\n");
+                foreach (VanDe v in tl) sb.Append("- ").Append(v.Tam).Append(" | hỏi: ").Append(v.NoiDung).Append(" | trả lời: ").Append(v.TraLoi.Trim()).Append('\n');
+            }
             return sb.ToString();
         }
 
@@ -462,7 +470,7 @@ dich: với MỖI vấn đề luật có nhom = khach trong danh sách đầu v�
                 var x = new JsonObject();
                 x.Set("ma", v.Ma); x.Set("muc", v.Muc); x.Set("nhom", v.Nhom); x.Set("tam", v.Tam); x.Set("muc_qc", v.MucQc);
                 x.Set("noi_dung", v.NoiDung); x.Set("cau_hoi_jp", v.CauHoiJp); x.Set("lien_lac", v.LienLac); x.Set("nguon", v.Nguon);
-                x.Set("trang_thai", v.TrangThai); x.Set("ly_do", v.LyDo); x.Set("da_gui", v.DaGui);
+                x.Set("trang_thai", v.TrangThai); x.Set("ly_do", v.LyDo); x.Set("tra_loi", v.TraLoi ?? ""); x.Set("da_gui", v.DaGui);
                 return (object)x;
             }).ToList());
             return JsonLite.Serialize(o);
@@ -484,7 +492,7 @@ dich: với MỖI vấn đề luật có nhom = khach trong danh sách đầu v�
                     Ma = x.GetString("ma") ?? "", Muc = x.GetString("muc") ?? VanDe.Vang, Nhom = x.GetString("nhom") ?? VanDe.NoiBo, Tam = x.GetString("tam") ?? "",
                     MucQc = x.GetString("muc_qc") ?? "", NoiDung = x.GetString("noi_dung") ?? "", CauHoiJp = x.GetString("cau_hoi_jp") ?? "",
                     LienLac = x.Get("lien_lac") is bool b && b, Nguon = x.GetString("nguon") ?? "luat", TrangThai = x.GetString("trang_thai") ?? "",
-                    LyDo = x.GetString("ly_do") ?? "", DaGui = x.Get("da_gui") is bool g && g,
+                    LyDo = x.GetString("ly_do") ?? "", TraLoi = x.GetString("tra_loi") ?? "", DaGui = x.Get("da_gui") is bool g && g,
                 });
             return kt;
         }
