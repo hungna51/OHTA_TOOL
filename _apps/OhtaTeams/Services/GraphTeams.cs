@@ -376,11 +376,26 @@ namespace TeamsTool.Services
             string url = TraoDoi.UrlTaiTep(web, tep.DuongDan);
             string thuMuc = Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "teams", "tep", itemId);
             Directory.CreateDirectory(thuMuc);
-            string f = Path.Combine(thuMuc, string.Concat(tep.Ten.Split(Path.GetInvalidFileNameChars())));
             using (HttpResponseMessage res = await Gui(HttpMethod.Get, url, null, ct, ScopeSharePoint(host)))
-            using (var ra = File.Create(f))
-                await res.Content.CopyToAsync(ra);
-            return f;
+                return GhiTepTam(thuMuc, tep.Ten, await res.Content.ReadAsByteArrayAsync());
+        }
+
+        /// <summary>
+        /// Ghi tệp tải về vào thư mục tạm. Bản cũ đang mở ở trình xem (PDF viewer khoá file) → ghi sang "tên (2).pdf", "tên (3).pdf"…
+        /// thay vì báo lỗi "being used by another process".
+        /// </summary>
+        private static string GhiTepTam(string thuMuc, string ten, byte[] noiDung)
+        {
+            ten = string.Concat(ten.Split(Path.GetInvalidFileNameChars()));
+            string f = Path.Combine(thuMuc, ten);
+            for (int i = 2; ; i++)
+            {
+                try { File.WriteAllBytes(f, noiDung); return f; }
+                catch (IOException) when (i < 50)
+                {
+                    f = Path.Combine(thuMuc, Path.GetFileNameWithoutExtension(ten) + " (" + i + ")" + Path.GetExtension(ten));
+                }
+            }
         }
 
         // ---------- Danh bạ nhân viên (giao đơn) ----------
@@ -466,9 +481,7 @@ namespace TeamsTool.Services
         {
             string thuMuc = Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "teams", "chat");
             Directory.CreateDirectory(thuMuc);
-            string f = Path.Combine(thuMuc, string.Concat(tep.Ten.Split(Path.GetInvalidFileNameChars())));
-            File.WriteAllBytes(f, await ByteTepChat(tep, ct));
-            return f;
+            return GhiTepTam(thuMuc, tep.Ten, await ByteTepChat(tep, ct));
         }
 
         /// <summary>Nội dung tệp gửi kèm trong chat (Graph /shares, quyền Sites.ReadWrite.All).</summary>

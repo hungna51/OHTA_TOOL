@@ -172,7 +172,8 @@ namespace TeamsTool.Services
                 string ma = PhongTiepNhan.MaBam(tamF);
                 if (tn.Tep.Any(x => x.MaBam == ma)) continue; // cùng tệp gửi cả đính kèm lẫn chat
                 string ten = TenKhongTrung(dir, PhongTiepNhan.TenAnToan(t.Ten), ma);
-                File.Copy(tamF, Path.Combine(dir, ten), true);
+                string dich = Path.Combine(dir, ten);
+                if (!File.Exists(dich)) File.Copy(tamF, dich); // đã có = cùng nội dung (TenKhongTrung) → không chép đè, kẻo lỗi khi tệp đang mở
                 TepDon cuT = cu?.Tep.FirstOrDefault(x => x.Ten == ten);
                 tn.Tep.Add(new TepDon { Ten = ten, Nguon = loaiNguon, MaBam = ma, Loai = cuT?.Loai ?? PhongTiepNhan.XepLoai(ten) });
             }
