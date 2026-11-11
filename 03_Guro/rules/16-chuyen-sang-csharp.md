@@ -40,7 +40,7 @@
 | 4 | `datbango` | Đặt bango + tên bản vẽ + kiểu chữ; chỉ mục không gian thay `ssget "_C"` | Chưa |
 | 5a | `quethinh` | Quét + gom hình cắt | **Chạy C# (`cs`)**: AB khớp 100%; 2 lần quét 4.27 s → < 0.05 s; GRO 29.9 s → 20.7 s (mục 172). Bản lisp đã gỡ (mục 184) |
 | 5b | `ghephinh` | Ghép hình ↔ text (chính, chiếu tia, Hungarian) | Chưa |
-| 5b-a | `ghephc` | Ghép hình chiếu vào cụm tấm bẻ (Hungarian 3A + chiếu tia 3B; 130837-1 từng ~6 phút, mục 214) | **Có bản C#, chưa nghiệm thu** (mục 215): mặc định `lisp`; chạy `GROCS` → `ghephc` → `Ab`, xem `[AB ghephc] khop N`, rồi mới `Cs` |
+| 5b-a | `ghephc` | Ghép hình chiếu vào cụm tấm bẻ (Hungarian 3A + chiếu tia 3B; 130837-1 từng ~6 phút, mục 214) | **Chạy C# (`cs`)**: AB khớp 65/65 (16 Hungarian + 49 chiếu tia, cùng thứ tự); 28.4 s → 0.35 s (C# 0.03 s); GRO 75.8 s → 38.6 s (mục 215). Bản lisp vẫn giữ (công tắc `lisp`) |
 | 5c | `dimhinh` | Gán Dim cho hình + cắt tấm gộp | Chưa |
 | 5c-a | `dimdai` | Khớp Dim dài trong thu thập Dim (khung) | **Chạy C# (`cs`)**: AB khớp 134/134; 1.39 s → 0.05 s; GRO còn 12.8 s (mục 174). Bản lisp đã gỡ (mục 184) |
 | 5c-b | `locdim` | Vòng lọc đầu thu thập Dim (khung, 1.31 s) | **Chạy C# (`cs`)**: AB khớp 395/395 (chưa gặp DIMENSION); 1.34 s → < 0.05 s; GRO còn 9.1 s (mục 176). Bản lisp đã gỡ (mục 184) |
