@@ -20,6 +20,12 @@ namespace TeamsTool.Core
         public int SoTep => Tep.Count;
     }
 
+    /// <summary>Người tag được bằng @ trong chat: Id = id tài khoản Microsoft 365 (Graph /users).</summary>
+    public sealed class NguoiTag
+    {
+        public string Id, Ten;
+    }
+
     public sealed class TepDinhKem
     {
         public string Ten, DuongDan; // tệp đính kèm của đơn: ServerRelativeUrl; tệp trong chat: URL SharePoint đầy đủ
@@ -113,12 +119,12 @@ namespace TeamsTool.Core
         }
 
         /// <summary>HTML tin mở đầu trao đổi về đơn: "Về đơn &lt;Title&gt;" (link tới đơn trên Lists) + nội dung người gõ.</summary>
-        public static string HtmlMoDau(string title, string webUrl, string chu)
+        public static string HtmlMoDau(string title, string webUrl, string chu, string htmlChu = null)
         {
             webUrl = PhanTichTeams.UrlMoDon(webUrl);
             string ve = string.IsNullOrEmpty(webUrl) ? "<b>Về đơn " + HtmlTraLoi(title) + "</b>"
                                                      : "<b>Về đơn <a href=\"" + webUrl.Replace("\"", "%22") + "\">" + HtmlTraLoi(title) + "</a></b>";
-            return "<p>" + ve + "</p><p>" + HtmlTraLoi(chu) + "</p>";
+            return "<p>" + ve + "</p><p>" + (htmlChu ?? HtmlTraLoi(chu)) + "</p>"; // htmlChu: chữ đã gắn tag @
         }
 
         /// <summary>
@@ -216,15 +222,79 @@ namespace TeamsTool.Core
             string.Join("<br>", (chu ?? "").Trim().Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;")
                                              .Replace("\r\n", "\n").Split('\n'));
 
-        /// <summary>Body POST …/replies.</summary>
-        public static string BodyTraLoi(string chu)
+        /// <summary>Body POST …/replies. tags: người đã chọn qua @ — "@Tên" trong chữ thành tag thật của Teams.</summary>
+        public static string BodyTraLoi(string chu, IEnumerable<NguoiTag> tags = null)
         {
+            var (html, mentions) = TagHtml(chu, tags);
             var b = new JsonObject();
             b.Set("contentType", "html");
-            b.Set("content", HtmlTraLoi(chu));
+            b.Set("content", html);
             var o = new JsonObject();
             o.Set("body", b);
+            return GanMentions(JsonLite.Serialize(o), mentions);
+        }
+
+        /// <summary>
+        /// Chữ người gõ → HTML + danh sách mentions của Graph: mỗi "@Tên" của người đã chọn thành &lt;at id="i"&gt;Tên&lt;/at&gt;
+        /// (tên dài trước để "@Nguyễn Văn Khải" không bị "@Nguyễn Văn" ăn mất). Người chọn rồi xoá khỏi chữ thì bỏ.
+        /// </summary>
+        public static (string Html, List<object> Mentions) TagHtml(string chu, IEnumerable<NguoiTag> tags)
+        {
+            string html = HtmlTraLoi(chu);
+            var mentions = new List<object>();
+            foreach (NguoiTag t in (tags ?? Enumerable.Empty<NguoiTag>()).Where(x => !string.IsNullOrEmpty(x.Id) && !string.IsNullOrEmpty(x.Ten))
+                                                                         .GroupBy(x => x.Id).Select(g => g.First()).OrderByDescending(x => x.Ten.Length))
+            {
+                string ten = HtmlTraLoi(t.Ten), tim = "@" + ten;
+                if (!html.Contains(tim)) continue;
+                int id = mentions.Count;
+                html = html.Replace(tim, "<at id=\"" + id + "\">" + ten + "</at>");
+                var user = new JsonObject();
+                user.Set("id", t.Id);
+                user.Set("displayName", t.Ten);
+                user.Set("userIdentityType", "aadUser");
+                var ai = new JsonObject();
+                ai.Set("user", user);
+                var m = new JsonObject();
+                m.Set("id", id);
+                m.Set("mentionText", t.Ten);
+                m.Set("mentioned", ai);
+                mentions.Add(m);
+            }
+            return (html, mentions);
+        }
+
+        /// <summary>Thêm "mentions" vào body JSON của tin (không có ai được tag thì giữ nguyên).</summary>
+        public static string GanMentions(string bodyJson, List<object> mentions)
+        {
+            if (mentions == null || mentions.Count == 0) return bodyJson;
+            var o = (JsonObject)JsonLite.Parse(bodyJson);
+            o.Set("mentions", mentions);
             return JsonLite.Serialize(o);
+        }
+
+        /// <summary>Graph /users (có id) → người tag được: tài khoản đang bật, có tên.</summary>
+        public static List<NguoiTag> DocNguoiTag(string json) =>
+            ((JsonLite.Parse(json) as JsonObject)?.Get("value") as List<object> ?? new List<object>()).OfType<JsonObject>()
+                .Where(u => !Equals(u.Get("accountEnabled"), false))
+                .Select(u => new NguoiTag { Id = u.GetString("id"), Ten = u.GetString("displayName") })
+                .Where(n => !string.IsNullOrEmpty(n.Id) && !string.IsNullOrEmpty(n.Ten))
+                .OrderBy(n => n.Ten, StringComparer.CurrentCulture).ToList();
+
+        /// <summary>
+        /// Đoạn đang gõ sau "@" tính tới con trỏ (để gợi ý tên). "@" phải ở đầu hoặc sau khoảng trắng, chưa xuống dòng,
+        /// tối đa 30 ký tự. Không đang gõ tag → (-1, null).
+        /// </summary>
+        public static (int ViTri, string Tim) DoanTag(string chu, int conTro)
+        {
+            chu = chu ?? "";
+            conTro = Math.Max(0, Math.Min(conTro, chu.Length));
+            int a = chu.LastIndexOf('@', Math.Max(0, conTro - 1));
+            if (conTro == 0 || a < 0) return (-1, null);
+            if (a > 0 && !char.IsWhiteSpace(chu[a - 1])) return (-1, null);
+            string tim = chu.Substring(a + 1, conTro - a - 1);
+            if (tim.Length > 30 || tim.Contains('\n') || tim.Contains('\r')) return (-1, null);
+            return (a, tim);
         }
     }
 }

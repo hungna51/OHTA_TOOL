@@ -310,6 +310,16 @@ namespace TeamsTool.Tests
             Kiem("url teams mo don: tab khong co webUrl /l/entity/ -> dung appId Lists",
                  PhanTichTeams.UrlTeamsMoDon(tabKhongEntityUrl, "19:c@thread.tacv2", "99", "https://kohtavn.sharepoint.com/sites/OHTA/Lists/2026/99_.000", "C99"),
                  "https://teams.microsoft.com/l/entity/2a527703-1f6f-4559-a332-d8a7d288cd88/009936cf?webUrl=https%3A%2F%2Fkohtavn.sharepoint.com%2Fsites%2FOHTA%2FLists%2F2026%2FDispForm.aspx%3FID%3D99&label=C99&context=%7B%22subEntityId%22%3A%2299%22%2C%22channelId%22%3A%2219%3Ac%40thread.tacv2%22%7D");
+            // Tag @ trong chat
+            var tg = new List<NguoiTag> { new NguoiTag { Id = "u1", Ten = "Nguyễn Văn" }, new NguoiTag { Id = "u2", Ten = "Nguyễn Văn Khải" }, new NguoiTag { Id = "u3", Ten = "Lê Gia Vinh" } };
+            var (hTag, mTag) = TraoDoi.TagHtml("@Nguyễn Văn Khải và @Lê Gia Vinh <xem>, @Lê Gia Vinh nhé", tg);
+            Kiem("tag: ten dai truoc, lap lai cung id, ma hoa HTML", hTag, "<at id=\"0\">Nguyễn Văn Khải</at> và <at id=\"1\">Lê Gia Vinh</at> &lt;xem&gt;, <at id=\"1\">Lê Gia Vinh</at> nhé");
+            Kiem("tag: chi nguoi co trong chu", string.Join(",", mTag.Cast<OhtaTool.Plugin.Core.JsonObject>().Select(m => m.GetString("mentionText") + "=" + ((OhtaTool.Plugin.Core.JsonObject)((OhtaTool.Plugin.Core.JsonObject)m.Get("mentioned")).Get("user")).GetString("id"))), "Nguyễn Văn Khải=u2,Lê Gia Vinh=u3");
+            var bTag = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyTraLoi("@Lê Gia Vinh ok", tg));
+            Kiem("tag: body tra loi co mentions", ((List<object>)bTag.Get("mentions")).Count + "|" + ((OhtaTool.Plugin.Core.JsonObject)bTag.Get("body")).GetString("content"), "1|<at id=\"0\">Lê Gia Vinh</at> ok");
+            Kiem("tag: khong tag -> khong co mentions", ((OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyTraLoi("ok", tg))).ContainsKey("mentions"), false);
+            Kiem("tag: doan dang go sau @", TraoDoi.DoanTag("chao @le g", 10).Tim + "|" + TraoDoi.DoanTag("a@b", 3).ViTri + "|" + TraoDoi.DoanTag("@", 1).Tim + "|" + TraoDoi.DoanTag("@ab\ncd", 6).ViTri, "le g|-1||-1");
+            Kiem("tag: doc nguoi tag tu /users", string.Join(",", TraoDoi.DocNguoiTag(@"{""value"":[{""id"":""a"",""displayName"":""Vinh"",""accountEnabled"":true},{""id"":""b"",""displayName"":""Tắt"",""accountEnabled"":false},{""id"":""c"",""displayName"":""An""}]}").Select(n => n.Id + "=" + n.Ten)), "c=An,a=Vinh");
             Kiem("tin mo dau khong the", ((OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyMoDau("<p>x</p>", null, "a"))).ContainsKey("attachments"), false);
             Kiem("tep: doc AttachmentFiles", string.Join(",", TraoDoi.DocTep(@"{""value"":[{""FileName"":""130819.pdf"",""ServerRelativeUrl"":""/sites/x/Lists/y/Attachments/2758/130819.pdf""},{""FileName"":""""}]}").Select(t => t.Ten + "=" + t.DuongDan)), "130819.pdf=/sites/x/Lists/y/Attachments/2758/130819.pdf");
             Kiem("tep: URL tai qua _api, ma hoa dau cach + nhay don", TraoDoi.UrlTaiTep("https://h/sites/x", "/sites/x/Lists/Tt c/Attachments/1/a'b.pdf"),

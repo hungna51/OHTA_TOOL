@@ -444,6 +444,7 @@ namespace TeamsTool.Views
         private List<KeyValuePair<string, string>> _danhBaDon = new List<KeyValuePair<string, string>>(); // người đã có trong các đơn
         private List<KeyValuePair<string, string>> _danhBaDu = new List<KeyValuePair<string, string>>();  // cả người bị ẩn: tra tên người đã giao
         private List<KeyValuePair<string, string>> _congTy, _nguoiSite; // (tên, email) công ty / (mã, email) site — null = chưa tải
+        private List<NguoiTag> _nguoiTag = new List<NguoiTag>();          // người tag được bằng @ trong chat (id tài khoản Microsoft 365)
         private bool _dangTaiDanhBa;
 
         /// <summary>_danhBa = người trong đơn + cả công ty (khi đã tải); nạp lại ô Nhân viên, giữ lựa chọn.</summary>
@@ -466,8 +467,9 @@ namespace TeamsTool.Views
             _dangTaiDanhBa = true;
             try
             {
-                var (congTy, site) = await GraphTeams.NguoiCongTyVaSite(_tab[7], CancellationToken.None);
+                var (congTy, site, tag) = await GraphTeams.NguoiCongTyVaSite(_tab[7], CancellationToken.None);
                 _congTy = congTy;
+                _nguoiTag = tag;
                 _nguoiSite = site;
                 GopDanhBa();
             }
@@ -1090,7 +1092,8 @@ namespace TeamsTool.Views
                                                  Padding = new Thickness(8, 5, 8, 5), Margin = new Thickness(0, 0, 0, 4) });
                 }
                 khung.Children.Add(KhungCuonTin(ds));
-                var o = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 44, Margin = new Thickness(0, 6, 0, 4), ToolTip = "Trả lời trong chuỗi hội thoại" };
+                var o = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 44, Margin = new Thickness(0, 6, 0, 4), ToolTip = "Trả lời trong chuỗi hội thoại — gõ @ để tag người" };
+                List<NguoiTag> daTag = GanGoiYTag(o);
                 Button gui = null;
                 gui = KieuTeams.Nut("Gửi trả lời", _mau, async (s, e) =>
                 {
@@ -1098,7 +1101,7 @@ namespace TeamsTool.Views
                     gui.IsEnabled = false;
                     try
                     {
-                        await GraphTeams.TraLoi(kq.Value.NhomId, h, o.Text, CancellationToken.None);
+                        await GraphTeams.TraLoi(kq.Value.NhomId, h, o.Text, CancellationToken.None, daTag);
                         if (phien != _phienChiTiet) return;
                         khung.Children.Clear();
                         khung.Children.Add(ChuPhu("Đã gửi. Đang tải lại chat…"));
@@ -1111,6 +1114,55 @@ namespace TeamsTool.Views
                 khung.Children.Add(gui);
             }
             catch (Exception ex) { if (phien == _phienChiTiet) { khung.Children.Clear(); khung.Children.Add(ChuPhu(ex.Message, true)); } }
+        }
+
+        /// <summary>
+        /// Gõ "@" trong ô chat → danh sách gợi ý người (danh bạ công ty, bỏ người ẩn ở ⚙, lọc không dấu) ngay dưới ô;
+        /// ↑ ↓ chọn, Enter / Tab chèn "@Tên ", Esc đóng, bấm chuột cũng chèn. Trả danh sách người đã chọn (để gửi tag thật).
+        /// </summary>
+        private List<NguoiTag> GanGoiYTag(TextBox o)
+        {
+            var daTag = new List<NguoiTag>();
+            var ds = new ListBox { MaxHeight = 220, MinWidth = 220, DisplayMemberPath = "Ten" };
+            var pop = new System.Windows.Controls.Primitives.Popup
+            {
+                PlacementTarget = o, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom, StaysOpen = false, AllowsTransparency = true,
+                Child = new Border { Child = ds, Background = Brushes.White, BorderBrush = KieuTeams.Mau("#D0D5DD"), BorderThickness = new Thickness(1) },
+            };
+            int viTri = -1;
+            void Chen()
+            {
+                if (!(ds.SelectedItem is NguoiTag n) || viTri < 0) return;
+                int conTro = o.CaretIndex;
+                o.Text = o.Text.Substring(0, viTri) + "@" + n.Ten + " " + o.Text.Substring(conTro);
+                o.CaretIndex = viTri + n.Ten.Length + 2;
+                if (daTag.All(x => x.Id != n.Id)) daTag.Add(n);
+                pop.IsOpen = false;
+                o.Focus();
+            }
+            o.TextChanged += (s, e) =>
+            {
+                var (vt, tim) = TraoDoi.DoanTag(o.Text, o.CaretIndex);
+                viTri = vt;
+                if (vt < 0 || _nguoiTag.Count == 0) { pop.IsOpen = false; return; }
+                HashSet<string> an = CaiDatTeams.NhanVienAn;
+                string k = PhanTichTeams.BoDau(tim);
+                var goiY = _nguoiTag.Where(n => !an.Contains(n.Ten) && PhanTichTeams.BoDau(n.Ten).Contains(k)).Take(8).ToList();
+                if (goiY.Count == 0) { pop.IsOpen = false; return; }
+                ds.ItemsSource = goiY;
+                ds.SelectedIndex = 0;
+                pop.IsOpen = true;
+            };
+            o.PreviewKeyDown += (s, e) =>
+            {
+                if (!pop.IsOpen) return;
+                if (e.Key == Key.Down) { ds.SelectedIndex = Math.Min(ds.SelectedIndex + 1, ds.Items.Count - 1); e.Handled = true; }
+                else if (e.Key == Key.Up) { ds.SelectedIndex = Math.Max(ds.SelectedIndex - 1, 0); e.Handled = true; }
+                else if (e.Key == Key.Enter || e.Key == Key.Tab) { Chen(); e.Handled = true; }
+                else if (e.Key == Key.Escape) { pop.IsOpen = false; e.Handled = true; }
+            };
+            ds.PreviewMouseLeftButtonUp += (s, e) => Chen();
+            return daTag;
         }
 
         /// <summary>Kênh đơn chưa có chuỗi chat: tên nhóm + ô nhập + nút Tạo trao đổi (tin đầu chuỗi có link tới đơn).</summary>
@@ -1130,8 +1182,9 @@ namespace TeamsTool.Views
                                             Foreground = KieuTeams.ChuPhu, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap,
                                             VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12) },
                 });
-                var o = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 44, Margin = new Thickness(0, 6, 0, 4), ToolTip = "Nội dung tin đầu tiên" };
-                var tao = KieuTeams.Nut("Tạo trao đổi", _mau, (s, e) => TaoTraoDoi(d, kenh, nhom.Value.Id, nhom.Value.Ten, o.Text));
+                var o = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 44, Margin = new Thickness(0, 6, 0, 4), ToolTip = "Nội dung tin đầu tiên — gõ @ để tag người" };
+                List<NguoiTag> daTag = GanGoiYTag(o);
+                var tao = KieuTeams.Nut("Tạo trao đổi", _mau, (s, e) => TaoTraoDoi(d, kenh, nhom.Value.Id, nhom.Value.Ten, o.Text, daTag));
                 tao.HorizontalAlignment = HorizontalAlignment.Left;
                 khung.Children.Add(o);
                 khung.Children.Add(tao);
@@ -1143,7 +1196,7 @@ namespace TeamsTool.Views
         /// Tạo trao đổi: gửi tin đầu chuỗi vào kênh ("Về đơn …" + nội dung), rồi ghi chuỗi mới vào cột ẩn teamsConversationMetadata
         /// của đơn (giữ chuỗi cũ) để Lists và OhtaTeams cùng thấy; đơn vừa bị sửa → đọc lại rồi ghi lại 1 lần.
         /// </summary>
-        private void TaoTraoDoi(DonTeams d, HoiThoai kenh, string nhomId, string nhomTen, string chu)
+        private void TaoTraoDoi(DonTeams d, HoiThoai kenh, string nhomId, string nhomTen, string chu, List<NguoiTag> daTag = null)
         {
             if (chu.Trim().Length == 0) { BaoTrangThai("Gõ nội dung trao đổi trước khi tạo."); return; }
             if (MessageBox.Show("Gửi tin mở trao đổi về đơn " + d.Title + " vào nhóm " + nhomTen + "?\n\n" + chu.Trim(), "Tạo trao đổi",
@@ -1157,7 +1210,7 @@ namespace TeamsTool.Views
                     try { _tabDon = await GraphTeams.TabDon(_tab[0], _tab[2], _tab[4], _tab[7], CancellationToken.None); }
                     catch (InvalidOperationException) { } // không đọc được tab: dùng link SharePoint
                 string urlMo = PhanTichTeams.UrlTeamsMoDon(_tabDon, _tab[2], d.Id, d.WebUrl, d.Title);
-                var (conv, kieu, loiThe) = await GraphTeams.TaoHoiThoai(nhomId, kenh.ChannelId, chu, d.Title, urlMo, _tabDon?.Id, CancellationToken.None);
+                var (conv, kieu, loiThe) = await GraphTeams.TaoHoiThoai(nhomId, kenh.ChannelId, chu, d.Title, urlMo, _tabDon?.Id, CancellationToken.None, daTag);
                 var chuoi = new HoiThoai { ConvId = conv, ChannelId = kenh.ChannelId, TeamInternalId = kenh.TeamInternalId };
                 string thongBao = "Đã tạo trao đổi trong nhóm " + nhomTen
                     + (kieu == "lists" ? " (kèm thẻ Về: " + d.Title + " của Lists)." : kieu == "the" ? " (kèm thẻ 📋 Về: " + d.Title + ")." : " (tin có link tới đơn).")

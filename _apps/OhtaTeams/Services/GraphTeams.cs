@@ -363,13 +363,14 @@ namespace TeamsTool.Services
         /// Người trong công ty (Graph /users, tài khoản đang bật) + người của site có sẵn mã (siteusers) — để SuaDon.GopDanhBa ghép.
         /// Công ty nhỏ (~42 người) nên tải hết 1 lần.
         /// </summary>
-        public static async Task<(List<KeyValuePair<string, string>> CongTy, List<KeyValuePair<string, string>> Site)> NguoiCongTyVaSite(string listUrl, CancellationToken ct)
+        public static async Task<(List<KeyValuePair<string, string>> CongTy, List<KeyValuePair<string, string>> Site, List<NguoiTag> Tag)> NguoiCongTyVaSite(string listUrl, CancellationToken ct)
         {
             var (host, web) = WebCuaList(listUrl);
-            Task<string> congTy = GetJson("/users?$select=displayName,userPrincipalName,mail,accountEnabled&$top=999", ct, ScopeDanhBa);
+            Task<string> congTy = GetJson("/users?$select=id,displayName,userPrincipalName,mail,accountEnabled&$top=999", ct, ScopeDanhBa);
             Task<string> site = GetJson(web + "/_api/web/siteusers?$select=Id,Email,PrincipalType&$filter=PrincipalType eq 1&$top=5000",
                                         ct, ScopeSharePoint(host), "application/json;odata=nometadata");
-            return (TeamsTool.Core.SuaDon.DocNguoiCongTy(await congTy), TeamsTool.Core.SuaDon.DocNguoiSite(await site));
+            string jsCongTy = await congTy;
+            return (TeamsTool.Core.SuaDon.DocNguoiCongTy(jsCongTy), TeamsTool.Core.SuaDon.DocNguoiSite(await site), TraoDoi.DocNguoiTag(jsCongTy));
         }
 
         /// <summary>
@@ -471,7 +472,8 @@ namespace TeamsTool.Services
         /// dòng đầu là "Về đơn …" có link (bị từ chối thì Teams không tạo tin, không có tin thừa).
         /// </summary>
         /// <returns>Id tin; Kieu = "lists" (thẻ gốc của Lists) / "the" (thẻ Adaptive Card) / "" (tin có link); Loi = lỗi Graph của các lần bị từ chối.</returns>
-        public static async Task<(string Id, string Kieu, string Loi)> TaoHoiThoai(string nhomId, string channelId, string chu, string title, string webUrl, string tabId, CancellationToken ct)
+        public static async Task<(string Id, string Kieu, string Loi)> TaoHoiThoai(string nhomId, string channelId, string chu, string title, string webUrl, string tabId, CancellationToken ct,
+                                                                                   IEnumerable<NguoiTag> tags = null)
         {
             string url = "/teams/" + nhomId + "/channels/" + Uri.EscapeDataString(channelId) + "/messages";
             async Task<string> Dang(string body)
@@ -482,21 +484,22 @@ namespace TeamsTool.Services
                     return !string.IsNullOrEmpty(id) ? id : throw new InvalidOperationException("Teams không trả id tin vừa tạo.");
                 }
             }
-            string htmlChu = "<p>" + TraoDoi.HtmlTraLoi(chu) + "</p>";
+            var (htmlTag, mentions) = TraoDoi.TagHtml(chu, tags); // "@Tên" người đã chọn → tag thật của Teams
+            string htmlChu = "<p>" + htmlTag + "</p>";
             var loi = new List<string>();
             // Không gửi tabReference qua Graph: Graph nhận (201) nhưng không gắn được ngữ cảnh mục đơn của Lists nên Teams ẩn trắng thẻ.
             // Gửi thẳng thẻ Adaptive Card "📋 Về: <đơn>" có nút bấm mở đơn; nếu Graph từ chối (400) mới lùi về tin có link HTML.
-            try { return (await Dang(TraoDoi.BodyMoDauThe(htmlChu, title, webUrl, Guid.NewGuid().ToString("N"))), "the", ""); }
+            try { return (await Dang(TraoDoi.GanMentions(TraoDoi.BodyMoDauThe(htmlChu, title, webUrl, Guid.NewGuid().ToString("N")), mentions)), "the", ""); }
             catch (InvalidOperationException ex) when (ex.Message.StartsWith("Graph 400")) { loi.Add("thẻ Adaptive: " + ex.Message); }
-            return (await Dang(TraoDoi.BodyMoDau(TraoDoi.HtmlMoDau(title, webUrl, chu), null, title)), "", string.Join("; ", loi));
+            return (await Dang(TraoDoi.GanMentions(TraoDoi.BodyMoDau(TraoDoi.HtmlMoDau(title, webUrl, chu, htmlTag), null, title), mentions)), "", string.Join("; ", loi));
         }
 
         /// <summary>Gửi một tin trả lời vào chuỗi chat của đơn.</summary>
 
-        public static async Task TraLoi(string nhomId, HoiThoai h, string chu, CancellationToken ct)
+        public static async Task TraLoi(string nhomId, HoiThoai h, string chu, CancellationToken ct, IEnumerable<NguoiTag> tags = null)
         {
             string url = "/teams/" + nhomId + "/channels/" + Uri.EscapeDataString(h.ChannelId) + "/messages/" + Uri.EscapeDataString(h.ConvId) + "/replies";
-            using (await Gui(HttpMethod.Post, url, TraoDoi.BodyTraLoi(chu), ct, ScopeChat)) { }
+            using (await Gui(HttpMethod.Post, url, TraoDoi.BodyTraLoi(chu, tags), ct, ScopeChat)) { }
         }
 
         /// <summary>(id, tên hiển thị) của người đang đăng nhập.</summary>
