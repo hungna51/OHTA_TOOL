@@ -18,6 +18,9 @@ $HasAi = Test-Path $AiProj
 $TeamsProj     = Join-Path $OhtaRoot "06_Teams\plugin\TeamsTool.Plugin\TeamsTool.Plugin.csproj"
 $TeamsTestProj = Join-Path $OhtaRoot "06_Teams\plugin\TeamsTool.Tests\TeamsTool.Tests.csproj"
 $HasTeams = Test-Path $TeamsProj
+# _apps/OhtaTeams: ung dung rieng OhtaTeams.exe (net48, khong can SDK CAD) - ra thang _apps\OhtaTeams\bin
+$TeamsAppProj = Join-Path $OhtaRoot "_apps\OhtaTeams\OhtaTeams.csproj"
+$HasTeamsApp = Test-Path $TeamsAppProj
 
 # --- Tu do SDK CAD dang cai tren may (moi may co the cai phien ban khac nhau) ---
 # ZWCAD co the cai o o khac (vd D:\ZWCAD) -> lay InstallLocation tu registry, fallback duong dan mac dinh
@@ -79,6 +82,30 @@ if ($HasTeams) {
     dotnet build $TeamsProj @BuildArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Bien dich TeamsTool.Plugin (06_Teams) THAT BAI!"
+    }
+}
+if ($HasTeamsApp) {
+    $TeamsBinDir = Join-Path (Split-Path -Parent $TeamsAppProj) "bin"
+    if (Test-Path $TeamsBinDir) {
+        Get-ChildItem -Path $TeamsBinDir -Filter "*.old_*" -ErrorAction SilentlyContinue | ForEach-Object {
+            Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+        }
+        $stampExe = [DateTime]::Now.ToString("yyyyMMdd_HHmmss")
+        foreach ($ext in @("exe", "pdb")) {
+            $fExe = Join-Path $TeamsBinDir "OhtaTeams.$ext"
+            if (Test-Path $fExe) {
+                try {
+                    $fs = [IO.File]::Open($fExe, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+                    $fs.Close()
+                } catch {
+                    Move-Item -Path $fExe -Destination (Join-Path $TeamsBinDir "OhtaTeams.old_${stampExe}.$ext") -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+    }
+    dotnet build $TeamsAppProj -c Release --nologo
+    if ($LASTEXITCODE -ne 0) {
+        throw "Bien dich OhtaTeams.exe (_apps) THAT BAI! (Dang mo OhtaTeams thi tat di roi build lai)"
     }
 }
 

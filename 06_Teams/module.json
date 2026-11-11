@@ -5,9 +5,9 @@
   "order": 60,
   "tabTitle": "Teams",
   "title": "Nhận đơn từ Microsoft Teams",
-  "version": "0.1",
+  "version": "0.2",
   "stage": "dev",
-  "description": "Xem đơn trong tab Lists của kênh Teams · nhóm → kênh → tab → đơn · ẩn đơn đã xong · lọc đơn của tôi",
+  "description": "Đơn đang làm · theo bản vẽ đang mở hoặc đơn 📌 trong ứng dụng OhtaTeams · mở trên Teams / thư mục đơn",
   "accentColor": "#4B53BC",
   "tools": []
 }
