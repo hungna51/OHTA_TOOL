@@ -107,6 +107,8 @@ namespace TeamsTool.Views
             _nhanVien.SelectionChanged += (s, e) => { if (_oDanhSach) VeDon(); };
             _tim.TextChanged += (s, e) => { _henTim.Stop(); _henTim.Start(); };
             _tim.KeyDown += (s, e) => { if (e.Key == Key.Escape) _tim.Clear(); };
+            _henChuyen.Tick += (s, e) => QuetChuyenTiep();
+            _henChuyen.Start();
             _henTim.Tick += (s, e) =>
             {
                 _henTim.Stop();
@@ -366,6 +368,7 @@ namespace TeamsTool.Views
             GopDanhBa();
             if (_congTy == null) TaiDanhBaCongTy();
             GhiDangLam();
+            QuetChuyenTiep();
         }
 
         private void GhiDangLam()
@@ -1038,6 +1041,7 @@ namespace TeamsTool.Views
             }
             foreach (HoiThoai c in cua.Where(h => !daDung.Contains(h))) cot.Add((c, c)); // chuỗi ở kênh khác: thêm cột
             if (cot.Count == 0) p.Children.Add(ChuPhu("Đơn chưa có chuỗi chat nào trên Teams."));
+            if (DateTime.Now - _lanQuetCuoi > TimeSpan.FromSeconds(30)) QuetChuyenTiep(); // mở đơn: quét ngay (tự chuyển tiếp nếu bật)
 
             var ngang = new System.Windows.Controls.Primitives.UniformGrid { Rows = 1, Columns = Math.Max(1, cot.Count) };
             for (int i = 0; i < cot.Count; i++)
@@ -1045,7 +1049,7 @@ namespace TeamsTool.Views
                 var khung = new StackPanel { Margin = new Thickness(i == 0 ? 0 : 5, 0, i == cot.Count - 1 ? 0 : 5, 0) };
                 khung.Children.Add(ChuPhu("Đang tải chat…"));
                 ngang.Children.Add(khung);
-                if (cot[i].Chuoi != null) TaiChuoiVao(khung, cot[i].Chuoi, phien);
+                if (cot[i].Chuoi != null) TaiChuoiVao(khung, cot[i].Chuoi, phien, d);
                 else KhungTaoChuoi(khung, d, cot[i].Kenh, phien);
             }
             p.Children.Add(ngang);
@@ -1065,7 +1069,7 @@ namespace TeamsTool.Views
             return sv;
         }
 
-        private async void TaiChuoiVao(StackPanel khung, HoiThoai h, int phien)
+        private async void TaiChuoiVao(StackPanel khung, HoiThoai h, int phien, DonTeams d)
         {
             try
             {
@@ -1073,7 +1077,14 @@ namespace TeamsTool.Views
                 if (phien != _phienChiTiet) return;
                 khung.Children.Clear();
                 if (kq == null) { khung.Children.Add(ChuPhu("Chuỗi chat nằm ở nhóm Teams bạn chưa tham gia.")); return; }
-                khung.Children.Add(TieuDeNhom(kq.Value.NhomTen));
+                var tieuDe = TieuDeNhom(kq.Value.NhomTen);
+                bool laNguon = KenhChuyen()?.Nguon is HoiThoai ng && ng.ChannelId == h.ChannelId && ng.TeamInternalId == h.TeamInternalId;
+                if (laNguon)
+                {
+                    tieuDe.ToolTip = "Chuột phải: chuyển tiếp cả chuỗi sang kênh có tab đơn";
+                    tieuDe.ContextMenu = MenuChuyen("Chuyển tiếp cả chuỗi sang kênh đơn", () => ChuyenTay(d, kq.Value.Tin.Where(x => x.LaTinNguoi).ToList()));
+                }
+                khung.Children.Add(tieuDe);
                 var ds = new StackPanel { Margin = new Thickness(0, 0, 4, 0) };
                 foreach (TinNhan t in kq.Value.Tin)
                 {
@@ -1088,8 +1099,10 @@ namespace TeamsTool.Views
                         foreach (TepDinhKem f in t.Tep) tep.Children.Add(NutTepChat(f));
                         tin.Children.Add(tep);
                     }
-                    ds.Children.Add(new Border { Child = tin, Background = KieuTeams.Mau("#EEF0FA"), CornerRadius = new CornerRadius(6),
-                                                 Padding = new Thickness(8, 5, 8, 5), Margin = new Thickness(0, 0, 0, 4) });
+                    var oTin = new Border { Child = tin, Background = KieuTeams.Mau("#EEF0FA"), CornerRadius = new CornerRadius(6),
+                                            Padding = new Thickness(8, 5, 8, 5), Margin = new Thickness(0, 0, 0, 4) };
+                    if (laNguon && t.LaTinNguoi) { TinNhan tinNay = t; oTin.ContextMenu = MenuChuyen("Chuyển tiếp tin này sang kênh đơn", () => ChuyenTay(d, new List<TinNhan> { tinNay })); }
+                    ds.Children.Add(oTin);
                 }
                 khung.Children.Add(KhungCuonTin(ds));
                 var o = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 44, Margin = new Thickness(0, 6, 0, 4), ToolTip = "Trả lời trong chuỗi hội thoại — gõ @ để tag người" };
@@ -1105,7 +1118,7 @@ namespace TeamsTool.Views
                         if (phien != _phienChiTiet) return;
                         khung.Children.Clear();
                         khung.Children.Add(ChuPhu("Đã gửi. Đang tải lại chat…"));
-                        TaiChuoiVao(khung, h, phien);
+                        TaiChuoiVao(khung, h, phien, d);
                     }
                     catch (Exception ex) { gui.IsEnabled = true; MessageBox.Show("Không gửi được:\n" + ex.Message, "Chat", MessageBoxButton.OK, MessageBoxImage.Warning); }
                 });
@@ -1165,6 +1178,114 @@ namespace TeamsTool.Views
             return daTag;
         }
 
+        // ---------- Chuyển tiếp chat kênh nguồn (OHTA-受注) → kênh có tab đơn (OHTA-日本) ----------
+
+        private readonly System.Windows.Threading.DispatcherTimer _henChuyen = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMinutes(5) };
+        private bool _dangChuyen;
+        private DateTime _lanQuetCuoi = DateTime.MinValue;
+
+        /// <summary>Cặp kênh: đích = kênh có tab danh sách đơn, nguồn = kênh còn lại trong 2 kênh dùng nhiều nhất. Thiếu một → null.</summary>
+        private (HoiThoai Nguon, HoiThoai Dich)? KenhChuyen()
+        {
+            if (_tab == null || _don.Count == 0) return null;
+            List<HoiThoai> kenh = TraoDoi.KenhPhoBien(_don);
+            HoiThoai dich = kenh.FirstOrDefault(k => k.ChannelId == _tab[2]), nguon = kenh.FirstOrDefault(k => k.ChannelId != _tab[2]);
+            return dich == null || nguon == null ? ((HoiThoai, HoiThoai)?)null : (nguon, dich);
+        }
+
+        /// <summary>
+        /// Tự chuyển tiếp (máy bật ở ⚙): đọc tin mới của kênh nguồn từ mốc, tin thuộc chuỗi của đơn nào thì chuyển sang chuỗi của đơn đó
+        /// ở kênh đích (chưa có chuỗi thì tạo). Lặng lẽ: không hỏi, không hộp báo — kết quả / lỗi ghi vào ⚙.
+        /// </summary>
+        private async void QuetChuyenTiep()
+        {
+            if (_dangChuyen || !CaiDatTeams.TuChuyenTiep || !(KenhChuyen() is var cap) || cap == null) return;
+            _dangChuyen = true;
+            _lanQuetCuoi = DateTime.Now;
+            DateTime batDau = DateTime.Now;
+            try
+            {
+                var (nguon, dich) = cap.Value;
+                var nhomNguon = await GraphTeams.NhomCuaInternal(nguon.TeamInternalId, CancellationToken.None);
+                var nhomDich = await GraphTeams.NhomCuaInternal(dich.TeamInternalId, CancellationToken.None);
+                if (nhomNguon == null || nhomDich == null) { CaiDatTeams.KetQuaChuyen = batDau.ToString("dd/MM HH:mm") + " — tài khoản chưa vào nhóm nguồn / đích"; return; }
+                DateTime moc = CaiDatTeams.MocChuyen ?? DateTime.Today;
+                List<TinNhan> tin = await GraphTeams.TinKenhTuMoc(nhomNguon.Value.Id, nguon.ChannelId, moc, CancellationToken.None);
+                var donTheoGoc = new Dictionary<string, DonTeams>();
+                foreach (DonTeams d in _don)
+                    foreach (HoiThoai h in TraoDoi.DocHoiThoai(d.HoiThoaiMeta).Where(x => x.ChannelId == nguon.ChannelId && x.TeamInternalId == nguon.TeamInternalId))
+                        donTheoGoc[h.ConvId] = d;
+                int so = 0;
+                foreach (var chuoi in ChuyenTiep.TinCanChuyen(tin, moc, donTheoGoc.Keys).GroupBy(t => t.GocId))
+                    so += await ChuyenTinDon(donTheoGoc[chuoi.Key], chuoi.ToList(), nhomNguon.Value.Ten, dich, nhomDich.Value);
+                CaiDatTeams.MocChuyen = batDau.AddMinutes(-2); // lùi 2 phút: tin gửi trong lúc quét không bị sót (trùng thì bỏ qua)
+                CaiDatTeams.KetQuaChuyen = batDau.ToString("dd/MM HH:mm") + " — " + so + " tin";
+            }
+            catch (Exception ex) { CaiDatTeams.KetQuaChuyen = batDau.ToString("dd/MM HH:mm") + " — lỗi: " + ex.Message.Split('\n')[0]; }
+            finally { _dangChuyen = false; }
+        }
+
+        /// <summary>
+        /// Chuyển các tin của một đơn sang chuỗi của đơn ở kênh đích: chưa có chuỗi thì tạo (kèm thẻ Về: đơn); tin đã có bên đích (cùng dòng đầu
+        /// + đoạn đầu nội dung) thì bỏ qua; ảnh đăng lại, tệp chép sang thư mục "Chuyển từ &lt;nhóm&gt;/&lt;đơn&gt;" của kênh đích. Trả số tin đã chuyển.
+        /// </summary>
+        private async Task<int> ChuyenTinDon(DonTeams d, List<TinNhan> tin, string nhomNguonTen, HoiThoai kenhDich, (string Id, string Ten) nhomDich)
+        {
+            HoiThoai chuoiDich = TraoDoi.DocHoiThoai(d.HoiThoaiMeta).FirstOrDefault(h => h.ChannelId == kenhDich.ChannelId && h.TeamInternalId == kenhDich.TeamInternalId);
+            if (chuoiDich == null)
+            {
+                var (moi, _, sau) = await TaoChuoiChoDon(d, kenhDich, nhomDich.Id, nhomDich.Ten, "Trao đổi chuyển tiếp từ " + nhomNguonTen, null);
+                chuoiDich = moi;
+                if (sau != null) d = sau;
+            }
+            List<TinNhan> daCo = (await GraphTeams.TaiChuoi(chuoiDich, CancellationToken.None))?.Tin ?? new List<TinNhan>();
+            int so = 0;
+            foreach (TinNhan t in tin.OrderBy(x => x.Luc))
+            {
+                if (ChuyenTiep.DaChuyen(daCo, nhomNguonTen, t)) continue;
+                var anh = new List<AnhChuyen>();
+                for (int i = 0; i < t.Anh.Count; i++)
+                {
+                    byte[] b = await GraphTeams.TaiAnhChat(t.Anh[i], CancellationToken.None);
+                    anh.Add(new AnhChuyen { TamId = (i + 1).ToString(), Byte = b, LoaiNoiDung = ChuyenTiep.LoaiAnh(b) });
+                }
+                var tep = new List<TepChuyen>();
+                foreach (TepDinhKem f in t.Tep)
+                    tep.Add(await GraphTeams.ChepTepSangKenh(nhomDich.Id, kenhDich.ChannelId, ChuyenTiep.ThuMucTep(nhomNguonTen, d.Title), f.Ten,
+                                                            await GraphTeams.ByteTepChat(f, CancellationToken.None), CancellationToken.None));
+                string body = ChuyenTiep.BodyChuyen(ChuyenTiep.DauChuyen(nhomNguonTen, t), ChuyenTiep.HtmlChuyen(t.Html, t.Anh), anh, tep);
+                await GraphTeams.DangTraLoi(nhomDich.Id, chuoiDich, body, CancellationToken.None);
+                so++;
+            }
+            return so;
+        }
+
+        private static ContextMenu MenuChuyen(string chu, Action lam)
+        {
+            var mi = new MenuItem { Header = "↪ " + chu };
+            mi.Click += (s, e) => lam();
+            var m = new ContextMenu();
+            m.Items.Add(mi);
+            return m;
+        }
+
+        /// <summary>Chuột phải → chuyển tiếp nhanh (không hỏi, không cần bật ⚙): tin đã có bên kia thì bỏ qua; xong vẽ lại chi tiết đơn.</summary>
+        private void ChuyenTay(DonTeams d, List<TinNhan> tin)
+        {
+            if (!(KenhChuyen() is var cap) || cap == null) { BaoTrangThai("Chưa xác định được kênh đích để chuyển tiếp."); return; }
+            Chay(async () =>
+            {
+                BaoTrangThai("Đang chuyển tiếp…");
+                var (nguon, dich) = cap.Value;
+                var nhomNguon = await GraphTeams.NhomCuaInternal(nguon.TeamInternalId, CancellationToken.None);
+                var nhomDich = await GraphTeams.NhomCuaInternal(dich.TeamInternalId, CancellationToken.None);
+                if (nhomNguon == null || nhomDich == null) { BaoTrangThai("Tài khoản chưa vào nhóm nguồn / đích."); return; }
+                int so = await ChuyenTinDon(d, tin, nhomNguon.Value.Ten, dich, nhomDich.Value);
+                DonTeams sau = _don.FirstOrDefault(x => x.Id == d.Id) ?? d;
+                HienChiTiet(sau, so == 0 ? "Các tin này đã có ở " + nhomDich.Value.Ten + " rồi." : "Đã chuyển " + so + " tin sang " + nhomDich.Value.Ten + ".");
+            });
+        }
+
         /// <summary>Kênh đơn chưa có chuỗi chat: tên nhóm + ô nhập + nút Tạo trao đổi (tin đầu chuỗi có link tới đơn).</summary>
         private async void KhungTaoChuoi(StackPanel khung, DonTeams d, HoiThoai kenh, int phien)
         {
@@ -1201,11 +1322,26 @@ namespace TeamsTool.Views
             if (chu.Trim().Length == 0) { BaoTrangThai("Gõ nội dung trao đổi trước khi tạo."); return; }
             if (MessageBox.Show("Gửi tin mở trao đổi về đơn " + d.Title + " vào nhóm " + nhomTen + "?\n\n" + chu.Trim(), "Tạo trao đổi",
                                 MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
-            string siteId = _tab[5], listId = _tab[6];
-            string cotMeta = d.HoiThoaiCot.Length > 0 ? d.HoiThoaiCot : _don.Select(x => x.HoiThoaiCot).FirstOrDefault(x => x.Length > 0);
+            string listId = _tab[6];
             Chay(async () =>
             {
                 BaoTrangThai("Đang tạo trao đổi…");
+                var (_, thongBao, sau) = await TaoChuoiChoDon(d, kenh, nhomId, nhomTen, chu, daTag);
+                if (_tab?[6] != listId) return;
+                if (sau == null) { VeDon(); return; }
+                HienChiTiet(sau, thongBao);
+            });
+        }
+
+        /// <summary>
+        /// Mở chuỗi mới về đơn trong kênh (tin đầu kèm thẻ "📋 Về: đơn") rồi gắn vào cột ẩn của đơn (giữ chuỗi cũ; đơn vừa bị sửa → đọc lại, ghi lại 1 lần).
+        /// Dùng cho nút Tạo trao đổi và tự chuyển tiếp. Trả chuỗi mới, câu thông báo, đơn đọc lại (null nếu không đọc được).
+        /// </summary>
+        private async Task<(HoiThoai Chuoi, string ThongBao, DonTeams Sau)> TaoChuoiChoDon(DonTeams d, HoiThoai kenh, string nhomId, string nhomTen, string chu, List<NguoiTag> daTag)
+        {
+            string siteId = _tab[5], listId = _tab[6];
+            string cotMeta = d.HoiThoaiCot.Length > 0 ? d.HoiThoaiCot : _don.Select(x => x.HoiThoaiCot).FirstOrDefault(x => x.Length > 0);
+            {
                 if (_tabDon == null)
                     try { _tabDon = await GraphTeams.TabDon(_tab[0], _tab[2], _tab[4], _tab[7], CancellationToken.None); }
                     catch (InvalidOperationException) { } // không đọc được tab: dùng link SharePoint
@@ -1226,10 +1362,8 @@ namespace TeamsTool.Views
                         catch (DonDaDoiException) when (lan == 0) { moi = await TaiLaiMotDon(siteId, listId, d.Id) ?? moi; } // người khác vừa sửa: đọc bản mới rồi ghi lại
                     }
                 DonTeams sau = await TaiLaiMotDon(siteId, listId, d.Id);
-                if (_tab?[6] != listId) return;
-                if (sau == null) { VeDon(); return; }
-                HienChiTiet(sau, thongBao);
-            });
+                return (chuoi, thongBao, sau);
+            }
         }
 
         /// <summary>Đọc lại một đơn từ Teams, thay vào danh sách đang có (ghi dang_lam.json). Không thấy → null.</summary>

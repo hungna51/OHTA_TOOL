@@ -79,6 +79,31 @@ namespace TeamsTool.Services
             set => Ghi("nv_an", string.Join("\n", value));
         }
 
+        /// <summary>Máy này tự chuyển tiếp chat kênh nguồn (OHTA-受注) → kênh có tab đơn (OHTA-日本). Mặc định tắt.</summary>
+        public static bool TuChuyenTiep
+        {
+            get => Doc("ct_bat") == "1";
+            set
+            {
+                Ghi("ct_bat", value ? "1" : "0");
+                if (value && MocChuyen == null) MocChuyen = DateTime.Today; // bật lần đầu: chỉ chuyển tin từ 0 giờ hôm nay
+            }
+        }
+
+        /// <summary>Chỉ chuyển tin gửi sau mốc này (giờ máy); sau mỗi lần quét xong dời tới lúc quét. null = chưa bật lần nào.</summary>
+        public static DateTime? MocChuyen
+        {
+            get => DateTime.TryParse(Doc("ct_moc"), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime d) ? d : (DateTime?)null;
+            set => Ghi("ct_moc", value?.ToString("o", System.Globalization.CultureInfo.InvariantCulture) ?? "");
+        }
+
+        /// <summary>Kết quả lần chuyển tiếp gần nhất (hiện ở ⚙): "11/11 08:05 — 3 tin" hoặc lỗi.</summary>
+        public static string KetQuaChuyen
+        {
+            get => Doc("ct_kq");
+            set => Ghi("ct_kq", value);
+        }
+
         /// <summary>Id đơn người dùng bấm 📌 Đang làm ("" = chưa chọn).</summary>
         public static string DonChon
         {
@@ -300,13 +325,14 @@ namespace TeamsTool.Services
 
         /// <summary>scope = null: quyền đọc lúc đăng nhập; khác: quyền thêm (ScopeGhi / ScopeChat / SharePoint).</summary>
         private static async Task<HttpResponseMessage> Gui(HttpMethod method, string url, string body, CancellationToken ct, string scope = null, string ifMatch = null,
-                                                           string accept = null)
+                                                           string accept = null, byte[] byteBody = null)
         {
             var req = new HttpRequestMessage(method, url.StartsWith("http") ? url : Graph + url);
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", scope != null ? await LayAccessPhu(scope, ct) : await LayAccess(ct));
             if (accept != null) req.Headers.TryAddWithoutValidation("Accept", accept);
             if (!string.IsNullOrEmpty(ifMatch)) req.Headers.TryAddWithoutValidation("If-Match", ifMatch.StartsWith("\"") ? ifMatch : "\"" + ifMatch + "\"");
             if (body != null) req.Content = new StringContent(body, new UTF8Encoding(false), "application/json");
+            if (byteBody != null) req.Content = new ByteArrayContent(byteBody); // tải tệp lên (chép tệp chat sang kênh khác)
             HttpResponseMessage res = await Http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             if ((int)res.StatusCode == 412) { res.Dispose(); throw new DonDaDoiException(); }
             if (!res.IsSuccessStatusCode)
@@ -441,10 +467,60 @@ namespace TeamsTool.Services
             string thuMuc = Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "teams", "chat");
             Directory.CreateDirectory(thuMuc);
             string f = Path.Combine(thuMuc, string.Concat(tep.Ten.Split(Path.GetInvalidFileNameChars())));
-            using (HttpResponseMessage res = await Gui(HttpMethod.Get, "/shares/" + TraoDoi.MaShare(tep.DuongDan) + "/driveItem/content", null, ct, ScopeGhi))
-            using (var ra = File.Create(f))
-                await res.Content.CopyToAsync(ra);
+            File.WriteAllBytes(f, await ByteTepChat(tep, ct));
             return f;
+        }
+
+        /// <summary>Nội dung tệp gửi kèm trong chat (Graph /shares, quyền Sites.ReadWrite.All).</summary>
+        public static async Task<byte[]> ByteTepChat(TepDinhKem tep, CancellationToken ct)
+        {
+            using (HttpResponseMessage res = await Gui(HttpMethod.Get, "/shares/" + TraoDoi.MaShare(tep.DuongDan) + "/driveItem/content", null, ct, ScopeGhi))
+                return await res.Content.ReadAsByteArrayAsync();
+        }
+
+        // ---------- Chuyển tiếp chat sang kênh khác ----------
+
+        /// <summary>
+        /// Tin của kênh từ mốc tới nay (tin gốc + trả lời, phẳng ra). Graph xếp chuỗi theo hoạt động mới nhất (mới trước)
+        /// nên đọc từng trang tới khi gặp chuỗi cũ hơn mốc thì dừng (tối đa 20 trang × 50 chuỗi).
+        /// </summary>
+        public static async Task<List<TinNhan>> TinKenhTuMoc(string nhomId, string channelId, DateTime moc, CancellationToken ct)
+        {
+            var kq = new List<TinNhan>();
+            string url = "/teams/" + nhomId + "/channels/" + Uri.EscapeDataString(channelId) + "/messages?$top=50&$expand=replies";
+            for (int trang = 0; trang < 20 && url != null; trang++)
+            {
+                string json = await GetJson(url, ct, ScopeChat);
+                List<TinNhan> tin = ChuyenTiep.DocTinKenh(json);
+                kq.AddRange(tin);
+                bool het = tin.GroupBy(t => t.GocId).Any(g => (ChuyenTiep.HoatDongCuoi(g) ?? DateTime.MinValue) < moc);
+                url = het ? null : PhanTichTeams.TrangSau(json);
+            }
+            return kq;
+        }
+
+        /// <summary>Đăng một tin (body JSON dựng sẵn: chữ + ảnh hostedContents + tệp) làm trả lời trong chuỗi.</summary>
+        public static async Task DangTraLoi(string nhomId, HoiThoai h, string body, CancellationToken ct)
+        {
+            string url = "/teams/" + nhomId + "/channels/" + Uri.EscapeDataString(h.ChannelId) + "/messages/" + Uri.EscapeDataString(h.ConvId) + "/replies";
+            using (await Gui(HttpMethod.Post, url, body, ct, ScopeChat)) { }
+        }
+
+        /// <summary>
+        /// Chép tệp vào thư mục Files của kênh: &lt;thư mục kênh&gt;/&lt;thuMuc&gt;/&lt;ten&gt; (trùng tên thì SharePoint tự thêm số) → (tên, link) để đính kèm.
+        /// shortcut: tải lên một lần (Graph nhận tới 250 MB); tệp lớn hơn cần phiên tải lên (createUploadSession).
+        /// </summary>
+        public static async Task<TepChuyen> ChepTepSangKenh(string nhomId, string channelId, string thuMuc, string ten, byte[] noiDung, CancellationToken ct)
+        {
+            var goc = (JsonObject)JsonLite.Parse(await GetJson("/teams/" + nhomId + "/channels/" + Uri.EscapeDataString(channelId) + "/filesFolder", ct, ScopeGhi));
+            string driveId = (goc.Get("parentReference") as JsonObject)?.GetString("driveId"), itemId = goc.GetString("id");
+            string duong = string.Join("/", (thuMuc + "/" + ten).Split('/').Select(Uri.EscapeDataString));
+            using (HttpResponseMessage res = await Gui(HttpMethod.Put, "/drives/" + driveId + "/items/" + itemId + ":/" + duong + ":/content?@microsoft.graph.conflictBehavior=rename",
+                                                       null, ct, ScopeGhi, byteBody: noiDung))
+            {
+                var o = (JsonObject)JsonLite.Parse(await res.Content.ReadAsStringAsync());
+                return new TepChuyen { Ten = o.GetString("name") ?? ten, Url = o.GetString("webUrl") };
+            }
         }
 
         private static readonly Dictionary<string, string> _idTab = new Dictionary<string, string>(); // "nhóm|kênh|tên tab" → id tab

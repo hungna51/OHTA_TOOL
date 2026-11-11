@@ -320,6 +320,33 @@ namespace TeamsTool.Tests
             Kiem("tag: khong tag -> khong co mentions", ((OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyTraLoi("ok", tg))).ContainsKey("mentions"), false);
             Kiem("tag: doan dang go sau @", TraoDoi.DoanTag("chao @le g", 10).Tim + "|" + TraoDoi.DoanTag("a@b", 3).ViTri + "|" + TraoDoi.DoanTag("@", 1).Tim + "|" + TraoDoi.DoanTag("@ab\ncd", 6).ViTri, "le g|-1||-1");
             Kiem("tag: doc nguoi tag tu /users", string.Join(",", TraoDoi.DocNguoiTag(@"{""value"":[{""id"":""a"",""displayName"":""Vinh"",""accountEnabled"":true},{""id"":""b"",""displayName"":""Tắt"",""accountEnabled"":false},{""id"":""c"",""displayName"":""An""}]}").Select(n => n.Id + "=" + n.Ten)), "c=An,a=Vinh");
+            // Chuyen tiep chat 受注 → 日本
+            var kenhTin = ChuyenTiep.DocTinKenh(@"{""value"":[
+  {""id"":""100"",""messageType"":""message"",""createdDateTime"":""2026-11-10T06:42:50Z"",""from"":{""user"":{""displayName"":""谷本""}},""body"":{""contentType"":""html"",""content"":""<p>OK</p><attachment id=\""tab::x\""></attachment>""},
+   ""replies"":[{""id"":""101"",""replyToId"":""100"",""messageType"":""message"",""createdDateTime"":""2026-11-11T00:41:40Z"",""from"":{""user"":{""displayName"":""岡田""}},""body"":{""contentType"":""html"",""content"":""<p>データが届きました</p>""}},
+                {""id"":""102"",""replyToId"":""100"",""messageType"":""systemEventMessage"",""createdDateTime"":""2026-11-11T00:50:00Z"",""from"":null,""body"":{""contentType"":""html"",""content"":""""}}]},
+  {""id"":""200"",""messageType"":""message"",""createdDateTime"":""2026-11-11T01:00:00Z"",""from"":{""user"":{""displayName"":""山中""}},""body"":{""contentType"":""text"",""content"":""khong gan don""}}]}");
+            Kiem("chuyen: doc tin kenh phang, goc id", string.Join(",", kenhTin.Select(t => t.Id + "@" + t.GocId)), "100@100,101@100,102@100,200@200");
+            var mocCt = new DateTime(2026, 11, 11, 0, 0, 0, DateTimeKind.Utc).ToLocalTime().Date;
+            var canCt = ChuyenTiep.TinCanChuyen(kenhTin, PhanTichTeams.DocNgay("2026-11-10T12:00:00Z").Value, new HashSet<string> { "100" });
+            Kiem("chuyen: chi tin nguoi, sau moc, thuoc don", string.Join(",", canCt.Select(t => t.Id)), "101");
+            string dauCt = ChuyenTiep.DauChuyen("OHTA-受注", canCt[0]);
+            Kiem("chuyen: dong dau", dauCt, "[OHTA-受注] 岡田 · " + PhanTichTeams.DocNgay("2026-11-11T00:41:40Z")?.ToString("dd/MM HH:mm"));
+            var dichCt = new List<TinNhan> { new TinNhan { Chu = dauCt + "\nデータが届きました" } };
+            Kiem("chuyen: da chuyen -> bo qua; tin khac cung phut -> chua", ChuyenTiep.DaChuyen(dichCt, "OHTA-受注", canCt[0]) + "|"
+                 + ChuyenTiep.DaChuyen(dichCt, "OHTA-受注", new TinNhan { Nguoi = "岡田", Luc = canCt[0].Luc, Chu = "別の内容" }), "True|False");
+            string anhG = "https://graph.microsoft.com/v1.0/teams/t/channels/c/messages/1/hostedContents/abc/$value";
+            Kiem("chuyen: tag thanh chu, bo the dinh kem, doi src anh",
+                 ChuyenTiep.HtmlChuyen("<p><at id=\"0\">Lê Gia Vinh</at> xem</p><img src=\"" + anhG + "\" alt=\"image\"><attachment id=\"a1\"></attachment>", new List<string> { anhG }),
+                 "<p>@Lê Gia Vinh xem</p><img src=\"../hostedContents/1/$value\" alt=\"image\">");
+            Kiem("chuyen: loai anh", ChuyenTiep.LoaiAnh(new byte[] { 0xFF, 0xD8, 0, 0 }) + "|" + ChuyenTiep.LoaiAnh(new byte[] { 0x89, 0x50, 0x4E, 0x47 }), "image/jpeg|image/png");
+            var bCt = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(ChuyenTiep.BodyChuyen(dauCt, "<p>x</p>",
+                new[] { new AnhChuyen { TamId = "1", LoaiNoiDung = "image/png", Byte = new byte[] { 1, 2 } } }, new[] { new TepChuyen { Ten = "a.dwg", Url = "https://h/a.dwg" } }));
+            var hc = (OhtaTool.Plugin.Core.JsonObject)((List<object>)bCt.Get("hostedContents"))[0];
+            var tc = (OhtaTool.Plugin.Core.JsonObject)((List<object>)bCt.Get("attachments"))[0];
+            Kiem("chuyen: body co anh + tep + the attachment", hc.GetString("@microsoft.graph.temporaryId") + "|" + hc.GetString("contentBytes") + "|" + tc.GetString("contentType") + "|" + tc.GetString("name")
+                 + "|" + ((OhtaTool.Plugin.Core.JsonObject)bCt.Get("body")).GetString("content").Contains("<attachment id=\"" + tc.GetString("id") + "\">"), "1|AQI=|reference|a.dwg|True");
+            Kiem("chuyen: thu muc tep", ChuyenTiep.ThuMucTep("OHTA-受注", "C081105/5"), "Chuyển từ OHTA-受注/C081105_5");
             Kiem("tin mo dau khong the", ((OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyMoDau("<p>x</p>", null, "a"))).ContainsKey("attachments"), false);
             Kiem("tep: doc AttachmentFiles", string.Join(",", TraoDoi.DocTep(@"{""value"":[{""FileName"":""130819.pdf"",""ServerRelativeUrl"":""/sites/x/Lists/y/Attachments/2758/130819.pdf""},{""FileName"":""""}]}").Select(t => t.Ten + "=" + t.DuongDan)), "130819.pdf=/sites/x/Lists/y/Attachments/2758/130819.pdf");
             Kiem("tep: URL tai qua _api, ma hoa dau cach + nhay don", TraoDoi.UrlTaiTep("https://h/sites/x", "/sites/x/Lists/Tt c/Attachments/1/a'b.pdf"),

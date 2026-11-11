@@ -23,6 +23,8 @@ namespace TeamsTool.Views
         private static TextBox O() => new TextBox { Padding = new Thickness(4, 3, 4, 3), Margin = new Thickness(0, 2, 0, 8) };
 
         private readonly List<CheckBox> _nhanVien = new List<CheckBox>(); // ô "hiện" từng người — bỏ tích = ẩn khỏi ô chọn người
+        private readonly CheckBox _tuChuyen = new CheckBox { Content = "Máy này tự chuyển tiếp chat OHTA-受注 → OHTA-日本 (5 phút một lần, khi OhtaTeams đang mở)",
+                                                             Margin = new Thickness(0, 0, 0, 4) };
 
         /// <param name="danhBa">Tên mọi người (danh bạ công ty + người trong đơn) để chọn ẩn / hiện; rỗng = chưa mở danh sách đơn.</param>
         public TeamsCaiDatWindow(Brush mau, List<string> danhBa = null)
@@ -83,6 +85,18 @@ namespace TeamsTool.Views
             goc.Children.Add(KieuTeams.The(ma));
             goc.Children.Add(KieuTeams.The(tm));
             goc.Children.Add(KieuTeams.The(KhoiNhanVien(mau, danhBa ?? new List<string>())));
+            // Chuyển tiếp chat: bật trên 1–2 máy; chỉ chuyển tin từ 0 giờ ngày bật lần đầu, kiểm tra trùng nên nhiều máy bật cũng không gửi đôi
+            _tuChuyen.IsChecked = CaiDatTeams.TuChuyenTiep;
+            var ct = new StackPanel();
+            ct.Children.Add(new TextBlock { Text = "Chuyển tiếp chat", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) });
+            ct.Children.Add(_tuChuyen);
+            string kq = CaiDatTeams.KetQuaChuyen;
+            ct.Children.Add(new TextBlock { Text = "Lần chuyển gần nhất: " + (kq.Length > 0 ? kq : "chưa có")
+                                                   + (CaiDatTeams.MocChuyen is DateTime moc ? " · chuyển tin từ " + moc.ToString("dd/MM HH:mm") : ""),
+                                            Foreground = KieuTeams.ChuPhu, FontSize = 10.5, TextWrapping = TextWrapping.Wrap });
+            ct.Children.Add(new TextBlock { Text = "Chuột phải vào tin / tiêu đề nhóm OHTA-受注 trong chi tiết đơn để chuyển tiếp ngay (không cần bật ô này).",
+                                            Foreground = KieuTeams.ChuPhu, FontSize = 10.5, TextWrapping = TextWrapping.Wrap });
+            goc.Children.Add(KieuTeams.The(ct));
             goc.Children.Add(KieuTeams.The(tk));
             goc.Children.Add(_baoLoi);
             goc.Children.Add(nut);
@@ -143,6 +157,7 @@ namespace TeamsTool.Views
         {
             try
             {
+                CaiDatTeams.TuChuyenTiep = _tuChuyen.IsChecked == true;
                 if (_nhanVien.Count > 0)
                     CaiDatTeams.NhanVienAn = new HashSet<string>(_nhanVien.Where(o => o.IsChecked != true).Select(o => (string)o.Content));
                 string tm = _thuMuc.Text.Trim().Trim('"');

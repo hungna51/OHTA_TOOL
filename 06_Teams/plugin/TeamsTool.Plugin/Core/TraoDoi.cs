@@ -18,6 +18,9 @@ namespace TeamsTool.Core
         public List<string> Anh = new List<string>();          // ảnh dán trong tin: URL hostedContents của Graph
         public List<TepDinhKem> Tep = new List<TepDinhKem>();  // tệp gửi kèm: DuongDan = URL SharePoint đầy đủ
         public int SoTep => Tep.Count;
+        public string Html = "";        // nội dung gốc (HTML) — để chuyển tiếp giữ định dạng
+        public string GocId;             // id tin gốc của chuỗi (chính nó nếu là tin gốc)
+        public bool LaTinNguoi = true;   // messageType = message (không phải tin hệ thống)
     }
 
     /// <summary>Người tag được bằng @ trong chat: Id = id tài khoản Microsoft 365 (Graph /users).</summary>
@@ -71,6 +74,9 @@ namespace TeamsTool.Core
                 Tep = (m.Get("attachments") as List<object> ?? new List<object>()).OfType<JsonObject>()
                         .Where(a => a.GetString("contentType") == "reference" && !string.IsNullOrEmpty(a.GetString("contentUrl")))
                         .Select(a => new TepDinhKem { Ten = a.GetString("name") ?? "tệp", DuongDan = a.GetString("contentUrl") }).ToList(),
+                Html = html ? chu : HtmlTraLoi(chu),
+                GocId = m.GetString("replyToId") ?? m.GetString("id"),
+                LaTinNguoi = (m.GetString("messageType") ?? "message") == "message",
             };
             return t;
         }
