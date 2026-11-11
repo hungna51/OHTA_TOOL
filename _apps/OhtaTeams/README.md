@@ -13,15 +13,15 @@ Thiết kế: [_docs/specs/2026-11-10-ung-dung-teams-rieng.md](../../_docs/specs
 
 Thiết kế: [_docs/specs/2026-11-11-phong-lam-viec-ai-ohtateams.md](../../_docs/specs/2026-11-11-phong-lam-viec-ai-ohtateams.md) · [ADR 0010](../../_docs/adr/0010-phong-lam-viec-ai-ohtateams.md).
 
-**Cần trên máy:** ⚙ → **Thư mục đơn** đã đặt · key Claude ở `05_AI\data\ai.key` (tab AI trên CAD → ⚙ → API key) · thư mục `_apps\OhtaTeams\data\quy_chuan\` (**gitignore — chép tay từ máy Admin**): `*.md` (QUY CHUẨN, gửi kèm lời dặn cho AI) + `cong_ty.txt` (mỗi dòng `khoá1,khoá2|Tên hiện` — đoán công ty đặc biệt từ các cột của đơn).
+**Cần trên máy:** ⚙ → tab **Thư mục đơn** đã đặt · key Claude (⚙ → tab **🤖 AI**, ghi `05_AI\data\ai.key` dùng chung với tab AI trên CAD) · thư mục `_apps\OhtaTeams\data\quy_chuan\` (**gitignore — chép tay từ máy Admin**): `*.md` (QUY CHUẨN, gửi kèm lời dặn cho AI) + `cong_ty.txt` (mỗi dòng `khoá1,khoá2|Tên hiện` — đoán công ty đặc biệt từ các cột của đơn).
 
-Mở chi tiết đơn → khu **🤖 AI** (gập sẵn) → **▶ Bắt đầu** (lần đầu hỏi đồng ý gửi bản vẽ lên Claude API, máy nhớ):
+Phòng AI là khung bên phải màn danh sách đơn (kéo vạch giữa để đổi rộng). **Chuột phải vào đơn → 🤖 Mở trong phòng AI** (hoặc nút **🤖 Phòng AI** trong chi tiết đơn) → **▶ Bắt đầu** (lần đầu hỏi đồng ý gửi bản vẽ lên Claude API; bật / tắt ở ⚙ → 🤖 AI):
 
 1. **Tiếp nhận** — tải tệp đính kèm + tệp trong các chuỗi chat của đơn vào `<thư mục đơn>\ai\goc\` (trùng nội dung bỏ qua, trùng tên khác nội dung thêm ` (2)`), xếp loại tệp (bản vẽ / 3D / đơn hàng-mail-ảnh / khác — đoán theo tên, sửa ở ô chọn), đoán **loại đơn** (mới / cần liên lạc / repeat / nửa repeat — từ các cột đơn) và **công ty đặc biệt**. Gộp bản nháp `ai\<Title>-番号.PDF` (đơn hàng trước, bản vẽ sau; xoay trang, tô màu vẫn làm tay). **Repeat hoàn toàn → dừng**, không gọi AI.
 2. **Đọc bản vẽ** — mỗi tệp loại *Bản vẽ* (PDF gửi nguyên, DXF gửi bản tóm tắt: kích thước bao, lỗ gom theo Ø, chữ) → Claude trả bảng **mỗi dòng một tấm**: số BV, tên, M, Z, T, Q, mặt, kích thước, bẻ, lỗ, dung sai, ghi chú JP + VI. Ô AI không chắc / tự chọn hiện ở cột ⚠. **Sửa thẳng trong bảng** (lưu ngay; ô đã sửa không bị lần đọc lại ghi đè). Đơn nửa repeat: bỏ tích **Mới** ở tấm repeat. Tệp không đổi (SHA-256) thì không gọi AI lại; **↻ Đọc lại tất cả** để ép đọc lại.
 3. **Kiểm tra**, 4. **Triển khai** — đợt 2, 3.
 
-Model: model Claude đang chọn ở tab AI (Ling / không chọn → `claude-opus-5-5`), effort `high`, quy chuẩn được cache. Tiền mỗi lần hiện dưới phòng 2.
+Model: chọn ở ⚙ → 🤖 AI (Opus / Sonnet / Haiku 5.5, hoặc theo tab AI trên CAD: Ling / không chọn → `claude-opus-5-5`), effort `high`, quy chuẩn được cache. Tiền mỗi lần hiện dưới phòng 2.
 
 Kết quả: `<thư mục đơn>\ai\tiep_nhan.json`, `chi_tiet.json` (bẻ / lỗ chi tiết nằm ở đây). Thư mục đơn = thư mục có sẵn (≤ 3 cấp dưới Thư mục đơn, tên chứa Title — như tab CAD khớp bản vẽ) hoặc tạo `<Thư mục đơn>\<Title>`.
 

@@ -29,17 +29,33 @@ namespace TeamsTool.Services
         // ---------- Cài đặt ----------
 
         /// <summary>Key Claude dùng chung với tab AI: dòng đầu không rỗng, không bắt đầu bằng # của 05_AI\data\ai.key.</summary>
+        public static string FileKey => Path.Combine(Goc, "05_AI", "data", "ai.key");
+
         public static string DocKey()
         {
-            string f = Path.Combine(Goc, "05_AI", "data", "ai.key");
-            if (!File.Exists(f)) return null;
-            return File.ReadAllLines(f).Select(s => s.Trim()).FirstOrDefault(s => s.Length > 0 && !s.StartsWith("#", StringComparison.Ordinal));
+            if (!File.Exists(FileKey)) return null;
+            return File.ReadAllLines(FileKey).Select(s => s.Trim()).FirstOrDefault(s => s.Length > 0 && !s.StartsWith("#", StringComparison.Ordinal));
         }
 
-        /// <summary>Model chọn ở tab AI (registry); không phải Claude (vd. Ling) → mặc định Opus 5.5.</summary>
+        /// <summary>Thay key (giữ các dòng # chú thích) — tab AI trên CAD cũng dùng key mới.</summary>
+        public static void GhiKey(string key)
+        {
+            var giu = File.Exists(FileKey) ? File.ReadAllLines(FileKey).Where(s => s.TrimStart().StartsWith("#", StringComparison.Ordinal)).ToList() : new List<string>();
+            giu.Add(key.Trim());
+            GhiAnToan(FileKey, string.Join("\r\n", giu) + "\r\n");
+        }
+
+        /// <summary>Model chọn ở ⚙ → AI của OhtaTeams; để trống = theo tab AI trên CAD (registry), không phải Claude (vd. Ling) → Opus 5.5.</summary>
+        public static string ModelRieng
+        {
+            get => CaiDatTeams.Doc("ai_model");
+            set => CaiDatTeams.Ghi("ai_model", value ?? "");
+        }
+
         public static string Model()
         {
-            string m = null;
+            string m = ModelRieng;
+            if (m.StartsWith("claude-", StringComparison.Ordinal)) return m;
             try { using (RegistryKey k = Registry.CurrentUser.OpenSubKey(@"Software\OFT_Lisp\OhtaTool\AI")) m = k?.GetValue("model") as string; }
             catch (Exception) { }
             return m != null && m.StartsWith("claude-", StringComparison.Ordinal) ? m : PhongDocBanVe.ModelMacDinh;

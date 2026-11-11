@@ -120,9 +120,20 @@ namespace TeamsTool.Views
             };
             _cuon.Content = _noiDung;
 
+            // Cột trái: đăng nhập / danh sách / chi tiết; cột phải: phòng 🤖 AI (kéo vạch giữa để đổi rộng)
             var than = new Grid();
+            than.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 300 });
+            than.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            than.ColumnDefinitions.Add(_cotAi);
+            var chia = new GridSplitter { Width = 5, HorizontalAlignment = HorizontalAlignment.Stretch, Background = KieuTeams.Mau("#E4E7EC"),
+                                          ResizeBehavior = GridResizeBehavior.PreviousAndNext, ToolTip = "Kéo để đổi rộng phòng AI" };
+            _chiaAi = chia;
+            Grid.SetColumn(chia, 1);
+            Grid.SetColumn(_khungAi, 2);
             than.Children.Add(_manDangNhap);
             than.Children.Add(_cuon);
+            than.Children.Add(chia);
+            than.Children.Add(_khungAi);
 
             var goc = new Grid();
             goc.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -142,9 +153,39 @@ namespace TeamsTool.Views
 
         private void BaoTrangThai(string s) => _trangThai.Text = _trangThaiDN.Text = s;
 
+        // ---------- Phòng 🤖 AI (khung bên phải) ----------
+
+        private readonly ColumnDefinition _cotAi = new ColumnDefinition { Width = new GridLength(0), MinWidth = 0 };
+        private readonly Border _khungAi = new Border { Padding = new Thickness(10, 8, 10, 8), Background = KieuTeams.Nen };
+        private GridSplitter _chiaAi;
+        private DonTeams _aiDon;  // đơn đang mở trong phòng AI (null = chưa chọn)
+        private double _rongAi = 560;
+
+        /// <summary>Chuột phải vào đơn → mở đơn đó trong khung AI bên phải.</summary>
+        private void MoPhongAi(DonTeams d)
+        {
+            _aiDon = d;
+            _khungAi.Child = new AiPhongControl(d, _tab[7], _tab[6], _mau, () => { _aiDon = null; _khungAi.Child = null; CapNhatAi(); });
+            CapNhatAi();
+        }
+
+        /// <summary>Hiện khung AI ở màn danh sách đơn (chỗ trống bên phải), ở màn khác chỉ khi đang mở một đơn.</summary>
+        private void CapNhatAi()
+        {
+            bool hien = GraphTeams.DaCoDangNhap && _tab != null && (_oDanhSach || _aiDon != null);
+            if (!hien && _cotAi.ActualWidth > 0) _rongAi = _cotAi.ActualWidth; // nhớ rộng đã kéo
+            if (hien && _aiDon == null && _khungAi.Child == null)
+                _khungAi.Child = new TextBlock { Text = "🤖 Phòng AI\n\nChuột phải vào một đơn → 🤖 Mở trong phòng AI\nđể tải tệp đơn và cho AI đọc bản vẽ.",
+                                                 Foreground = KieuTeams.ChuPhu, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4) };
+            _cotAi.MinWidth = hien ? 340 : 0;
+            _cotAi.Width = new GridLength(hien ? _rongAi : 0);
+            _khungAi.Visibility = _chiaAi.Visibility = hien ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         /// <summary>Đã đăng nhập → màn hình chính; chưa → nút Đăng nhập giữa palette (mờ nếu thiếu teams.json).</summary>
         private void CapNhatMan()
         {
+            CapNhatAi();
             bool daVao = GraphTeams.DaCoDangNhap;
             _cuon.Visibility = daVao ? Visibility.Visible : Visibility.Collapsed;
             _manDangNhap.Visibility = daVao ? Visibility.Collapsed : Visibility.Visible;
@@ -261,6 +302,7 @@ namespace TeamsTool.Views
             _noiDung.Children.Add(hang);
             _noiDung.Children.Add(_trangThai);
             _cuon.ScrollToTop();
+            CapNhatAi();
         }
 
         /// <summary>Một dòng bấm được (nhóm / kênh / tab). bam = null: mờ, ghiChu bên phải.</summary>
@@ -440,6 +482,7 @@ namespace TeamsTool.Views
             CapNhatThanhNhanh();
             BaoTrangThai(loc.Count + " / " + _don.Count + " đơn (" + DateTime.Now.ToString("HH:mm") + ")" + (dangTim ? " — kết quả tìm, gồm cả đơn đã xong (Esc để xoá)" : "") + _loiGhi);
             _oDanhSach = true;
+            CapNhatAi();
         }
 
         // ---------- Danh bạ nhân viên đầy đủ ----------
@@ -784,6 +827,7 @@ namespace TeamsTool.Views
                         DatO(h, new Border { ClipToBounds = true, Child = o }, i + 1);
                     }
                     h.MouseLeftButtonUp += (s, e) => HienChiTiet(d);
+                    h.ContextMenu = MenuDon(d);
                     bang.Children.Add(h);
                     daVe++;
                 }
@@ -911,7 +955,6 @@ namespace TeamsTool.Views
             }
 
             int phien = ++_phienChiTiet;
-            trai.Children.Add(new AiPhongControl(d, _tab[7], _tab[6], _mau));
             trai.Children.Add(KhoiTep(d, phien));
             phai.Children.Add(KhoiChat(d, phien));
         }
@@ -1265,6 +1308,19 @@ namespace TeamsTool.Views
             return so;
         }
 
+        /// <summary>Chuột phải vào dòng đơn.</summary>
+        private ContextMenu MenuDon(DonTeams d)
+        {
+            var m = new ContextMenu();
+            var ai = new MenuItem { Header = "🤖 Mở trong phòng AI", FontWeight = FontWeights.SemiBold };
+            ai.Click += (s, e) => MoPhongAi(d);
+            var ct = new MenuItem { Header = "Mở chi tiết đơn" };
+            ct.Click += (s, e) => HienChiTiet(d);
+            m.Items.Add(ai);
+            m.Items.Add(ct);
+            return m;
+        }
+
         private static ContextMenu MenuChuyen(string chu, Action lam)
         {
             var mi = new MenuItem { Header = "↪ " + chu };
@@ -1472,6 +1528,7 @@ namespace TeamsTool.Views
                 if (_loiGhi.Length > 0) MessageBox.Show(_loiGhi.TrimStart(' ', '—'), "Teams", MessageBoxButton.OK, MessageBoxImage.Warning);
                 HienChiTiet(d);
             }, chinh: !dangChon));
+            nut.Children.Add(KieuTeams.Nut("🤖 Phòng AI", _mau, (s, e) => MoPhongAi(d), chinh: false));
             if (_cots.Any(c => c.SuaDuoc) && !string.IsNullOrEmpty(d.ETag)) nut.Children.Add(KieuTeams.Nut("✏ Sửa nhiều ô", _mau, (s, e) => HienSua(d), chinh: false));
             if (!string.IsNullOrEmpty(d.WebUrl))
                 nut.Children.Add(KieuTeams.Nut("Mở trên Teams", _mau, async (s, e) =>

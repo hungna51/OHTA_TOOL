@@ -11,7 +11,8 @@ using TeamsTool.Services;
 namespace TeamsTool.Views
 {
     /// <summary>
-    /// Cửa sổ ⚙ Cài đặt tab Teams: Tenant/Client ID (ghi 06_Teams\data\teams.json), thư mục đơn (registry thu_muc_goc), Đăng xuất.
+    /// Cửa sổ ⚙ Cài đặt OhtaTeams, chia tab: Tài khoản (Tenant/Client ID — 06_Teams\data\teams.json, Đăng xuất), Thư mục đơn,
+    /// Nhân viên, Chuyển tiếp chat, 🤖 AI (key Claude, model, đồng ý gửi bản vẽ, quy chuẩn).
     /// DaDangXuat = true khi người dùng bấm Đăng xuất (tab quay về màn hình đăng nhập).
     /// </summary>
     internal sealed class TeamsCaiDatWindow : Window
@@ -30,9 +31,11 @@ namespace TeamsTool.Views
         public TeamsCaiDatWindow(Brush mau, List<string> danhBa = null)
         {
             Title = "Cài Đặt Teams";
-            Width = 520;
-            SizeToContent = SizeToContent.Height;
-            ResizeMode = ResizeMode.NoResize;
+            Width = 600;
+            Height = 560;
+            MinWidth = 480;
+            MinHeight = 400;
+            ResizeMode = ResizeMode.CanResize;
             ShowInTaskbar = false;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
             Background = KieuTeams.Nen;
@@ -81,10 +84,7 @@ namespace TeamsTool.Views
             nut.Children.Add(KieuTeams.Nut("Huỷ", mau, (s, e) => Close(), chinh: false));
             nut.Children.Add(KieuTeams.Nut("Lưu", mau, (s, e) => Luu()));
 
-            var goc = new StackPanel { Margin = new Thickness(12) };
-            goc.Children.Add(KieuTeams.The(ma));
-            goc.Children.Add(KieuTeams.The(tm));
-            goc.Children.Add(KieuTeams.The(KhoiNhanVien(mau, danhBa ?? new List<string>())));
+            var tab = new TabControl { Margin = new Thickness(0, 0, 0, 8) };
             // Chuyển tiếp chat: bật trên 1–2 máy; chỉ chuyển tin từ 0 giờ ngày bật lần đầu, kiểm tra trùng nên nhiều máy bật cũng không gửi đôi
             _tuChuyen.IsChecked = CaiDatTeams.TuChuyenTiep;
             var ct = new StackPanel();
@@ -96,11 +96,96 @@ namespace TeamsTool.Views
                                             Foreground = KieuTeams.ChuPhu, FontSize = 10.5, TextWrapping = TextWrapping.Wrap });
             ct.Children.Add(new TextBlock { Text = "Chuột phải vào tin / tiêu đề nhóm OHTA-受注 trong chi tiết đơn để chuyển tiếp ngay (không cần bật ô này).",
                                             Foreground = KieuTeams.ChuPhu, FontSize = 10.5, TextWrapping = TextWrapping.Wrap });
-            goc.Children.Add(KieuTeams.The(ct));
-            goc.Children.Add(KieuTeams.The(tk));
-            goc.Children.Add(_baoLoi);
-            goc.Children.Add(nut);
+            var tkMa = new StackPanel();
+            tkMa.Children.Add(KieuTeams.The(ma));
+            tkMa.Children.Add(KieuTeams.The(tk));
+            Tab(tab, "Tài khoản", tkMa);
+            Tab(tab, "Thư mục đơn", KieuTeams.The(tm));
+            Tab(tab, "Nhân viên", KieuTeams.The(KhoiNhanVien(mau, danhBa ?? new List<string>())));
+            Tab(tab, "Chuyển tiếp chat", KieuTeams.The(ct));
+            Tab(tab, "🤖 AI", KhoiAi(mau));
+            if (int.TryParse(CaiDatTeams.Doc("cai_dat_tab", "0"), out int tabCu)) tab.SelectedIndex = Math.Max(0, Math.Min(tab.Items.Count - 1, tabCu));
+            tab.SelectionChanged += (s, e) => { if (e.Source == tab) CaiDatTeams.Ghi("cai_dat_tab", tab.SelectedIndex.ToString()); };
+
+            var day = new StackPanel();
+            day.Children.Add(_baoLoi);
+            day.Children.Add(nut);
+            var goc = new DockPanel { Margin = new Thickness(12) };
+            DockPanel.SetDock(day, Dock.Bottom);
+            goc.Children.Add(day);
+            goc.Children.Add(tab);
             Content = goc;
+        }
+
+        private static void Tab(TabControl t, string ten, UIElement noiDung) =>
+            t.Items.Add(new TabItem
+            {
+                Header = new TextBlock { Text = ten, Margin = new Thickness(4, 2, 4, 2) },
+                Content = new ScrollViewer { Content = noiDung, Padding = new Thickness(6), VerticalScrollBarVisibility = ScrollBarVisibility.Auto },
+            });
+
+        // ---------- 🤖 AI ----------
+
+        private static readonly KeyValuePair<string, string>[] ModelAi =
+        {
+            new KeyValuePair<string, string>("", "Theo tab AI trên CAD (Ling / chưa chọn → Opus 5.5)"),
+            new KeyValuePair<string, string>("claude-opus-5-5", "Claude Opus 5.5 — đọc kỹ nhất (mặc định)"),
+            new KeyValuePair<string, string>("claude-sonnet-5-5", "Claude Sonnet 5.5 — rẻ hơn ~2 lần"),
+            new KeyValuePair<string, string>("claude-haiku-5-5", "Claude Haiku 5.5 — rẻ nhất, dễ đọc sót"),
+        };
+        private readonly PasswordBox _key = new PasswordBox { Padding = new Thickness(4, 3, 4, 3), Margin = new Thickness(0, 2, 0, 4) };
+        private readonly ComboBox _model = new ComboBox { Margin = new Thickness(0, 2, 0, 4), DisplayMemberPath = "Value", SelectedValuePath = "Key" };
+        private readonly CheckBox _dongY = new CheckBox { Content = "Cho phép gửi tệp bản vẽ của đơn lên Claude API (Anthropic) để đọc", Margin = new Thickness(0, 2, 0, 4) };
+
+        private StackPanel KhoiAi(Brush mau)
+        {
+            TextBlock Phu(string s) => new TextBlock { Text = s, Foreground = KieuTeams.ChuPhu, FontSize = 10.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 4) };
+            TextBlock Dau(string s) => new TextBlock { Text = s, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) };
+            var p = new StackPanel();
+
+            var k = new StackPanel();
+            k.Children.Add(Dau("Key Claude API"));
+            string cu = null;
+            try { cu = AiDon.DocKey(); } catch (Exception ex) { k.Children.Add(Phu("Không đọc được ai.key: " + ex.Message)); }
+            k.Children.Add(new TextBlock { Text = cu == null ? "Chưa có key — phòng AI không đọc được bản vẽ." : "Đã có key …" + cu.Substring(Math.Max(0, cu.Length - 4)),
+                                           Foreground = cu == null ? KieuTeams.Mau("#B42318") : KieuTeams.Mau("#1F7A4D"), TextWrapping = TextWrapping.Wrap });
+            k.Children.Add(new TextBlock { Text = "Dán key mới để thay (để trống = giữ key cũ):", Margin = new Thickness(0, 6, 0, 0) });
+            k.Children.Add(_key);
+            k.Children.Add(Phu("Lưu trong " + AiDon.FileKey + " — dùng chung với tab AI trên CAD, không lên GitHub."));
+            p.Children.Add(KieuTeams.The(k));
+
+            var m = new StackPanel();
+            m.Children.Add(Dau("Model đọc bản vẽ"));
+            _model.ItemsSource = ModelAi;
+            _model.SelectedValue = ModelAi.Any(x => x.Key == AiDon.ModelRieng) ? AiDon.ModelRieng : "";
+            m.Children.Add(_model);
+            m.Children.Add(Phu("Đang dùng: " + AiDon.Model() + ". Tiền mỗi lần đọc hiện dưới phòng 2."));
+            p.Children.Add(KieuTeams.The(m));
+
+            var d = new StackPanel();
+            d.Children.Add(Dau("Gửi bản vẽ ra ngoài"));
+            _dongY.IsChecked = AiDon.DaDongY;
+            d.Children.Add(_dongY);
+            d.Children.Add(Phu("Bỏ tích → lần ▶ Bắt đầu sau hỏi lại. Chỉ bật khi công ty đã cho phép gửi bản vẽ khách hàng lên dịch vụ AI."));
+            p.Children.Add(KieuTeams.The(d));
+
+            var q = new StackPanel();
+            q.Children.Add(Dau("Quy chuẩn gửi kèm AI"));
+            string tmQc = AiDon.ThuMucQuyChuan;
+            int soMd = Directory.Exists(tmQc) ? Directory.GetFiles(tmQc, "*.md").Length : 0;
+            bool coCongTy = File.Exists(Path.Combine(tmQc, "cong_ty.txt"));
+            q.Children.Add(new TextBlock { Text = soMd + " tệp quy chuẩn (.md) · cong_ty.txt: " + (coCongTy ? "có" : "chưa có"), TextWrapping = TextWrapping.Wrap,
+                                           Foreground = soMd == 0 ? KieuTeams.Mau("#B42318") : Brushes.Black });
+            q.Children.Add(Phu(tmQc + " — không lên GitHub, chép tay từ máy Admin. cong_ty.txt: mỗi dòng khoá1,khoá2|Tên hiện (đoán công ty đặc biệt)."));
+            var moQc = KieuTeams.Nut("📁 Mở thư mục quy chuẩn", mau, (s, e) =>
+            {
+                try { Directory.CreateDirectory(tmQc); System.Diagnostics.Process.Start("explorer.exe", "\"" + tmQc + "\""); }
+                catch (Exception ex) { _baoLoi.Text = "Không mở được: " + ex.Message; }
+            }, chinh: false);
+            moQc.HorizontalAlignment = HorizontalAlignment.Left;
+            q.Children.Add(moQc);
+            p.Children.Add(KieuTeams.The(q));
+            return p;
         }
 
         /// <summary>
@@ -157,6 +242,14 @@ namespace TeamsTool.Views
         {
             try
             {
+                string key = _key.Password.Trim();
+                if (key.Length > 0)
+                {
+                    if (key.Any(char.IsWhiteSpace)) { _baoLoi.Text = "Key Claude có khoảng trắng — dán lại đúng key."; return; }
+                    AiDon.GhiKey(key);
+                }
+                AiDon.ModelRieng = _model.SelectedValue as string;
+                AiDon.DaDongY = _dongY.IsChecked == true;
                 CaiDatTeams.TuChuyenTiep = _tuChuyen.IsChecked == true;
                 if (_nhanVien.Count > 0)
                     CaiDatTeams.NhanVienAn = new HashSet<string>(_nhanVien.Where(o => o.IsChecked != true).Select(o => (string)o.Content));

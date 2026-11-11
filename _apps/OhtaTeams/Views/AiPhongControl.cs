@@ -15,10 +15,10 @@ using TeamsTool.Services;
 namespace TeamsTool.Views
 {
     /// <summary>
-    /// Khu 🤖 AI trong chi tiết đơn (spec 2026-11-11): ▶ Bắt đầu chạy phòng 1 → 2 rồi dừng ở 3.
-    /// Đợt 1: phòng 1 (tiếp nhận) + phòng 2 (đọc bản vẽ); phòng 3, 4 chỉ hiện chỗ chờ.
+    /// Phòng 🤖 AI của một đơn (spec 2026-11-11) — khung bên phải màn hình, mở bằng chuột phải vào đơn → 🤖 Mở trong phòng AI.
+    /// ▶ Bắt đầu chạy phòng 1 → 2 rồi dừng ở 3. Đợt 1: phòng 1 (tiếp nhận) + phòng 2 (đọc bản vẽ); phòng 3, 4 chỉ hiện chỗ chờ.
     /// </summary>
-    public sealed class AiPhongControl : Expander
+    public sealed class AiPhongControl : UserControl
     {
         private static readonly Dictionary<string, string> TenLoaiDon = new Dictionary<string, string>
         {
@@ -40,13 +40,27 @@ namespace TeamsTool.Views
         private CancellationTokenSource _huy;
         private string _tm;
 
-        public AiPhongControl(DonTeams d, string listUrl, string listId, Brush mau)
+        /// <param name="dong">Bấm ✕ trên đầu khung (null = không có nút).</param>
+        public AiPhongControl(DonTeams d, string listUrl, string listId, Brush mau, Action dong)
         {
             _d = d; _listUrl = listUrl; _listId = listId; _mau = mau;
-            Header = new TextBlock { Text = "🤖 AI — phòng làm việc", FontWeight = FontWeights.SemiBold };
-            Margin = new Thickness(0, 0, 0, 8);
-            Content = _than;
-            Expanded += (s, e) => Ve();
+            var dau = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
+            if (dong != null)
+            {
+                var x = KieuTeams.Nut("✕", mau, (s, e) => dong(), chinh: false);
+                x.ToolTip = "Đóng phòng AI của đơn này (kết quả vẫn lưu trong thư mục đơn)";
+                DockPanel.SetDock(x, Dock.Right);
+                dau.Children.Add(x);
+            }
+            dau.Children.Add(new TextBlock { Text = "🤖 Phòng AI — " + d.Title, FontWeight = FontWeights.SemiBold, FontSize = 14,
+                                             VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
+            var khung = new DockPanel();
+            DockPanel.SetDock(dau, Dock.Top);
+            khung.Children.Add(dau);
+            khung.Children.Add(new ScrollViewer { Content = _than, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                                                  HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
+            Content = khung;
+            Ve();
         }
 
         private void Bao(string s) => Dispatcher.Invoke(() => _trangThai.Text = s);
