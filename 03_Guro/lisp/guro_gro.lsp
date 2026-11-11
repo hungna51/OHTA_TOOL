@@ -5230,6 +5230,17 @@
   kq
 )
 
+;;; Muc 218: che do GROCS cua mot buoc ("lisp" / "ab" / "cs"); DLL cu / loi -> "lisp".
+(defun gro--che-do-buoc (b / m)
+  (setq m (if (vl-symbol-value 'gro_net_cong_tac) (vl-catch-all-apply 'gro_net_cong_tac (list b)) "lisp"))
+  (if (member m '("ab" "cs")) m "lisp")
+)
+
+;;; Muc 218: text so -> (x y nguong) cho gro_net_cung_bo_goc, nguong = max(65, 8h) nhu gro--cung-gan-text-p.
+(defun gro--cbg-texts (texts)
+  (mapcar '(lambda (it) (list (car (nth 3 it)) (cadr (nth 3 it)) (max 65.0 (* 8.0 (nth 5 it))))) texts)
+)
+
 ;;; Cung nam gan mot text so (trong pham vi khop dim goc max(65, 8h)).
 (defun gro--cung-gan-text-p (a texts / ed)
   (setq ed (entget a))
@@ -5554,7 +5565,7 @@
                                            c-pt r-val parsed texts-lin texts-hole texts-ang
                                            new-lin val-num pt-c h promoted tc e-arc a-ed a-s a-e
                                            sw sw-deg d-sw ss-cir-all ss-arc-all extra-hole
-                                           dim-lin dim-hole dim-ang all-dims r-hole arcs-dim dau-cong vk-geo kq-pl kq-vk)
+                                           dim-lin dim-hole dim-ang all-dims r-hole arcs-dim dau-cong vk-geo kq-pl kq-vk che-cbg bo-cbg)
   ;; 1. Phan loai thuc the hinh hoc tren layer goc + CIRCLE / ARC ca ban ve.
   ;;    Muc 173 (GD 3a): tach ra gro--phan-loai-net (cong tac "nhannet": lisp / ab / cs).
   (setq kq-pl        (gro--phan-loai-net lay-goc ss)
@@ -5597,20 +5608,40 @@
   (setq arcs-dim arcs-cont)
   (if (and arcs-cont (or texts-lin texts-ang))
     (progn
-      (setq dau-cong nil i 0)
-      (if ss
-        (while (< i (sslength ss))
-          (setq e (ssname ss i) i (1+ i))
-          (if (member (cdr (assoc 0 (entget e))) '("LINE" "ARC" "LWPOLYLINE" "POLYLINE" "SPLINE" "ELLIPSE"))
-            (setq dau-cong (cons e dau-cong))
+      ;; Muc 218: GROCS cungbogoc -> cs: C# tinh (luoi dau net), ab: C# tinh de so, ap ket qua lisp.
+      (setq che-cbg (gro--che-do-buoc "cungbogoc"))
+      (if (= che-cbg "cs")
+        (setq bo-cbg   (cadr (gro--cs-goi "cungbogoc" 'gro_net_cung_bo_goc
+                                (list ss arcs-cont (gro--cbg-texts (append texts-lin texts-ang))) 2))
+              arcs-dim (vl-remove-if '(lambda (a) (member a bo-cbg)) arcs-cont)
+        )
+        (progn
+          (if (= che-cbg "ab")
+            (vl-catch-all-apply 'gro_net_cung_bo_goc
+              (list "ab" ss arcs-cont (gro--cbg-texts (append texts-lin texts-ang))))
+          )
+          (setq dau-cong nil i 0)
+          (if ss
+            (while (< i (sslength ss))
+              (setq e (ssname ss i) i (1+ i))
+              (if (member (cdr (assoc 0 (entget e))) '("LINE" "ARC" "LWPOLYLINE" "POLYLINE" "SPLINE" "ELLIPSE"))
+                (setq dau-cong (cons e dau-cong))
+              )
+            )
+          )
+          (foreach e arcs-cont (if (not (member e dau-cong)) (setq dau-cong (cons e dau-cong))))
+          (setq dau-cong (mapcar '(lambda (x) (list x (vlax-curve-getStartPoint x) (vlax-curve-getEndPoint x))) dau-cong)
+                arcs-dim (vl-remove-if '(lambda (a) (and (gro--cung-gan-text-p a (append texts-lin texts-ang))
+                                                         (gro--cung-bo-goc-p a dau-cong)))
+                                       arcs-cont)
+          )
+          (if (= che-cbg "ab")
+            (vl-catch-all-apply 'gro_net_ab
+              (cons "cungbogoc"
+                    (mapcar '(lambda (a) (strcat (cdr (assoc 5 (entget a))) "|bo=1"))
+                            (vl-remove-if '(lambda (a) (member a arcs-dim)) arcs-cont))))
           )
         )
-      )
-      (foreach e arcs-cont (if (not (member e dau-cong)) (setq dau-cong (cons e dau-cong))))
-      (setq dau-cong (mapcar '(lambda (x) (list x (vlax-curve-getStartPoint x) (vlax-curve-getEndPoint x))) dau-cong)
-            arcs-dim (vl-remove-if '(lambda (a) (and (gro--cung-gan-text-p a (append texts-lin texts-ang))
-                                                     (gro--cung-bo-goc-p a dau-cong)))
-                                   arcs-cont)
       )
       (if (< (length arcs-dim) (length arcs-cont))
         (gro--princ (strcat "\n[Xu ly net] Bo qua " (itoa (- (length arcs-cont) (length arcs-dim)))

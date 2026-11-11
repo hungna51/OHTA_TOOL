@@ -916,6 +916,7 @@ namespace ZwCadPlugin.Tests
             TestXepCum();
             TestTachVaCham();
             TestGhepHinhChieu();
+            TestCungBoGoc();
             TestChiaNetCat();
             TestDongKhung();
             TestGuroTabLayer();
@@ -1334,6 +1335,33 @@ namespace ZwCadPlugin.Tests
         }
 
         // ------------------------------------------------------------------
+        // Muc 218: GD3d cung bo goc
+        // ------------------------------------------------------------------
+        private static void TestCungBoGoc()
+        {
+            Console.WriteLine();
+            Console.WriteLine("=== GD3d cung bo goc (muc 218) ===");
+            // cung tam (0,0) r 10, tu 0 den 90 do: dau (10,0) tiep tuyen huong +Y; dau (0,10) tiep tuyen huong -X
+            var a = new CungBoGoc.Cung { Id = "A", Cx = 0, Cy = 0, R = 10, A0 = 0, A1 = Math.PI / 2 };
+            var gan = new List<CungBoGoc.TextSo> { new CungBoGoc.TextSo { X = 30, Y = 0, Nguong = 65 } };
+            var xa = new List<CungBoGoc.TextSo> { new CungBoGoc.TextSo { X = 500, Y = 0, Nguong = 65 } };
+            var tiepTuyen = new List<CungBoGoc.DauNet> { new CungBoGoc.DauNet { Id = "L", X = 10.2, Y = 0, Dx = 0, Dy = -5 } };
+            var banKinh = new List<CungBoGoc.DauNet> { new CungBoGoc.DauNet { Id = "L", X = 10, Y = 0, Dx = 1, Dy = 0 } };
+            var cuaChinhNo = new List<CungBoGoc.DauNet> { new CungBoGoc.DauNet { Id = "A", X = 10, Y = 0, Dx = 0, Dy = 1 } };
+            var c = new List<CungBoGoc.Cung> { a };
+            Kiem("noi tiep tuyen + gan text -> bo", string.Join(",", CungBoGoc.Chay(c, tiepTuyen, gan)), "A");
+            Kiem("xa text -> giu", CungBoGoc.Chay(c, tiepTuyen, xa).Count, 0);
+            Kiem("net theo ban kinh (dim goc) -> giu", CungBoGoc.Chay(c, banKinh, gan).Count, 0);
+            Kiem("dau cua chinh cung -> bo qua", CungBoGoc.Chay(c, cuaChinhNo, gan).Count, 0);
+            Kiem("xa 0.5 tro len -> giu", CungBoGoc.Chay(c, new List<CungBoGoc.DauNet> { new CungBoGoc.DauNet { Id = "L", X = 10.5, Y = 0, Dx = 0, Dy = 1 } }, gan).Count, 0);
+            Kiem("khong lay duoc dao ham -> giu", CungBoGoc.Chay(c, new List<CungBoGoc.DauNet> { new CungBoGoc.DauNet { Id = "L", X = 10, Y = 0 } }, gan).Count, 0);
+            Kiem("dau kia, toa do am, o luoi ben canh", string.Join(",", CungBoGoc.Chay(new List<CungBoGoc.Cung> {
+                new CungBoGoc.Cung { Id = "B", Cx = -20, Cy = -20, R = 10, A0 = Math.PI, A1 = 1.5 * Math.PI } },
+                new List<CungBoGoc.DauNet> { new CungBoGoc.DauNet { Id = "L", X = -19.9, Y = -30.1, Dx = 3, Dy = 0 } },
+                new List<CungBoGoc.TextSo> { new CungBoGoc.TextSo { X = -20, Y = -40, Nguong = 65 } })), "B");
+        }
+
+        // ------------------------------------------------------------------
         // Muc 215: GD5b-a ghep hinh chieu (Hungarian 3A + chieu tia 3B)
         // ------------------------------------------------------------------
         private static GhepHinhChieu.Hinh HC(int id, double x1, double y1, double x2, double y2, int? v = null) =>
@@ -1496,7 +1524,7 @@ namespace ZwCadPlugin.Tests
             Kiem("ten khoa registry", GroCongTac.TenKhoa(" PhanLoai "), "cs_phanloai");
             Kiem("buoc co trong danh sach", GroCongTac.LaBuoc("XULYNET"), true);
             Kiem("buoc khong co", GroCongTac.LaBuoc("abc"), false);
-            Kiem("21 buoc theo ke hoach (+ 7 buoc con 173-180, dsct 181, dongkhung 183, ghephc 215)", GroCongTac.Buoc.Count, 21);
+            Kiem("22 buoc theo ke hoach (+ 7 buoc con 173-180, dsct 181, dongkhung 183, ghephc 215, cungbogoc 218)", GroCongTac.Buoc.Count, 22);
 
             var p1 = GroPhien.Moi("A.dwg");
             p1.Dat("x", new List<int> { 1, 2 });

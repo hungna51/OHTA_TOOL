@@ -324,6 +324,30 @@ namespace ZwCadPlugin
         }
 
         /// <summary>
+        /// Mục 218 (GĐ 3d): (gro_net_cung_bo_goc "ab"|"cs" ss arcs-cont ((x y nguong) ...)) — cung bo góc biên dạng
+        /// (nối tiếp tuyến) gần text số. Trả (so-cung (ename ...)). Lỗi -> nil.
+        /// </summary>
+        [LispFunction("GRO_NET_CUNG_BO_GOC")]
+        public static object LispCungBoGoc(ResultBuffer rb)
+        {
+            Document doc = Application.DocumentManager.MdiActiveDocument;
+            if (doc == null || rb == null) return null;
+            try
+            {
+                List<object> a = CadServices.LispCay.Doc(rb);
+                if (a.Count < 4 || !(a[0] is string che)) return null;
+                return CadServices.CungBoGocCad.Chay(doc, GroCongTac.TenCheDo(GroCongTac.DocCheDo(che)), a[1],
+                    CadServices.LispCay.Ds(a[2]), CadServices.LispCay.Ds(a[3]));
+            }
+            catch (System.Exception ex)
+            {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GroBuocCommands", ex);
+                doc.Editor?.WriteMessage("\n[GRO .NET] Loi cung bo goc: " + ex.Message);
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Mục 215 (GĐ 5b-a): (gro_net_ghep_hc "ab"|"cs" tat-ca cho cum max-ray co-vung so-vung ds-cat) — ghép hình
         /// chiếu vào cụm tấm bẻ (Hungarian + chiếu tia). Trả (so-lan ((sid tid d loai) ...)). Lỗi -> nil.
         /// </summary>

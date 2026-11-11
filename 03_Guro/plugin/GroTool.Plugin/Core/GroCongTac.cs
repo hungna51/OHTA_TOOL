@@ -31,6 +31,7 @@ namespace ZwCadPlugin.Core
             new KeyValuePair<string, string>("nhannet",  "GD3a phan loai net cho nhan Dim (3b)"),
             new KeyValuePair<string, string>("dimdai3b", "GD3b khop Dim dai khi xu ly net (3b)"),
             new KeyValuePair<string, string>("vongkin",  "GD3c do vong kin bien dang khi nhan Dim (3b)"),
+            new KeyValuePair<string, string>("cungbogoc","GD3d bo cung bo goc bien dang khi khop dim goc (3b)"),
             new KeyValuePair<string, string>("datbango", "GD4 dat bango + ten ban ve"),
             new KeyValuePair<string, string>("quethinh", "GD5a quet + gom hinh cat"),
             new KeyValuePair<string, string>("ghephinh", "GD5b ghep hinh <-> text"),
