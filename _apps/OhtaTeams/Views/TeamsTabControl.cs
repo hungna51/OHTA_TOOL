@@ -162,10 +162,16 @@ namespace TeamsTool.Views
         private double _rongAi = 560;
 
         /// <summary>Chuột phải vào đơn → mở đơn đó trong khung AI bên phải.</summary>
+        private readonly Dictionary<string, AiPhongControl> _khungDangChay = new Dictionary<string, AiPhongControl>(); // id đơn → khung (giữ khi đơn còn chạy)
+
         private void MoPhongAi(DonTeams d)
         {
             _aiDon = d;
-            _khungAi.Child = new AiPhongControl(d, _tab[7], _tab[6], _mau, () => { _aiDon = null; _khungAi.Child = null; CapNhatAi(); });
+            // Đơn đang chạy dở (đã chuyển sang đơn khác rồi quay lại): dùng lại khung cũ để còn thấy tiến độ
+            if (!_khungDangChay.TryGetValue(d.Id, out AiPhongControl k) || !AiPhongControl.DangChayDon(d.Id))
+                k = _khungDangChay[d.Id] = new AiPhongControl(d, _tab[7], _tab[6], _mau, () => { _aiDon = null; _khungAi.Child = null; CapNhatAi(); });
+            foreach (string id in _khungDangChay.Keys.Where(x => x != d.Id && !AiPhongControl.DangChayDon(x)).ToList()) _khungDangChay.Remove(id);
+            _khungAi.Child = k;
             CapNhatAi();
         }
 

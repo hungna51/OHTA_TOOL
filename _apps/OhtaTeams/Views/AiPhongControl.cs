@@ -31,6 +31,7 @@ namespace TeamsTool.Views
         };
         // Đang chạy theo đơn (id) — vẽ lại chi tiết đơn giữa chừng không chạy trùng
         private static readonly HashSet<string> DangChay = new HashSet<string>();
+        public static bool DangChayDon(string id) => DangChay.Contains(id);
 
         private readonly DonTeams _d;
         private readonly string _listUrl, _listId;

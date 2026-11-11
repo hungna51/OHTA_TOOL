@@ -137,6 +137,21 @@ namespace TeamsTool.Views
         private readonly ComboBox _model = new ComboBox { Margin = new Thickness(0, 2, 0, 4), DisplayMemberPath = "Value", SelectedValuePath = "Key" };
         private readonly CheckBox _dongY = new CheckBox { Content = "Cho phép gửi tệp bản vẽ của đơn lên Claude API (Anthropic) để đọc", Margin = new Thickness(0, 2, 0, 4) };
 
+        private readonly CheckBox _keyRieng = new CheckBox { Content = "Mỗi phòng một key riêng (tắt = mọi phòng dùng key chung)", Margin = new Thickness(0, 10, 0, 2) };
+        private readonly PasswordBox[] _keyPhong = new PasswordBox[4];
+
+        /// <summary>Dòng "Tên: đã có key …abcd" / chữ đỏ khi chưa có.</summary>
+        private static TextBlock TrangThaiKey(int phong, string ten, string chuaCo)
+        {
+            string cu = null, loi = null;
+            try { cu = AiDon.DocKeyFile(phong); } catch (Exception ex) { loi = ex.Message; }
+            return new TextBlock
+            {
+                Text = ten + ": " + (loi != null ? "không đọc được (" + loi + ")" : cu == null ? chuaCo : "đã có key …" + cu.Substring(Math.Max(0, cu.Length - 4))),
+                Foreground = cu == null ? KieuTeams.Mau("#B42318") : KieuTeams.Mau("#1F7A4D"), TextWrapping = TextWrapping.Wrap,
+            };
+        }
+
         private StackPanel KhoiAi(Brush mau)
         {
             TextBlock Phu(string s) => new TextBlock { Text = s, Foreground = KieuTeams.ChuPhu, FontSize = 10.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 4) };
@@ -145,13 +160,30 @@ namespace TeamsTool.Views
 
             var k = new StackPanel();
             k.Children.Add(Dau("Key Claude API"));
-            string cu = null;
-            try { cu = AiDon.DocKey(); } catch (Exception ex) { k.Children.Add(Phu("Không đọc được ai.key: " + ex.Message)); }
-            k.Children.Add(new TextBlock { Text = cu == null ? "Chưa có key — phòng AI không đọc được bản vẽ." : "Đã có key …" + cu.Substring(Math.Max(0, cu.Length - 4)),
-                                           Foreground = cu == null ? KieuTeams.Mau("#B42318") : KieuTeams.Mau("#1F7A4D"), TextWrapping = TextWrapping.Wrap });
-            k.Children.Add(new TextBlock { Text = "Dán key mới để thay (để trống = giữ key cũ):", Margin = new Thickness(0, 6, 0, 0) });
+            k.Children.Add(TrangThaiKey(0, "Key chung", "Chưa có key — phòng AI không chạy được."));
+            k.Children.Add(new TextBlock { Text = "Dán key chung mới để thay (để trống = giữ key cũ):", Margin = new Thickness(0, 6, 0, 0) });
             k.Children.Add(_key);
-            k.Children.Add(Phu("Lưu trong " + AiDon.FileKey + " — dùng chung với tab AI trên CAD, không lên GitHub."));
+            k.Children.Add(Phu("Lưu trong " + AiDon.FileKey(0) + " — dùng chung với tab AI trên CAD, không lên GitHub."));
+
+            // Công tắc: mỗi phòng một key riêng ↔ mọi phòng dùng key chung
+            _keyRieng.IsChecked = AiDon.KeyRieng;
+            k.Children.Add(_keyRieng);
+            var rieng = new StackPanel { Margin = new Thickness(18, 2, 0, 0) };
+            for (int i = 0; i < _keyPhong.Length; i++)
+            {
+                int phong = i + 1;
+                rieng.Children.Add(TrangThaiKey(phong, AiDon.TenPhong[i], "chưa có → dùng key chung"));
+                _keyPhong[i] = new PasswordBox { Padding = new Thickness(4, 2, 4, 2), Margin = new Thickness(0, 1, 0, 6), ToolTip = "Dán key riêng của phòng (để trống = giữ)" };
+                rieng.Children.Add(_keyPhong[i]);
+            }
+            rieng.Children.Add(Phu("Lưu trong " + Path.GetDirectoryName(AiDon.FileKey(0)) + "\\ai.key.phong1…4. Hiện chỉ phòng 2 gọi AI; phòng 3, 4 dùng key ở đợt sau. "
+                                   + "Lưu ý: giới hạn tốc độ của Claude tính theo tổ chức (organization) — các key cùng một tổ chức vẫn chia chung giới hạn; "
+                                   + "key riêng giúp xem tiền theo từng phòng trên Console, muốn chạy song song nhiều hơn thì cần key ở tổ chức khác hoặc nâng hạn mức."));
+            void BatTat() => rieng.IsEnabled = _keyRieng.IsChecked == true;
+            _keyRieng.Checked += (s, e) => BatTat();
+            _keyRieng.Unchecked += (s, e) => BatTat();
+            BatTat();
+            k.Children.Add(rieng);
             p.Children.Add(KieuTeams.The(k));
 
             var m = new StackPanel();
@@ -172,11 +204,20 @@ namespace TeamsTool.Views
             var q = new StackPanel();
             q.Children.Add(Dau("Quy chuẩn gửi kèm AI"));
             string tmQc = AiDon.ThuMucQuyChuan;
-            int soMd = Directory.Exists(tmQc) ? Directory.GetFiles(tmQc, "*.md").Length : 0;
-            bool coCongTy = File.Exists(Path.Combine(tmQc, "cong_ty.txt"));
-            q.Children.Add(new TextBlock { Text = soMd + " tệp quy chuẩn (.md) · cong_ty.txt: " + (coCongTy ? "có" : "chưa có"), TextWrapping = TextWrapping.Wrap,
-                                           Foreground = soMd == 0 ? KieuTeams.Mau("#B42318") : Brushes.Black });
-            q.Children.Add(Phu(tmQc + " — không lên GitHub, chép tay từ máy Admin. cong_ty.txt: mỗi dòng khoá1,khoá2|Tên hiện (đoán công ty đặc biệt)."));
+            for (int i = 0; i < AiDon.ThuMucPhong.Length; i++)
+            {
+                string tmP = AiDon.ThuMucQuyChuanPhong(i + 1);
+                string[] md = Directory.Exists(tmP) ? Directory.GetFiles(tmP, "*.md") : new string[0];
+                q.Children.Add(new TextBlock
+                {
+                    Text = AiDon.TenPhong[i] + ": " + (md.Length == 0 ? "chưa có bộ riêng (dùng các .md ở gốc quy_chuan)"
+                                                                       : md.Length + " tệp, " + (md.Sum(f => new FileInfo(f).Length) / 1024) + " KB"),
+                    Foreground = md.Length == 0 ? KieuTeams.Mau("#B42318") : Brushes.Black, TextWrapping = TextWrapping.Wrap,
+                });
+            }
+            q.Children.Add(new TextBlock { Text = "cong_ty.txt: " + (File.Exists(Path.Combine(tmQc, "cong_ty.txt")) ? "có" : "chưa có"), Margin = new Thickness(0, 2, 0, 0) });
+            q.Children.Add(Phu(tmQc + "\\<phòng>\\*.md — mỗi phòng chỉ gửi bộ của mình cho AI (bản gốc đầy đủ ở _goc, không gửi). "
+                               + "Không lên GitHub, chép tay từ máy Admin. cong_ty.txt: mỗi dòng khoá1,khoá2|Tên hiện (đoán công ty đặc biệt)."));
             var moQc = KieuTeams.Nut("📁 Mở thư mục quy chuẩn", mau, (s, e) =>
             {
                 try { Directory.CreateDirectory(tmQc); System.Diagnostics.Process.Start("explorer.exe", "\"" + tmQc + "\""); }
@@ -242,12 +283,17 @@ namespace TeamsTool.Views
         {
             try
             {
-                string key = _key.Password.Trim();
-                if (key.Length > 0)
-                {
-                    if (key.Any(char.IsWhiteSpace)) { _baoLoi.Text = "Key Claude có khoảng trắng — dán lại đúng key."; return; }
-                    AiDon.GhiKey(key);
-                }
+                // Kiểm hết các ô key trước rồi mới ghi — một ô sai thì không ghi ô nào
+                var keys = new[] { _key }.Concat(_keyPhong).Select(o => o.Password.Trim()).ToArray();
+                for (int i = 0; i < keys.Length; i++)
+                    if (keys[i].Any(char.IsWhiteSpace))
+                    {
+                        _baoLoi.Text = "Key " + (i == 0 ? "chung" : "phòng " + AiDon.TenPhong[i - 1]) + " có khoảng trắng — dán lại đúng key.";
+                        return;
+                    }
+                for (int i = 0; i < keys.Length; i++)
+                    if (keys[i].Length > 0) AiDon.GhiKey(keys[i], i);
+                AiDon.KeyRieng = _keyRieng.IsChecked == true;
                 AiDon.ModelRieng = _model.SelectedValue as string;
                 AiDon.DaDongY = _dongY.IsChecked == true;
                 CaiDatTeams.TuChuyenTiep = _tuChuyen.IsChecked == true;

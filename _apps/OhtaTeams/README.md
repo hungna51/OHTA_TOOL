@@ -13,7 +13,12 @@ Thiết kế: [_docs/specs/2026-11-10-ung-dung-teams-rieng.md](../../_docs/specs
 
 Thiết kế: [_docs/specs/2026-11-11-phong-lam-viec-ai-ohtateams.md](../../_docs/specs/2026-11-11-phong-lam-viec-ai-ohtateams.md) · [ADR 0010](../../_docs/adr/0010-phong-lam-viec-ai-ohtateams.md).
 
-**Cần trên máy:** ⚙ → tab **Thư mục đơn** đã đặt · key Claude (⚙ → tab **🤖 AI**, ghi `05_AI\data\ai.key` dùng chung với tab AI trên CAD) · thư mục `_apps\OhtaTeams\data\quy_chuan\` (**gitignore — chép tay từ máy Admin**): `*.md` (QUY CHUẨN, gửi kèm lời dặn cho AI) + `cong_ty.txt` (mỗi dòng `khoá1,khoá2|Tên hiện` — đoán công ty đặc biệt từ các cột của đơn).
+**Cần trên máy:** ⚙ → tab **Thư mục đơn** đã đặt · key Claude (⚙ → tab **🤖 AI**, ghi `05_AI\data\ai.key` dùng chung với tab AI trên CAD) · thư mục `_apps\OhtaTeams\data\quy_chuan\` (**gitignore — chép tay từ máy Admin**):
+- `1_tiep_nhan\`, `2_doc_ban_ve\`, `3_kiem_tra\`, `4_trien_khai\` — **mỗi phòng một bộ quy chuẩn `*.md` riêng**, chỉ phần liên quan việc của phòng (phòng 2: vật liệu M/Z, tên kiểu gia công, bảng taro / sara; phòng 3: điều kiện, giới hạn máy, lỗ gần đường bẻ, công ty đặc biệt — không gồm các bước triển khai; phòng 4: các bước triển khai, bảng delta, file hoàn thành, layer). Phòng gọi AI chỉ gửi bộ của mình. Máy chưa có thư mục phòng → gửi các `*.md` ở gốc `quy_chuan` như cũ.
+- `_goc\` — bản QUY CHUẨN CHUNG đầy đủ (không gửi AI). Sửa bản gốc thì chia lại các bộ phòng cho khớp.
+- `cong_ty.txt` — mỗi dòng `khoá1,khoá2|Tên hiện` (đoán công ty đặc biệt từ các cột của đơn).
+
+**Key:** ⚙ → 🤖 AI → **Mỗi phòng một key riêng** (bật / tắt). Tắt: mọi phòng dùng key chung `ai.key`. Bật: phòng có `05_AI\data\ai.key.phong<n>` thì dùng key đó, chưa có thì dùng key chung. Giới hạn tốc độ Claude tính theo tổ chức — key cùng tổ chức vẫn chia chung giới hạn; key riêng chủ yếu để xem tiền từng phòng. Nhiều đơn chạy cùng lúc được: mở đơn khác trong phòng AI trong khi đơn trước đang chạy, quay lại đơn cũ vẫn thấy tiến độ.
 
 Phòng AI là khung bên phải màn danh sách đơn (kéo vạch giữa để đổi rộng). **Chuột phải vào đơn → 🤖 Mở trong phòng AI** (hoặc nút **🤖 Phòng AI** trong chi tiết đơn) → **▶ Bắt đầu** (lần đầu hỏi đồng ý gửi bản vẽ lên Claude API; bật / tắt ở ⚙ → 🤖 AI):
 

@@ -28,21 +28,41 @@ namespace TeamsTool.Services
 
         // ---------- Cài đặt ----------
 
-        /// <summary>Key Claude dùng chung với tab AI: dòng đầu không rỗng, không bắt đầu bằng # của 05_AI\data\ai.key.</summary>
-        public static string FileKey => Path.Combine(Goc, "05_AI", "data", "ai.key");
+        /// <summary>4 phòng AI: thư mục quy chuẩn riêng (quy_chuan\&lt;tên&gt;) và tên hiện.</summary>
+        public static readonly string[] ThuMucPhong = { "1_tiep_nhan", "2_doc_ban_ve", "3_kiem_tra", "4_trien_khai" };
+        public static readonly string[] TenPhong = { "1 · Tiếp nhận", "2 · Đọc bản vẽ", "3 · Kiểm tra", "4 · Triển khai" };
 
-        public static string DocKey()
+        /// <summary>
+        /// Key Claude: phong = 0 → key chung 05_AI\data\ai.key (dùng chung với tab AI trên CAD);
+        /// phong = 1..4 → ai.key.phong&lt;n&gt; cạnh đó (gitignore theo ai.key*).
+        /// </summary>
+        public static string FileKey(int phong = 0) => Path.Combine(Goc, "05_AI", "data", phong == 0 ? "ai.key" : "ai.key.phong" + phong);
+
+        /// <summary>Bật = mỗi phòng một key riêng; tắt = mọi phòng dùng key chung.</summary>
+        public static bool KeyRieng
         {
-            if (!File.Exists(FileKey)) return null;
-            return File.ReadAllLines(FileKey).Select(s => s.Trim()).FirstOrDefault(s => s.Length > 0 && !s.StartsWith("#", StringComparison.Ordinal));
+            get => CaiDatTeams.Doc("ai_key_rieng") == "1";
+            set => CaiDatTeams.Ghi("ai_key_rieng", value ? "1" : "");
         }
 
-        /// <summary>Thay key (giữ các dòng # chú thích) — tab AI trên CAD cũng dùng key mới.</summary>
-        public static void GhiKey(string key)
+        /// <summary>Dòng đầu không rỗng, không bắt đầu bằng # của file key; không có → null.</summary>
+        public static string DocKeyFile(int phong)
         {
-            var giu = File.Exists(FileKey) ? File.ReadAllLines(FileKey).Where(s => s.TrimStart().StartsWith("#", StringComparison.Ordinal)).ToList() : new List<string>();
+            string f = FileKey(phong);
+            if (!File.Exists(f)) return null;
+            return File.ReadAllLines(f).Select(s => s.Trim()).FirstOrDefault(s => s.Length > 0 && !s.StartsWith("#", StringComparison.Ordinal));
+        }
+
+        /// <summary>Key phòng dùng: đang bật key riêng và phòng có key → key phòng; còn lại → key chung.</summary>
+        public static string DocKey(int phong) => (KeyRieng ? DocKeyFile(phong) : null) ?? DocKeyFile(0);
+
+        /// <summary>Thay key (giữ các dòng # chú thích). phong = 0: key chung — tab AI trên CAD cũng dùng key mới.</summary>
+        public static void GhiKey(string key, int phong = 0)
+        {
+            string f = FileKey(phong);
+            var giu = File.Exists(f) ? File.ReadAllLines(f).Where(s => s.TrimStart().StartsWith("#", StringComparison.Ordinal)).ToList() : new List<string>();
             giu.Add(key.Trim());
-            GhiAnToan(FileKey, string.Join("\r\n", giu) + "\r\n");
+            GhiAnToan(f, string.Join("\r\n", giu) + "\r\n");
         }
 
         /// <summary>Model chọn ở ⚙ → AI của OhtaTeams; để trống = theo tab AI trên CAD (registry), không phải Claude (vd. Ling) → Opus 5.5.</summary>
@@ -68,11 +88,19 @@ namespace TeamsTool.Services
             set => CaiDatTeams.Ghi("ai_dong_y", value ? "1" : "");
         }
 
-        /// <summary>Toàn bộ quy chuẩn (*.md trong quy_chuan, gitignore) gửi kèm lời dặn; thiếu → rỗng.</summary>
-        public static string QuyChuan()
+        /// <summary>Thư mục quy chuẩn của phòng (1..4): quy_chuan\&lt;n_ten&gt;.</summary>
+        public static string ThuMucQuyChuanPhong(int phong) => Path.Combine(ThuMucQuyChuan, ThuMucPhong[phong - 1]);
+
+        /// <summary>
+        /// Bộ quy chuẩn riêng của phòng (*.md trong quy_chuan\&lt;n_ten&gt;, gitignore) gửi kèm lời dặn.
+        /// Máy chưa chia bộ (chưa có thư mục phòng) → mọi *.md ở gốc quy_chuan như trước; thiếu hết → rỗng.
+        /// </summary>
+        public static string QuyChuan(int phong)
         {
-            if (!Directory.Exists(ThuMucQuyChuan)) return "";
-            return string.Join("\n\n", Directory.GetFiles(ThuMucQuyChuan, "*.md").OrderBy(f => f).Select(f => File.ReadAllText(f, Encoding.UTF8)));
+            string tm = ThuMucQuyChuanPhong(phong);
+            if (!Directory.Exists(tm)) tm = ThuMucQuyChuan;
+            if (!Directory.Exists(tm)) return "";
+            return string.Join("\n\n", Directory.GetFiles(tm, "*.md").OrderBy(f => f).Select(f => File.ReadAllText(f, Encoding.UTF8)));
         }
 
         public static string[] DongCongTy()
@@ -223,8 +251,8 @@ namespace TeamsTool.Services
         /// </summary>
         public static async Task<ChiTiet> DocBanVe(TiepNhan tn, string tm, bool tatCa, Action<string> bao, CancellationToken ct)
         {
-            string key = DocKey() ?? throw new InvalidOperationException("Chưa có key Claude: tab AI trên CAD → ⚙ → API key (lưu ở 05_AI\\data\\ai.key)");
-            string model = Model(), quyChuan = QuyChuan();
+            string key = DocKey(2) ?? throw new InvalidOperationException("Chưa có key Claude: ⚙ → tab 🤖 AI → dán key");
+            string model = Model(), quyChuan = QuyChuan(2);
             ChiTiet cu = DocChiTiet(tm) ?? new ChiTiet();
             var ct2 = new ChiTiet { TokenVao = cu.TokenVao, TokenRa = cu.TokenRa, Tien = cu.Tien, MaBamDaDoc = new Dictionary<string, string>(cu.MaBamDaDoc) };
 
@@ -284,7 +312,7 @@ namespace TeamsTool.Services
             {
                 using (var req = new HttpRequestMessage(HttpMethod.Post, PhongDocBanVe.Url))
                 {
-                    if (!req.Headers.TryAddWithoutValidation("x-api-key", key)) throw new InvalidOperationException("API key trong ai.key có ký tự không hợp lệ");
+                    if (!req.Headers.TryAddWithoutValidation("x-api-key", key)) throw new InvalidOperationException("API key có ký tự không hợp lệ (⚙ → 🤖 AI → dán lại key)");
                     req.Headers.TryAddWithoutValidation("anthropic-version", PhongDocBanVe.PhienBanApi);
                     if (fallback) req.Headers.TryAddWithoutValidation("anthropic-beta", PhongDocBanVe.BetaFallback);
                     req.Content = new StringContent(body, Utf8, "application/json");
