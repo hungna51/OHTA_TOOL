@@ -348,6 +348,63 @@ namespace ZwCadPlugin
             }
         }
 
+        private static IList<ObjectId> IdsCua(object o) => o is SelectionSet s ? s.GetObjectIds() : new ObjectId[0];
+
+        /// <summary>
+        /// Mục 225 (GĐ 3e): (gro_net_doc_text_3b "ab"|"cs" ss ss-supp) — đọc + phân loại text số. Trả (txt-lin txt-hole txt-ang).
+        /// </summary>
+        [LispFunction("GRO_NET_DOC_TEXT_3B")]
+        public static object LispDocText3b(ResultBuffer rb) => Goi3b(rb, "doc text so", (doc, che, a) =>
+            a.Count < 3 ? null : CadServices.Dim3bCad.DocText(doc, che, IdsCua(a[1]), IdsCua(a[2])));
+
+        /// <summary>
+        /// Mục 225 (GĐ 3e): (gro_net_dim_khop_3b "ab"|"cs" texts-lin texts-hole texts-ang lines-cont arcs-dim tiny-circles)
+        /// — nâng dim góc + leader + Dim dài + dim góc. Trả (so-net (ename ...)).
+        /// </summary>
+        [LispFunction("GRO_NET_DIM_KHOP_3B")]
+        public static object LispDimKhop3b(ResultBuffer rb) => Goi3b(rb, "khop dim", (doc, che, a) =>
+            a.Count < 7 ? null : CadServices.Dim3bCad.DimKhop(doc, che, CadServices.LispCay.Ds(a[1]), CadServices.LispCay.Ds(a[2]),
+                CadServices.LispCay.Ds(a[3]), CadServices.LispCay.Ds(a[4]), CadServices.LispCay.Ds(a[5]), CadServices.LispCay.Ds(a[6])));
+
+        /// <summary>
+        /// Mục 225 (GĐ 3e): (gro_net_chuyen_layer_3b "ab"|"cs" lay-goc ss dim-geom-set) — đổi layer từng đối tượng.
+        /// Trả (cnt-k cnt-dim cnt-g cnt-t cnt-0 ((e lt) ...)). "ab" chỉ tính.
+        /// </summary>
+        [LispFunction("GRO_NET_CHUYEN_LAYER_3B")]
+        public static object LispChuyenLayer3b(ResultBuffer rb) => Goi3b(rb, "chuyen layer", (doc, che, a) =>
+            a.Count < 4 || !(a[1] is string lay) ? null : CadServices.Dim3bCad.ChuyenLayer(doc, che, lay, IdsCua(a[2]), CadServices.LispCay.Ds(a[3])));
+
+        private static object Goi3b(ResultBuffer rb, string ten, Func<Document, string, List<object>, object> f)
+        {
+            Document doc = Application.DocumentManager.MdiActiveDocument;
+            if (doc == null || rb == null) return null;
+            try
+            {
+                List<object> a = CadServices.LispCay.Doc(rb);
+                if (a.Count == 0 || !(a[0] is string che)) return null;
+                return f(doc, GroCongTac.TenCheDo(GroCongTac.DocCheDo(che)), a);
+            }
+            catch (System.Exception ex)
+            {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GroBuocCommands", ex);
+                doc.Editor?.WriteMessage("\n[GRO .NET] Loi " + ten + ": " + ex.Message);
+                return null;
+            }
+        }
+
+        /// <summary>Mục 225: (gro_net_tien_do "ten moc") — cập nhật thanh tiến độ tab Guro. "ket thuc" / "" -> ẩn.</summary>
+        [LispFunction("GRO_NET_TIEN_DO")]
+        public static object LispTienDo(ResultBuffer rb)
+        {
+            try
+            {
+                List<string> a = ChuoiTuRb(rb);
+                ViewModels.GuroTabViewModel.BaoTienDo(a.Count > 0 ? a[0] : "");
+            }
+            catch { }
+            return true;
+        }
+
         /// <summary>
         /// Mục 215 (GĐ 5b-a): (gro_net_ghep_hc "ab"|"cs" tat-ca cho cum max-ray co-vung so-vung ds-cat) — ghép hình
         /// chiếu vào cụm tấm bẻ (Hungarian + chiếu tia). Trả (so-lan ((sid tid d loai) ...)). Lỗi -> nil.

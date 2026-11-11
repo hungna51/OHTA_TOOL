@@ -917,6 +917,9 @@ namespace ZwCadPlugin.Tests
             TestTachVaCham();
             TestGhepHinhChieu();
             TestCungBoGoc();
+            TestDocText3b();
+            TestDimKhop3b();
+            TestTienDoGro();
             TestChiaNetCat();
             TestDongKhung();
             TestGuroTabLayer();
@@ -1362,6 +1365,86 @@ namespace ZwCadPlugin.Tests
         }
 
         // ------------------------------------------------------------------
+        // Muc 225: GD3e doc text so + khop dim 3b + tien do GRO
+        // ------------------------------------------------------------------
+        private static string PL(string s)
+        {
+            DocText3b.KetQua k = DocText3b.PhanLoai(s);
+            return k == null ? "-" : k.Loai + ":" + k.V.ToString(System.Globalization.CultureInfo.InvariantCulture) + (k.LaPhi ? ":phi" : "");
+        }
+
+        private static void TestDocText3b()
+        {
+            Console.WriteLine();
+            Console.WriteLine("=== GD3e doc + phan loai text so (muc 225) ===");
+            Kiem("45%%d -> goc 45", PL("45%%d"), "3:45");
+            Kiem("45 do (U+00B0) -> goc 45", PL("45°"), "3:45");
+            Kiem("\\U+00B0 trong chuoi -> goc", PL("30\\U+00B0"), "3:30");
+            Kiem("%%c12 -> lo 12, phi", PL("%%c12"), "2:12:phi");
+            Kiem("4-%%C8.5 -> lo 8.5 (so sau ky hieu)", PL("4-%%C8.5"), "2:8.5:phi");
+            Kiem("phi Unicode -> lo, phi", PL("φ20"), "2:20:phi");
+            Kiem("R15 -> lo 15, khong phi", PL("R15"), "2:15");
+            Kiem("M6 TAP -> lo 6", PL("M6 TAP"), "2:6");
+            Kiem("?12 (may byte) -> lo, phi", PL("?12"), "2:12:phi");
+            Kiem("3,200 -> dai 3200", PL("3,200"), "1:3200");
+            Kiem("MTEXT {\\fArial|b0;120} -> dai 120", PL("{\\fArial|b0;120}"), "1:120");
+            Kiem("SCALE 1:10 -> bo", PL("SCALE 1:10"), "-");
+            Kiem("4 MAI -> bo", PL("4枚"), "-");
+            Kiem("khong co so -> bo", PL("ABC"), "-");
+            Kiem("REV R2 -> bo (REV)", PL("REV R2"), "-");
+        }
+
+        private static DoanThang DT(string h, double x1, double y1, double x2, double y2) => new DoanThang(h, x1, y1, x2, y2);
+
+        private static string Tap(DimKhop3b.KetQua kq) => string.Join(",", kq.Net.OrderBy(x => x, StringComparer.Ordinal));
+
+        private static void TestDimKhop3b()
+        {
+            Console.WriteLine();
+            Console.WriteLine("=== GD3e khop dim 3b: goc + leader + nang goc (muc 225) ===");
+            double c45 = Math.Cos(Math.PI / 4), s45 = Math.Sin(Math.PI / 4);
+            var arc = new DimKhop3b.Cung { Handle = "A", Cx = 0, Cy = 0, R = 50, A0 = 0, A1 = Math.PI / 4 };
+            var arcs = new List<DimKhop3b.Cung> { arc };
+            var t45 = new DimKhop3b.TextSo { Handle = "T", Txt = "45", V = 45, Px = 60, Py = 25, H = 3.5 };
+            DoanThang chanNgan = DT("L1", 50, 0, 80, 0);                                   // 30 mm, theo ban kinh
+            DoanThang chanDai = DT("L2", 50 * c45, 50 * s45, 100 * c45, 100 * s45);        // 50 mm <= R+10
+            DoanThang lech = DT("X", 50, 0, 50, 30);                                        // cham dau cung nhung vuong goc
+            var lines = new List<DoanThang> { chanNgan, chanDai, lech };
+            var rong = new List<DimKhop3b.TextSo>();
+            var khongTron = new List<DimKhop3b.TronNho>();
+            Kiem("dim goc: cung + chan ngan + chan dai tu do", Tap(DimKhop3b.Chay(rong, rong, new List<DimKhop3b.TextSo> { t45 }, lines, arcs, khongTron)), "A,L1,L2");
+            var chan = new List<DoanThang>(lines) { DT("B", 100 * c45, 100 * s45, 100 * c45 + 20, 100 * s45) };
+            Kiem("chan dai co net noi dau xa -> canh hinh, bo", Tap(DimKhop3b.Chay(rong, rong, new List<DimKhop3b.TextSo> { t45 }, chan, arcs, khongTron)), "A,L1");
+            Kiem("ChanTuDo: dau xa tu do", DimKhop3b.ChanTuDo(chanDai, 50, 0, 50 * c45, 50 * s45, lines, arcs), true);
+
+            // leader: thanh do chu S duoi chu, net xien C dai = V noi dau S, mui ten ngan o dau kia
+            var tPhi = new DimKhop3b.TextSo { Handle = "P", Txt = "%%c10", V = 10, Px = 0, Py = 5, H = 4, Bb = new Hop(-5, 3, 5, 7), LaPhi = true };
+            double ox = 6 + 10 * c45, oy = 2 + 10 * s45;
+            var lLeader = new List<DoanThang> { DT("S", -6, 2, 6, 2), DT("C", 6, 2, ox, oy), DT("M", ox, oy, ox + 2, oy - 1), DT("Z", 200, 200, 210, 200) };
+            Kiem("leader: thanh do + net xien + mui ten", string.Join(",", DimKhop3b.Leader(tPhi, lLeader).Select(d => d.Handle).OrderBy(x => x)), "C,M,S");
+
+            // nang dim goc: chu so 45 nam trong texts-lin, co tron nho ky hieu do canh ben -> khop nhu dim goc
+            var tron = new List<DimKhop3b.TronNho> { new DimKhop3b.TronNho { Handle = "O", X = 62, Y = 27 } };
+            var kq = DimKhop3b.Chay(new List<DimKhop3b.TextSo> { t45 }, rong, rong, lines, arcs, tron);
+            Kiem("nang dim goc nho tron nho", kq.SoNang, 1);
+            Kiem("text nang -> khop cung + tron nho", Tap(kq), "A,L1,L2,O");
+        }
+
+        private static void TestTienDoGro()
+        {
+            Console.WriteLine();
+            Console.WriteLine("=== Tien do GRO tren tab Guro (muc 225) ===");
+            Kiem("khoi dong = 0%", TienDoGro.PhanTram("khoi dong"), (int?)0);
+            Kiem("ket thuc = 100%", TienDoGro.PhanTram("ket thuc"), (int?)100);
+            Kiem("tao entity - bango 12 = tao entity", TienDoGro.PhanTram("tao entity - bango 12"), TienDoGro.PhanTram("tao entity"));
+            Kiem("khac chu (156) co trong bang", TienDoGro.PhanTram("khac chu (156)") != null, true);
+            Kiem("doc phan loai text (4) giu ten", TienDoGro.Chuan("doc phan loai text (4)"), "doc phan loai text (4)");
+            Kiem("moc la -> null", TienDoGro.PhanTram("sap xep theo khung/vung"), (int?)null);
+            Kiem("in bao cao < 100", TienDoGro.PhanTram("in bao cao") < 100, true);
+            Kiem("tang dan: chon doi tuong < tach cap mirror", TienDoGro.PhanTram("chon doi tuong") < TienDoGro.PhanTram("tach cap mirror"), true);
+        }
+
+        // ------------------------------------------------------------------
         // Muc 215: GD5b-a ghep hinh chieu (Hungarian 3A + chieu tia 3B)
         // ------------------------------------------------------------------
         private static GhepHinhChieu.Hinh HC(int id, double x1, double y1, double x2, double y2, int? v = null) =>
@@ -1530,7 +1613,7 @@ namespace ZwCadPlugin.Tests
             Kiem("ten khoa registry", GroCongTac.TenKhoa(" PhanLoai "), "cs_phanloai");
             Kiem("buoc co trong danh sach", GroCongTac.LaBuoc("XULYNET"), true);
             Kiem("buoc khong co", GroCongTac.LaBuoc("abc"), false);
-            Kiem("22 buoc theo ke hoach (+ 7 buoc con 173-180, dsct 181, dongkhung 183, ghephc 215, cungbogoc 218)", GroCongTac.Buoc.Count, 22);
+            Kiem("25 buoc theo ke hoach (+ 7 buoc con 173-180, dsct 181, dongkhung 183, ghephc 215, cungbogoc 218, 3 buoc 3e 225)", GroCongTac.Buoc.Count, 25);
 
             var p1 = GroPhien.Moi("A.dwg");
             p1.Dat("x", new List<int> { 1, 2 });

@@ -120,6 +120,57 @@ namespace ZwCadPlugin.ViewModels
 
         public string TrangThai { get => _trangThai; private set { _trangThai = value; Bao(); } }
 
+        // ---------------------------- Tiến độ GRO (mục 225) ----------------------------
+
+        private bool _dangChay;
+        private double _tienDo;
+        private string _tienDoChu;
+        private static DateTime _lanVe;
+
+        public bool DangChay { get => _dangChay; private set { _dangChay = value; Bao(); } }
+        public double TienDo { get => _tienDo; private set { _tienDo = value; Bao(); } }
+        public string TienDoChu { get => _tienDoChu; private set { _tienDoChu = value; Bao(); } }
+
+        /// <summary>
+        /// gro--moc gọi qua GRO_NET_TIEN_DO: hiện bước đang chạy. Luồng chính đang bận chạy lisp nên WPF không
+        /// tự vẽ — đẩy một khung dispatcher như tab In (PrintRunner.PumpUi), tối đa ~10 lần / giây.
+        /// "ket thuc" hoặc chuỗi rỗng -> ẩn thanh.
+        /// </summary>
+        public static void BaoTienDo(string ten)
+        {
+            GuroTabViewModel vm = _hienTai;
+            if (vm == null) return;
+            bool xong = string.IsNullOrEmpty(ten) || TienDoGro.Chuan(ten) == "ket thuc";
+            bool doiTrangThai = xong == vm.DangChay;
+            if (xong)
+            {
+                vm.DangChay = false;
+                vm.TienDo = 0;
+            }
+            else
+            {
+                if (!vm.DangChay) vm.TienDo = 0;
+                vm.DangChay = true;
+                int? p = TienDoGro.PhanTram(ten);
+                if (p != null && p.Value > vm.TienDo) vm.TienDo = p.Value;
+                vm.TienDoChu = "Đang chạy GRO: " + ten + "  (" + (int)vm.TienDo + "%)";
+            }
+            if (!doiTrangThai && (DateTime.Now - _lanVe).TotalMilliseconds < 100) return;
+            _lanVe = DateTime.Now;
+            try
+            {
+                var frame = new System.Windows.Threading.DispatcherFrame();
+                vm._dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background,
+                    new System.Windows.Threading.DispatcherOperationCallback(f =>
+                    {
+                        ((System.Windows.Threading.DispatcherFrame)f).Continue = false;
+                        return null;
+                    }), frame);
+                System.Windows.Threading.Dispatcher.PushFrame(frame);
+            }
+            catch { }
+        }
+
         /// <summary>Một dòng các cài đặt chung đang bật (chi tiết ở cửa sổ ⚙).</summary>
         public string TomTat
         {

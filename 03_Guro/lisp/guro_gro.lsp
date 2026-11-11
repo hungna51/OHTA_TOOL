@@ -5241,6 +5241,38 @@
   (mapcar '(lambda (it) (list (car (nth 3 it)) (cadr (nth 3 it)) (max 65.0 (* 8.0 (nth 5 it))))) texts)
 )
 
+;;; Muc 225: GROCS doctext3b -> cs: C# doc + phan loai text so; ab: C# tinh de so, ap ket qua lisp.
+(defun gro--doc-text-3b (lay-goc ss / m kq supp)
+  (setq m (gro--che-do-buoc "doctext3b"))
+  (if (= m "lisp")
+    (gro--geom-parse-dim-texts lay-goc ss)
+    (progn
+      (setq supp (ssget "X" '((0 . "TEXT,MTEXT") (8 . "1-SUNPOU,0,*DIM*,*TEXT*,*SUNPOU*,DEFPOINTS,*GHI*,*MOJI*,*SUN*"))))
+      (if (= m "cs")
+        (gro--cs-goi "doctext3b" 'gro_net_doc_text_3b (list ss supp) 3)
+        (progn
+          (vl-catch-all-apply 'gro_net_doc_text_3b (list "ab" ss supp))
+          (setq kq (gro--geom-parse-dim-texts lay-goc ss))
+          (vl-catch-all-apply 'gro_net_ab (cons "doctext3b" (gro--ab-text-3b kq)))
+          kq
+        )
+      )
+    )
+  )
+)
+
+;;; Muc 225: ban ghi so A/B doctext3b "handle|loai=1/2/3|v=..." (1 dai, 2 lo, 3 goc nhu C# DocText3b).
+(defun gro--ab-text-3b (kq / out i ds x)
+  (setq i 1 out nil)
+  (foreach ds kq
+    (foreach x ds
+      (setq out (cons (strcat (cdr (assoc 5 (entget (car x)))) "|loai=" (itoa i) "|v=" (rtos (nth 2 x) 2 6)) out))
+    )
+    (setq i (1+ i))
+  )
+  out
+)
+
 ;;; Cung nam gan mot text so (trong pham vi khop dim goc max(65, 8h)).
 (defun gro--cung-gan-text-p (a texts / ed)
   (setq ed (entget a))
@@ -5598,7 +5630,7 @@
                                            c-pt r-val parsed texts-lin texts-hole texts-ang
                                            new-lin val-num pt-c h promoted tc e-arc a-ed a-s a-e
                                            sw sw-deg d-sw ss-cir-all ss-arc-all extra-hole
-                                           dim-lin dim-hole dim-ang all-dims r-hole arcs-dim dau-cong vk-geo kq-pl kq-vk che-cbg bo-cbg)
+                                           dim-lin dim-hole dim-ang all-dims r-hole arcs-dim dau-cong vk-geo kq-pl kq-vk che-cbg bo-cbg che-dk)
   ;; 1. Phan loai thuc the hinh hoc tren layer goc + CIRCLE / ARC ca ban ve.
   ;;    Muc 173 (GD 3a): tach ra gro--phan-loai-net (cong tac "nhannet": lisp / ab / cs).
   (setq kq-pl        (gro--phan-loai-net lay-goc ss)
@@ -5627,7 +5659,7 @@
 
   ;; 2. Thu thap va phan loai Text so do tren ban ve
   (gro--moc "3b dim: doc text so")
-  (setq parsed (gro--geom-parse-dim-texts lay-goc ss))
+  (setq parsed (gro--doc-text-3b lay-goc ss))   ; muc 225: cong tac "doctext3b"
   (setq texts-lin  (nth 0 parsed)
         texts-hole (nth 1 parsed)
         texts-ang  (nth 2 parsed)
@@ -5683,6 +5715,19 @@
     )
   )
 
+  ;; Muc 225: GROCS dimkhop3b -> cs: C# lam ca 2.5 + 3 + 4 (nang dim goc, leader, Dim dai, dim goc, hop nhat);
+  ;; ab: C# tinh de so voi tap all-dims cua lisp, ap ket qua lisp.
+  (setq che-dk (gro--che-do-buoc "dimkhop3b"))
+  (if (= che-dk "cs")
+    (progn
+      (gro--moc "3b dim: khop dim (C#)")
+      (cadr (gro--cs-goi "dimkhop3b" 'gro_net_dim_khop_3b
+              (list texts-lin texts-hole texts-ang lines-cont arcs-dim tiny-circles) 2))
+    )
+  (progn
+  (if (= che-dk "ab")
+    (vl-catch-all-apply 'gro_net_dim_khop_3b (list "ab" texts-lin texts-hole texts-ang lines-cont arcs-dim tiny-circles))
+  )
   (gro--moc "3b dim: nang dim goc")
   ;; 2.5 Neu co Text chi la so (nhu '45') nhung co hinh tron nho ky hieu do canh ben HOAC co cung tron ARC khop truc tiep goc -> chuyen sang texts-ang
   ;; TUYET DOI KHONG dung goc bu (180 - sw) de tranh bien kich thuoc chieu dai (nhu 124.8) thanh dim goc!
@@ -5778,7 +5823,12 @@
       (setq all-dims (cons e all-dims))
     )
   )
+  (if (= che-dk "ab")
+    (vl-catch-all-apply 'gro_net_ab (cons "dimkhop3b" (mapcar '(lambda (x) (cdr (assoc 5 (entget x)))) all-dims)))
+  )
   all-dims
+  )
+  )
 )
 
 ;;; Muc 143: cac net (LINE / ARC / polyline HO / SPLINE) GHEP THANH VONG KIN - bien dang tam
@@ -6219,8 +6269,10 @@
   lay
 )
 
-(defun gro--chuyen-layer (e lay-moi set-bylayer / d) 
+(defun gro--chuyen-layer (e lay-moi set-bylayer / d)
   (setq d (entget e))
+  ;; Muc 225: so A/B chuyenlayer3b - ghi lai layer dich
+  (if gro--ab-cl-bat (setq gro--ab-cl (cons (strcat (cdr (assoc 5 d)) "|lop=" lay-moi) gro--ab-cl)))
   (if (assoc 8 d) 
     (setq d (subst (cons 8 lay-moi) (assoc 8 d) d))
     (setq d (append d (list (cons 8 lay-moi))))
@@ -6445,8 +6497,8 @@
 
 (defun gro--xu-ly-net (lay-goc ss-in im-lang auto-dim mau-dim / ss i e ed etype lt c 
                        mau-dim-chot dim-geom-set cnt-k cnt-dim cnt-g cnt-t cnt-0 unconverted 
-                       grp-tbl found item msg msg-con vong-kin ds-cong
-                      ) 
+                       grp-tbl found item msg msg-con vong-kin ds-cong che-cl kq-cl
+                      )
   (if (or (null lay-goc) (= lay-goc "") (null (tblsearch "LAYER" lay-goc))) 
     (gro--princ 
       (strcat "\n[Xu ly net] Layer goc khong hop le: \"" 
@@ -6546,7 +6598,27 @@
                 gro--xln-danh-sach-chua-doi nil
                 i                           0
           )
-          (while (< i (sslength ss)) 
+          ;; Muc 225: GROCS chuyenlayer3b (tru nhanh doi theo MAU thu cong TH1b - van lisp).
+          ;; cs: C# doi layer + dem, bo vong lisp; ab: C# chi tinh, gro--chuyen-layer ghi ban ghi de so.
+          (setq che-cl (if (and (null auto-dim) mau-dim-chot) "lisp" (gro--che-do-buoc "chuyenlayer3b")))
+          (cond
+            ((= che-cl "cs")
+             (setq kq-cl       (gro--cs-goi "chuyenlayer3b" 'gro_net_chuyen_layer_3b (list lay-goc ss dim-geom-set) 6)
+                   cnt-k       (nth 0 kq-cl)
+                   cnt-dim     (nth 1 kq-cl)
+                   cnt-g       (nth 2 kq-cl)
+                   cnt-t       (nth 3 kq-cl)
+                   cnt-0       (nth 4 kq-cl)
+                   unconverted (nth 5 kq-cl)
+                   i           (sslength ss)
+             )
+            )
+            ((= che-cl "ab")
+             (vl-catch-all-apply 'gro_net_chuyen_layer_3b (list "ab" lay-goc ss dim-geom-set))
+             (setq gro--ab-cl nil gro--ab-cl-bat T)
+            )
+          )
+          (while (< i (sslength ss))
             (setq e  (ssname ss i)
                   ed (entget e '("GRO_CHUP_COPY"))
                   i  (1+ i)
@@ -6622,6 +6694,13 @@
                   )
                 )
               )
+            )
+          )
+          (if gro--ab-cl-bat
+            (progn
+              (setq gro--ab-cl-bat nil)
+              (vl-catch-all-apply 'gro_net_ab (cons "chuyenlayer3b" gro--ab-cl))
+              (setq gro--ab-cl nil)
             )
           )
           ;; Nhom cac doi tuong chua doi theo Linetype
@@ -13963,6 +14042,7 @@
         gro--moc-ten   nil
         gro--moc-t0    nil
         gro--moc-dau   (gro--moc-giay)
+        gro--tien-do   (if (vl-symbol-value 'gro_net_tien_do) T)   ; muc 225: thanh tien do tab Guro
   )
   ;; Phien C# moi (GroPhien) - DLL cu chua co ham thi bo qua
   (if (vl-symbol-value 'gro_net_phien_moi) (vl-catch-all-apply 'gro_net_phien_moi nil))
@@ -13993,7 +14073,15 @@
         gro--moc-t0  t1
         gro--buoc    ten
   )
+  (if gro--tien-do (vl-catch-all-apply 'gro_net_tien_do (list ten)))
+  (if (= ten "ket thuc") (setq gro--tien-do nil))
   ten
+)
+
+;;; Muc 225: an thanh tien do khi GRO dung giua chung (Esc / loi).
+(defun gro--tat-tien-do ()
+  (if gro--tien-do (vl-catch-all-apply 'gro_net_tien_do (list "")))
+  (setq gro--tien-do nil)
 )
 
 ;;; In bang thoi gian (ASCII) ra dong lenh. Chi in buoc >= 0.05 giay cho gon.
@@ -14115,6 +14203,7 @@
   ;; ten se che mat bien kia trong luc xu ly loi - tranh han cho de lan.
   (defun *error* (m) 
     (vl-catch-all-apply 'ohta_net_log (list "GRO" (strcat "GROCHAY dung: " (vl-princ-to-string m))))
+    (gro--tat-tien-do)
     (if filecsv 
       (progn 
         (close filecsv)

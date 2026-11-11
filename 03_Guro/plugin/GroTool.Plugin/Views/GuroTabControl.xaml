@@ -161,6 +161,16 @@
         <!-- 2. Nut chay -->
         <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#CFD8DC" BorderThickness="0,1,0,0" Padding="8,7">
             <StackPanel>
+                <!-- Muc 225: tien do GRO - nhay theo tung buoc (CAD dang chay mot buoc thi thanh dung im) -->
+                <Border Margin="0,0,0,7" Visibility="{Binding DangChay, Converter={StaticResource HienKhi}}" Background="#FFFFFF"
+                        BorderBrush="#CFD8DC" BorderThickness="1" CornerRadius="5" Padding="9,7">
+                    <StackPanel>
+                        <TextBlock Text="{Binding TienDoChu}" Foreground="#323639" FontSize="11.5" FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <ProgressBar Height="10" Margin="0,6,0,0" Minimum="0" Maximum="100" Value="{Binding TienDo}"
+                                     Foreground="{Binding AccentBrush}" Background="#ECEFF1" BorderThickness="0"/>
+                    </StackPanel>
+                </Border>
                 <Button Style="{StaticResource NutChinh}" Background="#323639" Content="▶  Chạy GRO"
                         Command="{Binding ChayGroCommand}" Margin="0,0,0,5"
                         ToolTip="Đánh số tấm với layer và cài đặt trên tab (lệnh GROCHAY)"/>
