@@ -38,8 +38,9 @@ namespace ZwCadPlugin.Core
             string txt = BoMaMtext(rawU);
             string up = txt.ToUpperInvariant(), rawUp = rawU.ToUpperInvariant();
             if (txt.Length == 0 || txt.Length > 35 || !txt.Any(c => c >= '0' && c <= '9')) return null;
-            foreach (string k in new[] { "T=", "T =", "JASM", "NO.", "SCALE", "DWG", "REV", "KOKUIN", "DATE" })
+            foreach (string k in new[] { "T=", "T =", "JASM", "SCALE", "DWG", "REV", "KOKUIN", "DATE" })
                 if (up.Contains(k)) return null;
+            if (SauLaKyTuDac(up, "NO")) return null;   // wcmatch "*NO.*": "." = ky tu khong phai chu/so (vd "No-8")
             if (txt.IndexOf('枚') >= 0 || txt.IndexOf('本') >= 0) return null;   // MAI / HON
 
             // A. dim goc
@@ -78,18 +79,23 @@ namespace ZwCadPlugin.Core
             return false;
         }
 
-        /// <summary>wcmatch "*R#*,*R #*,*R.*" trên chuỗi đã viết hoa.</summary>
+        /// <summary>wcmatch "*R#*,*R #*,*R.*" trên chuỗi đã viết hoa ("." của wcmatch = ký tự không phải chữ/số).</summary>
         private static bool CoR(string up)
         {
             for (int i = 0; i + 1 < up.Length; i++)
-            {
-                if (up[i] != 'R') continue;
-                char c = up[i + 1];
-                if ((c >= '0' && c <= '9') || c == '.') return true;
-                if (c == ' ' && i + 2 < up.Length && up[i + 2] >= '0' && up[i + 2] <= '9') return true;
-            }
+                if (up[i] == 'R' && (up[i + 1] >= '0' && up[i + 1] <= '9' || !LaChuSoAscii(up[i + 1]))) return true;
             return false;
         }
+
+        /// <summary>wcmatch "*&lt;tien&gt;.*": tiền tố rồi MỘT ký tự không phải chữ / số ASCII (máy byte: chữ Nhật cũng tính).</summary>
+        private static bool SauLaKyTuDac(string up, string tien)
+        {
+            for (int i = up.IndexOf(tien, StringComparison.Ordinal); i >= 0; i = up.IndexOf(tien, i + 1, StringComparison.Ordinal))
+                if (i + tien.Length < up.Length && !LaChuSoAscii(up[i + tien.Length])) return true;
+            return false;
+        }
+
+        private static bool LaChuSoAscii(char c) => (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 
         /// <summary>gro--extract-num-after-sym.</summary>
         public static double? SoSauKyHieu(string txt)

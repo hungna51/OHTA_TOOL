@@ -1392,6 +1392,9 @@ namespace ZwCadPlugin.Tests
             Kiem("4 MAI -> bo", PL("4枚"), "-");
             Kiem("khong co so -> bo", PL("ABC"), "-");
             Kiem("REV R2 -> bo (REV)", PL("REV R2"), "-");
+            Kiem("No-8 (wcmatch NO. = NO + ky tu dac biet) -> bo", PL("柱 No-8(8C)"), "-");
+            Kiem("NO8 (sau NO la so) -> van la dim dai", PL("NO8"), "1:8");
+            Kiem("R(5) (wcmatch R.) -> lo 5", PL("R(5)"), "2:5");
         }
 
         private static DoanThang DT(string h, double x1, double y1, double x2, double y2) => new DoanThang(h, x1, y1, x2, y2);
