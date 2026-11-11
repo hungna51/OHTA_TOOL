@@ -23,7 +23,9 @@ namespace TeamsTool.Core
     /// <summary>Người tag được bằng @ trong chat: Id = id tài khoản Microsoft 365 (Graph /users).</summary>
     public sealed class NguoiTag
     {
-        public string Id, Ten;
+        // thuộc tính (không phải trường): ô gợi ý @ của WPF hiện tên bằng binding DisplayMemberPath="Ten"
+        public string Id { get; set; }
+        public string Ten { get; set; }
     }
 
     public sealed class TepDinhKem
