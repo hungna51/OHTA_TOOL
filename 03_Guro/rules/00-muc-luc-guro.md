@@ -74,6 +74,7 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 | 219 | **Bước "đặt mã khắc vào hình" 7.7 s, riêng C# 7.24 s** (đo nhờ mục 217; phần tính toán phát lại ngoài CAD < 1 s): `DatMaKhacCad.QuetNet` lấy mẫu điểm (tới 64 điểm / nét) cho MỌI nét đúng loại trong bản vẽ — cả nét layer khác và 7024 nét bản chụp — chỉ để ghi dòng chẩn đoán. Nay chỉ lấy mẫu nét sẽ dùng (đúng layer, không có XData bản chụp); nét bị loại ghi chẩn đoán bằng hộp `GeometricExtents`. Danh sách nét dùng để đặt không đổi. **Đo lại 11/11: vẫn 7.15 s → lấy mẫu nét KHÔNG phải chỗ chậm chính** (xem mục 220) | [16-chuyen-sang-csharp.md](16-chuyen-sang-csharp.md) |
 | 220 | **Kết quả AB và thời gian C# chỉ in ra dòng lệnh, dòng lệnh ZWCAD bị cắt → mất** (người dùng không gửi được `[AB cungbogoc]`). Nay GROTOOL ghi thêm vào `ohta.log` qua `OhtaBugBridge.Info` (gọi `BugLog.Write(string, string)` của OHTATOOL bằng phản chiếu): mọi dòng `[AB …]`; `cung bo goc C# (ab/cs): … ms`; `dat ma khac C#: lay mau net … s, ghi dump … s, tinh … s, doi cum + in … s` để biết 7 s nằm ở đâu | [16-chuyen-sang-csharp.md](16-chuyen-sang-csharp.md) |
 | 221 | **Đặt mã khắc: 6.5 s trong 7.5 s là in dòng lệnh** (đo nhờ mục 220: lấy mẫu 0.18 s, dump 0.17 s, tính 0.58 s, "dời cụm + in" 6.52 s / 141 tấm). Mỗi `WriteMessage` ZWCAD vẽ lại dòng lệnh; nay gom dòng `[MK]` in 1 lần sau `Commit`, bỏ dòng tiến độ `Dat ma khac vao hinh... i/N`. Nhật ký tách `doi cum` và `in`. **Đo lại 11/11: C# 7.48 s → 1.08 s (dời cụm 0.02 s, in 0.10 s); bước 7.7 s → 1.56 s; GRO 37.7 s → 28.4 s** | [16-chuyen-sang-csharp.md](16-chuyen-sang-csharp.md) |
+| 222 | **Tấm gộp không cắt, bị báo "hình chứa ≥ 2 ghi chú = khung vẽ nhầm"** (130837-1, tấm 156/157 và 3 thanh giống hệt — 8 tấm): thanh dày 100 mm có đầu nhô cao 318.8 mm, 2 ghi chú viết PHÍA TRÊN thanh nhưng lọt vào hộp bao nhờ phần nhô → `QuetHinh` (mục 172) bỏ cả hình (khung tím `CANH_BAO_KHUNG_CAT`), bước cắt tấm gộp không có hình để cắt. Nay ghi chú chỉ tính "trong" khi bị nét của hình chặn cả 4 phía (`QuetHinh.BiBaoQuanh`, xét hộp bao từng nét). Phát lại dump quét hình thật: 4 → 0 khung nhầm, 156 → 160 hình. **Chưa chạy GRO trên ZWCAD** | [08-sap-xep-va-vung.md](08-sap-xep-va-vung.md) |
 | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) | Hộp thoại DCL + **bản .NET** (dialog `gro`, bảng DST), **tab Guro** | 18, 19, 20, 52, 55, 56, 64, 86, 192, 193, 194, 195, 196, 197 |
 | [06-encoding-chuoi.md](06-encoding-chuoi.md) | Encoding và xử lý chuỗi (CP932 / Unicode) | 2, 9, 15, 16, 50, 57 |
 | [07-tach-du-lieu.md](07-tach-du-lieu.md) | Tách độ dày, số lượng, mã khắc, **ghép dòng số lượng** | 10, 11, 17, 23, 24, 32, 43, 54, 168 |
@@ -89,14 +90,14 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 
 ## Mục lục mục lỗi
 
-1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–221 tại đây.
+1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–222 tại đây.
 
 > ### ⚠ SỐ MỤC LÀ CỐ ĐỊNH, KHÔNG ĐƯỢC ĐÁNH SỐ LẠI
 > Mã nguồn `.lsp` tham chiếu tới chúng ở **17 chỗ** (`CLAUDE.md muc 13`, `muc 29`, `muc 85`, `muc 86`, …) và các file rule tham chiếu chéo nhau ở **59 chỗ**. Đổi số là hỏng cả 59 chỗ đó cùng lúc.
 >
 > Thêm mục mới thì **nối tiếp số lớn nhất hiện có + 1**, bỏ vào file theo chủ đề, rồi cập nhật bảng dưới.
 >
-> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **221**.
+> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **222**.
 
 > ### Lệnh chẩn đoán cũ
 > `grosort` / `grodbg` / `growp` / `grostyle` / `bgdbg` thuộc bản đầy đủ cũ `guro ZWCAD(BG MK FN).lsp`, không có trong `guro_gro.lsp`. Các mục bên dưới nhắc tới chúng là ghi chép lịch sử. Lịch sử thay đổi lisp nay nằm trong git của OHTA_TOOL.

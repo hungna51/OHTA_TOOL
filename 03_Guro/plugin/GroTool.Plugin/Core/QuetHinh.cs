@@ -61,6 +61,20 @@ namespace ZwCadPlugin.Core
             return r;
         }
 
+        /// <summary>Mục 222: điểm bị nét của hình chặn cả 4 phía (trên, dưới, trái, phải) — xét hộp bao từng nét.</summary>
+        public static bool BiBaoQuanh(Diem p, HinhPrim s, IDictionary<int, Hop> bbTheoIdx)
+        {
+            bool tren = false, duoi = false, trai = false, phai = false;
+            foreach (int i in s.ThanhVien)
+            {
+                if (!bbTheoIdx.TryGetValue(i, out Hop b)) continue;
+                if (b.X1 <= p.X && p.X <= b.X2) { if (b.Y1 > p.Y) tren = true; if (b.Y2 < p.Y) duoi = true; }
+                if (b.Y1 <= p.Y && p.Y <= b.Y2) { if (b.X2 < p.X) trai = true; if (b.X1 > p.X) phai = true; }
+                if (tren && duoi && trai && phai) return true;
+            }
+            return false;
+        }
+
         /// <param name="nets">nét 0-KAKOU (đã bỏ paper space), thứ tự như lisp duyệt</param>
         /// <param name="kBoxes">hộp các khung phạm vi (null / rỗng = quét tự do)</param>
         /// <param name="diemGhiChu">điểm chèn các ghi chú (null / rỗng = bỏ bước lọc khung nhầm)</param>
@@ -149,10 +163,16 @@ namespace ZwCadPlugin.Core
             // Bo hinh chua >= 2 diem chen ghi chu (khung ve nham tren 0-KAKOU)
             if (diemGhiChu != null && diemGhiChu.Count > 0)
             {
+                var bbTheoIdx = new Dictionary<int, Hop>();
+                foreach (NetKakou it in items) bbTheoIdx[it.Idx] = it.Bb;
                 var con = new List<HinhPrim>();
                 foreach (HinhPrim s in shapes)
                 {
-                    int nIn = diemGhiChu.Count(p => p.X >= s.Bb.X1 && p.X <= s.Bb.X2 && p.Y >= s.Bb.Y1 && p.Y <= s.Bb.Y2);
+                    // Muc 222: ghi chu chi tinh la "trong" khi BI NET CUA HINH CHAN CA 4 PHIA (nhu nam trong
+                    // khung that). Chi xet hop bao thi tam gop co phan nho cao o dau (130837-1: thanh 100mm,
+                    // dau cao 318.8) nuot 2 ghi chu ghi PHIA TREN thanh -> tam bi bo, khong cat duoc.
+                    int nIn = diemGhiChu.Count(p => p.X >= s.Bb.X1 && p.X <= s.Bb.X2 && p.Y >= s.Bb.Y1 && p.Y <= s.Bb.Y2
+                                                    && BiBaoQuanh(p, s, bbTheoIdx));
                     if (nIn >= 2) kq.LoiKhung.Add(s); else con.Add(s);
                 }
                 shapes = con;

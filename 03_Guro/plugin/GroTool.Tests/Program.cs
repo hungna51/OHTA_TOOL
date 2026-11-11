@@ -1482,6 +1482,12 @@ namespace ZwCadPlugin.Tests
             var kq4 = QuetHinh.Gom(nets, null, new List<Diem> { new Diem(10, 10), new Diem(90, 40) });
             // bo khung nham TRUOC buoc gop lo (nhu lisp) -> lo cua tam A thanh hinh rieng
             Kiem("hinh chua 2 ghi chu -> bao khung nham; lo ben trong thanh hinh rieng", kq4.LoiKhung.Count + "/" + kq4.Hinh.Count, "1/2");
+            // muc 222: tam gop thanh mong 0..300 x 0..20 + dau cao 290..300 len 100; 2 ghi chu PHIA TREN thanh (trong hop bao)
+            var gop = new List<NetKakou>();
+            int G(double x1, double y1, double x2, double y2) { gop.Add(new NetKakou(gop.Count, new Hop(x1, y1, x2, y2))); return gop.Count - 1; }
+            G(0, 0, 300, 0); G(0, 0, 0, 20); G(0, 20, 290, 20); G(290, 20, 290, 100); G(290, 100, 300, 100); G(300, 0, 300, 100);
+            var kq7 = QuetHinh.Gom(gop, null, new List<Diem> { new Diem(50, 40), new Diem(200, 40) });
+            Kiem("muc 222: 2 ghi chu tren thanh, trong hop bao nhung khong bi bao quanh -> KHONG phai khung nham", kq7.LoiKhung.Count + "/" + kq7.Hinh.Count, "0/1");
             // thu tu dau vao khong doi nhom
             var dao = new List<NetKakou>(nets); dao.Reverse();
             var kq5 = QuetHinh.Gom(dao, null, null);
