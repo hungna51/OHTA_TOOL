@@ -5427,6 +5427,44 @@
   res-dim-ents
 )
 
+;;; Muc 223: chan dim goc dai - dau nao cua doan (lp1 lp2) XA ca 2 dau cung (pa pb) thi phai TU DO:
+;;; khong co dau net nao khac (LINE trong lines, ARC trong arcs) trong 1mm. Canh hinh that thi noi tiep.
+(defun gro--chan-dim-tu-do-p (e lp1 lp2 pa pb lines arcs / xa tu-do l ld ad c r q)
+  (setq xa (if (< (min (distance (gro--p2 lp1) pa) (distance (gro--p2 lp1) pb))
+                  (min (distance (gro--p2 lp2) pa) (distance (gro--p2 lp2) pb)))
+             (gro--p2 lp2)
+             (gro--p2 lp1)
+           )
+        tu-do T
+  )
+  (foreach l lines
+    (if (and tu-do (not (eq l e)))
+      (progn
+        (setq ld (entget l))
+        (if (or (< (distance xa (gro--p2 (cdr (assoc 10 ld)))) 1.0)
+                (< (distance xa (gro--p2 (cdr (assoc 11 ld)))) 1.0))
+          (setq tu-do nil)
+        )
+      )
+    )
+  )
+  (foreach l arcs
+    (if tu-do
+      (progn
+        (setq ad (entget l) c (cdr (assoc 10 ad)) r (cdr (assoc 40 ad)))
+        (foreach q (list (cdr (assoc 50 ad)) (cdr (assoc 51 ad)))
+          (if (< (distance xa (list (+ (car c) (* r (cos q))) (+ (cadr c) (* r (sin q))))) 1.0)
+            (setq tu-do nil)
+          )
+        )
+      )
+    )
+  )
+  tu-do
+)
+
+(defun gro--p2 (p) (list (car p) (cadr p)))
+
 ;; Khop Dim Goc (Angular Dim): Cung tron ARC + 2 doan thang noi o 2 dau cung
 (defun gro--geom-match-angular-dims (txt-ang-list arcs-list lines-list tiny-circles /
                                      item e-txt str a-deg pt-t rot h bb
@@ -5494,7 +5532,12 @@
                       (progn
                         (setq len-cl (distance (list (car lp1) (cadr lp1)) (list (car lp2) (cadr lp2))))
                         ;; Chan dim goc ngan (<= 45mm), phuong huong tam (Radial), khong lay canh dung/ngang hinh chieu
-                        (if (and (> len-cl 0.5) (<= len-cl 45.0))
+                        ;; Muc 223: chan dai hon 45mm (130837-1: 51-140mm, 9 net con o 0-KAKOU) van nhan neu
+                        ;; <= ban kinh + 10 va dau XA CUNG tu do (canh hinh that noi net khac o ca 2 dau)
+                        (if (and (> len-cl 0.5)
+                                 (or (<= len-cl 45.0)
+                                     (and (<= len-cl (+ r-arc 10.0))
+                                          (gro--chan-dim-tu-do-p cand-line lp1 lp2 p-astart p-aend lines-list arcs-list))))
                           (progn
                             (setq cl-ang (angle (list (car lp1) (cadr lp1)) (list (car lp2) (cadr lp2))))
                             (setq d1 (distance (list (car lp1) (cadr lp1)) p-astart)
