@@ -915,6 +915,7 @@ namespace ZwCadPlugin.Tests
             TestVongKin();
             TestXepCum();
             TestTachVaCham();
+            TestGhepHinhChieu();
             TestChiaNetCat();
             TestDongKhung();
             TestGuroTabLayer();
@@ -1333,6 +1334,38 @@ namespace ZwCadPlugin.Tests
         }
 
         // ------------------------------------------------------------------
+        // Muc 215: GD5b-a ghep hinh chieu (Hungarian 3A + chieu tia 3B)
+        // ------------------------------------------------------------------
+        private static GhepHinhChieu.Hinh HC(int id, double x1, double y1, double x2, double y2, int? v = null) =>
+            new GhepHinhChieu.Hinh { Id = id, X1 = x1, Y1 = y1, X2 = x2, Y2 = y2, Vung = v };
+
+        private static void TestGhepHinhChieu()
+        {
+            Console.WriteLine();
+            Console.WriteLine("=== GD5b-a ghep hinh chieu (muc 215) ===");
+            Kiem("tia ngang khong vat can = 10", GhepHinhChieu.ChieuTia(HC(1, 0, 0, 10, 10), HC(2, 20, 0, 30, 10), null, 400), (double?)10.0);
+            Kiem("tia bi chan -> null", GhepHinhChieu.ChieuTia(HC(1, 0, 0, 10, 10), HC(2, 20, 0, 30, 10),
+                 new List<GhepHinhChieu.Hinh> { HC(9, 12, 2, 18, 8) }, 400) == null, true);
+            Kiem("tia doc = 5", GhepHinhChieu.ChieuTia(HC(1, 0, 0, 10, 10), HC(2, 0, 15, 10, 20), null, 400), (double?)5.0);
+            Kiem("xa hon max tia -> null", GhepHinhChieu.ChieuTia(HC(1, 0, 0, 10, 10), HC(2, 500, 0, 510, 10), null, 400) == null, true);
+            var cat = new List<GhepHinhChieu.VetCat> { new GhepHinhChieu.VetCat { XDiv = 50, Gap = 10, X1 = 0, Y1 = 0, X2 = 100, Y2 = 50 } };
+            Kiem("hai nua cung lan cat -> tach", GhepHinhChieu.TachTuNhau(HC(1, 0, 0, 50, 50), HC(2, 60, 0, 110, 50), cat), true);
+            Kiem("tach -> khong chieu", GhepHinhChieu.ChieuDuoc(HC(1, 0, 0, 50, 50), HC(2, 60, 0, 110, 50), null, cat, 400) == null, true);
+            Kiem("hungarian cheo", string.Join(",", GhepHinhChieu.Hungarian(new double[,] { { 10, 1 }, { 1, 10 } }, 2)), "1,0");
+
+            var tatCa = new List<GhepHinhChieu.Hinh> { HC(1, 0, 0, 100, 100, 0), HC(2, 500, 0, 600, 100, 0),
+                HC(3, 120, 0, 150, 100, 0), HC(4, 450, 0, 480, 100, 0), HC(5, 160, 0, 190, 100, 1) };
+            var cum = new List<GhepHinhChieu.Cum> { new GhepHinhChieu.Cum { Tid = 11, Vung = 0, HinhIds = new List<int> { 1 } },
+                new GhepHinhChieu.Cum { Tid = 12, Vung = 0, HinhIds = new List<int> { 2 } } };
+            Func<List<GhepHinhChieu.LanGhep>, string> S2 = l => string.Join(";", l.Select(g => g.Hinh + ">" + g.Tam + ":" + S(g.D) + ":" + g.Loai));
+            Kiem("3A 1-1 roi 3B ghep 5 vao cum co 3 (10mm)",
+                 S2(GhepHinhChieu.Chay(tatCa, new List<int> { 3, 4, 5 }, cum, 400, false, 0, null)), "3>11:20.00:1;4>12:20.00:1;5>11:10.00:2");
+            Kiem("co vung: hinh 5 khac vung -> khong ghep",
+                 S2(GhepHinhChieu.Chay(tatCa, new List<int> { 3, 4, 5 }, cum, 400, true, 2, null)), "3>11:20.00:1;4>12:20.00:1");
+            Kiem("cum dau vao khong bi doi", cum[0].HinhIds.Count, 1);
+        }
+
+        // ------------------------------------------------------------------
         // Muc 181: GD5d-a chia net cat / kegaki vao danh sach chi tiet
         // ------------------------------------------------------------------
         private static NetCat NC(string h, double cx, double cy, bool bo = false) =>
@@ -1463,7 +1496,7 @@ namespace ZwCadPlugin.Tests
             Kiem("ten khoa registry", GroCongTac.TenKhoa(" PhanLoai "), "cs_phanloai");
             Kiem("buoc co trong danh sach", GroCongTac.LaBuoc("XULYNET"), true);
             Kiem("buoc khong co", GroCongTac.LaBuoc("abc"), false);
-            Kiem("20 buoc theo ke hoach (+ 7 buoc con 173-180, dsct 181, dongkhung 183)", GroCongTac.Buoc.Count, 20);
+            Kiem("21 buoc theo ke hoach (+ 7 buoc con 173-180, dsct 181, dongkhung 183, ghephc 215)", GroCongTac.Buoc.Count, 21);
 
             var p1 = GroPhien.Moi("A.dwg");
             p1.Dat("x", new List<int> { 1, 2 });

@@ -67,6 +67,7 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 | 212 | **ZWCAD ĐƠ (Not Responding) giữa chừng GRO, máy dev chạy cùng bản vẽ thì được — do lisp GURO CŨ trong Startup Suite xung đột** (DESKTOP-HFJESCO 06/11/2026, `dq.dxf`). Mỗi lần đơ một chỗ khác (v1.3.2 qua được dò vòng kín, v1.3.3 đơ ngay tại đó), không lỗi, không "GROCHAY dung" trong nhật ký. Sửa: gỡ lisp GURO cũ khỏi `APPLOAD → Startup Suite`, mở lại ZWCAD. Cách chẩn đoán + dấu hiệu: xem [12-chan-doan-bao-loi.md](12-chan-doan-bao-loi.md) mục 212. **Đã xác nhận** (gỡ ra là chạy). | [12-chan-doan-bao-loi.md](12-chan-doan-bao-loi.md) |
 | 213 | **Chữ `裏` đứng một mình bị coi là 逆図** (130837-1, 11/11/2026): ghi chú `裏ｶｲｻｷ t=9mm` (vát mặt sau) + `逆図 １枚` → báo "2 dòng GYAKUZU" (tấm 112/113); ghi chú `裏ｶｲｻｷ` + `本図 １枚` → tách thành cặp mirror sai (tấm vát). Nay bản nghịch = có `逆` hoặc cụm `裏図` (`gro--gyaku-p`), giống C# `CadDrawingScanner`; dùng ở `gro--it-loai-sl`, `gro--kiem-tra-trung-loai-sl`, `gro--dong-chung-p`, `gro--tach-dong-chung` | [08-sap-xep-va-vung.md](08-sap-xep-va-vung.md) |
 | 214 | **Bước "khung: ghép hình chiếu" chậm** (130837-1: ~6 phút, mỗi dòng `[CHIEU TIA]` 7–10 s): mỗi cặp hình–cụm lọc toàn bộ hình bản vẽ thành danh sách vật cản trước cả khi biết tia có hợp lệ, và vòng 3B tính lại tất cả sau mỗi lần ghép. Nay `gro--d-hinh-cum` thử chiếu **không vật cản** trước (không được thì bỏ — kết quả y hệt), dùng cho Hungarian và `gro--tim-ghep-hinh-chieu-tot-nhat`; vòng 3B (`gro--ghep-hinh-chieu-phu`) tính bảng 1 lần, mỗi lượt chỉ tính lại cụm vừa nhận hình. **Chưa đo lại trên ZWCAD** | [08-sap-xep-va-vung.md](08-sap-xep-va-vung.md) |
+| 215 | **Bước ghép hình chiếu (3A Hungarian + 3B chiếu tia) có bản C#** (`Core/GhepHinhChieu.cs`, chép 1-1 lisp mục 214; `GRO_NET_GHEP_HC`, bước `GROCS` mới **`ghephc`**). Mặc định vẫn `lisp`; `ab` = C# tính + so `[AB ghephc]` (khoá `H<sid>`, trường `tam`), áp kết quả lisp; `cs` = C# tính, lisp áp (`gro--ap-ghep-hc`, in y hệt dòng `[HUNGARIAN 1-1]` / `[CHIEU TIA]`). Dump `%TEMP%\gro_ghephc_dump.txt`. **Chưa chạy AB trên bản vẽ thật** | [16-chuyen-sang-csharp.md](16-chuyen-sang-csharp.md) |
 | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) | Hộp thoại DCL + **bản .NET** (dialog `gro`, bảng DST), **tab Guro** | 18, 19, 20, 52, 55, 56, 64, 86, 192, 193, 194, 195, 196, 197 |
 | [06-encoding-chuoi.md](06-encoding-chuoi.md) | Encoding và xử lý chuỗi (CP932 / Unicode) | 2, 9, 15, 16, 50, 57 |
 | [07-tach-du-lieu.md](07-tach-du-lieu.md) | Tách độ dày, số lượng, mã khắc, **ghép dòng số lượng** | 10, 11, 17, 23, 24, 32, 43, 54, 168 |
@@ -82,14 +83,14 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 
 ## Mục lục mục lỗi
 
-1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–214 tại đây.
+1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–215 tại đây.
 
 > ### ⚠ SỐ MỤC LÀ CỐ ĐỊNH, KHÔNG ĐƯỢC ĐÁNH SỐ LẠI
 > Mã nguồn `.lsp` tham chiếu tới chúng ở **17 chỗ** (`CLAUDE.md muc 13`, `muc 29`, `muc 85`, `muc 86`, …) và các file rule tham chiếu chéo nhau ở **59 chỗ**. Đổi số là hỏng cả 59 chỗ đó cùng lúc.
 >
 > Thêm mục mới thì **nối tiếp số lớn nhất hiện có + 1**, bỏ vào file theo chủ đề, rồi cập nhật bảng dưới.
 >
-> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **214**.
+> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **215**.
 
 > ### Lệnh chẩn đoán cũ
 > `grosort` / `grodbg` / `growp` / `grostyle` / `bgdbg` thuộc bản đầy đủ cũ `guro ZWCAD(BG MK FN).lsp`, không có trong `guro_gro.lsp`. Các mục bên dưới nhắc tới chúng là ghi chép lịch sử. Lịch sử thay đổi lisp nay nằm trong git của OHTA_TOOL.

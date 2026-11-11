@@ -7923,6 +7923,67 @@
 ;;; Dam bao cong bang: moi tam gia cong chi nhan dung 1 hinh chieu tot nhat o Luot 1
 ;;; Dau vao: pending-shapes, bent-clusters, all-shapes, max-ray-dist, co-vung, khungs-pham-vi
 ;;; Tra ve: (list updated-pending-shapes updated-bent-clusters)
+;;; Muc 215: buoc ghep hinh chieu (3A Hungarian + 3B chieu tia) chay bang C# gro_net_ghep_hc.
+;;; GROCS ghephc: lisp (mac dinh) / ab (C# tinh, lisp tinh + so, AP LISP) / cs (C# tinh, lisp ap).
+;;; Vung khong co (nil) gui -1.
+(defun gro--vid-so (v) (if (numberp v) v -1))
+
+;;; Tham so cho gro_net_ghep_hc: tat-ca ((sid x1 y1 x2 y2 vid) ...), cho (sid ...),
+;;; cum ((tid vid (sid ...)) ...) hinh moi ghep dung dau, max-ray, co-vung 1/0, so vung, net cat.
+(defun gro--ghep-hc-tham-so (pending bent all-shapes max-ray-dist co-vung khungs-pham-vi)
+  (list
+    (mapcar '(lambda (s) (append (list (nth 0 s)) (nth 2 s) (list (gro--vid-so (nth 4 s))))) all-shapes)
+    (mapcar 'car pending)
+    (mapcar '(lambda (cl) (list (nth 0 cl) (gro--vid-so (nth 3 cl)) (mapcar 'car (nth 1 cl)))) bent)
+    max-ray-dist
+    (if co-vung 1 0)
+    (length khungs-pham-vi)
+    (if (boundp 'gro--ds-cat) gro--ds-cat nil)
+  )
+)
+
+;;; Ap cac lan ghep C# tra ((sid tid d loai) ...) dung thu tu, in y het ban lisp. Tra (list pending bent).
+(defun gro--ap-ghep-hc (lan pending bent / g s)
+  (foreach g lan
+    (setq s (vl-some '(lambda (x) (if (= (nth 0 x) (nth 0 g)) x)) pending))
+    (if s
+      (progn
+        (setq pending (vl-remove-if '(lambda (x) (= (nth 0 x) (nth 0 s))) pending)
+              bent    (mapcar
+                        '(lambda (cl)
+                           (if (= (nth 0 cl) (nth 1 g))
+                             (list (nth 0 cl) (cons s (nth 1 cl)) (gro--bb-gop-2 (nth 2 cl) (nth 2 s)) (nth 3 cl))
+                             cl
+                           )
+                         )
+                        bent
+                      )
+        )
+        (if (not gro--im-chieu)
+          (gro--princ
+            (strcat "\n  [" (if (= (nth 3 g) 1) "HUNGARIAN 1-1" "CHIEU TIA")
+                    "] Da ghep Hinh chieu/Mat cat #" (itoa (nth 0 g))
+                    " vao Tam #" (itoa (nth 1 g))
+                    " (khoang cach: " (rtos (nth 2 g) 2 1) "mm)"
+            )
+          )
+        )
+      )
+    )
+  )
+  (list pending bent)
+)
+
+;;; Ban ghi so A/B: moi hinh da ghep (tru hinh chinh = cuoi danh sach) -> "H<sid>|tam=<tid>".
+(defun gro--ghep-hc-ban-ghi (bent / cl s r)
+  (foreach cl bent
+    (foreach s (cdr (reverse (nth 1 cl)))
+      (setq r (cons (strcat "H" (itoa (nth 0 s)) "|tam=" (itoa (nth 0 cl))) r))
+    )
+  )
+  r
+)
+
 (defun gro--ghep-hinh-chieu-hungarian (pending-shapes-in bent-clusters-in all-shapes 
                                       max-ray-dist co-vung khungs-pham-vi / 
                                       pending-shapes bent-clusters v-list v-idx v-item 
@@ -10582,7 +10643,7 @@
                                   cbb-shapes bb-total k-list bb-k
                                   other-t o-bb o-k-list gap-x gap-y pad-x 
                                   pad-y x1 y1 x2 y2 bb-final poly-4 pl-kin n-hinh kind 
-                                  o o-vid res-hg dim-units shape-dims-map dims-cua-tam 
+                                  o o-vid res-hg che-hc dim-units shape-dims-map dims-cua-tam 
                                   cbb-dims bb-geom s-dims dim-bbs dim-es bb-khoi-tid che-dk kq-dk i-dk r-dk ds-ab-dk
                                  )
   (if (or (null max-dist) (<= max-dist 0.0)) 
@@ -10722,19 +10783,47 @@
       (setq max-ray-dist (min 400.0 (if (and max-dist (> max-dist 0.0)) max-dist 400.0)))
 
       (gro--moc "khung: ghep hinh chieu")
-      ;; BUOC 3A: GHEP HINH CHIEU 1-1 TOAN CUC BANG HUNGARIAN (PHUONG AN 1)
-      ;; Dam bao moi tam gia cong chi nhan toi da 1 hinh chieu o luot nay, tranh tam giua nuot hinh tam ben
-      (setq res-hg (gro--ghep-hinh-chieu-hungarian pending-shapes bent-clusters shapes max-ray-dist co-vung khungs-pham-vi))
-      (setq pending-shapes (nth 0 res-hg)
-            bent-clusters  (nth 1 res-hg)
+      ;; Muc 215: GROCS ghephc -> cs: C# tinh 3A + 3B, lisp ap; ab: C# tinh de so, ap ket qua lisp.
+      (setq che-hc (if (vl-symbol-value 'gro_net_cong_tac)
+                     (vl-catch-all-apply 'gro_net_cong_tac (list "ghephc"))
+                     "lisp"
+                   )
       )
+      (if (not (member che-hc '("ab" "cs"))) (setq che-hc "lisp"))
+      (if (= che-hc "cs")
+        (if (and pending-shapes bent-clusters)
+          (setq res-hg         (gro--ap-ghep-hc
+                                 (cadr (gro--cs-goi "ghephc" 'gro_net_ghep_hc
+                                         (gro--ghep-hc-tham-so pending-shapes bent-clusters shapes max-ray-dist co-vung khungs-pham-vi)
+                                         2))
+                                 pending-shapes bent-clusters)
+                pending-shapes (nth 0 res-hg)
+                bent-clusters  (nth 1 res-hg)
+          )
+        )
+        (progn
+          (if (= che-hc "ab")
+            (vl-catch-all-apply 'gro_net_ghep_hc
+              (cons "ab" (gro--ghep-hc-tham-so pending-shapes bent-clusters shapes max-ray-dist co-vung khungs-pham-vi)))
+          )
+          ;; BUOC 3A: GHEP HINH CHIEU 1-1 TOAN CUC BANG HUNGARIAN (PHUONG AN 1)
+          ;; Dam bao moi tam gia cong chi nhan toi da 1 hinh chieu o luot nay, tranh tam giua nuot hinh tam ben
+          (setq res-hg (gro--ghep-hinh-chieu-hungarian pending-shapes bent-clusters shapes max-ray-dist co-vung khungs-pham-vi))
+          (setq pending-shapes (nth 0 res-hg)
+                bent-clusters  (nth 1 res-hg)
+          )
 
-      ;; BUOC 3B: QUET PHU CHO TAM CO TU 2 HINH CHIEU TRO LEN (NEU CON PENDING-SHAPES)
-      ;; Muc 214: bang khoang cach tinh 1 lan, moi luot chi tinh lai cum vua nhan hinh.
-      (if (and pending-shapes bent-clusters)
-        (setq res-hg         (gro--ghep-hinh-chieu-phu pending-shapes bent-clusters shapes max-ray-dist co-vung)
-              pending-shapes (nth 0 res-hg)
-              bent-clusters  (nth 1 res-hg)
+          ;; BUOC 3B: QUET PHU CHO TAM CO TU 2 HINH CHIEU TRO LEN (NEU CON PENDING-SHAPES)
+          ;; Muc 214: bang khoang cach tinh 1 lan, moi luot chi tinh lai cum vua nhan hinh.
+          (if (and pending-shapes bent-clusters)
+            (setq res-hg         (gro--ghep-hinh-chieu-phu pending-shapes bent-clusters shapes max-ray-dist co-vung)
+                  pending-shapes (nth 0 res-hg)
+                  bent-clusters  (nth 1 res-hg)
+            )
+          )
+          (if (= che-hc "ab")
+            (vl-catch-all-apply 'gro_net_ab (cons "ghephc" (gro--ghep-hc-ban-ghi bent-clusters)))
+          )
         )
       )
 

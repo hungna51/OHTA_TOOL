@@ -324,6 +324,29 @@ namespace ZwCadPlugin
         }
 
         /// <summary>
+        /// Mục 215 (GĐ 5b-a): (gro_net_ghep_hc "ab"|"cs" tat-ca cho cum max-ray co-vung so-vung ds-cat) — ghép hình
+        /// chiếu vào cụm tấm bẻ (Hungarian + chiếu tia). Trả (so-lan ((sid tid d loai) ...)). Lỗi -> nil.
+        /// </summary>
+        [LispFunction("GRO_NET_GHEP_HC")]
+        public static object LispGhepHc(ResultBuffer rb)
+        {
+            Document doc = Application.DocumentManager.MdiActiveDocument;
+            if (doc == null || rb == null) return null;
+            try
+            {
+                List<object> a = CadServices.LispCay.Doc(rb);
+                if (a.Count < 8 || !(a[0] is string che)) return null;
+                return CadServices.GhepHinhChieuCad.Chay(doc, GroCongTac.TenCheDo(GroCongTac.DocCheDo(che)), a.GetRange(1, 7));
+            }
+            catch (System.Exception ex)
+            {
+                ZwCadPlugin.OhtaBugBridge.Log("GRO/GroBuocCommands", ex);
+                doc.Editor?.WriteMessage("\n[GRO .NET] Loi ghep hinh chieu: " + ex.Message);
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Mục 181 (GĐ 5d-a): (gro_net_ds_chi_tiet "ab"|"cs" ss-kakou-keg muc) — chia nét cắt / kegaki về tấm
         /// trong danh sách chi tiết. Trả (so-net ((pt9...) ...)). Lỗi -> nil (lisp tự chạy bản lisp).
         /// </summary>
