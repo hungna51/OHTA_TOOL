@@ -56,6 +56,90 @@ namespace TeamsTool.Tests
             "  0\nMTEXT\n  3\n{\\fArial|b0;\\U+66F2}\n  1\n\\PR5\n" +
             "  0\nENDSEC\n  0\nEOF\n";
 
+        private static void TestPhongKiemTra()
+        {
+            Console.WriteLine("-- Phong 3 kiem tra --");
+            const string tvCsv = "﻿Mat,T,T_thuc,V,HikiShiro_90,Denta90,Ri,Saichou,L_saitei,Z_saitei\n" +
+                                 "SS,4.5,4.2,40,4.2,4.2,5.8,6000,25,32\nSS,4.5,4.2,25,3.7,3.7,3.3,5000,15,19.5\nSS,4.5,4.2,32,4,4,4.3,6000,20,32\n" +
+                                 "SS SIMA Ngoài,4.5,5.9,32,4,4,4,6000,20,32\nSS,3.2,3,16,2.6,2.6,2,5500,10,11.5\nhong\n";
+            const string catalog = "﻿M,Loai,Z,T_list\nSS400,SS,SS400,4.5\nSUS304 2B,SUS,SUS-N2,1.0\n";
+            var tv = PhongKiemTra.DocTv(tvCsv);
+            Kiem("TV: doc dong, bo dong hong; Lmin SS 4.5 theo V tang dan", tv.Count + "|" + string.Join(",", PhongKiemTra.Lmin(tv, "SS", 4.5).Select(r => r.V + "/" + r.Lmin)), "5|25/15,32/20,40/25");
+            Kiem("loai TV: catalog / doan ten / sima / khong ro",
+                 PhongKiemTra.LoaiTv("SS400", "", catalog, tv) + "|" + PhongKiemTra.LoaiTv("SUS304 No.1", "", catalog, tv) + "|" + PhongKiemTra.LoaiTv("A5052", "", catalog, tv) + "|" +
+                 PhongKiemTra.LoaiTv("SS400", "縞板", catalog, tv) + "|" + (PhongKiemTra.LoaiTv("C2801P", "", catalog, tv) ?? "null"), "SS|SUS|AL|SS SIMA Ngoài|null");
+            Kiem("taro: SS M6 t4.5 di dong / t12 xam / M10 t16 co dinh / SUS M6 t8 co dinh / SUS M3 t9 xam / M6x1.0 / AL ngoai bang",
+                 "" + PhongKiemTra.Taro("SS", "M6", 4.5) + PhongKiemTra.Taro("SS", "M6", 12) + PhongKiemTra.Taro("SS", "M10", 16) + PhongKiemTra.Taro("SUS", "M6", 8) +
+                 PhongKiemTra.Taro("SUS", "M3", 9) + PhongKiemTra.Taro("SS", "M6x1.0", 3.2) + (PhongKiemTra.Taro("AL", "M6", 3) == null), "xgccgxTrue");
+            Kiem("so trong chu", PhongKiemTra.So("t2.3") + "|" + PhongKiemTra.So("10枚") + "|" + (PhongKiemTra.So("abc") == null), "2.3|10|True");
+
+            var tam = new TamAi
+            {
+                Tep = "a.pdf", SoBanVe = "A-1", M = "SS400", T = "4.5", Q = "2", KichThuoc = "300x200",
+                CanhJson = "[{\"dai_ngoai\":[18,100],\"goc\":90,\"r_trong\":0,\"kieu\":\"be\",\"huong\":\"V\"},{\"dai_ngoai\":[12,80],\"goc\":90,\"r_trong\":10,\"kieu\":\"be\",\"huong\":\"V\"},{\"dai_ngoai\":[],\"goc\":90,\"r_trong\":12,\"kieu\":\"be\",\"huong\":\"\"}]",
+                LoJson = "[{\"d\":10,\"so_luong\":2,\"taro\":\"\",\"sara\":false,\"ghi_chu\":\"\",\"cach_duong_be\":10},{\"d\":6,\"so_luong\":1,\"taro\":\"\",\"sara\":false,\"ghi_chu\":\"\",\"cach_duong_be\":22}," +
+                         "{\"d\":5,\"so_luong\":1,\"taro\":\"M6\",\"sara\":false,\"ghi_chu\":\"\",\"cach_duong_be\":-1},{\"d\":3,\"so_luong\":1,\"taro\":\"\",\"sara\":false,\"ghi_chu\":\"\",\"cach_duong_be\":-1}]",
+            };
+            tam.KhongChac.Add("M"); tam.KhongChac.Add("Q"); tam.DaSua.Add("Q");
+            var cu = new TamAi { Tep = "b.pdf", SoBanVe = "B-1", M = "SS400", T = "3.2", Q = "", Moi = false };
+            var cuon = new TamAi { Tep = "b.pdf", SoBanVe = "C-1", M = "SS400", T = "3.2", Q = "", CanhJson = "[{\"dai_ngoai\":[],\"goc\":180,\"r_trong\":50,\"kieu\":\"cuon\",\"huong\":\"\"}]" };
+            var vd = PhongKiemTra.Luat(new[] { tam, cu, cuon }, tv, catalog);
+            string Tim(string ma) { var v = vd.FirstOrDefault(x => x.Ma.EndsWith("|" + ma)); return v == null ? "-" : v.Muc + "/" + v.Nhom + (v.LienLac ? "/LL" : ""); }
+            Kiem("luat: khong chac (bo o da sua) / canh 18 giua Lmin / canh 12 < Lmin nho nhat",
+                 Tim("khong_chac") + "|" + vd.First(x => x.Ma.EndsWith("|khong_chac")).NoiDung.Contains("ô: M —") + "|" + Tim("canh_0") + "|" + Tim("canh_1"),
+                 "vang/noi_bo|True|vang/tu_xu_ly|do/khach/LL");
+            Kiem("luat: R10 an 1 lan / R12 pitchi / lo 10 < Lmin 15 / lo 22 giua / taro M6 t4.5 khong bao / lo 3 < t",
+                 Tim("r_1") + "|" + Tim("r_2") + "|" + Tim("lo_be_0") + "|" + Tim("lo_be_1") + "|" + Tim("taro_2") + "|" + Tim("lo_nho_3"),
+                 "info/tu_xu_ly|vang/tu_xu_ly|do/khach/LL|vang/tu_xu_ly|-|vang/noi_bo");
+            Kiem("luat: tam khong moi bo qua / cuon R ngoai 53.2 < 100 / thieu Q / SS t3.2",
+                 vd.Any(x => x.Tam.StartsWith("B-1")) + "|" + vd.Any(x => x.Tam.StartsWith("C-1") && x.MucQc.StartsWith("C-2") && x.NoiDung.Contains("53.2 < 100")) + "|" +
+                 vd.Any(x => x.Tam.StartsWith("C-1") && x.Ma.EndsWith("|thieu_q") && x.Muc == VanDe.Do) + "|" + vd.Any(x => x.Tam.StartsWith("C-1") && x.Ma.EndsWith("|ss32")),
+                 "False|True|True|True");
+            var tamCu = new TamAi { Tep = "c.pdf", SoBanVe = "D-1", M = "SS400", T = "4.5", Q = "1", CanhJson = tam.CanhJson, LoJson = "[{\"d\":10,\"so_luong\":1,\"taro\":\"\",\"sara\":false,\"ghi_chu\":\"\"}]" };
+            Kiem("luat: bang doc ban cu (lo chua co cach_duong_be) -> nhac doc lai; ban moi khong nhac",
+                 PhongKiemTra.Luat(new[] { tamCu }, tv, catalog).Any(x => x.Ma.EndsWith("|thieu_cach")) + "|" + vd.Any(x => x.Ma.EndsWith("|thieu_cach")), "True|False");
+            Kiem("luat: khong co bang TV -> 1 canh bao, bo Lmin", PhongKiemTra.Luat(new[] { tam }, new List<PhongKiemTra.DongTv>(), catalog).Count(x => x.Ma.Contains("canh_") || x.Ma.Contains("khong_bang_tv")), 1);
+
+            // gộp: giữ trạng thái theo mã
+            var lan1 = PhongKiemTra.Luat(new[] { tam }, tv, catalog);
+            lan1.First(x => x.Ma.EndsWith("|canh_1")).TrangThai = VanDe.Xong;
+            lan1.First(x => x.Ma.EndsWith("|canh_1")).DaGui = true;
+            var lan2 = PhongKiemTra.Gop(lan1, PhongKiemTra.Luat(new[] { tam }, tv, catalog));
+            Kiem("gop: giu trang thai + da gui", lan2.First(x => x.Ma.EndsWith("|canh_1")).TrangThai + "|" + lan2.First(x => x.Ma.EndsWith("|canh_1")).DaGui + "|" + lan2.Count(x => x.ConMo), "xong|True|" + (lan2.Count - 1));
+
+            // bản nháp
+            var khach = new List<VanDe>
+            {
+                new VanDe { Nhom = VanDe.Khach, Tam = "A-1", NoiDung = "thiếu R", CauHoiJp = "Rをご指示ください。" },
+                new VanDe { Nhom = VanDe.Khach, Tam = "A-1", NoiDung = "rạch slit", CauHoiJp = "スリットを入れます。", LienLac = true },
+                new VanDe { Nhom = VanDe.Khach, NoiDung = "đã xong", TrangThai = VanDe.Xong },
+                new VanDe { Nhom = VanDe.NoiBo, Tam = "A-1", NoiDung = "xác nhận máy" },
+            };
+            Kiem("ban nhap お問い合わせ / 連絡します / noi bo",
+                 PhongKiemTra.BanNhap("130672", khach, false) + "#" + PhongKiemTra.BanNhap("130672", khach, true).Split('\n')[1] + "#" + PhongKiemTra.CauHoiNoiBo("130672", khach).Split('\n')[1] + "#" + PhongKiemTra.BanNhap("x", new List<VanDe>(), false),
+                 "【お問い合わせ】130672\n1. [A-1] Rをご指示ください。\n   (VI: thiếu R)#1. [A-1] スリットを入れます。#1. 🟡 [A-1] xác nhận máy#");
+
+            // JSON + phản hồi AI
+            var kt = new KiemTra { TuXacNhan = "2026-11-11 17:47", Tien = 0.05m, VanDe = lan2 };
+            var kt2 = PhongKiemTra.Doc(PhongKiemTra.Ghi(kt));
+            Kiem("kiem_tra.json ghi roi doc", kt2.TuXacNhan + "|" + kt2.Tien + "|" + kt2.VanDe.Count + "|" + kt2.VanDe.First(x => x.Ma.EndsWith("|canh_1")).TrangThai + "|" + kt2.DoConMo,
+                 "2026-11-11 17:47|0.05|" + lan2.Count + "|xong|" + lan2.Count(x => x.Muc == VanDe.Do && x.ConMo));
+            Kiem("kiem_tra.json hong -> null", PhongKiemTra.Doc("[]") == null, true);
+            string text = "{\"van_de\":[{\"tam\":\"A-1\",\"muc\":\"do\",\"nhom\":\"khach\",\"muc_qc\":\"B-2\",\"noi_dung\":\"Thiếu kích thước lỗ\",\"cau_hoi_jp\":\"穴位置をご指示ください。\",\"lien_lac\":false}," +
+                          "{\"tam\":\"\",\"muc\":\"la\",\"nhom\":\"la\",\"muc_qc\":\"\",\"noi_dung\":\"x\",\"cau_hoi_jp\":\"\",\"lien_lac\":false},{\"tam\":\"\",\"muc\":\"info\",\"nhom\":\"tu_xu_ly\",\"muc_qc\":\"\",\"noi_dung\":\" \",\"cau_hoi_jp\":\"\",\"lien_lac\":false}]," +
+                          "\"dich\":[{\"ma\":\"luat|a|canh_1\",\"cau_hoi_jp\":\"寸法変更可能でしょうか。\"}]}";
+            string phanHoi = "{\"stop_reason\":\"end_turn\",\"usage\":{\"input_tokens\":100,\"output_tokens\":20},\"content\":[{\"type\":\"text\",\"text\":" + OhtaTool.Plugin.Core.JsonLite.Serialize(text) + "}]}";
+            var ph = PhongKiemTra.DocPhanHoi(phanHoi, "a.pdf");
+            Kiem("phan hoi AI: van de + muc/nhom la -> mac dinh + bo noi dung rong + dich + token",
+                 ph.VanDe.Count + "|" + ph.VanDe[0].Muc + "/" + ph.VanDe[0].Nhom + "/" + ph.VanDe[0].Nguon + "|" + ph.VanDe[1].Muc + "/" + ph.VanDe[1].Nhom + "|" + ph.Dich["luat|a|canh_1"] + "|" + ph.Vao + "|" + (ph.Loi ?? "null"),
+                 "2|do/khach/ai|vang/noi_bo|寸法変更可能でしょうか。|100|null");
+            Kiem("phan hoi AI: loi key", PhongKiemTra.DocPhanHoi("{\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"x\"}}", "a").Loi.StartsWith("API key"), true);
+            Kiem("ma AI on dinh (bo dau cau, hoa thuong)", PhongKiemTra.MaAi("A.pdf", "A-1", "Thiếu R!") == PhongKiemTra.MaAi("a.pdf", "a-1", "thiếu r"), true);
+            string body = PhongKiemTra.Body("claude-opus-5-5", "QC3", "UERG", "dau vao", null);
+            Kiem("body phong 3: schema + cache QC + pdf + fallback",
+                 body.Contains("\"van_de\"") + "|" + body.Contains("\"cache_control\"") + "|" + body.Contains("\"application/pdf\"") + "|" + ((OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(body)).GetString("fallbacks"), "True|True|True|default");
+        }
+
         private static void TestPhongAi()
         {
             Console.WriteLine("-- Phong AI (tiep nhan / doc ban ve) --");
@@ -481,6 +565,7 @@ namespace TeamsTool.Tests
             Kiem("nguoi body: 1 nguoi bo trong = null",bN.ContainsKey("Ng1LookupId") && bN.Get("Ng1LookupId") == null, true);
 
             TestPhongAi();
+            TestPhongKiemTra();
 
             Console.WriteLine();
             Console.WriteLine("Tong: {0} OK, {1} FAIL", _ok, _fail);

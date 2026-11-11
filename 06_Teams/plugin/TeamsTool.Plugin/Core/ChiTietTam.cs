@@ -208,7 +208,7 @@ namespace TeamsTool.Core
 - Theo QUY CHUẨN ở khối sau. Vật liệu M và chế độ cắt Z dùng đúng tên trong bảng của quy chuẩn (C-1, C-2). Bản vẽ không ghi vật liệu → chọn theo C-1 và thêm ""M"" vào khong_chac.
 - T: độ dày danh nghĩa (số, mm). Q: số lượng (số). kich_thuoc: kích thước bao ""dài x rộng"" (mm).
 - canh: mỗi chỗ bẻ / nhấn / cuộn: dai_ngoai = các kích thước ngoài hai cạnh kề (mm), goc (độ), r_trong (mm, 0 nếu không ghi), kieu (be / an_1_lan / pitchi / cuon / khac), huong (V hoặc N, rỗng nếu không rõ).
-- lo: mỗi nhóm lỗ: d (Ø mm), so_luong, taro (vd ""M6"" nếu là lỗ ren, rỗng nếu không), sara (true nếu là lỗ 皿), ghi_chu.
+- lo: mỗi nhóm lỗ: d (Ø mm), so_luong, taro (vd ""M6"" nếu là lỗ ren, rỗng nếu không), sara (true nếu là lỗ 皿), ghi_chu, cach_duong_be = khoảng cách nhỏ nhất (mm) từ MÉP lỗ tới đường bẻ gần nhất, tính từ kích thước ghi trên bản vẽ (-1 nếu tấm không bẻ hoặc không tính được).
 - mat: bề mặt đặc biệt (HL, #400, 縞板/sima, ミガキ…), rỗng nếu thường. dung_sai: các dung sai ghi trên bản vẽ.
 - ghi_chu_jp: ghi chú tiếng Nhật giữ nguyên chữ; ghi_chu_vi: dịch sang tiếng Việt, ngắn gọn.
 - trang: số trang PDF chứa tấm (1 = trang đầu); DXF để rỗng.
@@ -256,7 +256,7 @@ namespace TeamsTool.Core
             foreach (string o in O) tt.Add((o, s));
             tt.Add(("trang", s));
             tt.Add(("canh", Mang(Obj(("dai_ngoai", Mang(n)), ("goc", n), ("r_trong", n), ("kieu", s), ("huong", s)))));
-            tt.Add(("lo", Mang(Obj(("d", n), ("so_luong", n), ("taro", s), ("sara", Kieu("boolean")), ("ghi_chu", s)))));
+            tt.Add(("lo", Mang(Obj(("d", n), ("so_luong", n), ("taro", s), ("sara", Kieu("boolean")), ("ghi_chu", s), ("cach_duong_be", n)))));
             tt.Add(("khong_chac", Mang(s)));
             return Obj(("tam", Mang(Obj(tt.ToArray()))));
         }

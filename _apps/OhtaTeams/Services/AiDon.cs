@@ -120,6 +120,10 @@ namespace TeamsTool.Services
         public static void Ghi(string tm, TiepNhan tn) => GhiAnToan(FileTiepNhan(tm), PhongTiepNhan.Ghi(tn));
         public static void Ghi(string tm, ChiTiet ct) => GhiAnToan(FileChiTiet(tm), PhongDocBanVe.Ghi(ct));
 
+        public static string FileKiemTra(string tm) => Path.Combine(tm, PhongTiepNhan.ThuMucAi, "kiem_tra.json");
+        public static KiemTra DocKiemTra(string tm) => File.Exists(FileKiemTra(tm)) ? PhongKiemTra.Doc(File.ReadAllText(FileKiemTra(tm), Encoding.UTF8)) : null;
+        public static void Ghi(string tm, KiemTra kt) => GhiAnToan(FileKiemTra(tm), PhongKiemTra.Ghi(kt));
+
         /// <summary>Ghi file tạm rồi thay — tắt máy giữa chừng không làm hỏng kết quả cũ.</summary>
         private static void GhiAnToan(string f, string noiDung)
         {
@@ -298,6 +302,71 @@ namespace TeamsTool.Services
             Ghi(tm, ct2);
             if (loi.Count > 0) bao("Có tệp chưa đọc được:\n" + string.Join("\n", loi));
             return ct2;
+        }
+
+        // ---------- Phòng 3 ----------
+
+        /// <summary>
+        /// Kiểm bảng tấm đã xác nhận: luật C# (bảng TV + catalog trong 01_Fname\data) rồi AI rà từng tệp bản vẽ theo QUY CHUẨN phòng 3
+        /// (không có key → chỉ chạy luật). Giữ trạng thái người dùng đã chọn ở lần trước (theo mã vấn đề).
+        /// </summary>
+        public static async Task<KiemTra> KiemTraDon(TiepNhan tn, ChiTiet ct, string tm, bool dungAi, Action<string> bao, CancellationToken huy)
+        {
+            KiemTra cu = DocKiemTra(tm);
+            string duLieu = Path.Combine(Goc, "01_Fname", "data");
+            string Doc(string ten) { string f = Path.Combine(duLieu, ten); return File.Exists(f) ? File.ReadAllText(f, Encoding.UTF8) : ""; }
+            List<PhongKiemTra.DongTv> tv = PhongKiemTra.DocTv(Doc("trav_90.csv"));
+            string catalog = Doc("catalog.csv");
+            var tam = ct.Tam.Where(t => t.Moi).ToList();
+
+            bao("Phòng 3: chạy luật…");
+            List<VanDe> luat = PhongKiemTra.Luat(tam, tv, catalog);
+            var vanDe = new List<VanDe>(luat);
+            var kt = new KiemTra { TuXacNhan = ct.XacNhan, TokenVao = cu?.TokenVao ?? 0, TokenRa = cu?.TokenRa ?? 0, Tien = cu?.Tien ?? 0 };
+            var loi = new List<string>();
+
+            string key = dungAi ? DocKey(3) : null;
+            if (dungAi && key == null) loi.Add("Chưa có key Claude (⚙ → 🤖 AI) — chỉ chạy luật, AI chưa rà bản vẽ.");
+            if (key != null)
+            {
+                string model = Model(), quyChuan = QuyChuan(3);
+                var theoTep = tam.GroupBy(t => t.Tep).ToList();
+                int i = 0;
+                foreach (var nhom in theoTep)
+                {
+                    huy.ThrowIfCancellationRequested();
+                    bao("Phòng 3: AI rà " + (++i) + "/" + theoTep.Count + " — " + nhom.Key + " (mỗi tệp khoảng 1 phút)");
+                    string f = Path.Combine(ThuMucTep(tm), nhom.Key);
+                    if (!File.Exists(f)) { loi.Add(nhom.Key + ": không còn tệp trong ai\\goc"); continue; }
+                    string pdf = null, dxf = null;
+                    try
+                    {
+                        if (f.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (new FileInfo(f).Length > PhongDocBanVe.PdfToiDa) { loi.Add(nhom.Key + ": PDF quá lớn (> 22 MB)"); continue; }
+                            pdf = Convert.ToBase64String(File.ReadAllBytes(f));
+                        }
+                        else dxf = DocDxf.TomTat(nhom.Key, DocDxf.DocFile(f));
+                    }
+                    catch (Exception ex) { loi.Add(nhom.Key + ": " + ex.Message); continue; }
+                    var luatTep = luat.Where(v => nhom.Any(t => v.Ma.StartsWith("luat|" + t.Khoa + "|", StringComparison.Ordinal))).ToList();
+                    string body = PhongKiemTra.Body(model, quyChuan, pdf, PhongKiemTra.DauVao(nhom.Key, tn?.CongTy, nhom, luatTep), dxf);
+                    PhongKiemTra.PhanHoi ph = PhongKiemTra.DocPhanHoi(await GuiClaude(key, PhongDocBanVe.CoFallback(model), body, huy), nhom.Key);
+                    kt.TokenVao += ph.Vao + ph.GhiCache + ph.DocCache;
+                    kt.TokenRa += ph.Ra;
+                    kt.Tien += PhongDocBanVe.Tien(model, ph.Vao, ph.GhiCache, ph.DocCache, ph.Ra);
+                    if (ph.Loi != null) { loi.Add(nhom.Key + ": " + ph.Loi); continue; }
+                    foreach (VanDe v in luatTep) if (ph.Dich.TryGetValue(v.Ma, out string jp)) v.CauHoiJp = jp;
+                    vanDe.AddRange(ph.VanDe);
+                }
+            }
+            // AI lỗi / không chạy: giữ vấn đề AI cũ của lần trước để không mất
+            if (loi.Count > 0 && cu != null) vanDe.AddRange(cu.VanDe.Where(v => v.Nguon == "ai" && !vanDe.Any(x => x.Ma == v.Ma)));
+            kt.VanDe = PhongKiemTra.Gop(cu?.VanDe, vanDe.GroupBy(v => v.Ma).Select(g => g.First()).ToList());
+            kt.Luc = DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+            Ghi(tm, kt);
+            if (loi.Count > 0) bao("Kiểm xong, có chỗ chưa chạy được:\n" + string.Join("\n", loi));
+            return kt;
         }
 
         private static readonly HttpClient Http = TaoHttp();

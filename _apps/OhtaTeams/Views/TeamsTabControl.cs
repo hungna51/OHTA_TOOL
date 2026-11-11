@@ -169,10 +169,39 @@ namespace TeamsTool.Views
             _aiDon = d;
             // Đơn đang chạy dở (đã chuyển sang đơn khác rồi quay lại): dùng lại khung cũ để còn thấy tiến độ
             if (!_khungDangChay.TryGetValue(d.Id, out AiPhongControl k) || !AiPhongControl.DangChayDon(d.Id))
-                k = _khungDangChay[d.Id] = new AiPhongControl(d, _tab[7], _tab[6], _mau, () => { _aiDon = null; _khungAi.Child = null; CapNhatAi(); });
+                k = _khungDangChay[d.Id] = new AiPhongControl(d, _tab[7], _tab[6], _mau, () => { _aiDon = null; _khungAi.Child = null; CapNhatAi(); },
+                                                              chu => GuiLenChuoiDon(d.Id, chu));
             foreach (string id in _khungDangChay.Keys.Where(x => x != d.Id && !AiPhongControl.DangChayDon(x)).ToList()) _khungDangChay.Remove(id);
             _khungAi.Child = k;
             CapNhatAi();
+        }
+
+        /// <summary>
+        /// Phòng AI gửi bản nháp お問い合わせ / 連絡します: lên chuỗi chat của đơn ở kênh đang mở (chưa có chuỗi thì tạo, như "Tạo trao đổi"),
+        /// tag người triển khai + người check của đơn (như chuyển tiếp). Trả câu báo kết quả.
+        /// </summary>
+        private async Task<string> GuiLenChuoiDon(string donId, string chu)
+        {
+            DonTeams d = _don.FirstOrDefault(x => x.Id == donId) ?? throw new InvalidOperationException("Không thấy đơn trong danh sách — bấm ⟳ Làm mới.");
+            HoiThoai kenh = TraoDoi.KenhPhoBien(_don).FirstOrDefault(k => k.ChannelId == _tab[2])
+                            ?? throw new InvalidOperationException("Chưa biết kênh của danh sách đơn (chưa đơn nào có chuỗi chat ở kênh này).");
+            var nhom = await GraphTeams.NhomCuaInternal(kenh.TeamInternalId, CancellationToken.None)
+                       ?? throw new InvalidOperationException("Tài khoản chưa vào nhóm của kênh đơn.");
+            if (_nguoiTag.Count == 0)
+                try { _nguoiTag = (await GraphTeams.NguoiCongTyVaSite(_tab[7], CancellationToken.None)).Tag; }
+                catch (Exception) { } // không có danh bạ: gửi không tag
+            List<NguoiTag> tag = ChuyenTiep.NguoiCanTag(d, _cots, _nguoiTag);
+            string noiDung = (tag.Count > 0 ? string.Join(" ", tag.Select(t => "@" + t.Ten)) + "\n" : "") + chu;
+            HoiThoai chuoi = TraoDoi.DocHoiThoai(d.HoiThoaiMeta).FirstOrDefault(h => h.ChannelId == kenh.ChannelId && h.TeamInternalId == kenh.TeamInternalId);
+            string daTag = tag.Count > 0 ? " (tag " + string.Join(", ", tag.Select(t => t.Ten)) + ")" : "";
+            if (chuoi == null)
+            {
+                var (_, thongBao, sau) = await TaoChuoiChoDon(d, kenh, nhom.Id, nhom.Ten, noiDung, tag);
+                if (sau != null) { int i = _don.FindIndex(x => x.Id == d.Id); if (i >= 0) _don[i] = sau; }
+                return "Đã gửi" + daTag + ". " + thongBao;
+            }
+            await GraphTeams.TraLoi(nhom.Id, chuoi, noiDung, CancellationToken.None, tag);
+            return "Đã gửi lên chuỗi đơn trong nhóm " + nhom.Ten + daTag + ".";
         }
 
         /// <summary>Hiện khung AI ở màn danh sách đơn (chỗ trống bên phải), ở màn khác chỉ khi đang mở một đơn.</summary>

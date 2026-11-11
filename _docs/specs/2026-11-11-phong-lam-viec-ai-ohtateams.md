@@ -101,7 +101,9 @@ _apps/OhtaTeams/
 
 1. ✅ (mã xong 11/11, **chờ chạy thử trên đơn thật**) Khu 🤖 AI + phòng 1 + phòng 2 (PDF + DXF). Chạy thử trên 3 đơn thật (có trong `Tài liệu\OHTA_DonTeams\`).
    Khác spec: chưa xoay trang 番号.PDF (không biết chiều trang khi chưa đọc nội dung — để AI báo ở đợt sau); ảnh chưa gộp vào 番号; công ty đặc biệt đoán theo `quy_chuan/cong_ty.txt` (gitignore) thay vì chữ trong 注文書; bảng chỉ sửa ô chữ, bẻ / lỗ sửa ở đợt 3.
-2. Phòng 3: luật C# + nhóm vấn đề + お問い合わせ / 連絡します + gửi lên chuỗi đơn.
+   Sau đợt 1 (11/11): chạy thật đơn 130672 (1 tấm, $0.06); khu AI chuyển ra khung bên phải màn danh sách (chuột phải đơn → 🤖 Mở trong phòng AI); quy chuẩn chia bộ riêng từng phòng (`quy_chuan/<n_ten>/`); key riêng từng phòng (bật / tắt); nút **✓ Xác nhận bảng → phòng 3** (`chi_tiet.json` `xac_nhan`).
+2. ✅ (mã xong 11/11, **chờ chạy thử trên đơn thật**) Phòng 3: luật C# + nhóm vấn đề + お問い合わせ / 連絡します + gửi lên chuỗi đơn. Đầu vào: bảng tấm đã xác nhận ở phòng 2. Mã: `Core/PhongKiemTra.cs` (thay tên `LuatQuyChuan.cs`), `AiDon.KiemTraDon`, kết quả `ai\kiem_tra.json`.
+   Khác spec: phòng 2 thêm ô `lo.cach_duong_be` (mép lỗ → đường bẻ gần nhất) để luật lỗ gần đường bẻ chạy được — bảng đọc trước đó nhắc đọc lại; Lmin xét **V nhỏ nhất và lớn nhất** của độ dày (QC "V đầu tiên" không khớp thứ tự bảng TV: ví dụ QC SS400 PL4.5 chọn V32 là dòng thứ 2) — dưới Lmin nhỏ nhất 🔴, giữa 🟡 chọn V nhỏ; vật liệu ngoài `catalog.csv` không làm luật C# (catalog chỉ 13 vật liệu, báo nhầm nhiều) — để AI rà theo bảng C-1 / C-2; hộp c > 150, bẻ C a < c, vát để AI (bảng tấm không có a, b, c); nút "Sửa ô" trên từng vấn đề chưa làm — sửa bằng ↩ Bỏ xác nhận ở phòng 2. Câu hỏi nội bộ: chép ra để gửi quản lý (chưa gửi tự động).
 3. Phòng 4: trải phẳng qua TraV + dòng CSV + gửi lên chuỗi đơn.
 
 Mỗi đợt: `build_ohta.ps1` sạch, test PASS, README `_apps/OhtaTeams` + `06_Teams` + CHANGELOG cập nhật, người dùng chạy thử rồi mới sang đợt sau.
@@ -113,8 +115,8 @@ Mỗi đợt: `build_ohta.ps1` sạch, test PASS, README `_apps/OhtaTeams` + `06
 
 ## Câu hỏi mở (cần người dùng trả lời trước đợt tương ứng)
 
-1. **Số luật trong mã công khai**: ngưỡng máy (Lmin, vát, cuộn) viết trong C# → nằm trên GitHub công khai. Đề xuất: chấp nhận (thông số máy / kỹ thuật, không phải dữ liệu khách); phần riêng từng công ty chỉ ở `quy_chuan/*.md` gitignore. *(đợt 2)*
-2. **Bảng taro (QC E-1-2)**: trong docx ô có màu `C1F0C8` (xanh), `FFC000` (cam), `808080` (xám). Xám là "không làm được" hay "xác nhận lại"? Màu đen ở đâu? *(đợt 2)*
+1. ✅ *(11/11)* **Số luật trong mã công khai**: **chấp nhận** — ngưỡng máy (Lmin, vát, cuộn, taro) viết trong C# (thông số kỹ thuật, không phải dữ liệu khách); phần riêng từng công ty chỉ ở `quy_chuan/*.md` gitignore.
+2. ✅ *(11/11)* **Bảng taro (QC E-1-2)**: ô `C1F0C8` xanh = máy di động, `FFC000` cam = máy cố định, `808080` xám = **🟡 xác nhận lại** (theo chú thích QC; bảng không có ô đen).
 3. **Tài liệu kèm chưa có**: bảng mở lỗ laser, bảng delta góc nhọn (QC B-2-3 — kiểm tra trùng `trav_nho90.csv` không), `OHTA仕様書` 8.1 (R ngoài góc nhọn), `R.END 1.pdf`, `JIS.pdf`, quy trình triển khai / repeat. *(đợt 2–3)*
 4. **"Ohta Press Calculator"** (QC B-2-2) có cùng số liệu với bảng TV không — kiểm bằng 5–10 ca trước khi dùng cho phòng 4. *(đợt 3)*
-5. **Chia sẻ `quy_chuan/*.md` cho máy khác**: chép tay như `teams.json`, hay lấy từ máy chủ như luật Kev (`/v1/rules`)? Đề xuất: chép tay bước đầu. *(đợt 1)*
+5. ✅ *(11/11)* **Chia sẻ `quy_chuan/` cho máy khác**: **chép tay** như `teams.json` (cả 4 thư mục phòng + `_goc` + `cong_ty.txt`).
