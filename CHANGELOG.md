@@ -2,6 +2,17 @@
 
 Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_ohta.ps1` lấy nội dung mục đó làm ghi chú Release trên GitHub, và hộp thoại "Có bản mới" trên máy đội cũng hiện đúng nội dung này — viết ngắn, cho người dùng xưởng đọc.
 
+## v1.4.2
+
+- Tab **Guro v1.6.3** — **GRO chạy nhanh hơn nhiều**: bản vẽ lớn từ ~67 giây còn ~27 giây (ghép hình chiếu, cung bo góc, đọc text số, khớp dim, chuyển layer nay chạy bằng C#).
+- Tab Guro có **thanh tiến độ** khi đang chạy GRO: hiện bước đang làm và % hoàn thành.
+- Chân dim góc dài hơn 45 mm cũng được chuyển sang `1-SUNPOU`.
+- Tấm gộp có đầu nhô cao không còn bị báo nhầm "khung vẽ nhầm".
+- Dấu độ kiểu `45ﾟ` không còn bị báo là "ghi chú tiếng Nhật mới". 裏 đứng một mình không còn bị hiểu là 逆図.
+- Cảnh báo khi máy còn nạp DLL GURO cũ (GROZWCAD / ZwCadPlugin) gây trùng lệnh.
+- Tab **Fname**: góc bẻ thử nhập kèm thông số dao (最長 / L / Z / Rend), tự gợi ý theo dữ liệu có sẵn.
+- Sau khi cập nhật, **đóng ZWCAD rồi mở lại**.
+
 ## v1.4.1
 
 - Tab **AI**: thêm **💬 Chat với AI (Ling)** — hỏi đáp trực tiếp trong tab, chữ trả lời hiện dần, bật/tắt "Hiện suy nghĩ", hiện tên model đang dùng.

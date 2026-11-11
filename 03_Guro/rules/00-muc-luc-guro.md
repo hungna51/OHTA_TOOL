@@ -80,6 +80,7 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 | 225 | **Các bước 3b còn lisp có bản C# + thanh tiến độ GRO trên tab Guro.** 3 bước `GROCS` mới (mặc định `lisp`; `ab` C# tính + so `[AB …]`, áp kết quả lisp; `cs` áp C#): **`doctext3b`** (`Core/DocText3b.cs`, chép `gro--geom-parse-dim-texts`: giải `\U+XXXX`, bỏ mã MTEXT, phân loại góc / lỗ / dài; C# đọc chuỗi Unicode nên không có dấu "?" của máy byte), **`dimkhop3b`** (`Core/DimKhop3b.cs`: nâng dim góc + leader + Dim dài `DimDai3b` + dim góc mục 223/224 + hợp nhất trong 1 lần gọi), **`chuyenlayer3b`** (`CadServices/Dim3bCad.cs`: đổi layer từng đối tượng, trừ nhánh đổi theo MÀU thủ công TH1b vẫn chạy lisp; layer gốc khoá thì bỏ qua như `entmod`). Hàm lisp `GRO_NET_DOC_TEXT_3B` / `GRO_NET_DIM_KHOP_3B` / `GRO_NET_CHUYEN_LAYER_3B`. Thanh tiến độ: `gro--moc` gọi `GRO_NET_TIEN_DO` → `GuroTabViewModel.BaoTienDo` (đẩy khung dispatcher như tab In, ≤ 10 lần/giây); phần trăm theo trọng số thời gian từng bước (`Core/TienDoGro.cs`); ẩn ở mốc "ket thuc" và trong `*error*` của `c:grochay`. |
 | 226 | **Nghiệm thu ab mục 225 trên 130837-1 (11/11): GRO 67 s → 28 s; `dimkhop3b` khớp 832/832, `chuyenlayer3b` khớp 7014/7014, `doctext3b` lệch 1** — text `統合新病院(西棟)　柱 No-8(8C)` chỉ C# nhận. Gốc: trong `wcmatch`, `.` = MỘT ký tự không phải chữ/số (không phải dấu chấm), nên `*NO.*` của lisp loại cả "No-8"; `*R.*` cũng vậy. `DocText3b` nay so đúng nghĩa đó (`SauLaKyTuDac`, `CoR`). Bài học: chép mẫu `wcmatch` sang C# phải dịch `#` (số), `@` (chữ), `.` (ký tự đặc biệt), không so chuỗi thẳng. **Chạy lại ab 15:03: `doctext3b` 281/281, `dimkhop3b` 832/832, `chuyenlayer3b` 7014/7014 — cả 3 bước khớp hết, GRO 26.7 s; được đổi sang `cs`.** |
 | 227 | **Tấm 101, 102, 105, 112, 113, 126 (130837-1) báo "ghi chú tiếng Nhật mới" là một dấu chấm, cột Ghi chú DST cũng chỉ có dấu chấm.** Bản vẽ ghi dim góc `45ﾟ` (U+FF9F, katakana nửa độ rộng) → `gro--gc-ghi-chu-ma-p` coi là text ghi chú tách rời (có chữ Nhật, mục 153), gộp vào tấm gần nhất; đoạn `ﾟ` không thuộc chữ cấu trúc nên `gro--ghi-chu-xdata` ghi vào XData. Nay `gro--doan-cau-truc-p` coi ký hiệu độ (`ﾟ` `゜` `°` `º` `˚`) là chữ cấu trúc → đoạn chỉ gồm dấu độ bị bỏ; `ﾊﾟｲﾌﾟ` vẫn giữ. Cần chạy lại GRO để ghi lại XData. |
+| 228 | **Bước C# đã nghiệm thu chạy `cs` mặc định (Guro 1.6.3 / OHTA 1.4.2).** Máy đội chưa từng gõ `GROCS` nên registry trống → `ghephc`, `cungbogoc`, `doctext3b`, `dimkhop3b`, `chuyenlayer3b` chạy lisp (ghép hình chiếu ~28 s). Nay `GroCongTac.MacDinhCs` + `DocCheDo(buoc, giaTri)`: registry CHƯA đặt → `cs`; đã đặt (kể cả `lisp`) thì giữ. Bước mới chuyển C# sau này chỉ vào danh sách khi đã nghiệm thu A/B. |
 | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) | Hộp thoại DCL + **bản .NET** (dialog `gro`, bảng DST), **tab Guro** | 18, 19, 20, 52, 55, 56, 64, 86, 192, 193, 194, 195, 196, 197 |
 | [06-encoding-chuoi.md](06-encoding-chuoi.md) | Encoding và xử lý chuỗi (CP932 / Unicode) | 2, 9, 15, 16, 50, 57 |
 | [07-tach-du-lieu.md](07-tach-du-lieu.md) | Tách độ dày, số lượng, mã khắc, **ghép dòng số lượng** | 10, 11, 17, 23, 24, 32, 43, 54, 168 |
@@ -95,14 +96,14 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 
 ## Mục lục mục lỗi
 
-1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–227 tại đây.
+1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–228 tại đây.
 
 > ### ⚠ SỐ MỤC LÀ CỐ ĐỊNH, KHÔNG ĐƯỢC ĐÁNH SỐ LẠI
 > Mã nguồn `.lsp` tham chiếu tới chúng ở **17 chỗ** (`CLAUDE.md muc 13`, `muc 29`, `muc 85`, `muc 86`, …) và các file rule tham chiếu chéo nhau ở **59 chỗ**. Đổi số là hỏng cả 59 chỗ đó cùng lúc.
 >
 > Thêm mục mới thì **nối tiếp số lớn nhất hiện có + 1**, bỏ vào file theo chủ đề, rồi cập nhật bảng dưới.
 >
-> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **227**.
+> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **228**.
 
 > ### Lệnh chẩn đoán cũ
 > `grosort` / `grodbg` / `growp` / `grostyle` / `bgdbg` thuộc bản đầy đủ cũ `guro ZWCAD(BG MK FN).lsp`, không có trong `guro_gro.lsp`. Các mục bên dưới nhắc tới chúng là ghi chép lịch sử. Lịch sử thay đổi lisp nay nằm trong git của OHTA_TOOL.

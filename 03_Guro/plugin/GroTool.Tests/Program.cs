@@ -1613,6 +1613,9 @@ namespace ZwCadPlugin.Tests
             Kiem("che do 'AB' -> ab", GroCongTac.DocCheDo(" AB "), CheDoBuoc.AB);
             Kiem("che do 'c#' -> cs", GroCongTac.DocCheDo("c#"), CheDoBuoc.CS);
             Kiem("che do la -> lisp (an toan)", GroCongTac.DocCheDo("xyz"), CheDoBuoc.Lisp);
+            Kiem("muc 228: ghephc chua dat -> cs", GroCongTac.DocCheDo("ghephc", null), CheDoBuoc.CS);
+            Kiem("muc 228: dimkhop3b da dat lisp -> giu lisp", GroCongTac.DocCheDo("dimkhop3b", "lisp"), CheDoBuoc.Lisp);
+            Kiem("muc 228: buoc chua nghiem thu chua dat -> lisp", GroCongTac.DocCheDo("sapxep", ""), CheDoBuoc.Lisp);
             Kiem("ten khoa registry", GroCongTac.TenKhoa(" PhanLoai "), "cs_phanloai");
             Kiem("buoc co trong danh sach", GroCongTac.LaBuoc("XULYNET"), true);
             Kiem("buoc khong co", GroCongTac.LaBuoc("abc"), false);

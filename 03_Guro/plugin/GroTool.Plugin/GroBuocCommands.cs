@@ -35,7 +35,7 @@ namespace ZwCadPlugin
             try
             {
                 using (WinReg.RegistryKey k = WinReg.Registry.CurrentUser.OpenSubKey(KhoaReg))
-                    return GroCongTac.DocCheDo(k?.GetValue(GroCongTac.TenKhoa(buoc)) as string);
+                    return GroCongTac.DocCheDo(buoc, k?.GetValue(GroCongTac.TenKhoa(buoc)) as string);
             }
             catch { return CheDoBuoc.Lisp; }
         }

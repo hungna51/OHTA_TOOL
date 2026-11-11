@@ -68,6 +68,13 @@ namespace ZwCadPlugin.Core
             }
         }
 
+        /// <summary>Mục 228: bước đã nghiệm thu A/B (130837-1) -> registry CHƯA đặt thì chạy cs (máy đội chưa từng gõ GROCS).</summary>
+        public static readonly string[] MacDinhCs = { "ghephc", "cungbogoc", "doctext3b", "dimkhop3b", "chuyenlayer3b" };
+
+        /// <summary>Chế độ của một bước từ giá trị registry: rỗng -> cs nếu bước đã nghiệm thu, còn lại như <see cref="DocCheDo(string)"/>.</summary>
+        public static CheDoBuoc DocCheDo(string ma, string giaTri) =>
+            string.IsNullOrWhiteSpace(giaTri) && MacDinhCs.Contains(ChuanMa(ma)) ? CheDoBuoc.CS : DocCheDo(giaTri);
+
         public static string TenCheDo(CheDoBuoc c) => c == CheDoBuoc.AB ? "ab" : c == CheDoBuoc.CS ? "cs" : "lisp";
 
         public static string TenKhoa(string ma) => "cs_" + ChuanMa(ma);
