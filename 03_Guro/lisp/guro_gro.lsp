@@ -2193,14 +2193,15 @@
 
 ;;; Muc 160: doan chu Nhat chi gom chu CAU TRUC cua text thong tin / dong so luong (vai tro
 ;;; HONZU/GYAKUZU/URA-ZU, dem MAI/HON/KO/KUMI/KAKU, don vi mm, chu gia cong da thanh cot V:
-;;; MAGE / KAISAKI, so + chu toan goc, dau) -> KHONG phai ghi chu. Ky tu khong doc duoc ("?")
+;;; MAGE / KAISAKI, so + chu toan goc, dau, ky hieu DO muc 227) -> KHONG phai ghi chu. Ky tu khong doc duoc ("?")
 ;;; KHONG tinh la cau truc -> giu lai lam ghi chu.
 (defun gro--doan-cau-truc-p (tk / ok c)
   (setq ok T)
   (foreach c (bg--codes tk)
     (if (not (or (member c '(26412 22259 36870 35023 26522 21508 20491 32068 13212 13213 26354 12370
                              65398 65394 65403 65399 12459 12452 12469 12461 38283 20808
-                             12539 12289 12290 215 12288))
+                             12539 12289 12290 215 12288
+                             65439 12444 176 186 730)) ; muc 227: ky hieu DO (dim "45" + FF9F) khong phai ghi chu
                  (and (>= c 65281) (<= c 65374))
                  (and (>= c 65377) (<= c 65381))))
       (setq ok nil)
