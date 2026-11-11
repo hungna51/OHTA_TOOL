@@ -13556,7 +13556,7 @@
           (gro--mk-so (nth 2 bb)) "," (gro--mk-so (nth 3 bb)))
 )
 
-(defun gro--dat-ma-khac-vao-hinh (kq-tk / khungs ds ct kh bb es mk fn bg cum bbc hs kq co-tam e)
+(defun gro--dat-ma-khac-vao-hinh (kq-tk / khungs ds ct kh bb es mk fn bg cum bbc hs kq co-tam e t0)
   (setq khungs (if kq-tk (car kq-tk) nil)
         ds     nil
         kq     nil
@@ -13613,7 +13613,12 @@
           (if (null (vl-symbol-value 'gro_net_dat_mk)) (gro--nap-net))
           (if (vl-symbol-value 'gro_net_dat_mk)
             (progn
+              (setq t0 (gro--moc-giay))
               (setq kq (vl-catch-all-apply 'gro_net_dat_mk ds))
+              ;; Muc 217: ghi thoi gian phan C# vao nhat ky (lisp chi chon tam, C# lam phan nang)
+              (vl-catch-all-apply 'ohta_net_log
+                (list "GRO" (strcat "C# gro_net_dat_mk (datmk): " (rtos (- (gro--moc-giay) t0) 2 2)
+                                    " s, " (itoa (length ds)) " dong du lieu")))
               (cond
                 ((vl-catch-all-error-p kq)
                  (setq kq (strcat "!!! Loi dat ma khac vao hinh (.NET): "
