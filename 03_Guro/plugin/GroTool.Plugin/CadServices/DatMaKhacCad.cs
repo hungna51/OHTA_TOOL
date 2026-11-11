@@ -61,15 +61,16 @@ namespace ZwCadPlugin.CadServices
                 KetQuaDatMk kq = DatMaKhac.ChayHet(tams, net, vatCan);
                 double tTinh = sw.Elapsed.TotalSeconds;
 
+                // Muc 221: gom dong [MK] in 1 lan sau Commit - moi WriteMessage ZWCAD ve lai dong lenh
+                // (141 tam: 6.5 s cho dong cum + in, tinh toan chi 0.6 s)
+                var sbIn = new System.Text.StringBuilder();
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
                     for (int i = 0; i < kq.Tams.Count; i++)
                     {
                         KetQuaTam r = kq.Tams[i];
                         DatMaKhac.DongTam d = dong[i];
-                        if ((i + 1) % 10 == 0)
-                            ed.WriteMessage("\n[GRO] Dat ma khac vao hinh... " + (i + 1) + "/" + kq.Tams.Count);
-                        ed.WriteMessage("\n" + r.DongChanDoan);
+                        sbIn.Append("\n").Append(r.DongChanDoan);
 
                         ObjectId idBango = LayId(db, d.HandleBango);
                         if (r.Dat)
@@ -83,6 +84,8 @@ namespace ZwCadPlugin.CadServices
                     tr.Commit();
                 }
                 double tGhi = sw.Elapsed.TotalSeconds;
+                ed.WriteMessage(sbIn.ToString());
+                double tIn = sw.Elapsed.TotalSeconds;
 
                 ed.WriteMessage("\n[GRO] Dat ma khac (.NET): " + kq.Tong + " tam, " +
                                 sw.Elapsed.TotalSeconds.ToString("0.0", CultureInfo.InvariantCulture) +
@@ -91,8 +94,8 @@ namespace ZwCadPlugin.CadServices
                 if (kq.ThongBao != null) ed.WriteMessage("\n[GRO] " + kq.ThongBao);
                 // muc 220: tach thoi gian tung phan vao ohta.log (dong lenh hay bi cat)
                 ZwCadPlugin.OhtaBugBridge.Info("GRO", string.Format(CultureInfo.InvariantCulture,
-                    "dat ma khac C#: lay mau net {0:0.00} s ({1} net, {2} chan doan), ghi dump {3:0.00} s, tinh {4:0.00} s, doi cum + in {5:0.00} s ({6} tam)",
-                    tLayMau, net.Count, chanDoan.Count, tDump - tLayMau, tTinh - tDump, tGhi - tTinh, kq.Tams.Count));
+                    "dat ma khac C#: lay mau net {0:0.00} s ({1} net, {2} chan doan), ghi dump {3:0.00} s, tinh {4:0.00} s, doi cum {5:0.00} s, in {7:0.00} s ({6} tam)",
+                    tLayMau, net.Count, chanDoan.Count, tDump - tLayMau, tTinh - tDump, tGhi - tTinh, kq.Tams.Count, tIn - tGhi));
                 return kq.ThongBao;
             }
             finally
