@@ -346,6 +346,10 @@ namespace TeamsTool.Tests
             var tc = (OhtaTool.Plugin.Core.JsonObject)((List<object>)bCt.Get("attachments"))[0];
             Kiem("chuyen: body co anh + tep + the attachment", hc.GetString("@microsoft.graph.temporaryId") + "|" + hc.GetString("contentBytes") + "|" + tc.GetString("contentType") + "|" + tc.GetString("name")
                  + "|" + ((OhtaTool.Plugin.Core.JsonObject)bCt.Get("body")).GetString("content").Contains("<attachment id=\"" + tc.GetString("id") + "\">"), "1|AQI=|reference|a.dwg|True");
+            Kiem("chuyen: ma dinh kem tu eTag tep", ChuyenTiep.GuidTuETag("\"{153FA47A-18C9-4179-BE08-9879815A9C90},1\"") + "|" + (ChuyenTiep.GuidTuETag("abc") == null), "153fa47a-18c9-4179-be08-9879815a9c90|True");
+            var bEt = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(ChuyenTiep.BodyChuyen("d", "", null, new[] { new TepChuyen { Ten = "a", Url = "u", Id = "153fa47a-18c9-4179-be08-9879815a9c90" }, new TepChuyen { Ten = "b", Url = "v" } }));
+            var dsEt = ((List<object>)bEt.Get("attachments")).Cast<OhtaTool.Plugin.Core.JsonObject>().Select(x => x.GetString("id")).ToList();
+            Kiem("chuyen: dinh kem dung ma eTag, thieu thi GUID moi", dsEt[0] + "|" + Guid.TryParse(dsEt[1], out _), "153fa47a-18c9-4179-be08-9879815a9c90|True");
             Kiem("chuyen: thu muc tep", ChuyenTiep.ThuMucTep("OHTA-受注", "C081105/5"), "Chuyển từ OHTA-受注/C081105_5");
             Kiem("tin mo dau khong the", ((OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(TraoDoi.BodyMoDau("<p>x</p>", null, "a"))).ContainsKey("attachments"), false);
             Kiem("tep: doc AttachmentFiles", string.Join(",", TraoDoi.DocTep(@"{""value"":[{""FileName"":""130819.pdf"",""ServerRelativeUrl"":""/sites/x/Lists/y/Attachments/2758/130819.pdf""},{""FileName"":""""}]}").Select(t => t.Ten + "=" + t.DuongDan)), "130819.pdf=/sites/x/Lists/y/Attachments/2758/130819.pdf");

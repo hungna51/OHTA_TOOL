@@ -515,11 +515,19 @@ namespace TeamsTool.Services
             var goc = (JsonObject)JsonLite.Parse(await GetJson("/teams/" + nhomId + "/channels/" + Uri.EscapeDataString(channelId) + "/filesFolder", ct, ScopeGhi));
             string driveId = (goc.Get("parentReference") as JsonObject)?.GetString("driveId"), itemId = goc.GetString("id");
             string duong = string.Join("/", (thuMuc + "/" + ten).Split('/').Select(Uri.EscapeDataString));
+            // đã có tệp cùng tên + cùng dung lượng (lần chuyển trước lỗi sau khi chép) → dùng lại, không tạo bản "tên 1"
+            try
+            {
+                var cu = (JsonObject)JsonLite.Parse(await GetJson("/drives/" + driveId + "/items/" + itemId + ":/" + duong + "?$select=name,size,webUrl,eTag", ct, ScopeGhi));
+                if (cu.Get("size")?.ToString() == noiDung.Length.ToString())
+                    return new TepChuyen { Ten = cu.GetString("name") ?? ten, Url = cu.GetString("webUrl"), Id = ChuyenTiep.GuidTuETag(cu.GetString("eTag")) };
+            }
+            catch (InvalidOperationException) { } // chưa có (404) → tải lên
             using (HttpResponseMessage res = await Gui(HttpMethod.Put, "/drives/" + driveId + "/items/" + itemId + ":/" + duong + ":/content?@microsoft.graph.conflictBehavior=rename",
                                                        null, ct, ScopeGhi, byteBody: noiDung))
             {
                 var o = (JsonObject)JsonLite.Parse(await res.Content.ReadAsStringAsync());
-                return new TepChuyen { Ten = o.GetString("name") ?? ten, Url = o.GetString("webUrl") };
+                return new TepChuyen { Ten = o.GetString("name") ?? ten, Url = o.GetString("webUrl"), Id = ChuyenTiep.GuidTuETag(o.GetString("eTag")) };
             }
         }
 

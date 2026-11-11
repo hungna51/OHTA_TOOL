@@ -17,6 +17,7 @@ namespace TeamsTool.Core
     public sealed class TepChuyen
     {
         public string Ten, Url;
+        public string Id; // mã đính kèm = GUID trong eTag của tệp (Graph bắt buộc, sai thì 400 "Invalid GUID")
     }
 
     /// <summary>
@@ -97,7 +98,7 @@ namespace TeamsTool.Core
         /// <summary>Body POST tin chuyển tiếp: dòng đầu in đậm + nội dung (đã qua HtmlChuyen) + ảnh (hostedContents) + tệp (reference).</summary>
         public static string BodyChuyen(string dau, string htmlNoiDung, IEnumerable<AnhChuyen> anh, IEnumerable<TepChuyen> tep)
         {
-            var dsTep = (tep ?? Enumerable.Empty<TepChuyen>()).Select((t, i) => (Id: "tep" + i + Guid.NewGuid().ToString("N").Substring(0, 8), t)).ToList();
+            var dsTep = (tep ?? Enumerable.Empty<TepChuyen>()).Select(t => (Id: !string.IsNullOrEmpty(t.Id) ? t.Id : Guid.NewGuid().ToString(), t)).ToList();
             string html = "<p><b>" + TraoDoi.HtmlTraLoi(dau) + "</b></p>" + htmlNoiDung
                         + string.Concat(dsTep.Select(x => "<attachment id=\"" + x.Id + "\"></attachment>"));
             var b = new JsonObject();
@@ -126,6 +127,16 @@ namespace TeamsTool.Core
                     return (object)a;
                 }).ToList());
             return JsonLite.Serialize(o);
+        }
+
+        /// <summary>
+        /// Mã đính kèm tệp cho tin Teams = GUID trong eTag của driveItem ("{153FA47A-…},1" → "153fa47a-…").
+        /// Không đọc được → null (BodyChuyen tự tạo GUID mới).
+        /// </summary>
+        public static string GuidTuETag(string eTag)
+        {
+            Match m = Regex.Match(eTag ?? "", @"\{?([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\}?");
+            return m.Success ? m.Groups[1].Value.ToLowerInvariant() : null;
         }
 
         /// <summary>Thư mục chép tệp sang kênh đích: "Chuyển từ OHTA-受注/&lt;số đơn&gt;" (bỏ ký tự cấm trong tên thư mục SharePoint).</summary>
