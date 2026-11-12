@@ -111,7 +111,7 @@ namespace TeamsTool.Views
         private async void Chay(int tu, bool docLaiHet)
         {
             if (DangChay.Contains(_d.Id)) return;
-            if (tu != 5 && !AiDon.DaDongY) // 5 = vẽ DXF trên máy, không gửi gì ra ngoài
+            if (tu != 5 && tu != 8 && !AiDon.DaDongY) // 5, 8 = vẽ DXF trên máy (8 chỉ gửi AI khi có ô sửa — đã đồng ý từ lúc đọc)
             {
                 if (MessageBox.Show("Khu AI gửi tệp bản vẽ của đơn lên dịch vụ AI (Claude của Anthropic, hoặc Gemini của Google nếu Nguồn AI = Antigravity) để đọc.\nCông ty đã cho phép gửi bản vẽ khách hàng ra dịch vụ AI chưa?\n\nĐồng ý → máy này không hỏi lại.",
                                     "AI đọc bản vẽ", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
@@ -129,26 +129,21 @@ namespace TeamsTool.Views
                 switch (tu)
                 {
                     case 5:
+                        await VeDxf();
+                        return;
+                    case 8:
                     {
-                        // Vẽ DXF bằng ezdxf: máy chưa có ezdxf thì hỏi cài trước
-                        AiDon.TinhTrangPython py = await AiDon.KiemPython(lai: true);
-                        if (!py.SanSang || !py.Pymupdf)
-                        {
-                            if (py.Python == null) { Bao(py.Loi); return; }
-                            string thieu = py.SanSang ? "PyMuPDF (cắt ảnh tấm từ PDF)" : "ezdxf (vẽ DXF)";
-                            bool cai = MessageBox.Show("Máy chưa có " + thieu + ".\nCài ezdxf + matplotlib + PyMuPDF bằng pip ngay? Cần mạng, khoảng 1 phút.",
-                                                       "Cài thư viện Python", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
-                            if (cai) py = await AiDon.CaiEzdxf(Bao, _huy.Token);
-                            if (!py.SanSang) { Bao(py.Loi); return; }
-                        }
-                        ChiTiet ct5 = AiDon.DocChiTiet(_tm);
-                        await AiDon.CatAnh(ct5, _tm, _d.Title, _huy.Token); // ảnh tấm còn thiếu (máy vừa cài PyMuPDF)
-                        List<AiDon.KetQuaVe> kq5 = await AiDon.VeBanVe(AiDon.TinhLai(ct5, AiDon.TaoTrienKhai(ct5, _tm), _d.Title, _tm), _d.Title, _tm, Bao, _huy.Token);
-                        var loi5 = kq5.Where(k => k.Loi != null).Select(k => k.Bango + ": " + k.Loi).ToList();
-                        var thieu5 = kq5.Where(k => k.ThieuDim.Count > 0).Select(k => k.Bango + ": " + string.Join(", ", k.ThieuDim)).ToList();
-                        Bao("Đã vẽ " + kq5.Count(k => k.Loi == null) + " bản trải phẳng (ezdxf, môi trường moi-truong-ve.dxf) trong ai\\ban_ve. Bấm ảnh để mở DXF."
-                            + (thieu5.Count > 0 ? "\n⚠ Còn thiếu dim của khách (bổ sung trên CAD):\n" + string.Join("\n", thieu5) : "")
-                            + (loi5.Count > 0 ? "\nChưa vẽ được:\n" + string.Join("\n", loi5) : ""));
+                        // Sau ✓ Xác nhận: rút bài học (nếu có ô sửa) rồi vẽ DXF luôn, không đợi bấm
+                        string bh = "";
+                        if (PhongBaiHoc.CacChoSua(AiDon.DocChiTiet(_tm)).Count > 0)
+                            try
+                            {
+                                int n = await AiDon.RutBaiHoc(tn, AiDon.DocChiTiet(_tm), _tm, _baiHocPdf, Bao, _huy.Token);
+                                if (n > 0) bh = "AI đề xuất " + n + " bài học từ chỗ bạn sửa (xem cuối phòng 2, máy Admin duyệt ➕).\n";
+                            }
+                            catch (Exception ex) when (!(ex is OperationCanceledException)) { bh = ex.Message + " — bấm 🤖 Rút bài học ở phòng 2 để thử lại.\n"; }
+                        string ve = await VeDxf();
+                        if (ve != null) Bao(bh + ve);
                         return;
                     }
                     case 6:
@@ -204,6 +199,31 @@ namespace TeamsTool.Views
                 Ve();
                 _trangThai.Text = tt;
             }
+        }
+
+        /// <summary>Vẽ DXF mọi tấm (ezdxf): máy thiếu thư viện thì hỏi cài; báo + trả câu kết quả (null = dừng, đã báo).</summary>
+        private async Task<string> VeDxf()
+        {
+            AiDon.TinhTrangPython py = await AiDon.KiemPython(lai: true);
+            if (!py.SanSang || !py.Pymupdf)
+            {
+                if (py.Python == null) { Bao(py.Loi); return null; }
+                string thieu = py.SanSang ? "PyMuPDF (cắt ảnh tấm từ PDF)" : "ezdxf (vẽ DXF)";
+                bool cai = MessageBox.Show("Máy chưa có " + thieu + ".\nCài ezdxf + matplotlib + PyMuPDF bằng pip ngay? Cần mạng, khoảng 1 phút.",
+                                           "Cài thư viện Python", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
+                if (cai) py = await AiDon.CaiEzdxf(Bao, _huy.Token);
+                if (!py.SanSang) { Bao(py.Loi); return null; }
+            }
+            ChiTiet ct5 = AiDon.DocChiTiet(_tm);
+            await AiDon.CatAnh(ct5, _tm, _d.Title, _huy.Token); // ảnh tấm còn thiếu (máy vừa cài PyMuPDF)
+            List<AiDon.KetQuaVe> kq5 = await AiDon.VeBanVe(AiDon.TinhLai(ct5, AiDon.TaoTrienKhai(ct5, _tm), _d.Title, _tm), _d.Title, _tm, Bao, _huy.Token);
+            var loi5 = kq5.Where(k => k.Loi != null).Select(k => k.Bango + ": " + k.Loi).ToList();
+            var thieu5 = kq5.Where(k => k.ThieuDim.Count > 0).Select(k => k.Bango + ": " + string.Join(", ", k.ThieuDim)).ToList();
+            string bao = "Đã vẽ " + kq5.Count(k => k.Loi == null) + " bản trải phẳng (ezdxf, môi trường moi-truong-ve.dxf) trong ai\\ban_ve — xem ở phòng 3, bấm ảnh để mở DXF."
+                         + (thieu5.Count > 0 ? "\n⚠ Còn thiếu dim của khách (bổ sung trên CAD):\n" + string.Join("\n", thieu5) : "")
+                         + (loi5.Count > 0 ? "\nChưa vẽ được:\n" + string.Join("\n", loi5) : "");
+            Bao(bao);
+            return bao;
         }
 
         // ---------- Phòng 1: Nhận & Đọc ----------
@@ -625,7 +645,7 @@ namespace TeamsTool.Views
                 ct.XacNhan = DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
                 AiDon.Ghi(_tm, ct);
                 Ve();
-                if (soSua > 0) Chay(7, false); // AI rút bài học từ chỗ người sửa (chạy nền, Triển khai dùng được ngay)
+                Chay(8, false); // rút bài học (nếu có ô sửa) rồi vẽ DXF luôn — không đợi bấm 📐 Vẽ DXF
             }).Also(b =>
             {
                 b.IsEnabled = !chay && ct.Tam.Count > 0 && kt.DoConMo == 0;
