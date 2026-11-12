@@ -135,7 +135,8 @@ namespace TeamsTool.Views
         };
         private readonly PasswordBox _key = new PasswordBox { Padding = new Thickness(4, 3, 4, 3), Margin = new Thickness(0, 2, 0, 4) };
         private readonly ComboBox _model = new ComboBox { Margin = new Thickness(0, 2, 0, 4), DisplayMemberPath = "Value", SelectedValuePath = "Key" };
-        private readonly CheckBox _dongY = new CheckBox { Content = "Cho phép gửi tệp bản vẽ của đơn lên Claude API (Anthropic) để đọc", Margin = new Thickness(0, 2, 0, 4) };
+        private readonly CheckBox _dongY = new CheckBox { Content = "Cho phép gửi tệp bản vẽ của đơn lên dịch vụ AI (Anthropic / Google, theo Nguồn AI) để đọc", Margin = new Thickness(0, 2, 0, 4) };
+        private readonly ComboBox _nguon = new ComboBox { Margin = new Thickness(0, 2, 0, 4), DisplayMemberPath = "Value", SelectedValuePath = "Key" };
 
         private readonly CheckBox _keyRieng = new CheckBox { Content = "Mỗi phòng một key riêng (tắt = mọi phòng dùng key chung)", Margin = new Thickness(0, 10, 0, 2) };
         private readonly PasswordBox[] _keyPhong = new PasswordBox[4];
@@ -157,6 +158,23 @@ namespace TeamsTool.Views
             TextBlock Phu(string s) => new TextBlock { Text = s, Foreground = KieuTeams.ChuPhu, FontSize = 10.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 4) };
             TextBlock Dau(string s) => new TextBlock { Text = s, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) };
             var p = new StackPanel();
+
+            // Nguồn AI: key API (mặc định) hoặc CLI dùng gói của người đăng nhập trên máy
+            var n = new StackPanel();
+            n.Children.Add(Dau("Nguồn AI"));
+            string CoCli(string ng) => AiDon.TimCli(ng) != null ? "đã cài" : "chưa cài";
+            _nguon.ItemsSource = new[]
+            {
+                new KeyValuePair<string, string>(AiCli.Api, "Key API Claude (mặc định — tính tiền theo token)"),
+                new KeyValuePair<string, string>(AiCli.ClaudeCode, "Claude Code CLI (claude — gói Claude của người đăng nhập, " + CoCli(AiCli.ClaudeCode) + ")"),
+                new KeyValuePair<string, string>(AiCli.Antigravity, "Antigravity CLI (agy — gói Google, model Gemini, " + CoCli(AiCli.Antigravity) + ")"),
+            };
+            _nguon.SelectedValue = AiDon.NguonAi;
+            n.Children.Add(_nguon);
+            n.Children.Add(Phu("CLI: không cần key, không hiện $ (tính trong gói), chậm hơn ~10–30 giây mỗi lần, không cache quy chuẩn, dễ chạm giới hạn gói khi đọc nhiều PDF. "
+                               + "Mỗi máy đăng nhập bằng tài khoản của chính người dùng — dùng chung một tài khoản gói cá nhân cho nhiều người có thể trái điều khoản. "
+                               + "Antigravity dùng model Gemini: lời dặn viết theo Claude, kiểm kết quả kỹ trước khi dùng rộng."));
+            p.Children.Add(KieuTeams.The(n));
 
             var k = new StackPanel();
             k.Children.Add(Dau("Key Claude API"));
@@ -294,6 +312,7 @@ namespace TeamsTool.Views
                 for (int i = 0; i < keys.Length; i++)
                     if (keys[i].Length > 0) AiDon.GhiKey(keys[i], i);
                 AiDon.KeyRieng = _keyRieng.IsChecked == true;
+                AiDon.NguonAi = _nguon.SelectedValue as string;
                 AiDon.ModelRieng = _model.SelectedValue as string;
                 AiDon.DaDongY = _dongY.IsChecked == true;
                 CaiDatTeams.TuChuyenTiep = _tuChuyen.IsChecked == true;

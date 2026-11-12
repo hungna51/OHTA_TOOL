@@ -97,6 +97,10 @@ _apps/OhtaTeams/
 - Quyền Graph: không thêm (đã có đọc tệp, `ChannelMessage.Send`).
 - Gửi dữ liệu ra ngoài: chỉ tệp của đơn gửi Claude API, khi bấm ▶. Lần đầu bật trên máy → hỏi xác nhận một lần (ghi registry `ai_dong_y`).
 
+## Nguồn AI qua CLI (12/11/2026)
+
+Ngoài key API: `claude -p` (Claude Code, gói Claude) và `agy -p` (Antigravity, gói Google, Gemini) — cả hai có `--output-format json`, `--json-schema`, `--effort`. `Core/AiCli.cs`: tách body /v1/messages → `yeu_cau.md` (lời dặn + QC + phần đơn; dòng lệnh Windows giới hạn ~32 nghìn ký tự) + `ban_ve.pdf` trong thư mục tạm; Claude Code chỉ `--allowed-tools Read`; kết quả (`structured_output` / `result` / `response`) đổi về dạng phản hồi API, usage = 0 (tính trong gói). `AiDon.GuiAi` chọn theo `ai_nguon`. Thử thật: Antigravity đọc PDF 130672 đúng (152 giây); Claude Code trên máy dev đang hết hạn mức tháng (429) — chưa thử lượt thành công, bộ chuyển đổi theo dạng kết quả tài liệu (`structured_output`). Rủi ro: điều khoản gói cá nhân khi dùng cho cả xưởng; Gemini khác Claude với lời dặn hiện tại.
+
 ## Bản vẽ phòng 4 bằng ezdxf (chốt 12/11/2026 — thay text-to-cad)
 
 Lý do: bản vẽ xưởng là 2D sống nhờ F-name TEXT, dim, nét DASHED, layer OHTA → ezdxf ghi được hết; text-to-cad không xuất TEXT / dim / kiểu nét (giữ text-to-cad cho đơn có STEP 3D cần trải phẳng). Sinh bản vẽ không tốn token (AI chỉ đọc tiết diện + chọn loại biên dạng).

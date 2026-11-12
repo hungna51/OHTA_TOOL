@@ -257,7 +257,7 @@ namespace TeamsTool.Services
         /// </summary>
         public static async Task<ChiTiet> DocBanVe(TiepNhan tn, string tm, bool tatCa, Action<string> bao, CancellationToken ct)
         {
-            string key = DocKey(2) ?? throw new InvalidOperationException("Chưa có key Claude: ⚙ → tab 🤖 AI → dán key");
+            string key = KeyPhong(2);
             string model = Model(), quyChuan = QuyChuan(2);
             ChiTiet cu = DocChiTiet(tm) ?? new ChiTiet();
             var ct2 = new ChiTiet { TokenVao = cu.TokenVao, TokenRa = cu.TokenRa, Tien = cu.Tien, MaBamDaDoc = new Dictionary<string, string>(cu.MaBamDaDoc) };
@@ -285,7 +285,7 @@ namespace TeamsTool.Services
                     catch (Exception ex) { loi.Add(t.Ten + ": " + ex.Message); continue; }
                 }
                 string body = PhongDocBanVe.Body(model, PhongDocBanVe.LoiDan, quyChuan, t.Ten, pdf, dxf);
-                PhongDocBanVe.PhanHoi ph = PhongDocBanVe.DocPhanHoi(await GuiClaude(key, PhongDocBanVe.CoFallback(model), body, ct));
+                PhongDocBanVe.PhanHoi ph = PhongDocBanVe.DocPhanHoi(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, ct));
                 ct2.TokenVao += ph.Vao + ph.GhiCache + ph.DocCache;
                 ct2.TokenRa += ph.Ra;
                 ct2.Tien += PhongDocBanVe.Tien(model, ph.Vao, ph.GhiCache, ph.DocCache, ph.Ra);
@@ -324,7 +324,7 @@ namespace TeamsTool.Services
             var kt = new KiemTra { TuXacNhan = ct.XacNhan, TokenVao = cu?.TokenVao ?? 0, TokenRa = cu?.TokenRa ?? 0, Tien = cu?.Tien ?? 0 };
             var loi = new List<string>();
 
-            string key = dungAi ? DocKey(3) : null;
+            string key = !dungAi ? null : NguonAi != AiCli.Api ? "" : DocKey(3); // CLI không cần key
             if (dungAi && key == null) loi.Add("Chưa có key Claude (⚙ → 🤖 AI) — chỉ chạy luật, AI chưa rà bản vẽ.");
             if (key != null)
             {
@@ -350,7 +350,7 @@ namespace TeamsTool.Services
                     catch (Exception ex) { loi.Add(nhom.Key + ": " + ex.Message); continue; }
                     var luatTep = luat.Where(v => nhom.Any(t => v.Ma.StartsWith("luat|" + t.Khoa + "|", StringComparison.Ordinal))).ToList();
                     string body = PhongKiemTra.Body(model, quyChuan, pdf, PhongKiemTra.DauVao(nhom.Key, tn?.CongTy, nhom, luatTep, cu?.VanDe), dxf);
-                    PhongKiemTra.PhanHoi ph = PhongKiemTra.DocPhanHoi(await GuiClaude(key, PhongDocBanVe.CoFallback(model), body, huy), nhom.Key);
+                    PhongKiemTra.PhanHoi ph = PhongKiemTra.DocPhanHoi(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, huy), nhom.Key);
                     kt.TokenVao += ph.Vao + ph.GhiCache + ph.DocCache;
                     kt.TokenRa += ph.Ra;
                     kt.Tien += PhongDocBanVe.Tien(model, ph.Vao, ph.GhiCache, ph.DocCache, ph.Ra);
@@ -535,7 +535,7 @@ namespace TeamsTool.Services
         /// </summary>
         public static async Task<PhongTrienKhai.MauMoi> DeXuatMau(TamAi tam, TamTrienKhai tk, KetQuaTrienKhai kq, string tm, Action<string> bao, CancellationToken huy)
         {
-            string key = DocKey(4) ?? throw new InvalidOperationException("Chưa có key Claude: ⚙ → tab 🤖 AI → dán key");
+            string key = KeyPhong(4);
             string model = Model();
             var daCo = (await DanhSachMau(tm)).Select(m => m.Ten).ToList();
             string viDu = File.ReadAllText(Path.Combine(ThuVienChung, "be.py"), Encoding.UTF8);
@@ -544,7 +544,7 @@ namespace TeamsTool.Services
                 pdf = Convert.ToBase64String(File.ReadAllBytes(f));
             bao("Phòng 4: AI viết mẫu vẽ mới cho " + tk.Ten + "…");
             string body = PhongTrienKhai.BodyMauMoi(model, pdf, PhongTrienKhai.DauVaoMauMoi(tam, tk, daCo, viDu));
-            PhongTrienKhai.MauMoi m = PhongTrienKhai.DocMauMoi(await GuiClaude(key, PhongDocBanVe.CoFallback(model), body, huy), daCo);
+            PhongTrienKhai.MauMoi m = PhongTrienKhai.DocMauMoi(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, huy), daCo);
             kq.TokenVao += m.Vao + m.GhiCache + m.DocCache;
             kq.TokenRa += m.Ra;
             kq.Tien += PhongDocBanVe.Tien(model, m.Vao, m.GhiCache, m.DocCache, m.Ra);
@@ -572,9 +572,12 @@ namespace TeamsTool.Services
         }
 
         /// <summary>Chạy lệnh, đợi tối đa 3 phút, trả (mã thoát, stdout + stderr). Huỷ → giết tiến trình.</summary>
-        private static async Task<(int Ma, string Ra)> ChayLenh(string exe, string thuMuc, CancellationToken huy, params string[] thamSo)
+        private static Task<(int Ma, string Ra)> ChayLenh(string exe, string thuMuc, CancellationToken huy, params string[] thamSo) =>
+            ChayLenh(exe, thuMuc, 180, huy, thamSo);
+
+        private static async Task<(int Ma, string Ra)> ChayLenh(string exe, string thuMuc, int giayToiDa, CancellationToken huy, params string[] thamSo)
         {
-            var psi = new System.Diagnostics.ProcessStartInfo(exe, string.Join(" ", thamSo.Select(a => "\"" + a.TrimEnd('\\') + "\"")))
+            var psi = new System.Diagnostics.ProcessStartInfo(exe, string.Join(" ", thamSo.Select(AiCli.ThoatThamSo)))
             {
                 WorkingDirectory = thuMuc, UseShellExecute = false, CreateNoWindow = true,
                 RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = Utf8, StandardErrorEncoding = Utf8,
@@ -583,9 +586,9 @@ namespace TeamsTool.Services
             using (var p = System.Diagnostics.Process.Start(psi))
             {
                 Task<string> ra = p.StandardOutput.ReadToEndAsync(), loi = p.StandardError.ReadToEndAsync();
-                var xong = Task.Run(() => p.WaitForExit(180000));
+                var xong = Task.Run(() => p.WaitForExit(giayToiDa * 1000));
                 using (huy.Register(() => { try { p.Kill(); } catch (InvalidOperationException) { } }))
-                    if (!await xong) { try { p.Kill(); } catch (InvalidOperationException) { } return (-1, "quá 3 phút"); }
+                    if (!await xong) { try { p.Kill(); } catch (InvalidOperationException) { } return (-1, "quá " + giayToiDa / 60 + " phút"); }
                 huy.ThrowIfCancellationRequested();
                 return (p.ExitCode, (await ra) + (await loi));
             }
@@ -598,7 +601,7 @@ namespace TeamsTool.Services
         {
             NapTraV(lai: true);
             KetQuaTrienKhai cu = DocTrienKhai(tm);
-            string key = DocKey(4) ?? throw new InvalidOperationException("Chưa có key Claude: ⚙ → tab 🤖 AI → dán key");
+            string key = KeyPhong(4);
             string model = Model(), quyChuan = QuyChuan(4);
             var kq = new KetQuaTrienKhai { TuXacNhan = kt.XacNhan, TokenVao = cu?.TokenVao ?? 0, TokenRa = cu?.TokenRa ?? 0, Tien = cu?.Tien ?? 0 };
             var loi = new List<string>();
@@ -623,7 +626,7 @@ namespace TeamsTool.Services
                 }
                 catch (Exception ex) { loi.Add(nhom.Key + ": " + ex.Message); continue; }
                 string body = PhongTrienKhai.Body(model, quyChuan, pdf, PhongTrienKhai.DauVao(nhom.Key, nhom, kt.VanDe, thuVien), dxf);
-                PhongTrienKhai.PhanHoi ph = PhongTrienKhai.DocPhanHoi(await GuiClaude(key, PhongDocBanVe.CoFallback(model), body, huy));
+                PhongTrienKhai.PhanHoi ph = PhongTrienKhai.DocPhanHoi(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, huy));
                 kq.TokenVao += ph.Vao + ph.GhiCache + ph.DocCache;
                 kq.TokenRa += ph.Ra;
                 kq.Tien += PhongDocBanVe.Tien(model, ph.Vao, ph.GhiCache, ph.DocCache, ph.Ra);
@@ -653,6 +656,62 @@ namespace TeamsTool.Services
         {
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12; // net48 có thể chưa bật TLS 1.2
             return new HttpClient { Timeout = TimeSpan.FromMinutes(10) }; // PDF nhiều trang + effort high: một lần gọi có thể vài phút
+        }
+
+        // ---------- Nguồn AI: key API / Claude Code CLI / Antigravity CLI ----------
+
+        /// <summary>Nguồn AI chọn ở ⚙ → 🤖 AI: api (mặc định) / claude_code / antigravity.</summary>
+        public static string NguonAi
+        {
+            get { string v = CaiDatTeams.Doc("ai_nguon", AiCli.Api); return v == AiCli.ClaudeCode || v == AiCli.Antigravity ? v : AiCli.Api; }
+            set => CaiDatTeams.Ghi("ai_nguon", value ?? AiCli.Api);
+        }
+
+        /// <summary>Lệnh CLI của nguồn (claude / agy): trên PATH hoặc chỗ trình cài đặt để; chưa cài → null.</summary>
+        public static string TimCli(string nguon)
+        {
+            string ten = nguon == AiCli.ClaudeCode ? "claude" : nguon == AiCli.Antigravity ? "agy" : null;
+            if (ten == null) return null;
+            string nha = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var cho = (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';').Where(d => d.Trim().Length > 0).Select(d => d.Trim().Trim('"'))
+                      .Concat(new[] { Path.Combine(nha, ".local", "bin"), Path.Combine(local, "agy", "bin"), Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "npm") });
+            foreach (string dir in cho)
+                foreach (string duoi in new[] { ".exe", ".cmd" })
+                    try { string f = Path.Combine(dir, ten + duoi); if (File.Exists(f)) return f; }
+                    catch (ArgumentException) { } // PATH có ký tự lạ
+            return null;
+        }
+
+        /// <summary>Key cho phòng khi nguồn là API (thiếu → báo); nguồn CLI không cần key → "".</summary>
+        public static string KeyPhong(int phong) =>
+            NguonAi != AiCli.Api ? "" : DocKey(phong) ?? throw new InvalidOperationException("Chưa có key Claude: ⚙ → tab 🤖 AI → dán key (hoặc chọn Nguồn AI = Claude Code / Antigravity)");
+
+        /// <summary>Gửi body /v1/messages theo nguồn đang chọn; trả phản hồi dạng API (CLI được đổi về cùng dạng).</summary>
+        private static Task<string> GuiAi(string key, bool fallback, string body, CancellationToken ct) =>
+            NguonAi == AiCli.Api ? GuiClaude(key, fallback, body, ct) : GuiCli(NguonAi, body, ct);
+
+        /// <summary>
+        /// Chạy claude -p / agy -p trong thư mục tạm: yeu_cau.md (lời dặn + quy chuẩn + phần người dùng) + ban_ve.pdf, chỉ cho đọc tệp,
+        /// trả JSON theo schema → phản hồi dạng API (AiCli.DoiKetQua). Thư mục tạm xoá sau khi xong.
+        /// </summary>
+        private static async Task<string> GuiCli(string nguon, string body, CancellationToken ct)
+        {
+            string cli = TimCli(nguon) ?? throw new InvalidOperationException(
+                (nguon == AiCli.ClaudeCode ? "Máy chưa cài Claude Code (lệnh claude)" : "Máy chưa cài Antigravity CLI (lệnh agy)") + " — cài, đăng nhập, hoặc đổi Nguồn AI ở ⚙ → 🤖 AI.");
+            AiCli.YeuCau yc = AiCli.TachBody(body);
+            string dir = Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "ai_cli", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                File.WriteAllText(Path.Combine(dir, AiCli.TepYeuCau), yc.HuongDan, Utf8);
+                if (yc.PdfBase64 != null) File.WriteAllBytes(Path.Combine(dir, AiCli.TepPdf), Convert.FromBase64String(yc.PdfBase64));
+                var (ma, ra) = await ChayLenh(cli, dir, 900, ct, AiCli.ThamSo(nguon, yc, dir).ToArray());
+                return AiCli.DoiKetQua(ra);
+            }
+            finally
+            {
+                try { Directory.Delete(dir, true); } catch (IOException) { } catch (UnauthorizedAccessException) { } // CLI còn giữ tệp: để %TEMP% tự dọn
+            }
         }
 
         /// <summary>POST /v1/messages như ClaudeHttp của tab AI: 429 / 5xx thử lại 2 lần; trả body kể cả JSON lỗi.</summary>

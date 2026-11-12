@@ -56,6 +56,33 @@ namespace TeamsTool.Tests
             "  0\nMTEXT\n  3\n{\\fArial|b0;\\U+66F2}\n  1\n\\PR5\n" +
             "  0\nENDSEC\n  0\nEOF\n";
 
+        private static void TestAiCli()
+        {
+            Console.WriteLine("-- Nguon AI qua CLI --");
+            string body = PhongDocBanVe.Body("claude-opus-5-5", "LOI DAN", "QUY CHUAN", "a.pdf", "UERG", null);
+            var yc = AiCli.TachBody(body);
+            Kiem("tach body API: loi dan + quy chuan + phan nguoi dung, pdf, schema, model, effort",
+                 yc.HuongDan.StartsWith("LOI DAN") + "|" + yc.HuongDan.Contains("QUY CHUAN") + "|" + yc.HuongDan.Contains("Tệp: a.pdf") + "|" + yc.PdfBase64 + "|" + yc.Schema.Contains("\"tam\"") + "|" + yc.Model + "|" + yc.Effort,
+                 "True|True|True|UERG|True|claude-opus-5-5|high");
+            var cc = AiCli.ThamSo(AiCli.ClaudeCode, yc, "D:/tm");
+            var ag = AiCli.ThamSo(AiCli.Antigravity, new AiCli.YeuCau { Schema = "{}", Model = "claude-opus-5-5" }, "D:/tm");
+            Kiem("tham so: claude chi Read + model; agy add-dir, khong model; loi nhan nhac pdf",
+                 cc.Contains("Read") + "|" + cc.Contains("--model") + "|" + cc.Contains("--add-dir") + "|" + ag.Contains("--add-dir") + "|" + ag.Contains("--model") + "|" + cc[1].Contains(AiCli.TepPdf) + "|" + ag[1].Contains(AiCli.TepPdf),
+                 "True|True|False|True|False|True|False");
+            Kiem("thoat tham so dong lenh Windows", AiCli.ThoatThamSo("a b") + " " + AiCli.ThoatThamSo("{\"x\":1}") + " " + AiCli.ThoatThamSo("C:\\a\\") + " " + AiCli.ThoatThamSo("x\\\"y"),
+                 "\"a b\" \"{\\\"x\\\":1}\" \"C:\\a\\\\\" \"x\\\\\\\"y\"");
+            string agyOk = "{\"conversation_id\":\"x\",\"status\":\"SUCCESS\",\"response\":\"{\\\"so\\\":5}\\n\",\"structured_output\":{\"chu\":\"xin chào\",\"so\":5},\"usage\":{\"input_tokens\":12403,\"output_tokens\":69}}";
+            string ccLoi = "{\"type\":\"result\",\"is_error\":true,\"api_error_status\":429,\"result\":\"You've hit your monthly spend limit\",\"usage\":{\"input_tokens\":0}}";
+            string ccRao = "dong log\n{\"type\":\"result\",\"is_error\":false,\"result\":\"```json\\n{\\\"tam\\\":[]}\\n```\"}";
+            var p1 = PhongDocBanVe.DocPhanHoi(AiCli.DoiKetQua(agyOk));
+            var p2 = PhongDocBanVe.DocPhanHoi(AiCli.DoiKetQua(ccLoi));
+            var p3 = PhongDocBanVe.DocPhanHoi(AiCli.DoiKetQua(ccRao));
+            var p4 = PhongDocBanVe.DocPhanHoi(AiCli.DoiKetQua("Error: not logged in"));
+            Kiem("doi ket qua CLI: agy structured_output / claude loi 429 / rao ```json + dong log / khong JSON",
+                 AiCli.DoiKetQua(agyOk).Contains("xin chào") + "|" + p1.Vao + "|" + p2.Loi + "|" + (p3.Loi ?? "null") + "|" + p3.Tam.Count + "|" + p4.Loi,
+                 "True|0|You've hit your monthly spend limit|null|0|CLI không trả JSON: Error: not logged in");
+        }
+
         private static void TestPhongTrienKhai()
         {
             Console.WriteLine("-- Phong 4 trien khai --");
@@ -681,6 +708,7 @@ namespace TeamsTool.Tests
             TestPhongAi();
             TestPhongKiemTra();
             TestPhongTrienKhai();
+            TestAiCli();
 
             Console.WriteLine();
             Console.WriteLine("Tong: {0} OK, {1} FAIL", _ok, _fail);
