@@ -79,12 +79,25 @@ namespace TeamsTool.Tests
             var tk2 = new TamTrienKhai { Kieu = "be", X = L(50, 100), Y = Phang(200), VChon = "V32" };
             PhongTrienKhai.Tinh(tk2, tam, TraV, 4.2, Lmin);
             Kiem("be L nguoi chon V32 (QC δ4): X = 142", tk2.VChon + "|" + tk2.XPhang + "|" + tk2.ChiTiet[0].Contains("V32 δ4 → −8"), "V32|142|True");
+            Kiem("duong be tren tam phang: L V32 -> 46 (= 50 - δ4), doan 46 + 96", string.Join(",", tk2.BeX) + "|" + string.Join("+", tk2.DoanPhangX) + "|" + tk2.BeY.Count, "46|46+96|0");
+            var hop = new TamTrienKhai { Kieu = "be", VChon = "V32",
+                X = new TietDien { Doan = { 20, 100, 20 }, Uon = { new Uon(), new Uon() } }, Y = new TietDien { Doan = { 20, 60, 20 }, Uon = { new Uon(), new Uon() } } };
+            PhongTrienKhai.Tinh(hop, tam, TraV, 4.2, Lmin);
+            string py = PhongTrienKhai.ScriptCad("130672-3", hop);
+            Kiem("hop: X x Y, duong be 2 huong, cat 4 goc 16x16, script text-to-cad",
+                 hop.XPhang + "x" + hop.YPhang + "|" + string.Join(",", hop.BeX) + "|" + string.Join(",", hop.BeY) + "|" +
+                 py.Contains("GOC = [(0, 0, 16, 16), (108, 0, 16, 16), (0, 68, 16, 16), (108, 68, 16, 16)]") + "|" + py.Contains("def tam_130672_3():") + "|" +
+                 py.Contains("label=\"BEND\"") + "|" + py.Contains("cat.label = \"0-KAKOU\""),
+                 "124x84|16,108|16,68|True|True|True|True");
+            Kiem("script: tam phang khong co duong be / goc; lam tay -> null; ten script",
+                 PhongTrienKhai.ScriptCad("A", new TamTrienKhai { XPhang = 300, YPhang = 150 }).Contains("BE_X = []") + "|" + (PhongTrienKhai.ScriptCad("A", new TamTrienKhai { LamTay = true, XPhang = 1, YPhang = 1 }) == null) + "|" +
+                 PhongTrienKhai.TenScript("130672-1 (Ａ)"), "True|True|tam_130672_1");
             var tk3 = new TamTrienKhai { Kieu = "be", X = L(18, 100), Y = Phang(200) };
             PhongTrienKhai.Tinh(tk3, tam, TraV, 4.2, Lmin);
             Kiem("be canh 18: bo V40 (Lmin 25) va giu V25 (15)", tk3.VChon, "V25");
             var tk4 = new TamTrienKhai { Kieu = "be", X = L(50, 100, "an_1_lan", 90, 10), Y = Phang(200) };
             PhongTrienKhai.Tinh(tk4, tam, TraV, 4.2, Lmin);
-            Kiem("an 1 lan R10 90° T4.5 T thuc 4.2: 150 - 2x14.5 + (10+1.89)xπ/2", tk4.XPhang, 139.7);
+            Kiem("an 1 lan R10 90° T4.5 T thuc 4.2: 150 - 2x14.5 + (10+1.89)xπ/2; duong be giua cung", tk4.XPhang + "|" + string.Join(",", tk4.BeX), "139.7|44.84");
             var tk5 = new TamTrienKhai { Kieu = "be", X = new TietDien { Doan = { 0, 0 }, Uon = { new Uon { Kieu = "cuon", R = 100, Cung = 360 } } }, Y = Phang(500) };
             PhongTrienKhai.Tinh(tk5, new TamAi { T = "3.2", M = "SS400" }, TraV, 3, Lmin);
             Kiem("cuon tron R100 T thuc 3: 2π(100+1.5) + ky hieu r", tk5.XPhang + "|" + tk5.KyHieu, "637.7|r");

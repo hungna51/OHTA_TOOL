@@ -102,7 +102,7 @@ namespace TeamsTool.Views
         private async void Chay(int tu, bool docLaiHet)
         {
             if (DangChay.Contains(_d.Id)) return;
-            if (!AiDon.DaDongY)
+            if (tu != 5 && !AiDon.DaDongY) // 5 = vẽ DXF trên máy, không gửi gì ra ngoài
             {
                 if (MessageBox.Show("Khu AI gửi tệp bản vẽ của đơn lên Claude API (Anthropic) để đọc.\nCông ty đã cho phép gửi bản vẽ khách hàng ra dịch vụ AI chưa?\n\nĐồng ý → máy này không hỏi lại.",
                                     "AI đọc bản vẽ", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
@@ -117,6 +117,14 @@ namespace TeamsTool.Views
             {
                 Directory.CreateDirectory(_tm);
                 TiepNhan tn = AiDon.DocTiepNhan(_tm);
+                if (tu == 5)
+                {
+                    var ct5 = AiDon.DocChiTiet(_tm);
+                    int so = await AiDon.VeBanVe(AiDon.TinhLai(ct5, AiDon.DocTrienKhai(_tm), _d.Title, _tm), _d.Title, _tm, Bao, _huy.Token);
+                    if (!_trangThai.Text.StartsWith("Vẽ xong", StringComparison.Ordinal))
+                        Bao("Đã vẽ " + so + " bản trải phẳng (DXF) bằng text-to-cad trong ai\\ban_ve. Bấm ảnh để mở DXF.");
+                    return;
+                }
                 if (tu == 4)
                 {
                     KetQuaTrienKhai kq = await AiDon.TrienKhaiDon(AiDon.DocChiTiet(_tm), AiDon.DocKiemTra(_tm), _tm, Bao, _huy.Token);
@@ -420,6 +428,8 @@ namespace TeamsTool.Views
             p.Children.Add(Chu(string.Format(CultureInfo.InvariantCulture, "{0} tấm · {1} làm tay · {2} tấm có cảnh báo · triển khai lúc {3} · AI ≈ ${4:0.00}",
                 ds.Count, ds.Count(x => x.Tk.LamTay), ds.Count(x => x.Tk.CanhBao.Count > 0), kq.Luc, kq.Tien)));
 
+            string dirBv = AiDon.ThuMucBanVe(_tm);
+            int stt = 0;
             foreach (var (tam, tk) in ds)
             {
                 var the = new StackPanel();
@@ -447,6 +457,29 @@ namespace TeamsTool.Views
                 foreach (string c in tk.ChiTiet) the.Children.Add(Chu(c));
                 foreach (string c in tk.CanhBao) the.Children.Add(Chu("⚠ " + c, true));
                 if (tk.GhiChu.Length > 0) the.Children.Add(Chu("AI: " + tk.GhiChu));
+                // Bản vẽ text-to-cad: ảnh xem trước, bấm để mở DXF
+                string ma = AiDon.Bango(_d.Title, ++stt), dxf = Path.Combine(dirBv, ma + ".dxf"), png = Path.Combine(dirBv, ma + ".png");
+                if (File.Exists(dxf))
+                {
+                    var link = new TextBlock { Text = "📐 " + ma + ".dxf" + (File.GetLastWriteTime(dxf) < File.GetLastWriteTime(AiDon.FileTrienKhai(_tm)) ? "  (cũ hơn kết quả triển khai — vẽ lại)" : ""),
+                                               Foreground = _mau, Cursor = System.Windows.Input.Cursors.Hand, ToolTip = "Mở DXF", Margin = new Thickness(0, 4, 0, 2) };
+                    link.MouseLeftButtonUp += (s, e) => Mo(dxf);
+                    the.Children.Add(link);
+                    if (File.Exists(png))
+                        try
+                        {
+                            var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                            bmp.BeginInit();
+                            bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; // đọc xong nhả file — vẽ lại ghi đè được
+                            bmp.CreateOptions = System.Windows.Media.Imaging.BitmapCreateOptions.IgnoreImageCache;
+                            bmp.UriSource = new Uri(png);
+                            bmp.EndInit();
+                            var anh = new Image { Source = bmp, MaxHeight = 180, HorizontalAlignment = HorizontalAlignment.Left, Cursor = System.Windows.Input.Cursors.Hand, ToolTip = "Bấm để mở DXF" };
+                            anh.MouseLeftButtonUp += (s, e) => Mo(dxf);
+                            the.Children.Add(anh);
+                        }
+                        catch (Exception) { } // ảnh hỏng: vẫn còn link DXF
+                }
                 p.Children.Add(new Border
                 {
                     Child = the, Padding = new Thickness(6, 4, 6, 4), Margin = new Thickness(0, 4, 0, 0), CornerRadius = new CornerRadius(4),
@@ -456,6 +489,11 @@ namespace TeamsTool.Views
 
             string tomTat = PhongTrienKhai.TomTat(_d.Title, ds);
             var nut = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+            nut.Children.Add(KieuTeams.Nut("📐 Vẽ DXF (text-to-cad)", _mau, (s, e) => Chay(5, false), chinh: false).Also(b =>
+            {
+                b.IsEnabled = !chay && ds.Any(x => !x.Tk.LamTay && x.Tk.XPhang.HasValue && x.Tk.YPhang.HasValue);
+                b.ToolTip = "Vẽ tấm phẳng X × Y + đường bẻ + khắc mã tấm bằng text-to-cad (build123d) → ai\\ban_ve\\<bango>.dxf. Chưa có lỗ, F-name — bổ sung trên CAD.";
+            }));
             nut.Children.Add(KieuTeams.Nut("📄 Mở CSV", _mau, (s, e) => Mo(AiDon.FileCsv(_tm)), chinh: false).Also(b => b.ToolTip = "ai\\trien_khai.csv — bango tạm <mã>-<số>, GRO đánh bango thật trên CAD"));
             nut.Children.Add(KieuTeams.Nut("📋 Chép tóm tắt", _mau, (s, e) =>
             {

@@ -420,6 +420,73 @@ namespace TeamsTool.Services
             return ra;
         }
 
+        // ---------- Bản vẽ trải phẳng bằng text-to-cad ----------
+
+        public static string ThuMucBanVe(string tm) => Path.Combine(tm, PhongTiepNhan.ThuMucAi, "ban_ve");
+        public static string Bango(string title, int stt) => title + "-" + stt; // trùng cột エクスポート用 của trien_khai.csv
+
+        /// <summary>Lệnh cad của text-to-cad (texttocad.dev): trên PATH hoặc %USERPROFILE%\.local\bin\cad.cmd; chưa cài → null.</summary>
+        public static string TimCad()
+        {
+            foreach (string dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';').Where(d => d.Trim().Length > 0)
+                                   .Concat(new[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "bin") }))
+                foreach (string ten in new[] { "cad.cmd", "cad.exe" })
+                    try { string f = Path.Combine(dir.Trim().Trim('"'), ten); if (File.Exists(f)) return f; }
+                    catch (ArgumentException) { } // PATH có ký tự lạ
+            return null;
+        }
+
+        private static async Task<(int Ma, string Ra)> ChayCad(string cad, string thuMuc, CancellationToken huy, params string[] thamSo)
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo(cad, string.Join(" ", thamSo.Select(a => "\"" + a + "\"")))
+            {
+                WorkingDirectory = thuMuc, UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = Utf8, StandardErrorEncoding = Utf8,
+            };
+            using (var p = System.Diagnostics.Process.Start(psi))
+            {
+                Task<string> ra = p.StandardOutput.ReadToEndAsync(), loi = p.StandardError.ReadToEndAsync();
+                var xong = Task.Run(() => p.WaitForExit(180000));
+                using (huy.Register(() => { try { p.Kill(); } catch (InvalidOperationException) { } }))
+                    if (!await xong) { try { p.Kill(); } catch (InvalidOperationException) { } return (-1, "quá 3 phút"); }
+                huy.ThrowIfCancellationRequested();
+                return (p.ExitCode, (await ra) + (await loi));
+            }
+        }
+
+        /// <summary>
+        /// Vẽ trải phẳng từng tấm bằng text-to-cad: &lt;bango&gt;.py (build123d) → cad run → cad export &lt;bango&gt;.dxf → cad snapshot &lt;bango&gt;.png,
+        /// trong ai\ban_ve. Tấm làm tay / thiếu X, Y thì bỏ. Trả số bản vẽ đã xuất.
+        /// </summary>
+        public static async Task<int> VeBanVe(IList<(TamAi Tam, TamTrienKhai Tk)> ds, string title, string tm, Action<string> bao, CancellationToken huy)
+        {
+            string cad = TimCad() ?? throw new InvalidOperationException("Máy chưa cài text-to-cad (lệnh cad). Cài: PowerShell → irm https://www.texttocad.dev/install.ps1 | iex");
+            string dir = ThuMucBanVe(tm);
+            Directory.CreateDirectory(dir);
+            var loi = new List<string>();
+            int xong = 0;
+            for (int i = 0; i < ds.Count; i++)
+            {
+                huy.ThrowIfCancellationRequested();
+                string ma = Bango(title, i + 1), script = PhongTrienKhai.ScriptCad(ma, ds[i].Tk);
+                if (script == null) { loi.Add(ma + ": làm tay / chưa có X × Y — không vẽ"); continue; }
+                bao("Phòng 4: text-to-cad vẽ " + (i + 1) + "/" + ds.Count + " — " + ma);
+                string ten = PhongTrienKhai.TenScript(ma);
+                File.WriteAllText(Path.Combine(dir, ten + ".py"), script, Utf8);
+                var (m1, r1) = await ChayCad(cad, dir, huy, "run", ten + ".py");
+                var id = System.Text.RegularExpressions.Regex.Match(r1, @"(?m)^\s*id:\s*(\S+)");
+                if (m1 != 0 || !id.Success) { loi.Add(ma + ": cad run lỗi — " + DongCuoi(r1)); continue; }
+                var (m2, r2) = await ChayCad(cad, dir, huy, "export", id.Groups[1].Value, ma + ".dxf");
+                if (m2 != 0) { loi.Add(ma + ": cad export lỗi — " + DongCuoi(r2)); continue; }
+                await ChayCad(cad, dir, huy, "snapshot", ma + ".dxf", ma + ".png", "--width", "900", "--height", "600"); // ảnh xem trước: lỗi thì thôi
+                xong++;
+            }
+            if (loi.Count > 0) bao("Vẽ xong " + xong + " bản, có tấm chưa vẽ được:\n" + string.Join("\n", loi));
+            return xong;
+        }
+
+        private static string DongCuoi(string s) => (s ?? "").Trim().Split('\n').LastOrDefault()?.Trim() ?? "";
+
         /// <summary>AI đọc tiết diện từng tấm (theo tệp bản vẽ) — giữ V người đã chọn ở lần trước.</summary>
         public static async Task<KetQuaTrienKhai> TrienKhaiDon(ChiTiet ct, KiemTra kt, string tm, Action<string> bao, CancellationToken huy)
         {

@@ -43,6 +43,8 @@ namespace TeamsTool.Core
         public List<string> ChiTiet = new List<string>(), CanhBao = new List<string>();
         public List<string> CacV = new List<string>();
         public string KyHieu = "";
+        /// <summary>Vị trí đường bẻ trên tấm phẳng (mm từ mép trái / mép dưới) và các đoạn thẳng phẳng — để vẽ DXF.</summary>
+        public List<double> BeX = new List<double>(), BeY = new List<double>(), DoanPhangX = new List<double>(), DoanPhangY = new List<double>();
     }
 
     /// <summary>Kết quả phòng 4, lưu &lt;thư mục đơn&gt;\ai\trien_khai.json (+ trien_khai.csv).</summary>
@@ -75,6 +77,7 @@ namespace TeamsTool.Core
         public static void Tinh(TamTrienKhai tk, TamAi tam, Func<double, List<UngVienV>> traV, double tThuc, Func<string, double?> lmin = null)
         {
             tk.ChiTiet.Clear(); tk.CanhBao.Clear(); tk.CacV.Clear();
+            tk.BeX.Clear(); tk.BeY.Clear(); tk.DoanPhangX.Clear(); tk.DoanPhangY.Clear();
             tk.XPhang = tk.YPhang = null;
             tk.LamTay = tk.Kieu == "lam_tay";
             double T = PhongKiemTra.So(tam.T) ?? 0;
@@ -102,8 +105,8 @@ namespace TeamsTool.Core
                 }
             }
 
-            tk.XPhang = Trai(tk.X, "X", tk, traV, T, tThuc);
-            tk.YPhang = Trai(tk.Y, "Y", tk, traV, T, tThuc);
+            tk.XPhang = Trai(tk.X, "X", tk, traV, T, tThuc, tk.BeX, tk.DoanPhangX);
+            tk.YPhang = Trai(tk.Y, "Y", tk, traV, T, tThuc, tk.BeY, tk.DoanPhangY);
             if (tk.X.Doan.Count == 0) tk.CanhBao.Add("Chưa có tiết diện hướng X.");
             if (tk.Y.Doan.Count == 0) tk.CanhBao.Add("Chưa có tiết diện hướng Y.");
             tk.KyHieu = KyHieu(tam, tatCaUon);
@@ -117,12 +120,15 @@ namespace TeamsTool.Core
         }
 
         /// <summary>Chiều dài trải của một tiết diện; ghi từng chỗ uốn vào ChiTiet. Không tính được → null.</summary>
-        private static double? Trai(TietDien td, string huong, TamTrienKhai tk, Func<double, List<UngVienV>> traV, double T, double tThuc)
+        private static double? Trai(TietDien td, string huong, TamTrienKhai tk, Func<double, List<UngVienV>> traV, double T, double tThuc,
+                                    List<double> viTriBe, List<double> doanPhang)
         {
             if (td.Doan.Count == 0) return null;
             if (td.Doan.Count != td.Uon.Count + 1) { tk.CanhBao.Add("Tiết diện " + huong + ": số đoạn phải = số chỗ uốn + 1."); return null; }
             double tong = td.Doan.Sum();
             var dong = new StringBuilder(huong + ": " + string.Join(" + ", td.Doan.Select(F)));
+            // mỗi chỗ uốn: bớt đoạn trước, bề rộng vùng uốn (đường bẻ ở giữa), bớt đoạn sau — để đặt đường bẻ trên tấm phẳng
+            var cho = new List<(double Truoc, double Vung, double Sau)>();
             for (int i = 0; i < td.Uon.Count; i++)
             {
                 Uon u = td.Uon[i];
@@ -134,6 +140,7 @@ namespace TeamsTool.Core
                         UngVienV chon = uv.FirstOrDefault(x => x.V == tk.VChon) ?? uv.FirstOrDefault();
                         if (chon == null) { tk.CanhBao.Add(huong + " chỗ " + (i + 1) + ": bảng TV không có góc " + F(u.Goc) + "° — tra tay / bẻ thử."); return null; }
                         tong -= 2 * chon.Delta;
+                        cho.Add((chon.Delta, 0, chon.Delta));
                         dong.Append(" | " + F(u.Goc) + "° " + chon.V + " δ" + F(chon.Delta) + " → −" + F(2 * chon.Delta) + (chon.Nguon.Length > 0 ? " (" + chon.Nguon + ")" : ""));
                         if (chon.CanhBao.Length > 0) tk.CanhBao.Add(huong + " chỗ " + (i + 1) + ": " + chon.CanhBao);
                         if (chon.V != tk.VChon && tk.VChon.Length > 0) tk.CanhBao.Add(huong + " chỗ " + (i + 1) + ": góc " + F(u.Goc) + "° không có " + tk.VChon + ", dùng " + chon.V + ".");
@@ -144,6 +151,7 @@ namespace TeamsTool.Core
                         // QC B-2-4: đường trung bình O = 0.45 × T thực; bớt 2 đoạn lùi (R + T)·tan(θ/2), cộng cung (R + O)·θ
                         double theta = 180 - u.Goc, rad = theta * Math.PI / 180, lui = (u.R + T) * Math.Tan(rad / 2), cung = (u.R + 0.45 * tThuc) * rad;
                         tong += cung - 2 * lui;
+                        cho.Add((lui, cung, lui));
                         dong.Append(" | ấn 1 lần R" + F(u.R) + " " + F(u.Goc) + "°: −2×" + F(lui) + " + cung " + F(cung));
                         break;
                     }
@@ -153,6 +161,7 @@ namespace TeamsTool.Core
                         double cung = (u.R + 0.5 * tThuc) * u.Cung * Math.PI / 180;
                         if (u.Cung <= 0) { tk.CanhBao.Add(huong + " chỗ " + (i + 1) + ": cuộn chưa có góc cung."); return null; }
                         tong += cung;
+                        cho.Add((0, cung, 0));
                         dong.Append(" | cuộn R" + F(u.R) + " cung " + F(u.Cung) + "°: + " + F(cung));
                         break;
                     }
@@ -160,6 +169,14 @@ namespace TeamsTool.Core
                         tk.CanhBao.Add(huong + " chỗ " + (i + 1) + ": kiểu uốn '" + u.Kieu + "' chưa tính được.");
                         return null;
                 }
+            }
+            double viTri = 0;
+            for (int k = 0; k < td.Doan.Count; k++)
+            {
+                double doan = td.Doan[k] - (k > 0 ? cho[k - 1].Sau : 0) - (k < cho.Count ? cho[k].Truoc : 0);
+                doanPhang.Add(Math.Round(doan, 2));
+                viTri += doan;
+                if (k < cho.Count) { viTriBe.Add(Math.Round(viTri + cho[k].Vung / 2, 2)); viTri += cho[k].Vung; }
             }
             double kq = Math.Round(tong, 1);
             tk.ChiTiet.Add(dong + " ⇒ " + F(kq));
@@ -179,6 +196,55 @@ namespace TeamsTool.Core
             if (lo.OfType<JsonObject>().Any(l => l.Get("sara") is bool b && b)) k.Add('s');
             return k.Count == 0 ? "" : k.Count == 1 ? k[0].ToString() : "*";
         }
+
+        // ---------- Bản vẽ trải phẳng (text-to-cad) ----------
+
+        /// <summary>Tên hàm / tệp Python hợp lệ từ bango: "130672-1" → "tam_130672_1".</summary>
+        public static string TenScript(string ma) =>
+            "tam_" + new string((ma ?? "").Select(c => c < 128 && char.IsLetterOrDigit(c) ? char.ToLowerInvariant(c) : '_').ToArray()).Trim('_');
+
+        /// <summary>
+        /// Script build123d (một @model, text-to-cad) vẽ tấm phẳng X × Y: lớp 0-KAKOU = nét cắt (hộp: cắt 4 góc theo đoạn phẳng đầu / cuối),
+        /// BEND = đường bẻ (tên lớp có chữ bend để text-to-cad cho phép nét hở), 3-KEGAKI = khắc mã tấm (chữ dạng nét viền).
+        /// Không vẽ được (làm tay / thiếu X, Y) → null.
+        /// shortcut: chưa có lỗ (bảng tấm không có toạ độ lỗ), khe R góc hộp, F-name — bổ sung trên CAD.
+        /// </summary>
+        public static string ScriptCad(string ma, TamTrienKhai tk)
+        {
+            if (tk.LamTay || !(tk.XPhang is double x) || !(tk.YPhang is double y) || x <= 0 || y <= 0) return null;
+            string ten = TenScript(ma);
+            var goc = new List<string>();
+            if (tk.BeX.Count > 0 && tk.BeY.Count > 0 && tk.DoanPhangX.Count > 1 && tk.DoanPhangY.Count > 1)
+            {
+                double x0 = tk.DoanPhangX[0], x1 = tk.DoanPhangX[tk.DoanPhangX.Count - 1], y0 = tk.DoanPhangY[0], y1 = tk.DoanPhangY[tk.DoanPhangY.Count - 1];
+                goc.Add(Bo(0, 0, x0, y0)); goc.Add(Bo(x - x1, 0, x1, y0)); goc.Add(Bo(0, y - y1, x0, y1)); goc.Add(Bo(x - x1, y - y1, x1, y1));
+            }
+            string ds(IEnumerable<double> v) => "[" + string.Join(", ", v.Select(F)) + "]";
+            var sb = new StringBuilder();
+            sb.Append("# Ban ve trai phang (phong 4 OhtaTeams, text-to-cad) - sinh tu dong, sua tay se bi ghi de khi ve lai.\n");
+            sb.Append("import build123d as bd\nfrom cad import model\n\n");
+            sb.Append("X, Y = ").Append(F(x)).Append(", ").Append(F(y)).Append('\n');
+            sb.Append("BE_X = ").Append(ds(tk.BeX)).Append("  # duong be song song truc Y, mm tu mep trai\n");
+            sb.Append("BE_Y = ").Append(ds(tk.BeY)).Append("  # duong be song song truc X, mm tu mep duoi\n");
+            sb.Append("GOC = [").Append(string.Join(", ", goc)).Append("]  # hop: cat goc (x, y, rong, cao)\n");
+            sb.Append("MA = \"").Append((ma ?? "").Replace("\\", "").Replace("\"", "")).Append("\"\n\n\n");
+            sb.Append("@model\ndef ").Append(ten).Append("():\n");
+            sb.Append("    with bd.BuildSketch() as s:\n");
+            sb.Append("        bd.Rectangle(X, Y, align=(bd.Align.MIN, bd.Align.MIN))\n");
+            sb.Append("        for (gx, gy, gw, gh) in GOC:\n");
+            sb.Append("            with bd.Locations((gx, gy)):\n");
+            sb.Append("                bd.Rectangle(gw, gh, align=(bd.Align.MIN, bd.Align.MIN), mode=bd.Mode.SUBTRACT)\n");
+            sb.Append("    cat = s.sketch\n    cat.label = \"0-KAKOU\"\n    phan = [cat]\n");
+            sb.Append("    be = [bd.Edge.make_line((v, 0, 0), (v, Y, 0)) for v in BE_X] + [bd.Edge.make_line((0, v, 0), (X, v, 0)) for v in BE_Y]\n");
+            sb.Append("    if be:\n        phan.append(bd.Compound(be, label=\"BEND\"))\n");
+            sb.Append("    with bd.BuildSketch() as t:\n        with bd.Locations((X / 2, Y / 2)):\n            bd.Text(MA, font_size=min(8.0, Y / 6, X / max(len(MA), 1)))\n");
+            sb.Append("    chu = t.sketch\n    chu.label = \"3-KEGAKI\"\n    phan.append(chu)\n");
+            sb.Append("    return bd.Compound(children=phan, label=\"tam\")\n\n\n");
+            sb.Append("if __name__ == \"__main__\":\n    ").Append(ten).Append("()\n");
+            return sb.ToString();
+        }
+
+        private static string Bo(double x, double y, double w, double h) => "(" + F(x) + ", " + F(y) + ", " + F(w) + ", " + F(h) + ")";
 
         // ---------- CSV + tóm tắt ----------
 
