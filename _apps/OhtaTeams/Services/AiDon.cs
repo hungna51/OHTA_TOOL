@@ -29,9 +29,14 @@ namespace TeamsTool.Services
 
         // ---------- Cài đặt ----------
 
-        /// <summary>4 phòng AI: thư mục quy chuẩn riêng (quy_chuan\&lt;tên&gt;) và tên hiện.</summary>
+        /// <summary>
+        /// 4 bộ quy chuẩn (quy_chuan\&lt;tên&gt;) theo việc. Từ 12/11 còn 3 phòng: 1 Nhận &amp; Đọc gửi bộ đọc + kiểm tra + triển khai trong một lượt,
+        /// 2 Kiểm tra &amp; Hỏi dùng bộ kiểm tra khi kiểm lại bằng chữ, 3 Triển khai &amp; Vẽ dùng bộ triển khai khi AI viết mẫu vẽ.
+        /// </summary>
         public static readonly string[] ThuMucPhong = { "1_tiep_nhan", "2_doc_ban_ve", "3_kiem_tra", "4_trien_khai" };
-        public static readonly string[] TenPhong = { "1 · Tiếp nhận", "2 · Đọc bản vẽ", "3 · Kiểm tra", "4 · Triển khai" };
+        public static readonly string[] TenPhong = { "Tiếp nhận (không gửi AI)", "Đọc bản vẽ (phòng 1)", "Kiểm tra (phòng 1 + 2)", "Triển khai (phòng 1 + 3)" };
+        /// <summary>Key riêng: tệp ai.key.phong2/3/4 (giữ tên cũ) ↔ phòng mới 1/2/3.</summary>
+        public static readonly (int Tep, string Ten)[] KeyTheoPhong = { (2, "1 · Nhận & Đọc"), (3, "2 · Kiểm tra & Hỏi"), (4, "3 · Triển khai & Vẽ") };
 
         /// <summary>
         /// Key Claude: phong = 0 → key chung 05_AI\data\ai.key (dùng chung với tab AI trên CAD);
@@ -101,7 +106,84 @@ namespace TeamsTool.Services
             string tm = ThuMucQuyChuanPhong(phong);
             if (!Directory.Exists(tm)) tm = ThuMucQuyChuan;
             if (!Directory.Exists(tm)) return "";
-            return string.Join("\n\n", Directory.GetFiles(tm, "*.md").OrderBy(f => f).Select(f => File.ReadAllText(f, Encoding.UTF8)));
+            return string.Join("\n\n", Directory.GetFiles(tm, "*.md").Where(f => !string.Equals(Path.GetFileName(f), PhongBaiHoc.TenTep, StringComparison.OrdinalIgnoreCase))
+                                                           .OrderBy(f => f).Select(f => File.ReadAllText(f, Encoding.UTF8)));
+        }
+
+        /// <summary>Quy chuẩn lượt đọc bản vẽ (đọc + kiểm tra + triển khai, bỏ trùng khi máy chưa chia bộ) + bài học đã duyệt.</summary>
+        public static string QuyChuanDoc(bool kemBaiHoc = true)
+        {
+            string qc = string.Join("\n\n", new[] { 2, 3, 4 }.Select(QuyChuan).Where(s => s.Length > 0).Distinct());
+            string bh = kemBaiHoc ? string.Join("\n", PhongBaiHoc.CacBaiHoc(DocBaiHoc()).Select(b => "- " + b)) : "";
+            return bh.Length == 0 ? qc : qc + "\n\n## BÀI HỌC TỪ CÁC LẦN NGƯỜI SỬA (ưu tiên áp dụng)\n" + bh;
+        }
+
+        // ---------- Bài học ----------
+
+        /// <summary>Thư mục bài học dùng chung (OneDrive / SharePoint) chọn ở ⚙ → 🤖 AI; "" = tệp trên máy (quy chuẩn phòng đọc).</summary>
+        public static string ThuMucBaiHocChung
+        {
+            get => CaiDatTeams.Doc("ai_bai_hoc_dir");
+            set => CaiDatTeams.Ghi("ai_bai_hoc_dir", (value ?? "").Trim().Trim('"'));
+        }
+
+        public static string FileBaiHoc
+        {
+            get
+            {
+                string chung = ThuMucBaiHocChung;
+                return Path.Combine(chung.Length > 0 && Directory.Exists(chung) ? chung : ThuMucQuyChuanPhong(2), PhongBaiHoc.TenTep);
+            }
+        }
+
+        public static string DocBaiHoc()
+        {
+            try { return File.Exists(FileBaiHoc) ? File.ReadAllText(FileBaiHoc, Encoding.UTF8) : ""; }
+            catch (IOException) { return ""; } // thư mục chung đang đồng bộ: lần này đọc không có bài học
+        }
+
+        /// <summary>
+        /// AI xem các chỗ người sửa (chưa gửi) → đề xuất bài học (chờ duyệt) vào ct.BaiHoc. kemPdf: gửi kèm bản vẽ (một lượt mỗi tệp),
+        /// không thì một lượt chữ cho cả đơn. Trả số đề xuất mới.
+        /// </summary>
+        public static async Task<int> RutBaiHoc(TiepNhan tn, ChiTiet ct, string tm, bool kemPdf, Action<string> bao, CancellationToken huy)
+        {
+            List<ChoSua> choSua = PhongBaiHoc.CacChoSua(ct);
+            if (choSua.Count == 0) return 0;
+            string key = KeyPhong(3), model = Model(), quyChuan = QuyChuanDoc(kemBaiHoc: false);
+            List<string> cu = PhongBaiHoc.CacBaiHoc(DocBaiHoc());
+            var nhom = kemPdf ? choSua.GroupBy(c => c.Tam.Tep).Select(g => g.ToList()).ToList() : new List<List<ChoSua>> { choSua };
+            int moi = 0, i = 0;
+            var loi = new List<string>();
+            foreach (List<ChoSua> ds in nhom)
+            {
+                huy.ThrowIfCancellationRequested();
+                bao("AI rút bài học từ " + ds.Count + " chỗ sửa" + (kemPdf ? " — " + ds[0].Tam.Tep + " (" + (++i) + "/" + nhom.Count + ")" : "") + "…");
+                string pdf = null, f = Path.Combine(ThuMucTep(tm), ds[0].Tam.Tep);
+                if (kemPdf && f.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) && File.Exists(f) && new FileInfo(f).Length <= PhongDocBanVe.PdfToiDa)
+                    pdf = Convert.ToBase64String(File.ReadAllBytes(f));
+                string body = PhongBaiHoc.Body(model, quyChuan, pdf, PhongBaiHoc.DauVao(ds, tn?.CongTy, cu));
+                PhongBaiHoc.PhanHoi ph = PhongBaiHoc.DocPhanHoi(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, huy));
+                ct.TokenVao += ph.Vao + ph.GhiCache + ph.DocCache;
+                ct.TokenRa += ph.Ra;
+                ct.Tien += PhongDocBanVe.Tien(model, ph.Vao, ph.GhiCache, ph.DocCache, ph.Ra);
+                if (ph.Loi != null) { loi.Add(ph.Loi); continue; }
+                foreach (DeXuatBaiHoc d in ph.BaiHoc.Where(d => !ct.BaiHoc.Any(x => x.TrangThai != "bo" && x.NoiDung == d.NoiDung))) { ct.BaiHoc.Add(d); moi++; }
+                ct.DaRutBaiHoc.UnionWith(ds.Select(c => c.ChuKy));
+            }
+            Ghi(tm, ct);
+            if (loi.Count > 0) throw new InvalidOperationException("AI chưa rút được bài học: " + string.Join("; ", loi.Distinct()));
+            return moi;
+        }
+
+        /// <summary>Chỉ máy Admin: ghi bài học đã duyệt vào bai_hoc.md (gộp vào dòng trùng ý nếu AI chỉ ra).</summary>
+        public static void ThemBaiHoc(ChiTiet ct, string tm, DeXuatBaiHoc d)
+        {
+            if (!LaMayAdmin()) throw new InvalidOperationException("Chỉ máy Admin được thêm bài học.");
+            string f = FileBaiHoc;
+            GhiAnToan(f, PhongBaiHoc.ApDung(File.Exists(f) ? File.ReadAllText(f, Encoding.UTF8) : "", d));
+            d.TrangThai = "them";
+            Ghi(tm, ct);
         }
 
         public static string[] DongCongTy()
@@ -258,9 +340,16 @@ namespace TeamsTool.Services
         public static async Task<ChiTiet> DocBanVe(TiepNhan tn, string tm, bool tatCa, Action<string> bao, CancellationToken ct)
         {
             string key = KeyPhong(2);
-            string model = Model(), quyChuan = QuyChuan(2);
+            string model = Model(), quyChuan = QuyChuanDoc();
             ChiTiet cu = DocChiTiet(tm) ?? new ChiTiet();
-            var ct2 = new ChiTiet { TokenVao = cu.TokenVao, TokenRa = cu.TokenRa, Tien = cu.Tien, MaBamDaDoc = new Dictionary<string, string>(cu.MaBamDaDoc) };
+            var ct2 = new ChiTiet
+            {
+                TokenVao = cu.TokenVao, TokenRa = cu.TokenRa, Tien = cu.Tien, MaBamDaDoc = new Dictionary<string, string>(cu.MaBamDaDoc),
+                BaiHoc = cu.BaiHoc, DaRutBaiHoc = cu.DaRutBaiHoc,
+            };
+            // Một lượt đọc trả cả thông số + tiết diện + nghi vấn; mẫu biên dạng để AI chọn (máy chưa có Python / ezdxf → rỗng)
+            string them = PhongDocBanVe.DauVao(tn.CongTy, (await DanhSachMau(tm)).Select(m => (m.Ten, m.MoTa)));
+            var nghiVan = new List<VanDe>();
 
             var canDoc = tn.Tep.Where(t => t.Loai == PhongTiepNhan.BanVe && (t.Ten.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) || t.Ten.EndsWith(".dxf", StringComparison.OrdinalIgnoreCase)))
                                .Where(t => tatCa || !ct2.MaBamDaDoc.TryGetValue(t.Ten, out string mb) || mb != t.MaBam).ToList();
@@ -271,7 +360,7 @@ namespace TeamsTool.Services
             foreach (TepDon t in canDoc)
             {
                 ct.ThrowIfCancellationRequested();
-                bao("Phòng 2: AI đọc " + (++i) + "/" + canDoc.Count + " — " + t.Ten + " (mỗi tệp khoảng 1 phút)");
+                bao("Phòng 1: AI đọc " + (++i) + "/" + canDoc.Count + " — " + t.Ten + " (thông số + tiết diện + nghi vấn, mỗi tệp 1–2 phút)");
                 string f = Path.Combine(ThuMucTep(tm), t.Ten);
                 string pdf = null, dxf = null;
                 if (t.Ten.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
@@ -284,86 +373,74 @@ namespace TeamsTool.Services
                     try { dxf = DocDxf.TomTat(t.Ten, DocDxf.DocFile(f)); }
                     catch (Exception ex) { loi.Add(t.Ten + ": " + ex.Message); continue; }
                 }
-                string body = PhongDocBanVe.Body(model, PhongDocBanVe.LoiDan, quyChuan, t.Ten, pdf, dxf);
-                PhongDocBanVe.PhanHoi ph = PhongDocBanVe.DocPhanHoi(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, ct));
+                string body = PhongDocBanVe.Body(model, PhongDocBanVe.LoiDan, quyChuan, t.Ten, pdf, dxf, them);
+                PhongDocBanVe.PhanHoi ph = PhongDocBanVe.DocPhanHoi(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, ct), t.Ten);
                 ct2.TokenVao += ph.Vao + ph.GhiCache + ph.DocCache;
                 ct2.TokenRa += ph.Ra;
                 ct2.Tien += PhongDocBanVe.Tien(model, ph.Vao, ph.GhiCache, ph.DocCache, ph.Ra);
                 if (ph.Loi != null) { loi.Add(t.Ten + ": " + ph.Loi); continue; }
                 foreach (TamAi tam in ph.Tam) tam.Tep = t.Ten;
                 moi.AddRange(ph.Tam);
+                nghiVan.AddRange(ph.VanDe);
                 docLai.Add(t.Ten);
                 ct2.MaBamDaDoc[t.Ten] = t.MaBam;
             }
             // Tệp đã bị bỏ khỏi đơn / đổi sang loại khác → bỏ tấm của nó
             var conLai = new HashSet<string>(tn.Tep.Where(t => t.Loai == PhongTiepNhan.BanVe).Select(t => t.Ten));
             ct2.Tam = PhongDocBanVe.Gop(cu.Tam.Where(x => conLai.Contains(x.Tep)).ToList(), moi, docLai);
-            // Bảng đổi (đọc lại / bỏ tệp) → phải xác nhận lại trước khi sang phòng 3
+            // Nghi vấn: tệp vừa đọc lại lấy mới, tệp không đọc lại giữ cũ (mã nghi vấn = "ai|<tệp>|…")
+            bool CuaTep(VanDe v, string tep) => v.Ma.StartsWith("ai|" + tep.ToLowerInvariant() + "|", StringComparison.Ordinal);
+            ct2.NghiVan = cu.NghiVan.Where(v => conLai.Any(f => CuaTep(v, f)) && !docLai.Any(f => CuaTep(v, f))).Concat(nghiVan).ToList();
+            // Bảng đổi (đọc lại / bỏ tệp) → phải xác nhận lại trước khi sang Triển khai
             ct2.XacNhan = docLai.Count == 0 && ct2.Tam.Count == cu.Tam.Count ? cu.XacNhan : "";
             Ghi(tm, ct2);
             if (loi.Count > 0) bao("Có tệp chưa đọc được:\n" + string.Join("\n", loi));
             return ct2;
         }
 
-        // ---------- Phòng 3 ----------
+        // ---------- Phòng 2: Kiểm tra & Hỏi ----------
 
         /// <summary>
-        /// Kiểm bảng tấm đã xác nhận: luật C# (bảng TV + catalog trong 01_Fname\data) rồi AI rà từng tệp bản vẽ theo QUY CHUẨN phòng 3
-        /// (không có key → chỉ chạy luật). Giữ trạng thái người dùng đã chọn ở lần trước (theo mã vấn đề).
+        /// Luật C# (bảng TV + catalog như tab Fname) trên bảng tấm hiện tại + nghi vấn AI thấy khi đọc + vấn đề AI kiểm lại bằng chữ (giữ từ lần trước).
+        /// Không gọi AI, chạy ngay — gọi sau mỗi lần đọc / sửa bảng. Giữ trạng thái, câu trả lời người dùng (theo mã vấn đề).
         /// </summary>
-        public static async Task<KiemTra> KiemTraDon(TiepNhan tn, ChiTiet ct, string tm, bool dungAi, Action<string> bao, CancellationToken huy)
+        public static KiemTra KiemLuat(ChiTiet ct, string tm)
         {
             KiemTra cu = DocKiemTra(tm);
-            List<PhongKiemTra.DongTv> tv = PhongKiemTra.DocTv(BangFname("trav_90"));
-            string catalog = BangFname("catalog");
-            var tam = ct.Tam.Where(t => t.Moi).ToList();
-
-            bao("Phòng 3: chạy luật…");
-            List<VanDe> luat = PhongKiemTra.Luat(tam, tv, catalog);
-            var vanDe = new List<VanDe>(luat);
-            var kt = new KiemTra { TuXacNhan = ct.XacNhan, TokenVao = cu?.TokenVao ?? 0, TokenRa = cu?.TokenRa ?? 0, Tien = cu?.Tien ?? 0 };
-            var loi = new List<string>();
-
-            string key = !dungAi ? null : NguonAi != AiCli.Api ? "" : DocKey(3); // CLI không cần key
-            if (dungAi && key == null) loi.Add("Chưa có key Claude (⚙ → 🤖 AI) — chỉ chạy luật, AI chưa rà bản vẽ.");
-            if (key != null)
+            var vanDe = PhongKiemTra.Luat(ct.Tam.Where(t => t.Moi), PhongKiemTra.DocTv(BangFname("trav_90")), BangFname("catalog"));
+            vanDe.AddRange(ct.NghiVan);
+            // "ai" = kiểm lại bằng chữ (và AI rà bản vẽ của bản 4 phòng cũ) — chỉ có trong kiem_tra.json
+            if (cu != null) vanDe.AddRange(cu.VanDe.Where(v => v.Nguon == "ai"));
+            var kt = new KiemTra
             {
-                string model = Model(), quyChuan = QuyChuan(3);
-                var theoTep = tam.GroupBy(t => t.Tep).ToList();
-                int i = 0;
-                foreach (var nhom in theoTep)
-                {
-                    huy.ThrowIfCancellationRequested();
-                    bao("Phòng 3: AI rà " + (++i) + "/" + theoTep.Count + " — " + nhom.Key + " (mỗi tệp khoảng 1 phút)");
-                    string f = Path.Combine(ThuMucTep(tm), nhom.Key);
-                    if (!File.Exists(f)) { loi.Add(nhom.Key + ": không còn tệp trong ai\\goc"); continue; }
-                    string pdf = null, dxf = null;
-                    try
-                    {
-                        if (f.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (new FileInfo(f).Length > PhongDocBanVe.PdfToiDa) { loi.Add(nhom.Key + ": PDF quá lớn (> 22 MB)"); continue; }
-                            pdf = Convert.ToBase64String(File.ReadAllBytes(f));
-                        }
-                        else dxf = DocDxf.TomTat(nhom.Key, DocDxf.DocFile(f));
-                    }
-                    catch (Exception ex) { loi.Add(nhom.Key + ": " + ex.Message); continue; }
-                    var luatTep = luat.Where(v => nhom.Any(t => v.Ma.StartsWith("luat|" + t.Khoa + "|", StringComparison.Ordinal))).ToList();
-                    string body = PhongKiemTra.Body(model, quyChuan, pdf, PhongKiemTra.DauVao(nhom.Key, tn?.CongTy, nhom, luatTep, cu?.VanDe), dxf);
-                    PhongKiemTra.PhanHoi ph = PhongKiemTra.DocPhanHoi(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, huy), nhom.Key);
-                    kt.TokenVao += ph.Vao + ph.GhiCache + ph.DocCache;
-                    kt.TokenRa += ph.Ra;
-                    kt.Tien += PhongDocBanVe.Tien(model, ph.Vao, ph.GhiCache, ph.DocCache, ph.Ra);
-                    if (ph.Loi != null) { loi.Add(nhom.Key + ": " + ph.Loi); continue; }
-                    vanDe.AddRange(ph.VanDe);
-                }
-            }
-            // AI lỗi / không chạy: giữ vấn đề AI cũ của lần trước để không mất
-            if (loi.Count > 0 && cu != null) vanDe.AddRange(cu.VanDe.Where(v => v.Nguon == "ai" && !vanDe.Any(x => x.Ma == v.Ma)));
-            kt.VanDe = PhongKiemTra.Gop(cu?.VanDe, vanDe.GroupBy(v => v.Ma).Select(g => g.First()).ToList());
-            kt.Luc = DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+                TokenVao = cu?.TokenVao ?? 0, TokenRa = cu?.TokenRa ?? 0, Tien = cu?.Tien ?? 0,
+                VanDe = PhongKiemTra.Gop(cu?.VanDe, vanDe.GroupBy(v => v.Ma).Select(g => g.First()).ToList()),
+                Luc = DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture),
+            };
             Ghi(tm, kt);
-            if (loi.Count > 0) bao("Kiểm xong, có chỗ chưa chạy được:\n" + string.Join("\n", loi));
+            return kt;
+        }
+
+        /// <summary>
+        /// Kiểm lại sau khi có câu trả lời: luật + AI đọc bảng tấm và câu trả lời (CHỈ GỬI CHỮ, không gửi bản vẽ) theo QC kiểm tra,
+        /// thêm vấn đề mới phát sinh. Chưa có câu trả lời nào → chỉ chạy luật.
+        /// </summary>
+        public static async Task<KiemTra> KiemLaiAi(TiepNhan tn, ChiTiet ct, string tm, Action<string> bao, CancellationToken huy)
+        {
+            KiemTra kt = KiemLuat(ct, tm);
+            if (!kt.VanDe.Any(v => v.TraLoi.Trim().Length > 0)) { bao("Chưa có câu trả lời nào — đã chạy lại luật, không gọi AI."); return kt; }
+            string key = KeyPhong(3), model = Model();
+            bao("Phòng 2: AI xem câu trả lời (chỉ gửi chữ)…");
+            string body = PhongKiemTra.Body(model, QuyChuan(3), null, PhongKiemTra.DauVao("(cả đơn)", tn?.CongTy, ct.Tam.Where(t => t.Moi), kt.VanDe, kt.VanDe), null, PhongKiemTra.LoiDanChu);
+            PhongKiemTra.PhanHoi ph = PhongKiemTra.DocPhanHoi(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, huy), "don");
+            kt.TokenVao += ph.Vao + ph.GhiCache + ph.DocCache;
+            kt.TokenRa += ph.Ra;
+            kt.Tien += PhongDocBanVe.Tien(model, ph.Vao, ph.GhiCache, ph.DocCache, ph.Ra);
+            if (ph.Loi != null) { Ghi(tm, kt); throw new InvalidOperationException("AI chưa kiểm lại được: " + ph.Loi); }
+            var moi = ph.VanDe.Where(v => !kt.VanDe.Any(x => x.Ma == v.Ma)).GroupBy(v => v.Ma).Select(g => g.First()).ToList();
+            kt.VanDe.AddRange(moi);
+            Ghi(tm, kt);
+            bao("Kiểm lại xong: AI thêm " + moi.Count + " vấn đề mới.");
             return kt;
         }
 
@@ -388,6 +465,38 @@ namespace TeamsTool.Services
             OhtaTool.Plugin.Core.TraVCalculator.Load(ThuMucFname);
             OhtaTool.Plugin.Core.TraVCalculator.SetCatalog(OhtaTool.Plugin.Core.FnameCatalogData.LoadFromModuleDirectory(ThuMucFname));
             _daNapTraV = true;
+        }
+
+        /// <summary>
+        /// Dữ liệu triển khai từ bảng tấm đã xác nhận (tiết diện đọc cùng lượt đọc, người đã sửa) — không gọi AI.
+        /// Giữ V người đã chọn, token. Đơn đọc bằng bản cũ: tiết diện phòng Triển khai cũ đã đọc được chép vào bảng tấm.
+        /// Chỉ ghi trien_khai.json khi đổi (giờ tệp dùng để báo DXF cũ).
+        /// </summary>
+        public static KetQuaTrienKhai TaoTrienKhai(ChiTiet ct, string tm)
+        {
+            KetQuaTrienKhai cu = DocTrienKhai(tm);
+            var kq = new KetQuaTrienKhai { TuXacNhan = ct.XacNhan, Luc = cu?.Luc ?? "", TokenVao = cu?.TokenVao ?? 0, TokenRa = cu?.TokenRa ?? 0, Tien = cu?.Tien ?? 0 };
+            bool doiCt = false;
+            foreach (TamAi tam in ct.Tam.Where(t => t.Moi))
+            {
+                TamTrienKhai c = cu?.Tam.FirstOrDefault(x => x.Khoa == tam.Khoa);
+                if (!PhongTrienKhai.CoTietDien(tam) && c != null && (c.Kieu == "lam_tay" || c.X.Doan.Count > 0 || c.Y.Doan.Count > 0))
+                {
+                    PhongTrienKhai.ChepVaoTam(c, tam);
+                    doiCt = true;
+                }
+                TamTrienKhai tk = PhongTrienKhai.TuTam(tam);
+                tk.VChon = c?.VChon ?? "";
+                kq.Tam.Add(tk);
+            }
+            if (doiCt) Ghi(tm, ct);
+            string json = PhongTrienKhai.Ghi(kq);
+            if (cu == null || json != PhongTrienKhai.Ghi(cu))
+            {
+                kq.Luc = DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+                Ghi(tm, kq);
+            }
+            return kq;
         }
 
         /// <summary>
@@ -533,7 +642,7 @@ namespace TeamsTool.Services
         /// AI viết mẫu biên dạng mới cho tấm chưa có mẫu (đọc lại bản vẽ khách + mô tả + ví dụ be.py), kiểm an toàn (KiemMau),
         /// lưu ai\ban_ve\mau_thu\&lt;ten&gt;.py và gán cho tấm. Trả mẫu (Loi khác null = không dùng được).
         /// </summary>
-        public static async Task<PhongTrienKhai.MauMoi> DeXuatMau(TamAi tam, TamTrienKhai tk, KetQuaTrienKhai kq, string tm, Action<string> bao, CancellationToken huy)
+        public static async Task<PhongTrienKhai.MauMoi> DeXuatMau(ChiTiet ct, TamAi tam, TamTrienKhai tk, KetQuaTrienKhai kq, string tm, Action<string> bao, CancellationToken huy)
         {
             string key = KeyPhong(4);
             string model = Model();
@@ -552,7 +661,8 @@ namespace TeamsTool.Services
             {
                 Directory.CreateDirectory(ThuVienThu(tm));
                 File.WriteAllText(Path.Combine(ThuVienThu(tm), m.Ten + ".py"), m.Ma, Utf8);
-                tk.BienDang = m.Ten;
+                tk.BienDang = tam.BienDang = m.Ten; // biên dạng nằm trong bảng tấm — trien_khai.json dựng lại từ đó
+                Ghi(tm, ct);
             }
             Ghi(tm, kq);
             return m;
@@ -596,23 +706,26 @@ namespace TeamsTool.Services
 
         private static string DongCuoi(string s) => (s ?? "").Trim().Split('\n').LastOrDefault()?.Trim() ?? "";
 
-        /// <summary>AI đọc tiết diện từng tấm (theo tệp bản vẽ) — giữ V người đã chọn ở lần trước.</summary>
+        /// <summary>
+        /// Chỉ cho đơn đọc bằng bản cũ (bảng tấm chưa có tiết diện): AI đọc bù tiết diện các tấm đó theo tệp bản vẽ.
+        /// Kết quả vào trien_khai.json; TaoTrienKhai chép sang bảng tấm. Đơn đọc bằng bản mới không cần.
+        /// </summary>
         public static async Task<KetQuaTrienKhai> TrienKhaiDon(ChiTiet ct, KiemTra kt, string tm, Action<string> bao, CancellationToken huy)
         {
             NapTraV(lai: true);
             KetQuaTrienKhai cu = DocTrienKhai(tm);
             string key = KeyPhong(4);
             string model = Model(), quyChuan = QuyChuan(4);
-            var kq = new KetQuaTrienKhai { TuXacNhan = kt.XacNhan, TokenVao = cu?.TokenVao ?? 0, TokenRa = cu?.TokenRa ?? 0, Tien = cu?.Tien ?? 0 };
+            var kq = new KetQuaTrienKhai { TuXacNhan = ct.XacNhan, TokenVao = cu?.TokenVao ?? 0, TokenRa = cu?.TokenRa ?? 0, Tien = cu?.Tien ?? 0 };
             var loi = new List<string>();
-            var theoTep = ct.Tam.Where(t => t.Moi).GroupBy(t => t.Tep).ToList();
+            var theoTep = ct.Tam.Where(t => t.Moi && !PhongTrienKhai.CoTietDien(t)).GroupBy(t => t.Tep).ToList();
             // mẫu biên dạng để AI chọn (máy chưa có Python / ezdxf → rỗng: AI để trống, vẽ thì tự suy)
             var thuVien = (await DanhSachMau(tm)).Select(m => (m.Ten, m.MoTa)).ToList();
             int i = 0;
             foreach (var nhom in theoTep)
             {
                 huy.ThrowIfCancellationRequested();
-                bao("Phòng 4: AI đọc tiết diện " + (++i) + "/" + theoTep.Count + " — " + nhom.Key + " (mỗi tệp khoảng 1 phút)");
+                bao("Phòng 3: AI đọc bù tiết diện (đơn cũ) " + (++i) + "/" + theoTep.Count + " — " + nhom.Key + " (mỗi tệp khoảng 1 phút)");
                 string f = Path.Combine(ThuMucTep(tm), nhom.Key);
                 string pdf = null, dxf = null;
                 try
@@ -625,7 +738,7 @@ namespace TeamsTool.Services
                     else dxf = DocDxf.TomTat(nhom.Key, DocDxf.DocFile(f));
                 }
                 catch (Exception ex) { loi.Add(nhom.Key + ": " + ex.Message); continue; }
-                string body = PhongTrienKhai.Body(model, quyChuan, pdf, PhongTrienKhai.DauVao(nhom.Key, nhom, kt.VanDe, thuVien), dxf);
+                string body = PhongTrienKhai.Body(model, quyChuan, pdf, PhongTrienKhai.DauVao(nhom.Key, nhom, kt?.VanDe, thuVien), dxf);
                 PhongTrienKhai.PhanHoi ph = PhongTrienKhai.DocPhanHoi(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, huy));
                 kq.TokenVao += ph.Vao + ph.GhiCache + ph.DocCache;
                 kq.TokenRa += ph.Ra;

@@ -56,6 +56,75 @@ namespace TeamsTool.Tests
             "  0\nMTEXT\n  3\n{\\fArial|b0;\\U+66F2}\n  1\n\\PR5\n" +
             "  0\nENDSEC\n  0\nEOF\n";
 
+        /// <summary>3 phòng (12/11): đọc một lượt (tiết diện + nghi vấn), tiết diện dạng chữ, luật tiết diện, bài học.</summary>
+        private static void TestBaPhong()
+        {
+            Console.WriteLine("-- 3 phong: doc mot luot / tiet dien chu / bai hoc --");
+            string loi;
+            TietDien td = PhongTrienKhai.DocChuTd("50 b90 100 a90r10 40", out loi);
+            Kiem("td chu: doc", td.Doan.Count + "|" + td.Uon.Count + "|" + td.Uon[1].Kieu + "|" + td.Uon[1].R + "|" + (loi ?? "null"), "3|2|an_1_lan|10|null");
+            Kiem("td chu: ghi lai giong", PhongTrienKhai.ChuTd(td), "50 b90 100 a90r10 40");
+            Kiem("td chu: cuon + pitchi + dau +", PhongTrienKhai.ChuTd(PhongTrienKhai.DocChuTd("0 + c360r50 + 0", out loi)) + "|" + PhongTrienKhai.DocChuTd("20 P90 20", out loi).Uon[0].Kieu, "0 c360r50 0|pitchi");
+            Kiem("td chu: rong = khong uon", PhongTrienKhai.DocChuTd("", out loi).Doan.Count + "|" + PhongTrienKhai.DocChuTd("300", out loi).Doan.Count, "0|1");
+            Kiem("td chu: sai ket thuc bang uon", PhongTrienKhai.DocChuTd("50 b90", out loi) == null && loi.Contains("kết thúc"), true);
+            Kiem("td chu: sai ky hieu", PhongTrienKhai.DocChuTd("50 x90 50", out loi) == null && loi.Contains("x90"), true);
+
+            // Phản hồi đọc bản vẽ một lượt: tiết diện cấu trúc → chữ, nghi vấn → VanDe nguồn "doc"
+            string text = "{\"tam\":[{\"so_ban_ve\":\"A-1\",\"ten\":\"L\",\"M\":\"SPCC\",\"Z\":\"\",\"T\":\"1.6\",\"Q\":\"2\",\"mat\":\"\",\"kich_thuoc\":\"100x50\",\"dung_sai\":\"\",\"ghi_chu_jp\":\"\",\"ghi_chu_vi\":\"\",\"trang\":\"1\",\"canh\":[],\"lo\":[],\"khong_chac\":[],"
+                 + "\"kieu_td\":\"be\",\"x\":{\"doan\":[50,30],\"uon\":[{\"kieu\":\"be\",\"goc\":90,\"r_trong\":0,\"cung\":0}]},\"y\":{\"doan\":[200],\"uon\":[]},\"ghi_chu_td\":\"bẻ V\",\"bien_dang\":\"be\",\"mo_ta_bien_dang\":\"\"}],"
+                 + "\"van_de\":[{\"tam\":\"A-1\",\"muc\":\"do\",\"nhom\":\"khach\",\"muc_qc\":\"\",\"noi_dung\":\"Lỗ M5 cách mép bao nhiêu?\",\"lien_lac\":false}]}";
+            var ph = PhongDocBanVe.DocPhanHoi("{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":" + OhtaTool.Plugin.Core.JsonLite.Serialize(text) + "}]}", "A.pdf");
+            TamAi t = ph.Tam[0];
+            Kiem("doc 1 luot: tiet dien chu", t.KieuTd + "|" + t.TdX + "|" + t.TdY + "|" + t.BienDang, "be|50 b90 30|200|be");
+            Kiem("doc 1 luot: nghi van", ph.VanDe.Count + "|" + ph.VanDe[0].Nguon + "|" + ph.VanDe[0].Ma.StartsWith("ai|a.pdf|") + "|" + ph.VanDe[0].Muc, "1|doc|True|do");
+            Kiem("schema doc co van_de + x", PhongDocBanVe.Body("claude-opus-5-5", "d", "q", "A.pdf", null, null, "Thư viện").Contains("\"van_de\"")
+                 && PhongDocBanVe.Body("claude-opus-5-5", "d", "q", "A.pdf", null, null, "Thư viện biên dạng").Contains("Thư viện biên dạng"), true);
+
+            // Lưu / đọc chi_tiet.json giữ tiết diện, giá trị AI, nghi vấn, bài học
+            t.Tep = "A.pdf";
+            t.GiaTriAi["T"] = "1.6"; t.T = "2.0"; t.DaSua.Add("T"); t.LyDoSua = "khách sửa";
+            var ct = new ChiTiet { Tam = { t }, NghiVan = ph.VanDe, BaiHoc = { new DeXuatBaiHoc { NoiDung = "Khi …", TrangThai = "" } } };
+            ct.DaRutBaiHoc.Add("x");
+            ChiTiet ct2 = PhongDocBanVe.Doc(PhongDocBanVe.Ghi(ct));
+            TamAi t2 = ct2.Tam[0];
+            Kiem("chi_tiet: giu td + gia tri AI", t2.TdX + "|" + t2.KieuTd + "|" + t2.GiaTriAi["T"] + "|" + t2.LyDoSua, "50 b90 30|be|1.6|khách sửa");
+            Kiem("chi_tiet: giu nghi van + bai hoc", ct2.NghiVan.Count + "|" + ct2.NghiVan[0].Nguon + "|" + ct2.BaiHoc.Count + "|" + ct2.DaRutBaiHoc.Count, "1|doc|1|1");
+            // Đọc lại: ô đã sửa giữ giá trị người + giá trị AI gốc
+            var moi = PhongDocBanVe.Doc(PhongDocBanVe.Ghi(new ChiTiet { Tam = { PhongDocBanVe.DocPhanHoi("{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":" + OhtaTool.Plugin.Core.JsonLite.Serialize(text) + "}]}").Tam[0] } })).Tam;
+            moi[0].Tep = "A.pdf";
+            var gop = PhongDocBanVe.Gop(ct2.Tam, moi, new HashSet<string> { "A.pdf" });
+            Kiem("gop: giu o sua + gia tri AI", gop[0].T + "|" + gop[0].GiaTriAi["T"] + "|" + gop[0].LyDoSua, "2.0|1.6|khách sửa");
+
+            // Chỗ sửa → bài học
+            var cs = PhongBaiHoc.CacChoSua(ct2);
+            Kiem("cho sua: T 1.6 -> 2.0", cs.Count + "|" + cs[0].O + "|" + cs[0].Ai + "|" + cs[0].Dung, "1|T|1.6|2.0");
+            ct2.DaRutBaiHoc.Add(cs[0].ChuKy);
+            Kiem("cho sua: da gui thi bo qua", PhongBaiHoc.CacChoSua(ct2).Count, 0);
+            Kiem("dau vao bai hoc", PhongBaiHoc.DauVao(cs, "", new[] { "Cũ 1" }).Contains("độ dày T: AI đọc «1.6» → đúng «2.0» | lý do người sửa: khách sửa")
+                 && PhongBaiHoc.DauVao(cs, "", new[] { "Cũ 1" }).Contains("- Cũ 1"), true);
+            string tep = PhongBaiHoc.ApDung("", new DeXuatBaiHoc { NoiDung = "Bài A" });
+            tep = PhongBaiHoc.ApDung(tep, new DeXuatBaiHoc { NoiDung = "Bài B" });
+            tep = PhongBaiHoc.ApDung(tep, new DeXuatBaiHoc { NoiDung = "Bài A2", GopVoi = "Bài A" });
+            Kiem("ap dung: them + gop thay dong", string.Join("|", PhongBaiHoc.CacBaiHoc(tep)) + "|" + tep.StartsWith("# "), "Bài A2|Bài B|True");
+            var bh = PhongBaiHoc.DocPhanHoi("{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":" +
+                OhtaTool.Plugin.Core.JsonLite.Serialize("{\"bai_hoc\":[{\"noi_dung\":\"Khi ghi t= thì…\",\"gop_voi\":\"\",\"ly_do\":\"nhầm\"},{\"noi_dung\":\" \",\"gop_voi\":\"\",\"ly_do\":\"\"}]}") + "}]}");
+            Kiem("phan hoi bai hoc: bo dong rong", bh.BaiHoc.Count + "|" + bh.BaiHoc[0].LyDo + "|" + (bh.Loi ?? "null"), "1|nhầm|null");
+
+            // Luật tiết diện + dựng triển khai từ bảng
+            var sai = new TamAi { SoBanVe = "S", M = "SPCC", T = "1.6", Q = "1", KieuTd = "be", TdX = "50 b90" };
+            var thieu = new TamAi { SoBanVe = "K", M = "SPCC", T = "1.6", Q = "1", KieuTd = "be" };
+            var cu = new TamAi { SoBanVe = "C", M = "SPCC", T = "1.6", Q = "1" };
+            var luat = PhongKiemTra.Luat(new[] { sai, thieu, cu }, new List<PhongKiemTra.DongTv>(), "");
+            Kiem("luat: td sai do / thieu td vang / ban cu khong bao",
+                 luat.Count(v => v.Ma.EndsWith("|td_sai_X") && v.Muc == VanDe.Do) + "|" + luat.Count(v => v.Ma.EndsWith("|thieu_td")) + "|" + luat.Count(v => v.Ma.Contains("|c||") && v.Ma.Contains("td")), "1|1|0");
+            Kiem("co tiet dien", PhongTrienKhai.CoTietDien(t2) + "|" + PhongTrienKhai.CoTietDien(cu) + "|" + PhongTrienKhai.CoTietDien(new TamAi { KieuTd = "lam_tay" }), "True|False|True");
+            TamTrienKhai tk = PhongTrienKhai.TuTam(t2);
+            Kiem("tu tam: tiet dien + bien dang", tk.Kieu + "|" + tk.X.Doan.Count + "|" + tk.X.Uon.Count + "|" + tk.Y.Doan[0] + "|" + tk.BienDang, "be|2|1|200|be");
+            var chep = new TamAi();
+            PhongTrienKhai.ChepVaoTam(tk, chep);
+            Kiem("chep td vao bang (don cu)", chep.TdX + "|" + chep.KieuTd, "50 b90 30|be");
+        }
+
         private static void TestAiCli()
         {
             Console.WriteLine("-- Nguon AI qua CLI --");
@@ -709,6 +778,7 @@ namespace TeamsTool.Tests
             TestPhongKiemTra();
             TestPhongTrienKhai();
             TestAiCli();
+            TestBaPhong();
 
             Console.WriteLine();
             Console.WriteLine("Tong: {0} OK, {1} FAIL", _ok, _fail);

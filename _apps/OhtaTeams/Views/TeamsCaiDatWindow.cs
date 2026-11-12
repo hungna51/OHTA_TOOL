@@ -139,7 +139,8 @@ namespace TeamsTool.Views
         private readonly ComboBox _nguon = new ComboBox { Margin = new Thickness(0, 2, 0, 4), DisplayMemberPath = "Value", SelectedValuePath = "Key" };
 
         private readonly CheckBox _keyRieng = new CheckBox { Content = "Mỗi phòng một key riêng (tắt = mọi phòng dùng key chung)", Margin = new Thickness(0, 10, 0, 2) };
-        private readonly PasswordBox[] _keyPhong = new PasswordBox[4];
+        private readonly PasswordBox[] _keyPhong = new PasswordBox[AiDon.KeyTheoPhong.Length];
+        private readonly TextBox _baiHoc = new TextBox { Padding = new Thickness(4, 2, 4, 2), Margin = new Thickness(0, 2, 6, 4), MinWidth = 300 };
 
         /// <summary>Dòng "Tên: đã có key …abcd" / chữ đỏ khi chưa có.</summary>
         private static TextBlock TrangThaiKey(int phong, string ten, string chuaCo)
@@ -189,12 +190,12 @@ namespace TeamsTool.Views
             var rieng = new StackPanel { Margin = new Thickness(18, 2, 0, 0) };
             for (int i = 0; i < _keyPhong.Length; i++)
             {
-                int phong = i + 1;
-                rieng.Children.Add(TrangThaiKey(phong, AiDon.TenPhong[i], "chưa có → dùng key chung"));
+                var (tep, ten) = AiDon.KeyTheoPhong[i];
+                rieng.Children.Add(TrangThaiKey(tep, ten, "chưa có → dùng key chung"));
                 _keyPhong[i] = new PasswordBox { Padding = new Thickness(4, 2, 4, 2), Margin = new Thickness(0, 1, 0, 6), ToolTip = "Dán key riêng của phòng (để trống = giữ)" };
                 rieng.Children.Add(_keyPhong[i]);
             }
-            rieng.Children.Add(Phu("Lưu trong " + Path.GetDirectoryName(AiDon.FileKey(0)) + "\\ai.key.phong1…4. Hiện chỉ phòng 2 gọi AI; phòng 3, 4 dùng key ở đợt sau. "
+            rieng.Children.Add(Phu("Lưu trong " + Path.GetDirectoryName(AiDon.FileKey(0)) + "\\ai.key.phong2…4 (phòng 1 · 2 · 3). Phòng 1 đọc bản vẽ; phòng 2 kiểm lại câu trả lời + rút bài học; phòng 3 viết mẫu vẽ / đọc bù đơn cũ. "
                                    + "Lưu ý: giới hạn tốc độ của Claude tính theo tổ chức (organization) — các key cùng một tổ chức vẫn chia chung giới hạn; "
                                    + "key riêng giúp xem tiền theo từng phòng trên Console, muốn chạy song song nhiều hơn thì cần key ở tổ chức khác hoặc nâng hạn mức."));
             void BatTat() => rieng.IsEnabled = _keyRieng.IsChecked == true;
@@ -209,7 +210,7 @@ namespace TeamsTool.Views
             _model.ItemsSource = ModelAi;
             _model.SelectedValue = ModelAi.Any(x => x.Key == AiDon.ModelRieng) ? AiDon.ModelRieng : "";
             m.Children.Add(_model);
-            m.Children.Add(Phu("Đang dùng: " + AiDon.Model() + ". Tiền mỗi lần đọc hiện dưới phòng 2."));
+            m.Children.Add(Phu("Đang dùng: " + AiDon.Model() + ". Tiền mỗi lần đọc hiện ở phòng 1."));
             p.Children.Add(KieuTeams.The(m));
 
             var d = new StackPanel();
@@ -244,6 +245,28 @@ namespace TeamsTool.Views
             moQc.HorizontalAlignment = HorizontalAlignment.Left;
             q.Children.Add(moQc);
             p.Children.Add(KieuTeams.The(q));
+
+            // Bài học AI rút từ chỗ người sửa (Admin duyệt) — gửi kèm quy chuẩn ở lượt đọc bản vẽ
+            var bh = new StackPanel();
+            bh.Children.Add(Dau("Bài học đọc bản vẽ"));
+            int so = PhongBaiHoc.CacBaiHoc(AiDon.DocBaiHoc()).Count;
+            bh.Children.Add(new TextBlock
+            {
+                Text = "Đang dùng: " + AiDon.FileBaiHoc + " — " + so + " bài học" + (so > PhongBaiHoc.NguongNhac ? " (quá " + PhongBaiHoc.NguongNhac + ", nên dọn bớt)" : ""),
+                Foreground = so > PhongBaiHoc.NguongNhac ? KieuTeams.Mau("#B42318") : Brushes.Black, TextWrapping = TextWrapping.Wrap,
+            });
+            bh.Children.Add(new TextBlock { Text = "Thư mục bài học dùng chung (OneDrive / SharePoint — để trống = tệp trên máy này):", Margin = new Thickness(0, 6, 0, 0), TextWrapping = TextWrapping.Wrap });
+            _baiHoc.Text = AiDon.ThuMucBaiHocChung;
+            var hangBh = new WrapPanel();
+            hangBh.Children.Add(_baiHoc);
+            hangBh.Children.Add(KieuTeams.Nut("Chọn…", mau, (s, e) =>
+            {
+                using (var d = new System.Windows.Forms.FolderBrowserDialog { Description = "Chọn thư mục dùng chung chứa bai_hoc.md", SelectedPath = _baiHoc.Text })
+                    if (d.ShowDialog() == System.Windows.Forms.DialogResult.OK) _baiHoc.Text = d.SelectedPath;
+            }, chinh: false));
+            bh.Children.Add(hangBh);
+            bh.Children.Add(Phu("Mọi máy chọn cùng một thư mục thì đọc chung một bai_hoc.md; chỉ máy Admin ghi thêm bài học. Tệp không lên GitHub."));
+            p.Children.Add(KieuTeams.The(bh));
             return p;
         }
 
@@ -306,11 +329,14 @@ namespace TeamsTool.Views
                 for (int i = 0; i < keys.Length; i++)
                     if (keys[i].Any(char.IsWhiteSpace))
                     {
-                        _baoLoi.Text = "Key " + (i == 0 ? "chung" : "phòng " + AiDon.TenPhong[i - 1]) + " có khoảng trắng — dán lại đúng key.";
+                        _baoLoi.Text = "Key " + (i == 0 ? "chung" : "phòng " + AiDon.KeyTheoPhong[i - 1].Ten) + " có khoảng trắng — dán lại đúng key.";
                         return;
                     }
+                string bh = _baiHoc.Text.Trim().Trim('"');
+                if (bh.Length > 0 && !Directory.Exists(bh)) { _baoLoi.Text = "Thư mục bài học không tồn tại: " + bh; return; }
                 for (int i = 0; i < keys.Length; i++)
-                    if (keys[i].Length > 0) AiDon.GhiKey(keys[i], i);
+                    if (keys[i].Length > 0) AiDon.GhiKey(keys[i], i == 0 ? 0 : AiDon.KeyTheoPhong[i - 1].Tep);
+                AiDon.ThuMucBaiHocChung = bh;
                 AiDon.KeyRieng = _keyRieng.IsChecked == true;
                 AiDon.NguonAi = _nguon.SelectedValue as string;
                 AiDon.ModelRieng = _model.SelectedValue as string;

@@ -4,6 +4,9 @@ Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_oh
 
 ## Chưa phát hành
 
+- **OhtaTeams — khu 🤖 AI gộp lại còn 3 phòng**: **1 Nhận & Đọc** (mỗi bản vẽ chỉ gửi AI một lần, đọc luôn cả tiết diện và các điểm nghi vấn — nhanh hơn, tốn ít hơn khoảng 3 lần), **2 Kiểm tra & Hỏi** (luật kiểm tự chạy lại sau mỗi ô sửa; sửa cả tiết diện ngay trên bảng; kiểm lại câu trả lời chỉ gửi chữ), **3 Triển khai & Vẽ** (không gọi AI nữa).
+- **Bài học đọc bản vẽ**: khi xác nhận, AI xem những ô bạn đã sửa, chỉ ra mình đọc sai ở đâu và đề xuất bài học; máy Admin duyệt thì lần đọc sau AI áp dụng. Chọn thư mục bài học dùng chung ở ⚙ → 🤖 AI để mọi máy cùng học.
+
 - **OhtaTeams** — khu **🤖 AI** trong chi tiết đơn (máy Admin, đang thử): **▶ Bắt đầu** tải mọi tệp của đơn (đính kèm + chat) về thư mục đơn, gộp bản nháp `<mã>-番号.PDF`, rồi AI đọc từng bản vẽ PDF / DXF ra bảng tấm (vật liệu, độ dày, số lượng, kích thước, bẻ, lỗ, ghi chú JP + VI). Sửa thẳng trong bảng; ô ⚠ là AI không chắc.
 - Khu AI nằm ở khung bên phải danh sách đơn: **chuột phải vào đơn → 🤖 Mở trong phòng AI**. ⚙ Cài đặt chia tab, có tab **🤖 AI** (key Claude, model, quy chuẩn).
 - Phòng **Kiểm tra**: xác nhận bảng tấm → **▶ Kiểm tra** tìm cạnh bẻ ngắn / lỗ gần đường bẻ (Lmin bảng TV), R uốn, cuộn, taro, độ dày cần xác nhận, thiếu kích thước, mâu thuẫn… chia **Hỏi khách / Hỏi nội bộ / Tự xử lý**; soạn お問い合わせ / 連絡します và gửi lên chuỗi đơn; ô **Trả lời** cho từng vấn đề.

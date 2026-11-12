@@ -164,7 +164,14 @@ namespace TeamsTool.Core
                 // Ô AI chưa chắc (người dùng chưa sửa)
                 var chuaChac = t.KhongChac.Where(k => !t.DaSua.Contains(k)).OrderBy(k => k).ToList();
                 if (chuaChac.Count > 0)
-                    Them("khong_chac", VanDe.Vang, VanDe.NoiBo, "", "AI chưa chắc ô: " + string.Join(", ", chuaChac) + " — đối chiếu lại bản vẽ (sửa ở bảng phòng 2).");
+                    Them("khong_chac", VanDe.Vang, VanDe.NoiBo, "", "AI chưa chắc ô: " + string.Join(", ", chuaChac) + " — đối chiếu lại bản vẽ (sửa ở bảng).");
+
+                // Tiết diện (đọc cùng lượt đọc bản vẽ; KieuTd rỗng = đọc bằng bản cũ → phòng Triển khai đọc bù)
+                foreach (var (chu, huong) in new[] { (t.TdX, "X"), (t.TdY, "Y") })
+                    if (chu.Trim().Length > 0 && PhongTrienKhai.DocChuTd(chu, out string loiTd) == null)
+                        Them("td_sai_" + huong, VanDe.Do, VanDe.TuXuLy, "", "Tiết diện " + huong + " viết sai: " + loiTd + " — sửa ở cột Tiết diện " + huong + ".");
+                if (t.KieuTd.Length > 0 && t.KieuTd != "lam_tay" && t.TdX.Trim().Length == 0 && t.TdY.Trim().Length == 0)
+                    Them("thieu_td", VanDe.Vang, VanDe.TuXuLy, "", "Chưa có tiết diện — nhập cột Tiết diện X / Y để trải phẳng.");
 
                 double? T = So(t.T), Q = So(t.Q);
                 if (T == null || T <= 0) Them("thieu_t", VanDe.Do, VanDe.Khach, "II.1", "Bản vẽ không ghi / không đọc được độ dày T.");
@@ -229,7 +236,7 @@ namespace TeamsTool.Core
 
                 // Lỗ — bảng đọc trước khi có cach_duong_be (11/11) thì nhắc đọc lại
                 if (coBe && lo.OfType<JsonObject>().Any() && lo.OfType<JsonObject>().All(x => x.Get("cach_duong_be") == null))
-                    Them("thieu_cach", VanDe.Vang, VanDe.NoiBo, "B-6-1", "Bảng tấm chưa có khoảng cách lỗ – đường bẻ (đọc bằng bản cũ) — phòng 2 ↻ Đọc lại tất cả để kiểm lỗ gần đường bẻ.");
+                    Them("thieu_cach", VanDe.Vang, VanDe.NoiBo, "B-6-1", "Bảng tấm chưa có khoảng cách lỗ – đường bẻ (đọc bằng bản cũ) — phòng 1 ↻ Đọc lại tất cả để kiểm lỗ gần đường bẻ.");
                 for (int i = 0; i < lo.Count; i++)
                 {
                     if (!(lo[i] is JsonObject l)) continue;
@@ -346,6 +353,42 @@ Tìm THÊM các vấn đề luật chưa bắt, theo QUY CHUẨN ở khối sau 
 Mỗi vấn đề: tam (số bản vẽ hoặc tên tấm, rỗng nếu chung), muc (do = chặn triển khai; vang = cần xác nhận; info = chỉ ghi chú), nhom (tu_xu_ly = làm theo QC không cần hỏi; noi_bo = hỏi quản lý; khach = hỏi khách), muc_qc (vd B-6-1), lien_lac (true nếu là báo slit / phần thừa — bản 連絡します; false nếu là câu hỏi お問い合わせ).
 noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: chỗ nào + thiếu / sai gì (+ số). Nhóm khach / noi_bo viết thành câu hỏi trực tiếp (vd ""Vị trí lỗ M5 cách mép trái bao nhiêu?""). Không giải thích lý do, không suy đoán, không lặp ý; nhiều ý cùng một chỗ thì gộp. Chỉ nêu vấn đề làm thay đổi cách triển khai.";
 
+        /// <summary>Kiểm lại bằng chữ (không gửi bản vẽ): sau khi có câu trả lời của khách / quản lý.</summary>
+        public const string LoiDanChu =
+@"Bạn là kỹ sư kiểm tra dữ liệu triển khai kim loại tấm của OHTA (phòng Kiểm tra). LẦN NÀY KHÔNG CÓ BẢN VẼ — chỉ có bảng tấm (đã qua người sửa), các vấn đề đã tìm và câu trả lời của khách / quản lý.
+Tìm vấn đề MỚI phát sinh từ câu trả lời hoặc từ số liệu bảng tấm, theo QUY CHUẨN ở khối sau:
+- Câu trả lời mâu thuẫn với bảng tấm / với câu trả lời khác, hoặc còn thiếu để triển khai (vd trả lời đổi vật liệu nhưng T không có trong bảng).
+- Câu trả lời làm phát sinh việc cần làm (slit, phần thừa, đổi V, làm tay).
+KHÔNG lặp vấn đề đã có, không hỏi lại ý đã được trả lời, không đoán nội dung bản vẽ. Không có gì mới → van_de rỗng.
+Mỗi vấn đề: tam, muc (do / vang / info), nhom (tu_xu_ly / noi_bo / khach), muc_qc, lien_lac, noi_dung (tiếng Việt, MỘT ý, ~20 từ, nhóm khach / noi_bo viết thành câu hỏi trực tiếp).";
+
+        /// <summary>Mẫu JSON một vấn đề (dùng chung: đọc bản vẽ, kiểm lại bằng chữ).</summary>
+        public static JsonObject SchemaVanDe()
+        {
+            JsonObject s = Kieu("string");
+            return Obj(("tam", s), ("muc", LuaChon("do", "vang", "info")), ("nhom", LuaChon("tu_xu_ly", "noi_bo", "khach")),
+                       ("muc_qc", s), ("noi_dung", s), ("lien_lac", Kieu("boolean")));
+        }
+
+        /// <summary>Mảng van_de của AI → vấn đề (mã theo tệp + tấm + nội dung, nguồn "doc" / "ai").</summary>
+        public static List<VanDe> DocDsVanDe(List<object> ds, string tenTep, string nguon)
+        {
+            var kq = new List<VanDe>();
+            foreach (JsonObject x in ds.OfType<JsonObject>())
+            {
+                string tam = x.GetString("tam") ?? "", noiDung = x.GetString("noi_dung") ?? "";
+                if (noiDung.Trim().Length == 0) continue;
+                kq.Add(new VanDe
+                {
+                    Ma = MaAi(tenTep, tam, noiDung), Tam = tam, NoiDung = noiDung, Nguon = nguon,
+                    Muc = Mot(x.GetString("muc"), VanDe.Vang, VanDe.Do, VanDe.Vang, VanDe.ThongTin),
+                    Nhom = Mot(x.GetString("nhom"), VanDe.NoiBo, VanDe.TuXuLy, VanDe.NoiBo, VanDe.Khach),
+                    MucQc = x.GetString("muc_qc") ?? "", LienLac = x.Get("lien_lac") is bool b && b,
+                });
+            }
+            return kq;
+        }
+
         /// <summary>Phần chữ gửi kèm bản vẽ: bảng tấm của tệp + vấn đề luật (mã, nhóm, nội dung) + công ty.</summary>
         public static string DauVao(string tenTep, string congTy, IEnumerable<TamAi> tam, IEnumerable<VanDe> luat, IEnumerable<VanDe> daTraLoi = null)
         {
@@ -355,7 +398,8 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             foreach (TamAi t in tam)
                 sb.Append("- ").Append(TenTam(t)).Append(": M=").Append(t.M).Append(" Z=").Append(t.Z).Append(" T=").Append(t.T).Append(" Q=").Append(t.Q)
                   .Append(" mặt=").Append(t.Mat).Append(" kích thước=").Append(t.KichThuoc).Append(" dung sai=").Append(t.DungSai)
-                  .Append(" bẻ=").Append(t.CanhJson).Append(" lỗ=").Append(t.LoJson).Append(" ghi chú=").Append(t.GhiChuJp).Append('\n');
+                  .Append(" bẻ=").Append(t.CanhJson).Append(" lỗ=").Append(t.LoJson).Append(" ghi chú=").Append(t.GhiChuJp)
+                  .Append(t.KieuTd.Length > 0 ? " tiết diện " + t.KieuTd + " X=[" + t.TdX + "] Y=[" + t.TdY + "]" : "").Append('\n');
             sb.Append("\nVấn đề luật đã tìm:\n");
             var ds = luat.ToList();
             if (ds.Count == 0) sb.Append("(không có)\n");
@@ -369,16 +413,10 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             return sb.ToString();
         }
 
-        public static JsonObject Schema()
-        {
-            JsonObject s = Kieu("string"), b = Kieu("boolean");
-            JsonObject vd = Obj(("tam", s), ("muc", LuaChon("do", "vang", "info")), ("nhom", LuaChon("tu_xu_ly", "noi_bo", "khach")),
-                                ("muc_qc", s), ("noi_dung", s), ("lien_lac", b));
-            return Obj(("van_de", Mang(vd)));
-        }
+        public static JsonObject Schema() => Obj(("van_de", Mang(SchemaVanDe())));
 
-        /// <summary>Body POST /v1/messages — cùng khung với phòng 2 (system = lời dặn + QC phòng 3 có cache).</summary>
-        public static string Body(string model, string quyChuan, string pdfBase64, string dauVao, string tomTatDxf)
+        /// <summary>Body POST /v1/messages — system = lời dặn (mặc định LoiDan; LoiDanChu khi kiểm lại bằng chữ) + QC có cache.</summary>
+        public static string Body(string model, string quyChuan, string pdfBase64, string dauVao, string tomTatDxf, string loiDan = null)
         {
             var body = new JsonObject();
             body.Set("model", model);
@@ -393,7 +431,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             body.Set("output_config", oc);
             var cache = new JsonObject();
             cache.Set("type", "ephemeral");
-            body.Set("system", new List<object> { Khoi(LoiDan, null), Khoi(quyChuan, cache) });
+            body.Set("system", new List<object> { Khoi(loiDan ?? LoiDan, null), Khoi(quyChuan, cache) });
             var nd = new List<object>();
             if (!string.IsNullOrEmpty(pdfBase64))
             {
@@ -431,18 +469,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             try { nd = text == null ? null : JsonLite.Parse(text) as JsonObject; } catch (Exception) { nd = null; }
             if (nd?.Get("van_de") is List<object> ds)
             {
-                foreach (JsonObject x in ds.OfType<JsonObject>())
-                {
-                    string tam = x.GetString("tam") ?? "", noiDung = x.GetString("noi_dung") ?? "";
-                    if (noiDung.Trim().Length == 0) continue;
-                    kq.VanDe.Add(new VanDe
-                    {
-                        Ma = MaAi(tenTep, tam, noiDung), Tam = tam, NoiDung = noiDung, Nguon = "ai",
-                        Muc = Mot(x.GetString("muc"), VanDe.Vang, VanDe.Do, VanDe.Vang, VanDe.ThongTin),
-                        Nhom = Mot(x.GetString("nhom"), VanDe.NoiBo, VanDe.TuXuLy, VanDe.NoiBo, VanDe.Khach),
-                        MucQc = x.GetString("muc_qc") ?? "", LienLac = x.Get("lien_lac") is bool b && b,
-                    });
-                }
+                kq.VanDe = DocDsVanDe(ds, tenTep, "ai");
                 return kq;
             }
             kq.Loi = p2.Loi ?? "Phản hồi AI không đúng mẫu";
@@ -460,16 +487,26 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             o.Set("token_vao", new JsonNumber(kt.TokenVao.ToString(CultureInfo.InvariantCulture)));
             o.Set("token_ra", new JsonNumber(kt.TokenRa.ToString(CultureInfo.InvariantCulture)));
             o.Set("tien", new JsonNumber(kt.Tien.ToString(CultureInfo.InvariantCulture)));
-            o.Set("van_de", kt.VanDe.Select(v =>
-            {
-                var x = new JsonObject();
-                x.Set("ma", v.Ma); x.Set("muc", v.Muc); x.Set("nhom", v.Nhom); x.Set("tam", v.Tam); x.Set("muc_qc", v.MucQc);
-                x.Set("noi_dung", v.NoiDung); x.Set("cau_hoi_jp", v.CauHoiJp); x.Set("lien_lac", v.LienLac); x.Set("nguon", v.Nguon);
-                x.Set("trang_thai", v.TrangThai); x.Set("ly_do", v.LyDo); x.Set("tra_loi", v.TraLoi ?? ""); x.Set("da_gui", v.DaGui);
-                return (object)x;
-            }).ToList());
+            o.Set("van_de", kt.VanDe.Select(v => (object)GhiVanDe(v)).ToList());
             return JsonLite.Serialize(o);
         }
+
+        public static JsonObject GhiVanDe(VanDe v)
+        {
+            var x = new JsonObject();
+            x.Set("ma", v.Ma); x.Set("muc", v.Muc); x.Set("nhom", v.Nhom); x.Set("tam", v.Tam); x.Set("muc_qc", v.MucQc);
+            x.Set("noi_dung", v.NoiDung); x.Set("cau_hoi_jp", v.CauHoiJp); x.Set("lien_lac", v.LienLac); x.Set("nguon", v.Nguon);
+            x.Set("trang_thai", v.TrangThai); x.Set("ly_do", v.LyDo); x.Set("tra_loi", v.TraLoi ?? ""); x.Set("da_gui", v.DaGui);
+            return x;
+        }
+
+        public static VanDe DocVanDe(JsonObject x) => new VanDe
+        {
+            Ma = x.GetString("ma") ?? "", Muc = x.GetString("muc") ?? VanDe.Vang, Nhom = x.GetString("nhom") ?? VanDe.NoiBo, Tam = x.GetString("tam") ?? "",
+            MucQc = x.GetString("muc_qc") ?? "", NoiDung = x.GetString("noi_dung") ?? "", CauHoiJp = x.GetString("cau_hoi_jp") ?? "",
+            LienLac = x.Get("lien_lac") is bool b && b, Nguon = x.GetString("nguon") ?? "luat", TrangThai = x.GetString("trang_thai") ?? "",
+            LyDo = x.GetString("ly_do") ?? "", TraLoi = x.GetString("tra_loi") ?? "", DaGui = x.Get("da_gui") is bool g && g,
+        };
 
         public static KiemTra Doc(string json)
         {
@@ -481,14 +518,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
                 TuXacNhan = o.GetString("tu_xac_nhan") ?? "", XacNhan = o.GetString("xac_nhan") ?? "", Luc = o.GetString("luc") ?? "",
                 TokenVao = (long)(SoObj(o.Get("token_vao")) ?? 0), TokenRa = (long)(SoObj(o.Get("token_ra")) ?? 0), Tien = (decimal)(SoObj(o.Get("tien")) ?? 0),
             };
-            foreach (JsonObject x in (o.Get("van_de") as List<object> ?? new List<object>()).OfType<JsonObject>())
-                kt.VanDe.Add(new VanDe
-                {
-                    Ma = x.GetString("ma") ?? "", Muc = x.GetString("muc") ?? VanDe.Vang, Nhom = x.GetString("nhom") ?? VanDe.NoiBo, Tam = x.GetString("tam") ?? "",
-                    MucQc = x.GetString("muc_qc") ?? "", NoiDung = x.GetString("noi_dung") ?? "", CauHoiJp = x.GetString("cau_hoi_jp") ?? "",
-                    LienLac = x.Get("lien_lac") is bool b && b, Nguon = x.GetString("nguon") ?? "luat", TrangThai = x.GetString("trang_thai") ?? "",
-                    LyDo = x.GetString("ly_do") ?? "", TraLoi = x.GetString("tra_loi") ?? "", DaGui = x.Get("da_gui") is bool g && g,
-                });
+            foreach (JsonObject x in (o.Get("van_de") as List<object> ?? new List<object>()).OfType<JsonObject>()) kt.VanDe.Add(DocVanDe(x));
             return kt;
         }
 

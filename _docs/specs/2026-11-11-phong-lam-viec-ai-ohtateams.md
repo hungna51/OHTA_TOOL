@@ -4,6 +4,13 @@
 >
 > Nguồn nghiệp vụ: **QUY CHUẨN CHUNG 2025.04.21** (notebook "OHTA AI"). Bản Markdown ở `_apps/OhtaTeams/data/quy_chuan/` — **gitignore, không lên GitHub** (repo công khai; tài liệu nội bộ có tên khách và link OneDrive). Spec này chỉ trỏ tới mục (vd. "QC B-6-1"), không chép nội dung.
 
+> **Chia lại 3 phòng (chốt với người dùng 12/11/2026, sau đơn chạy thử).** Bản 4 phòng gửi mỗi bản vẽ lên AI 3 lần (đọc, kiểm, tiết diện) — chậm, tốn, và mỗi lần đọc một kiểu. Nay:
+> 1. **Nhận & Đọc** = phòng 1 + 2 cũ. Mỗi tệp **một lượt AI** trả thông số + **tiết diện** (x / y, `bien_dang`) + **nghi vấn** (`van_de`, nguồn `doc`); quy chuẩn gửi kèm = bộ 2 + 3 + 4 (bỏ trùng) + `bai_hoc.md`. Đọc xong luật tự chạy.
+> 2. **Kiểm tra & Hỏi** = phòng 3 cũ, **không gửi PDF**. Luật C# chạy lại sau mỗi ô sửa (`AiDon.KiemLuat`); thêm luật tiết diện sai (🔴) / thiếu (🟡). Bảng tấm sửa được cả tiết diện (dạng chữ `50 b90 100 b90 50`, `PhongTrienKhai.ChuTd / DocChuTd`). **🤖 Kiểm lại câu trả lời** = luật + AI chỉ đọc chữ (`PhongKiemTra.LoiDanChu`). **✓ Xác nhận → Triển khai** là chốt duy nhất (`chi_tiet.json` `xac_nhan`; `kiem_tra.json` không còn `xac_nhan` / `tu_xac_nhan`).
+> 3. **Triển khai & Vẽ** = phòng 4 cũ, **không gọi AI** (`AiDon.TaoTrienKhai` dựng từ bảng tấm, giữ V đã chọn). AI chỉ khi viết mẫu vẽ mới, hoặc đọc bù tiết diện cho đơn đọc bằng bản cũ (tiết diện cũ trong `trien_khai.json` tự chép vào bảng).
+> 4. **Bài học** (`Core/BaiHoc.cs`): ô người sửa nhớ giá trị AI (`gia_tri_ai`) + lý do (`ly_do_sua`). Lúc xác nhận, AI xem chỗ sửa (chữ; tích "AI xem lại bản vẽ" thì gửi PDF từng tệp), so với bài học đã có → đề xuất (trùng ý thì `gop_voi` thay dòng cũ). **Chỉ máy Admin** ghi vào `bai_hoc.md` (`quy_chuan\2_doc_ban_ve\` hoặc thư mục dùng chung ở ⚙ → 🤖 AI). > 60 bài học → nhắc dọn.
+> Key riêng giữ tên tệp cũ: phòng 1 · 2 · 3 = `ai.key.phong2` · `3` · `4`. Các mục "Phòng 1–4" bên dưới là thiết kế gốc, giữ để tra cứu.
+
 ## Mục tiêu
 
 Trong **chi tiết đơn** của OhtaTeams thêm khu **🤖 AI** đưa một đơn qua 4 phòng, giống cách người triển khai đang làm tay theo QC:

@@ -419,10 +419,83 @@ Với MỖI tấm trong bảng, đọc TIẾT DIỆN để trải phẳng (khôn
 
         public static JsonObject Schema()
         {
-            JsonObject s = Kieu("string"), n = Kieu("number");
-            JsonObject uon = Obj(("kieu", LuaChon("be", "an_1_lan", "cuon", "pitchi")), ("goc", n), ("r_trong", n), ("cung", n));
-            JsonObject td = Obj(("doan", Mang(n)), ("uon", Mang(uon)));
+            JsonObject s = Kieu("string"), td = SchemaTd();
             return Obj(("tam", Mang(Obj(("so_ban_ve", s), ("ten", s), ("kieu", LuaChon("phang", "be", "lam_tay")), ("x", td), ("y", td), ("ghi_chu", s), ("bien_dang", s), ("mo_ta_bien_dang", s)))));
+        }
+
+        /// <summary>Mẫu JSON một tiết diện (dùng chung với lượt đọc bản vẽ).</summary>
+        public static JsonObject SchemaTd()
+        {
+            JsonObject n = Kieu("number");
+            JsonObject uon = Obj(("kieu", LuaChon("be", "an_1_lan", "cuon", "pitchi")), ("goc", n), ("r_trong", n), ("cung", n));
+            return Obj(("doan", Mang(n)), ("uon", Mang(uon)));
+        }
+
+        // ---------- Tiết diện dạng chữ (sửa trên bảng phòng Kiểm tra) ----------
+        // Đoạn và chỗ uốn xen nhau: số = đoạn (mm); b90 = bẻ 90° (b90r2 có R trong); a90r10 = ấn 1 lần; c360r50 = cuộn cung 360° R50; p90 = pitchi.
+
+        public const string HuongDanTd = "Số = đoạn ngoài (mm), xen chỗ uốn: b90 = bẻ 90° (b90r2 có R), a90r10 = ấn 1 lần R10, c360r50 = cuộn cung 360° R50, p90 = pitchi. Vd: 50 b90 100 b90 50. Không uốn: một số.";
+
+        public static string ChuTd(TietDien td)
+        {
+            var p = new List<string>();
+            for (int i = 0; i < Math.Max(td.Doan.Count, td.Uon.Count); i++)
+            {
+                if (i < td.Doan.Count) p.Add(F(td.Doan[i]));
+                if (i < td.Uon.Count)
+                {
+                    Uon u = td.Uon[i];
+                    string r = u.R > 0 ? "r" + F(u.R) : "";
+                    p.Add(u.Kieu == "an_1_lan" ? "a" + F(u.Goc) + r : u.Kieu == "cuon" ? "c" + F(u.Cung) + r : u.Kieu == "pitchi" ? "p" + F(u.Goc) + r : "b" + F(u.Goc) + r);
+                }
+            }
+            return string.Join(" ", p);
+        }
+
+        private static readonly System.Text.RegularExpressions.Regex ChuUon =
+            new System.Text.RegularExpressions.Regex(@"^([bacp])(\d+(?:\.\d+)?)°?(?:r(\d+(?:\.\d+)?))?$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        /// <summary>Chữ → tiết diện; sai cú pháp → null + loi. Chữ rỗng → tiết diện rỗng.</summary>
+        public static TietDien DocChuTd(string s, out string loi)
+        {
+            loi = null;
+            var td = new TietDien();
+            string[] tu = (s ?? "").Replace(',', ' ').Replace('+', ' ').Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < tu.Length; i++)
+            {
+                if (i % 2 == 0)
+                {
+                    if (!double.TryParse(tu[i], NumberStyles.Float, CultureInfo.InvariantCulture, out double d) || d < 0) { loi = "'" + tu[i] + "' phải là một đoạn (số mm)"; return null; }
+                    td.Doan.Add(d);
+                    continue;
+                }
+                var m = ChuUon.Match(tu[i]);
+                if (!m.Success) { loi = "'" + tu[i] + "' không phải chỗ uốn (b90, a90r10, c360r50, p90)"; return null; }
+                double so = double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture), r = m.Groups[3].Success ? double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture) : 0;
+                char k = char.ToLowerInvariant(m.Groups[1].Value[0]);
+                td.Uon.Add(k == 'c' ? new Uon { Kieu = "cuon", Cung = so, R = r }
+                                    : new Uon { Kieu = k == 'a' ? "an_1_lan" : k == 'p' ? "pitchi" : "be", Goc = so, R = r });
+            }
+            if (tu.Length > 0 && tu.Length % 2 == 0) { loi = "phải kết thúc bằng một đoạn"; return null; }
+            return td;
+        }
+
+        /// <summary>Tấm đã có tiết diện (đọc bằng bản mới, hoặc người nhập) chưa.</summary>
+        public static bool CoTietDien(TamAi t) => t.KieuTd == "lam_tay" || t.TdX.Trim().Length > 0 || t.TdY.Trim().Length > 0;
+
+        /// <summary>Dữ liệu triển khai từ bảng tấm đã xác nhận (V người chọn gán bên ngoài).</summary>
+        public static TamTrienKhai TuTam(TamAi t) => new TamTrienKhai
+        {
+            Khoa = t.Khoa, Ten = PhongKiemTra.TenTam(t), Kieu = t.KieuTd.Length > 0 ? t.KieuTd : "phang", GhiChu = t.GhiChuTd,
+            BienDang = t.BienDang, MoTaBienDang = t.MoTaBienDang,
+            X = DocChuTd(t.TdX, out _) ?? new TietDien(), Y = DocChuTd(t.TdY, out _) ?? new TietDien(),
+        };
+
+        /// <summary>Đơn đọc bằng bản cũ: chép tiết diện phòng Triển khai cũ đã đọc vào bảng tấm.</summary>
+        public static void ChepVaoTam(TamTrienKhai tk, TamAi t)
+        {
+            t.KieuTd = tk.Kieu; t.TdX = ChuTd(tk.X); t.TdY = ChuTd(tk.Y); t.GhiChuTd = tk.GhiChu;
+            t.BienDang = tk.BienDang; t.MoTaBienDang = tk.MoTaBienDang;
         }
 
         /// <summary>Phần chữ gửi kèm bản vẽ: bảng tấm của tệp + câu trả lời phòng 3.</summary>
@@ -451,7 +524,7 @@ Với MỖI tấm trong bảng, đọc TIẾT DIỆN để trải phẳng (khôn
             BodyChung(model, LoiDan, Schema(), quyChuan, pdfBase64, dauVao, tomTatDxf);
 
         /// <summary>Body POST /v1/messages: system = lời dặn (+ quy chuẩn có cache), user = PDF / chữ; trả JSON theo schema.</summary>
-        private static string BodyChung(string model, string loiDan, JsonObject schema, string quyChuan, string pdfBase64, string dauVao, string tomTatDxf)
+        public static string BodyChung(string model, string loiDan, JsonObject schema, string quyChuan, string pdfBase64, string dauVao, string tomTatDxf)
         {
             var body = new JsonObject();
             body.Set("model", model);
@@ -580,7 +653,7 @@ Với MỖI tấm trong bảng, đọc TIẾT DIỆN để trải phẳng (khôn
             return o;
         }
 
-        private static TietDien DocTd(JsonObject o)
+        public static TietDien DocTd(JsonObject o)
         {
             var td = new TietDien();
             if (o == null) return td;
