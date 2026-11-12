@@ -2,10 +2,10 @@
 
     python ve.py --kiem                 → {"python", "ezdxf", "matplotlib"}  (ezdxf thiếu → "ezdxf": null)
     python ve.py --thu-vien DIR [DIR…]  → [{"ten", "mo_ta", "tep"}]  mẫu biên dạng (thư mục sau đè thư mục trước)
-    python ve.py VIEC.json              → {"ket_qua": [{"bango", "tep", "anh", "loi"}]}
+    python ve.py VIEC.json              → {"ket_qua": [{"bango", "tep", "anh", "loi", "thieu_dim"}]}
 
 VIEC.json (OhtaTeams ghi): {"moi_truong": dxf, "thu_muc_ra": dir, "thu_vien": [dir…],
-  "tam": [{"bango", "bien_dang", "x", "y", "be_x", "be_y", "doan_x", "doan_y", "ke_gaki": [[x, y]…], "fname": [dòng], "ghi_chu": [dòng]}]}
+  "tam": [{"bango", "bien_dang", "x", "y", "be_x", "be_y", "doan_x", "doan_y", "ke_gaki": [[x, y]…], "dim_khach": [{"loai", "gia_tri", "tu", "den"}], "fname": [dòng], "ghi_chu": [dòng]}]}
 Mẫu biên dạng (thu_vien/<ten>.py): MO_TA + ve(nen, t) vẽ viền / đường bẻ / dim riêng của hình; ケガキ, chuỗi dim dưới / phải,
 dim tổng (1-XY), F-name, Khung_IN thêm ở đây (them_chung) theo bản chuẩn xưởng.
 Tệp đã sửa tay trên CAD (mã băm khác lần ghi trước, nhớ trong .ve_dxf.json) không bị ghi đè: ghi "<bango> (2).dxf".
@@ -86,6 +86,55 @@ def chuoi(moc, a, b):
     return kq
 
 
+def dim_da_ve(nen):
+    """(loai, số đo) các dim đã vẽ: ngang / doc / r / phi / goc."""
+    kq = []
+    for e in nen.msp.query("DIMENSION"):
+        kieu = e.dimtype & 7
+        try:
+            so = float(e.get_measurement())
+        except Exception:
+            continue
+        if kieu == 4:
+            kq.append(("r", so))
+        elif kieu == 3:
+            kq.append(("phi", so))
+        elif kieu in (2, 5):
+            kq.append(("goc", so))
+        else:
+            kq.append(("doc" if abs(float(e.dxf.get("angle", 0)) % 180 - 90) < 1 else "ngang", so))
+    return kq
+
+
+def du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y):
+    """Quy tắc 12/11: bản vẽ phải có ĐỦ kích thước khách (dim_khach). So với dim đã vẽ (kể cả dim tổng sắp vẽ);
+    thiếu dim ngang / dọc → thêm một hàng dim (dưới / phải, sau chuỗi dim); thiếu R có tâm → dim R; còn lại báo thiếu.
+    Trả (số hàng ngang, số hàng dọc đã dùng, [mô tả dim thiếu])."""
+    import moi_truong as mt
+    co = dim_da_ve(nen) + [("ngang", x1 - x0), ("doc", y1 - y0)]
+    thieu = []
+    for d in t.get("dim_khach", []):
+        loai, so = d.get("loai", ""), float(d.get("gia_tri", 0) or 0)
+        if so <= 0 or any(l == loai and abs(m - so) <= 0.05 for l, m in co):
+            continue
+        tu, den = float(d.get("tu", 0) or 0), float(d.get("den", 0) or 0)
+        a, b = min(tu, den), max(tu, den)
+        if loai == "ngang" and abs((b - a) - so) <= 0.5 and x0 - 0.01 <= a and b <= x1 + 0.01:
+            nen.dim_ngang(a, b, y0, y0 - mt.LE_DIM - hang_x * mt.BUOC_DIM)
+            hang_x += 1
+        elif loai == "doc" and abs((b - a) - so) <= 0.5 and y0 - 0.01 <= a and b <= y1 + 0.01:
+            nen.dim_doc(a, b, x1, x1 + mt.LE_DIM + hang_y * mt.BUOC_DIM)
+            hang_y += 1
+        elif loai == "r" and (tu or den):
+            d2 = nen.msp.add_radius_dim(center=(tu, den), radius=so, angle=45, dimstyle=nen.kieu_dim, dxfattribs={"layer": mt.LOP_DIM})
+            d2.render()
+        else:
+            thieu.append(("R" if loai == "r" else "Ø" if loai == "phi" else "") + ("%g" % so) + ("°" if loai == "goc" else "") + " (" + loai + ")")
+            continue
+        co.append((loai, so))
+    return hang_x, hang_y, thieu
+
+
 def them_chung(nen, t, x0, y0, x1, y1):
     """Phần chung mọi tấm theo bản chuẩn xưởng (12/11): ケガキ + leader, chuỗi dim chi tiết dưới / phải (1-SUNPOU),
     dim tổng X dưới cùng + Y bên phải (1-XY), F-name dưới tấm, Khung_IN tỉ lệ khổ A ngang."""
@@ -104,12 +153,14 @@ def them_chung(nen, t, x0, y0, x1, y1):
     if len(my) > 2:
         for a, b in zip(my, my[1:]):
             nen.dim_doc(a, b, x1, x1 + mt.LE_DIM)
-    y_tong = y0 - (mt.LE_TONG if len(mx) > 2 else mt.LE_DIM)
+    hx, hy, thieu = du_dim_khach(nen, t, x0, y0, x1, y1, 1 if len(mx) > 2 else 0, 1 if len(my) > 2 else 0)
+    y_tong = y0 - mt.LE_DIM - hx * mt.BUOC_DIM  # dim tổng luôn ngoài cùng
     nen.dim_ngang(x0, x1, y0, y_tong, lop=mt.LOP_XY)
-    nen.dim_doc(y0, y1, x1, x1 + (mt.LE_TONG if len(my) > 2 else mt.LE_DIM), lop=mt.LOP_XY)
+    nen.dim_doc(y0, y1, x1, x1 + mt.LE_DIM + hy * mt.BUOC_DIM, lop=mt.LOP_XY)
     nen.fname(x0 + mt.LECH_FNAME, y_tong - mt.DUOI_FNAME, t.get("fname", []))
     bx0, by0, bx1, by1 = mt.bao_tat_ca(nen)
     nen.khung_in(*mt.khung_a(bx0 - mt.LE_KHUNG, by0 - mt.LE_KHUNG, bx1 + mt.LE_KHUNG, by1 + mt.LE_KHUNG))
+    return thieu
 
 
 def ve_tam(viec, t, mau, so_tay, co_anh):
@@ -122,7 +173,7 @@ def ve_tam(viec, t, mau, so_tay, co_anh):
     x0, y0, x1, y1 = mt.khung_bao(nen)
     if x1 <= x0 or y1 <= y0:
         raise ValueError("mẫu '%s' không vẽ viền cắt nào" % ten)
-    them_chung(nen, t, x0, y0, x1, y1)
+    thieu = them_chung(nen, t, x0, y0, x1, y1)
     tep = ten_ra(viec["thu_muc_ra"], t["bango"], so_tay)
     nen.luu(tep)
     so_tay[os.path.basename(tep)] = ma_bam(tep)
@@ -134,7 +185,7 @@ def ve_tam(viec, t, mau, so_tay, co_anh):
             dm.qsave(nen.msp, anh, bg="#FFFFFF", size_inches=(6, 4), dpi=110)
         except Exception:  # ảnh xem trước hỏng không làm hỏng bản vẽ
             anh = None
-    return tep, anh
+    return tep, anh, thieu
 
 
 def ve_viec(tep_viec):
@@ -154,8 +205,8 @@ def ve_viec(tep_viec):
     kq = []
     for t in viec["tam"]:
         try:
-            tep, anh = ve_tam(viec, t, mau, so_tay, co_anh)
-            kq.append({"bango": t["bango"], "tep": tep, "anh": anh, "loi": None})
+            tep, anh, thieu = ve_tam(viec, t, mau, so_tay, co_anh)
+            kq.append({"bango": t["bango"], "tep": tep, "anh": anh, "loi": None, "thieu_dim": thieu})
         except Exception as ex:
             kq.append({"bango": t.get("bango", "?"), "tep": None, "anh": None,
                        "loi": "%s: %s" % (type(ex).__name__, ex), "chi_tiet": traceback.format_exc(limit=3)})

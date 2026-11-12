@@ -8,9 +8,10 @@
 - Đường bẻ: LINE `0-KAKOU`, nét DASHED (`nen.duong_be`).
 
 ## Dim
+- **Luôn đủ kích thước của khách**: mọi kích thước khách ghi trên bản vẽ còn đúng trên hình trải phẳng (`dim_khach`, AI đọc lúc đọc bản vẽ) phải có trên bản vẽ OHTA, cùng số. `ve.py` so với các dim đã vẽ: thiếu dim ngang / dọc → tự thêm một hàng dim (sau chuỗi dim, trước dim tổng); thiếu R có tâm → dim R; còn lại (Ø lỗ, góc…) báo "còn thiếu dim của khách" để bổ sung trên CAD.
 - **Dim tổng** X (dưới cùng) và Y (bên phải): layer **`1-XY`**, kiểu `ISO-26` — `ve.py` tự thêm.
 - **Chuỗi dim chi tiết**: layer `1-SUNPOU`, giữa tấm và dim tổng — chuỗi ngang **phía dưới**, chuỗi dọc **bên phải**. Mốc: mép tấm, đường bẻ, dấu ケガキ, tâm cung có ghi R, mốc mẫu thêm (`nen.moc_x`, `nen.moc_y`). `ve.py` tự dựng.
-- Khoảng cách: viền → chuỗi dim 80 (`LE_DIM`); viền → dim tổng 124 (`LE_TONG`; không có chuỗi dim thì 80).
+- Khoảng cách: viền → chuỗi dim 80 (`LE_DIM`), mỗi hàng dim sau cách thêm 44 (`BUOC_DIM`); dim tổng luôn ở hàng ngoài cùng (có chuỗi dim: 124).
 - **Cung cần ghi R**: `nen.cung(..., dim=True)` — dim R (kiểu `ISO-26`, CAD tự dùng `ISO-26$4`), chữ ra ngoài phía trên-phải, tâm cung vào chuỗi dim. Nhiều cung cùng R chỉ ghi một lần.
 - Đầu tấm là cung bán nguyệt: 2 dim nửa chiều cao (mép → tâm cung → mép) phía đầu đó, cách viền `LE_DIM`, chữ đưa ra ngoài (dưới / trên) bằng `vi_tri_chu`.
 - Không đặt dim chi tiết phía trên tấm.

@@ -614,6 +614,8 @@ namespace TeamsTool.Services
         public sealed class KetQuaVe
         {
             public string Bango, Tep, Anh, Loi;
+            /// <summary>Dim khách chưa có trên bản vẽ mà không tự thêm được (Ø lỗ, góc…) — người vẽ bổ sung trên CAD.</summary>
+            public List<string> ThieuDim = new List<string>();
         }
 
         /// <summary>
@@ -635,7 +637,11 @@ namespace TeamsTool.Services
             try { o = JsonLite.Parse(ra.Trim().Split('\n').Last()) as JsonObject; } catch (Exception) { }
             if (ma != 0 || o == null) throw new InvalidOperationException("ve.py lỗi: " + DongCuoi(ra));
             return (o.Get("ket_qua") as List<object> ?? new List<object>()).OfType<JsonObject>()
-                .Select(x => new KetQuaVe { Bango = x.GetString("bango"), Tep = x.GetString("tep"), Anh = x.GetString("anh"), Loi = x.GetString("loi") }).ToList();
+                .Select(x => new KetQuaVe
+                {
+                    Bango = x.GetString("bango"), Tep = x.GetString("tep"), Anh = x.GetString("anh"), Loi = x.GetString("loi"),
+                    ThieuDim = (x.Get("thieu_dim") as List<object> ?? new List<object>()).OfType<string>().ToList(),
+                }).ToList();
         }
 
         /// <summary>

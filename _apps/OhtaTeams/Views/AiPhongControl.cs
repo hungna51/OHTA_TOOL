@@ -143,7 +143,9 @@ namespace TeamsTool.Views
                         ChiTiet ct5 = AiDon.DocChiTiet(_tm);
                         List<AiDon.KetQuaVe> kq5 = await AiDon.VeBanVe(AiDon.TinhLai(ct5, AiDon.TaoTrienKhai(ct5, _tm), _d.Title, _tm), _d.Title, _tm, Bao, _huy.Token);
                         var loi5 = kq5.Where(k => k.Loi != null).Select(k => k.Bango + ": " + k.Loi).ToList();
+                        var thieu5 = kq5.Where(k => k.ThieuDim.Count > 0).Select(k => k.Bango + ": " + string.Join(", ", k.ThieuDim)).ToList();
                         Bao("Đã vẽ " + kq5.Count(k => k.Loi == null) + " bản trải phẳng (ezdxf, môi trường moi-truong-ve.dxf) trong ai\\ban_ve. Bấm ảnh để mở DXF."
+                            + (thieu5.Count > 0 ? "\n⚠ Còn thiếu dim của khách (bổ sung trên CAD):\n" + string.Join("\n", thieu5) : "")
                             + (loi5.Count > 0 ? "\nChưa vẽ được:\n" + string.Join("\n", loi5) : ""));
                         return;
                     }
@@ -324,6 +326,7 @@ namespace TeamsTool.Views
             Cot(g, "Bẻ", "TomTatCanh", null);
             Cot(g, "Lỗ", "TomTatLo", null);
             Cot(g, "ケガキ", "TomTatKeGaki", null);
+            Cot(g, "Dim khách", "TomTatDimKhach", null);
             Cot(g, "Dung sai", "DungSai", "dung_sai");
             Cot(g, "Ghi chú (JP)", "GhiChuJp", "ghi_chu_jp", 220);
             Cot(g, "Ghi chú (VI)", "GhiChuVi", "ghi_chu_vi", 220);

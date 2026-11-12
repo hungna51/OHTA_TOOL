@@ -133,10 +133,14 @@ namespace TeamsTool.Tests
             tamF.T = "1.6"; tamF.SoBanVe = "A-1";
             Kiem("fname: so BV truoc bango, T=1.6 giu", string.Join(",", PhongTrienKhai.DongFname(tamF, new TamTrienKhai(), "x-1").Take(3)), "N=A-1,M=SS400,T=1.6");
             tamK.Moi = true;
+            tamK.DimKhachJson = "[{\"loai\":\"ngang\",\"gia_tri\":120,\"tu\":0,\"den\":120}]";
+            Kiem("dim khach: luu + tom tat + schema", PhongDocBanVe.Doc(PhongDocBanVe.Ghi(new ChiTiet { Tam = { tamK } })).Tam[0].TomTatDimKhach + "|"
+                 + PhongDocBanVe.Body("claude-opus-5-5", "d", "q", "A.pdf", null, null).Contains("\"dim_khach\""), "1 dim|True");
             var tkK = PhongTrienKhai.TuTam(tamK);
             tkK.XPhang = 80; tkK.YPhang = 200;
             string viec = PhongTrienKhai.ViecVe("test", new List<(TamAi, TamTrienKhai)> { (tamK, tkK) }, "m.dxf", "ra", new[] { "tv" });
-            Kiem("viec ve: ke_gaki + N=so BV", System.Text.RegularExpressions.Regex.Replace(viec, @"\s", "").Contains("\"ke_gaki\":[[120,27.5]]") + "|" + viec.Contains("N=A-1"), "True|True");
+            Kiem("viec ve: ke_gaki + N=so BV", System.Text.RegularExpressions.Regex.Replace(viec, @"\s", "").Contains("\"ke_gaki\":[[120,27.5]]") + "|" + viec.Contains("N=A-1") + "|"
+                 + System.Text.RegularExpressions.Regex.Replace(viec, @"\s", "").Contains("\"dim_khach\":[{\"loai\":\"ngang\",\"gia_tri\":120"), "True|True|True");
         }
 
         private static void TestAiCli()

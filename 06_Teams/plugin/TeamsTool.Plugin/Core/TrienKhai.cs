@@ -260,6 +260,7 @@ namespace TeamsTool.Core
                 j.Set("be_x", So(tk.BeX)); j.Set("be_y", So(tk.BeY));
                 j.Set("doan_x", So(tk.DoanPhangX)); j.Set("doan_y", So(tk.DoanPhangY));
                 j.Set("ke_gaki", KeGaki(t).Select(k => (object)So(new[] { k.X, k.Y })).ToList());
+                j.Set("dim_khach", DsJson(t.DimKhachJson));
                 j.Set("fname", DongFname(t, tk, Bango(title, i + 1)).Cast<object>().ToList());
                 j.Set("ghi_chu", tk.ChiTiet.Cast<object>().ToList());
                 tam.Add(j);
@@ -270,6 +271,11 @@ namespace TeamsTool.Core
             o.Set("thu_vien", thuVien.Cast<object>().ToList());
             o.Set("tam", tam);
             return JsonLite.Serialize(o);
+        }
+
+        private static List<object> DsJson(string json)
+        {
+            try { return JsonLite.Parse(json ?? "[]") as List<object> ?? new List<object>(); } catch (Exception) { return new List<object>(); }
         }
 
         /// <summary>Các dấu ケガキ đọc được (bỏ dấu thiếu x / y).</summary>
