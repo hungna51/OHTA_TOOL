@@ -221,6 +221,11 @@ namespace TeamsTool.Tests
             var phL = PhongKiemTra.DocPhanHoi(AiCli.DoiPhanHoiLing("{\"choices\":[{\"message\":{\"content\":\"```json\\n{\\\"van_de\\\":[{\\\"tam\\\":\\\"A\\\",\\\"muc\\\":\\\"do\\\",\\\"nhom\\\":\\\"khach\\\",\\\"muc_qc\\\":\\\"\\\",\\\"noi_dung\\\":\\\"R?\\\",\\\"lien_lac\\\":false}]}\\n```\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":5}}"), "don");
             Kiem("ling: doc phan hoi (bo rao ```) + loi", phL.VanDe.Count + "|" + phL.VanDe[0].NoiDung + "|" + phL.Vao + "|"
                  + PhongKiemTra.DocPhanHoi(AiCli.DoiPhanHoiLing("{\"error\":{\"message\":\"Rate Limit Exceeded\"}}"), "d").Loi, "1|R?|0|Ling: Rate Limit Exceeded");
+            var tGoc = new TamAi { SoBanVe = "G", M = "SS400", T = "9", Q = "2", KieuTd = "phang", TdX = "600", TdY = "140", BienDang = "phang", MoTa = "Tấm phẳng, vát góc C10 ở 2 đầu cạnh dài" };
+            int coGoc() => PhongKiemTra.Luat(new[] { tGoc }, new List<PhongKiemTra.DongTv>(), "").Count(v => v.Ma.EndsWith("|thieu_goc"));
+            int truoc = coGoc();
+            tGoc.ThamSo = "c1=10; c2=10";
+            Kiem("luat: mo ta vat goc ma thieu c / r", truoc + "|" + coGoc(), "1|0");
             string schema = System.Text.RegularExpressions.Regex.Replace(OhtaTool.Plugin.Core.JsonLite.Serialize(PhongDocBanVe.Schema()), @"\s", "");
             Console.WriteLine("  (do dai schema doc ban ve: " + schema.Length + ")");
             Kiem("schema gon: khong enum, khong tiet dien long", schema.Contains("\"enum\"") + "|" + schema.Contains("\"uon\"") + "|" + (schema.Length < 6000), "False|False|True");

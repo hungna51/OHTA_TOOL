@@ -121,6 +121,20 @@ def anh_huong_dan(moi_truong, thu_muc):
                 if chu:
                     e.dxf.text = chu
                     e.override().render()
+            # nhãn "C15" (vát góc) bằng số thông số → ghi tên (c1…)
+            for e in nen.msp.query("MTEXT TEXT"):
+                chu_nhan = e.text if e.dxftype() == "MTEXT" else e.dxf.text
+                if chu_nhan[:1] == "C":
+                    try:
+                        so = float(chu_nhan[1:])
+                    except ValueError:
+                        continue
+                    ten_ts = next((k for v, k in nhan if abs(v - so) <= 0.01), None)
+                    if ten_ts:
+                        if e.dxftype() == "MTEXT":
+                            e.text = ten_ts
+                        else:
+                            e.dxf.text = ten_ts
             anh = os.path.join(thu_muc, ten + ".png")
             dm.qsave(nen.msp, anh, bg="#FFFFFF", size_inches=(6, 4), dpi=110)
             kq.append({"ten": ten, "anh": anh, "loi": None})
