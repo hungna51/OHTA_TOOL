@@ -647,12 +647,14 @@ namespace TeamsTool.Services
             string key = KeyPhong(4);
             string model = Model();
             var daCo = (await DanhSachMau(tm)).Select(m => m.Ten).ToList();
-            string viDu = File.ReadAllText(Path.Combine(ThuVienChung, "be.py"), Encoding.UTF8);
+            string viDuF = Path.Combine(ThuVienChung, "dai_lom_loi.py"); // ví dụ có cung thật + dim tâm cung theo bản chuẩn
+            string viDu = File.ReadAllText(File.Exists(viDuF) ? viDuF : Path.Combine(ThuVienChung, "be.py"), Encoding.UTF8);
             string f = Path.Combine(ThuMucTep(tm), tam.Tep), pdf = null;
             if (File.Exists(f) && f.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) && new FileInfo(f).Length <= PhongDocBanVe.PdfToiDa)
                 pdf = Convert.ToBase64String(File.ReadAllBytes(f));
             bao("Phòng 4: AI viết mẫu vẽ mới cho " + tk.Ten + "…");
-            string body = PhongTrienKhai.BodyMauMoi(model, pdf, PhongTrienKhai.DauVaoMauMoi(tam, tk, daCo, viDu));
+            string qcVe = Path.Combine(ThuMucVeDxf, "QUY_CHUAN_VE.md"); // quy ước vẽ theo bản chuẩn xưởng
+            string body = PhongTrienKhai.BodyMauMoi(model, File.Exists(qcVe) ? File.ReadAllText(qcVe, Encoding.UTF8) : null, pdf, PhongTrienKhai.DauVaoMauMoi(tam, tk, daCo, viDu));
             PhongTrienKhai.MauMoi m = PhongTrienKhai.DocMauMoi(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, huy), daCo);
             kq.TokenVao += m.Vao + m.GhiCache + m.DocCache;
             kq.TokenRa += m.Ra;
@@ -693,6 +695,7 @@ namespace TeamsTool.Services
                 RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = Utf8, StandardErrorEncoding = Utf8,
             };
             psi.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
+            psi.EnvironmentVariables["OPENBLAS_NUM_THREADS"] = "1"; // numpy (matplotlib) nhiều luồng có lúc hết bộ nhớ khi vẽ ảnh xem trước
             using (var p = System.Diagnostics.Process.Start(psi))
             {
                 Task<string> ra = p.StandardOutput.ReadToEndAsync(), loi = p.StandardError.ReadToEndAsync();

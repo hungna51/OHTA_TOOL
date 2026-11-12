@@ -35,6 +35,8 @@ namespace TeamsTool.Core
         /// <summary>Mẫu biên dạng ve_dxf AI chọn (chua_co = chưa có mẫu) + mô tả khi chưa có.</summary>
         public string BienDang = "", MoTaBienDang = "";
         public string CanhJson = "[]", LoJson = "[]";
+        /// <summary>Dấu khắc vạch ケガキ / マーキング: [{x, y}] mm trên hình trải phẳng, gốc góc trái dưới.</summary>
+        public string KeGakiJson = "[]";
         public HashSet<string> KhongChac = new HashSet<string>(); // ô AI không chắc / AI tự chọn
         public HashSet<string> DaSua = new HashSet<string>();     // ô người dùng đã sửa — chạy lại không ghi đè
         /// <summary>Ô → giá trị AI đọc trước khi người sửa (để AI rút bài học).</summary>
@@ -42,6 +44,7 @@ namespace TeamsTool.Core
 
         public string TomTatCanh => TomTat(CanhJson, "chỗ bẻ");
         public string TomTatLo => TomTat(LoJson, "lỗ");
+        public string TomTatKeGaki => TomTat(KeGakiJson, "ケガキ");
         public string CanhBao => KhongChac.Count == 0 ? "" : "⚠ " + string.Join(", ", KhongChac.OrderBy(x => x));
 
         private static string TomTat(string json, string ten)
@@ -148,6 +151,7 @@ namespace TeamsTool.Core
                 x.Set("ly_do_sua", t.LyDoSua ?? "");
                 x.Set("canh", SafeParse(t.CanhJson));
                 x.Set("lo", SafeParse(t.LoJson));
+                x.Set("ke_gaki", SafeParse(t.KeGakiJson));
                 x.Set("moi", t.Moi);
                 x.Set("khong_chac", t.KhongChac.OrderBy(s => s).Cast<object>().ToList());
                 x.Set("da_sua", t.DaSua.OrderBy(s => s).Cast<object>().ToList());
@@ -260,6 +264,7 @@ TIẾT DIỆN của mỗi tấm (để trải phẳng — KHÔNG tự tính tr�
   · Cuộn: uon kieu cuon, r_trong = R trong, cung = góc cung (360 = tròn kín, 180 = nửa); doan kề là phần thẳng tiếp tuyến (0 nếu không có).
   · Hướng không uốn: một doan = chiều dài phẳng theo hướng đó, uon rỗng. Tấm phẳng: x = [dài], y = [rộng]. Hộp 3–4 cạnh: x và y đều có tiết diện (thành – đáy – thành).
 - ghi_chu_td: tiếng Việt, ngắn (hướng bẻ V / N, chỗ chưa chắc). Không đọc được tiết diện → doan rỗng, ghi lý do, thêm tiet_dien vào khong_chac.
+- ke_gaki: mỗi dấu khắc vạch (マーキング / ケガキ / 罫書き — dấu vạch, KHÔNG phải lỗ): x, y = toạ độ tâm (mm) trên hình TRẢI PHẲNG, gốc ở góc trái dưới của tấm, x theo hướng tiết diện x; không có → rỗng. Bản vẽ chỉ ghi số dấu mà thiếu vị trí → để rỗng và hỏi trong van_de.
 - bien_dang: tên đúng MỘT mẫu trong ""Thư viện biên dạng"" (phần người dùng) khớp hình trải phẳng; làm tay → rỗng; không mẫu nào khớp → ""chua_co"". mo_ta_bien_dang: chỉ khi chua_co — mô tả hình trải phẳng (viền, góc cắt, đường bẻ, lỗ / rãnh đặc biệt) đủ để viết mẫu vẽ mới; còn lại rỗng.
 
 NGHI VẤN (van_de, cho cả tệp): vấn đề có thật trên bản vẽ cần hỏi / xác nhận trước khi triển khai, theo QUY CHUẨN — không bịa:
@@ -329,6 +334,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             kieuTd.Set("enum", new List<object> { "phang", "be", "lam_tay" });
             tt.Add(("kieu_td", kieuTd)); tt.Add(("x", td)); tt.Add(("y", td));
             tt.Add(("ghi_chu_td", s)); tt.Add(("bien_dang", s)); tt.Add(("mo_ta_bien_dang", s));
+            tt.Add(("ke_gaki", Mang(Obj(("x", n), ("y", n)))));
             return Obj(("tam", Mang(Obj(tt.ToArray()))), ("van_de", Mang(PhongKiemTra.SchemaVanDe())));
         }
 
@@ -402,6 +408,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             if (x.Get("y") is JsonObject ty) t.TdY = PhongTrienKhai.ChuTd(PhongTrienKhai.DocTd(ty));
             t.CanhJson = JsonLite.Serialize(x.Get("canh") as List<object> ?? new List<object>());
             t.LoJson = JsonLite.Serialize(x.Get("lo") as List<object> ?? new List<object>());
+            t.KeGakiJson = JsonLite.Serialize(x.Get("ke_gaki") as List<object> ?? new List<object>());
             t.KhongChac.UnionWith(DsChu(x.Get("khong_chac")));
             return t;
         }

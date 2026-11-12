@@ -123,6 +123,20 @@ namespace TeamsTool.Tests
             var chep = new TamAi();
             PhongTrienKhai.ChepVaoTam(tk, chep);
             Kiem("chep td vao bang (don cu)", chep.TdX + "|" + chep.KieuTd, "50 b90 30|be");
+
+            // Bản chuẩn xưởng (12/11): ケガキ đọc + gửi ve.py, N= bango, T có phần thập phân
+            var tamK = PhongDocBanVe.DocPhanHoi("{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":" + OhtaTool.Plugin.Core.JsonLite.Serialize(
+                text.Replace("\"mo_ta_bien_dang\":\"\"}", "\"mo_ta_bien_dang\":\"\",\"ke_gaki\":[{\"x\":120,\"y\":27.5},{\"x\":180}]}")) + "}]}").Tam[0];
+            Kiem("ke gaki: doc + bo dau thieu y", PhongTrienKhai.KeGaki(tamK).Count + "|" + tamK.TomTatKeGaki + "|" + PhongDocBanVe.Doc(PhongDocBanVe.Ghi(new ChiTiet { Tam = { tamK } })).Tam[0].KeGakiJson.Contains("120"), "1|2 ケガキ|True");
+            var tamF = new TamAi { M = "SS400", T = "12", Q = "2", Z = "SS400" };
+            Kiem("fname: N= bango, T=12.0", string.Join(",", PhongTrienKhai.DongFname(tamF, new TamTrienKhai(), "test-1")), "N=test-1,M=SS400,T=12.0,Q=2,Z=SS400");
+            tamF.T = "1.6"; tamF.SoBanVe = "A-1";
+            Kiem("fname: so BV truoc bango, T=1.6 giu", string.Join(",", PhongTrienKhai.DongFname(tamF, new TamTrienKhai(), "x-1").Take(3)), "N=A-1,M=SS400,T=1.6");
+            tamK.Moi = true;
+            var tkK = PhongTrienKhai.TuTam(tamK);
+            tkK.XPhang = 80; tkK.YPhang = 200;
+            string viec = PhongTrienKhai.ViecVe("test", new List<(TamAi, TamTrienKhai)> { (tamK, tkK) }, "m.dxf", "ra", new[] { "tv" });
+            Kiem("viec ve: ke_gaki + N=so BV", System.Text.RegularExpressions.Regex.Replace(viec, @"\s", "").Contains("\"ke_gaki\":[[120,27.5]]") + "|" + viec.Contains("N=A-1"), "True|True");
         }
 
         private static void TestAiCli()
@@ -232,7 +246,7 @@ namespace TeamsTool.Tests
             string tl = OhtaTool.Plugin.Core.JsonLite.Serialize("{\"ten\":\"chu_u\",\"mo_ta\":\"Chu U\",\"ma\":" + OhtaTool.Plugin.Core.JsonLite.Serialize(maTot) + "}");
             var mm = PhongTrienKhai.DocMauMoi("{\"stop_reason\":\"end_turn\",\"usage\":{\"input_tokens\":9,\"output_tokens\":4},\"content\":[{\"type\":\"text\",\"text\":" + tl + "}]}", daCo);
             Kiem("doc mau moi tu phan hoi AI", mm.Ten + "|" + mm.MoTa + "|" + (mm.Loi ?? "null") + "|" + mm.Ma.Contains("def ve(nen, t)") + "|" + mm.Vao, "chu_u|Chu U|null|True|9");
-            string bodyMau = PhongTrienKhai.BodyMauMoi("claude-opus-5-5", null, "dau vao");
+            string bodyMau = PhongTrienKhai.BodyMauMoi("claude-opus-5-5", null, null, "dau vao");
             Kiem("body mau moi: schema ten/mo_ta/ma, khong khoi quy chuan", bodyMau.Contains("\"ma\"") + "|" + bodyMau.Contains("cache_control"), "True|False");
             var phang = new TamTrienKhai { Kieu = "phang", X = Phang(300), Y = Phang(150) };
             PhongTrienKhai.Tinh(phang, new TamAi { T = "3.2", M = "SS400", Q = "1" }, TraV, 3, Lmin);

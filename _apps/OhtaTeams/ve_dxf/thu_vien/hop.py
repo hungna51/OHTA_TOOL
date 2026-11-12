@@ -1,9 +1,7 @@
 """Mẫu biên dạng: hộp 3–4 cạnh (bẻ cả 2 hướng)."""
 
-from moi_truong import LE_DIM
-
 MO_TA = ("Hộp / khay bẻ cả 2 hướng (3–4 cạnh): hình chữ thập — chữ nhật X × Y cắt 4 góc theo đoạn phẳng đầu / cuối "
-         "mỗi hướng, đường bẻ DASHED chỉ trong phần đáy, dim chuỗi 2 hướng. Liên kết góc hở / kín, khe R chưa vẽ.")
+         "mỗi hướng, đường bẻ DASHED chỉ trong phần đáy, dim chuỗi 2 hướng (phía dưới / phải). Liên kết góc hở / kín, khe R chưa vẽ.")
 
 
 def ve(nen, t):
@@ -20,9 +18,4 @@ def ve(nen, t):
         nen.duong_be((v, gy0), (v, y - gy1))
     for v in t.get("be_y", []):
         nen.duong_be((gx0, v), (x - gx1, v))
-    moc = [0.0] + list(t.get("be_x", [])) + [x]
-    for a, b in zip(moc, moc[1:]):
-        nen.dim_ngang(a, b, y, y + LE_DIM)
-    moc = [0.0] + list(t.get("be_y", [])) + [y]
-    for a, b in zip(moc, moc[1:]):
-        nen.dim_doc(a, b, x, x + LE_DIM)
+    # dim chuỗi theo đường bẻ: ve.py tự thêm (dưới / phải) từ be_x, be_y

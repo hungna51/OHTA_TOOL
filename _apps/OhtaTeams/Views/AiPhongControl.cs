@@ -323,6 +323,7 @@ namespace TeamsTool.Views
             Cot(g, "Ghi chú TD", "GhiChuTd", "ghi_chu_td", 180);
             Cot(g, "Bẻ", "TomTatCanh", null);
             Cot(g, "Lỗ", "TomTatLo", null);
+            Cot(g, "ケガキ", "TomTatKeGaki", null);
             Cot(g, "Dung sai", "DungSai", "dung_sai");
             Cot(g, "Ghi chú (JP)", "GhiChuJp", "ghi_chu_jp", 220);
             Cot(g, "Ghi chú (VI)", "GhiChuVi", "ghi_chu_vi", 220);

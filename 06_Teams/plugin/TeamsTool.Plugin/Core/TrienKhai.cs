@@ -226,10 +226,15 @@ namespace TeamsTool.Core
         /// <summary>Bango tạm &lt;title&gt;-&lt;stt&gt; (cột エクスポート用 của CSV, tên tệp bản vẽ). GRO đánh bango thật trên CAD.</summary>
         public static string Bango(string title, int stt) => title + "-" + stt;
 
-        /// <summary>F-name như tab Fname: N=, M=, T=, Q=, các dòng V= của TraV / ấn 1 lần, Z=.</summary>
-        public static List<string> DongFname(TamAi tam, TamTrienKhai tk)
+        /// <summary>
+        /// F-name như tab Fname: N=, M=, T=, Q=, các dòng V= của TraV / ấn 1 lần, Z=. Theo bản chuẩn xưởng (12/11):
+        /// N= trống thì lấy bango; T luôn có phần thập phân (12 → 12.0).
+        /// </summary>
+        public static List<string> DongFname(TamAi tam, TamTrienKhai tk, string bango = "")
         {
-            var d = new List<string> { "N=" + (tam.SoBanVe.Length > 0 ? tam.SoBanVe : tam.Ten), "M=" + tam.M, "T=" + tam.T, "Q=" + tam.Q };
+            string n = tam.SoBanVe.Length > 0 ? tam.SoBanVe : tam.Ten.Length > 0 ? tam.Ten : bango;
+            string t = double.TryParse((tam.T ?? "").Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double so) ? so.ToString("0.0##", CultureInfo.InvariantCulture) : tam.T;
+            var d = new List<string> { "N=" + n, "M=" + tam.M, "T=" + t, "Q=" + tam.Q };
             d.AddRange(tk.DongV);
             d.Add("Z=" + tam.Z);
             return d;
@@ -254,7 +259,8 @@ namespace TeamsTool.Core
                 j.Set("y", new JsonNumber(F(y)));
                 j.Set("be_x", So(tk.BeX)); j.Set("be_y", So(tk.BeY));
                 j.Set("doan_x", So(tk.DoanPhangX)); j.Set("doan_y", So(tk.DoanPhangY));
-                j.Set("fname", DongFname(t, tk).Cast<object>().ToList());
+                j.Set("ke_gaki", KeGaki(t).Select(k => (object)So(new[] { k.X, k.Y })).ToList());
+                j.Set("fname", DongFname(t, tk, Bango(title, i + 1)).Cast<object>().ToList());
                 j.Set("ghi_chu", tk.ChiTiet.Cast<object>().ToList());
                 tam.Add(j);
             }
@@ -266,13 +272,26 @@ namespace TeamsTool.Core
             return JsonLite.Serialize(o);
         }
 
+        /// <summary>Các dấu ケガキ đọc được (bỏ dấu thiếu x / y).</summary>
+        public static List<(double X, double Y)> KeGaki(TamAi t)
+        {
+            var ds = new List<(double, double)>();
+            List<object> l;
+            try { l = JsonLite.Parse(t.KeGakiJson ?? "[]") as List<object> ?? new List<object>(); } catch (Exception) { l = new List<object>(); }
+            foreach (JsonObject o in l.OfType<JsonObject>())
+                if (SoJ(o, "x") is double x && SoJ(o, "y") is double y) ds.Add((x, y));
+            return ds;
+        }
+
         // ---------- Đề xuất mẫu biên dạng mới (AI viết, Admin duyệt) ----------
 
         public const string LoiDanMauMoi =
 @"Bạn viết MẪU BIÊN DẠNG mới cho thư viện vẽ trải phẳng của OHTA (Python 3, ezdxf). Một mẫu = một tệp Python:
 - MO_TA = ""..."": một câu tiếng Việt mô tả loại biên dạng (để AI phòng Triển khai chọn mẫu sau này) — mô tả LOẠI hình, không ghi số của tấm này.
 - def ve(nen, t): vẽ viền cắt + đường bẻ (+ dim riêng nếu cần) của tấm bằng các hàm của nen (moi_truong.NenVe). t là dict: x, y (kích thước trải), be_x (vị trí đường bẻ song song trục Y, mm từ mép trái), be_y (song song trục X, mm từ mép dưới), doan_x, doan_y (các đoạn phẳng giữa đường bẻ), ghi_chu (list chuỗi), fname (list chuỗi — KHÔNG tự vẽ, chương trình vẽ).
-- Đặt tấm từ gốc (0, 0). Viền cắt phải KÍN (nen.vien / nen.chu_nhat). Chỉ dùng hàm của nen, không tự đặt layer / kiểu chữ / kiểu dim. Dim tổng X, Y, F-name, Khung_IN chương trình tự thêm — không vẽ.
+- Đặt tấm từ gốc (0, 0). Viền cắt phải KÍN. Cạnh thẳng + cung: nen.duong + nen.cung (CUNG THẬT — không chia cung thành nhiều điểm); toàn cạnh thẳng: nen.vien / nen.chu_nhat. Chỉ dùng hàm của nen, không tự đặt layer / kiểu chữ / kiểu dim.
+- Dim theo bản chuẩn xưởng: chuỗi dim chi tiết ở PHÍA DƯỚI (và bên phải) — chương trình tự dựng từ be_x / be_y / ケガキ / nen.moc_x, nen.moc_y; mẫu chỉ thêm mốc (nen.moc_x.append(...)). Cung cần ghi R: nen.cung(..., dim=True) (tự dim R + đưa tâm vào chuỗi). Dim riêng của hình (vd 2 dim nửa chiều cao tới tâm cung) đặt cách viền LE_DIM, chữ đoạn ngắn đưa ra ngoài bằng vi_tri_chu.
+- KHÔNG vẽ: dim tổng X, Y (1-XY), ケガキ, F-name, Khung_IN — chương trình tự thêm. Theo QUY CHUẨN VẼ ở khối sau nếu có.
 - CHỈ được import: math, moi_truong (vd from moi_truong import LE_DIM). Không đọc / ghi tệp, không os / sys / subprocess / eval / exec.
 - Viết tổng quát cho mọi tấm cùng loại (đọc số từ t), không gắn cứng số của tấm này.
 Trả: ten (tên tệp: chữ thường không dấu, số, gạch dưới, 3–30 ký tự, khác tên đã có), mo_ta (= MO_TA), ma (toàn bộ mã Python).";
@@ -281,12 +300,18 @@ Trả: ten (tên tệp: chữ thường không dấu, số, gạch dưới, 3–
         public const string ApiMoiTruong =
 @"nen.vien(diem)                 # viền cắt kín, diem = [(x, y), ...] không lặp đỉnh đầu (0-KAKOU)
 nen.chu_nhat(x0, y0, x1, y1)   # viền cắt chữ nhật
+nen.duong(a, b)                # một cạnh viền rời (LINE 0-KAKOU) — dùng cùng nen.cung khi viền có cung
+nen.cung(tam, r, goc_dau, goc_cuoi, dim=False)  # cung viền thật (ARC 0-KAKOU), độ, ngược chiều kim đồng hồ; dim=True: dim R + tâm vào chuỗi dim
+nen.moc_x.append(x); nen.moc_y.append(y)        # thêm mốc vào chuỗi dim dưới / phải
 nen.duong_be(a, b)             # đường bẻ (LINE 0-KAKOU, nét DASHED), a, b = (x, y)
 nen.slit(a, b)                 # nét rạch slit (4-SHT, không cần kín)
 nen.chu(x, y, noi_dung, cao=14.0)   # chữ ghi chú (1-SUNPOU, kiểu Text)
 nen.dim_ngang(x0, x1, y, y_dim)     # dim ngang đo x0 → x1 tại cao độ y, đường dim ở y_dim (ISO-26)
-nen.dim_doc(y0, y1, x, x_dim)       # dim dọc
-moi_truong.LE_DIM = 40.0       # khoảng viền → đường dim";
+nen.dim_doc(y0, y1, x, x_dim, vi_tri_chu=None)  # dim dọc; vi_tri_chu=(x, y) đưa chữ ra ngoài
+moi_truong.LE_DIM = 80.0       # khoảng viền → đường dim chi tiết";
+
+        public static string BodyMauMoi(string model, string quyChuanVe, string pdfBase64, string dauVao) =>
+            BodyChung(model, LoiDanMauMoi, SchemaMauMoi(), string.IsNullOrWhiteSpace(quyChuanVe) ? null : quyChuanVe, pdfBase64, dauVao, null);
 
         public static JsonObject SchemaMauMoi()
         {
@@ -307,8 +332,6 @@ moi_truong.LE_DIM = 40.0       # khoảng viền → đường dim";
               .Append("\n\nVí dụ một mẫu trong thư viện:\n```python\n").Append(maViDu).Append("\n```\n");
             return sb.ToString();
         }
-
-        public static string BodyMauMoi(string model, string pdfBase64, string dauVao) => BodyChung(model, LoiDanMauMoi, SchemaMauMoi(), null, pdfBase64, dauVao, null);
 
         /// <summary>Kết quả AI đề xuất: tên tệp, mô tả, mã; Loi khác null = không dùng được.</summary>
         public sealed class MauMoi

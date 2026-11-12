@@ -5,6 +5,7 @@ Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_oh
 ## Chưa phát hành
 
 - **OhtaTeams — khu 🤖 AI gộp lại còn 3 phòng**: **1 Nhận & Đọc** (mỗi bản vẽ chỉ gửi AI một lần, đọc luôn cả tiết diện và các điểm nghi vấn — nhanh hơn, tốn ít hơn khoảng 3 lần), **2 Kiểm tra & Hỏi** (luật kiểm tự chạy lại sau mỗi ô sửa; sửa cả tiết diện ngay trên bảng; kiểm lại câu trả lời chỉ gửi chữ), **3 Triển khai & Vẽ** (không gọi AI nữa).
+- **Bản vẽ DXF giống bản chuẩn xưởng**: cung vẽ cung thật (không còn chia nhỏ thành đoạn), dim tổng X / Y trên layer `1-XY` (X dưới, Y phải), chuỗi dim chi tiết phía dưới, dim bán kính R, dấu **ケガキ** (chữ thập + `n-ケガキ`, AI đọc vị trí dấu từ bản vẽ khách), F-name dưới tấm (`N=` lấy bango khi thiếu, `T=12.0`), Khung_IN tỉ lệ khổ A.
 - **Bài học đọc bản vẽ**: khi xác nhận, AI xem những ô bạn đã sửa, chỉ ra mình đọc sai ở đâu và đề xuất bài học; máy Admin duyệt thì lần đọc sau AI áp dụng. Chọn thư mục bài học dùng chung ở ⚙ → 🤖 AI để mọi máy cùng học.
 
 - **OhtaTeams** — khu **🤖 AI** trong chi tiết đơn (máy Admin, đang thử): **▶ Bắt đầu** tải mọi tệp của đơn (đính kèm + chat) về thư mục đơn, gộp bản nháp `<mã>-番号.PDF`, rồi AI đọc từng bản vẽ PDF / DXF ra bảng tấm (vật liệu, độ dày, số lượng, kích thước, bẻ, lỗ, ghi chú JP + VI). Sửa thẳng trong bảng; ô ⚠ là AI không chắc.

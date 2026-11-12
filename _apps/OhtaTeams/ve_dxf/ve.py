@@ -5,8 +5,9 @@
     python ve.py VIEC.json              → {"ket_qua": [{"bango", "tep", "anh", "loi"}]}
 
 VIEC.json (OhtaTeams ghi): {"moi_truong": dxf, "thu_muc_ra": dir, "thu_vien": [dir…],
-  "tam": [{"bango", "bien_dang", "x", "y", "be_x", "be_y", "doan_x", "doan_y", "fname": [dòng], "ghi_chu": [dòng]}]}
-Mẫu biên dạng (thu_vien/<ten>.py): MO_TA + ve(nen, t) vẽ viền / đường bẻ / dim riêng; dim tổng, F-name, Khung_IN thêm ở đây.
+  "tam": [{"bango", "bien_dang", "x", "y", "be_x", "be_y", "doan_x", "doan_y", "ke_gaki": [[x, y]…], "fname": [dòng], "ghi_chu": [dòng]}]}
+Mẫu biên dạng (thu_vien/<ten>.py): MO_TA + ve(nen, t) vẽ viền / đường bẻ / dim riêng của hình; ケガキ, chuỗi dim dưới / phải,
+dim tổng (1-XY), F-name, Khung_IN thêm ở đây (them_chung) theo bản chuẩn xưởng.
 Tệp đã sửa tay trên CAD (mã băm khác lần ghi trước, nhớ trong .ve_dxf.json) không bị ghi đè: ghi "<bango> (2).dxf".
 """
 import hashlib
@@ -76,6 +77,41 @@ def ten_ra(thu_muc, bango, so_tay):
         i += 1
 
 
+def chuoi(moc, a, b):
+    """Mốc trong [a, b] (gồm 2 đầu), sắp xếp, bỏ trùng (< 0.01 mm)."""
+    kq = []
+    for v in sorted([a, b] + [float(m) for m in moc if a - 0.01 <= float(m) <= b + 0.01]):
+        if not kq or v - kq[-1] > 0.01:
+            kq.append(v)
+    return kq
+
+
+def them_chung(nen, t, x0, y0, x1, y1):
+    """Phần chung mọi tấm theo bản chuẩn xưởng (12/11): ケガキ + leader, chuỗi dim chi tiết dưới / phải (1-SUNPOU),
+    dim tổng X dưới cùng + Y bên phải (1-XY), F-name dưới tấm, Khung_IN tỉ lệ khổ A ngang."""
+    import moi_truong as mt
+    kg = sorted(([float(k[0]), float(k[1])] for k in t.get("ke_gaki", [])), key=lambda k: k[0])
+    for kx, ky in kg:
+        nen.ke_gaki(kx, ky)
+    if kg:
+        gx, gy = kg[len(kg) // 2]
+        nen.leader([(gx, gy), (gx + 23, y1 + 53), (gx + 24, y1 + 53)], "%d-ケガキ" % len(kg))
+    mx = chuoi(list(t.get("be_x", [])) + [k[0] for k in kg] + nen.moc_x, x0, x1)
+    my = chuoi(list(t.get("be_y", [])) + nen.moc_y, y0, y1)
+    if len(mx) > 2:
+        for a, b in zip(mx, mx[1:]):
+            nen.dim_ngang(a, b, y0, y0 - mt.LE_DIM)
+    if len(my) > 2:
+        for a, b in zip(my, my[1:]):
+            nen.dim_doc(a, b, x1, x1 + mt.LE_DIM)
+    y_tong = y0 - (mt.LE_TONG if len(mx) > 2 else mt.LE_DIM)
+    nen.dim_ngang(x0, x1, y0, y_tong, lop=mt.LOP_XY)
+    nen.dim_doc(y0, y1, x1, x1 + (mt.LE_TONG if len(my) > 2 else mt.LE_DIM), lop=mt.LOP_XY)
+    nen.fname(x0 + mt.LECH_FNAME, y_tong - mt.DUOI_FNAME, t.get("fname", []))
+    bx0, by0, bx1, by1 = mt.bao_tat_ca(nen)
+    nen.khung_in(*mt.khung_a(bx0 - mt.LE_KHUNG, by0 - mt.LE_KHUNG, bx1 + mt.LE_KHUNG, by1 + mt.LE_KHUNG))
+
+
 def ve_tam(viec, t, mau, so_tay, co_anh):
     import moi_truong as mt
     ten = t.get("bien_dang", "")
@@ -86,15 +122,7 @@ def ve_tam(viec, t, mau, so_tay, co_anh):
     x0, y0, x1, y1 = mt.khung_bao(nen)
     if x1 <= x0 or y1 <= y0:
         raise ValueError("mẫu '%s' không vẽ viền cắt nào" % ten)
-    # dim tổng (dưới, trái), F-name bên phải, Khung_IN bao hết
-    nen.dim_ngang(x0, x1, y0, y0 - mt.LE_DIM)
-    nen.dim_doc(y0, y1, x0, x0 - mt.LE_DIM)
-    fx = x1 + mt.LE_DIM * 2.5
-    dong = t.get("fname", [])
-    rong = nen.fname(fx, y1, dong)
-    cao_fname = len(dong) * mt.CAO_FNAME * 2.0
-    nen.khung_in(x0 - mt.LE_DIM - mt.LE_KHUNG, min(y0, y1 - cao_fname) - mt.LE_DIM - mt.LE_KHUNG,
-                 fx + rong + mt.LE_KHUNG, y1 + mt.LE_DIM * 1.5 + mt.LE_KHUNG)
+    them_chung(nen, t, x0, y0, x1, y1)
     tep = ten_ra(viec["thu_muc_ra"], t["bango"], so_tay)
     nen.luu(tep)
     so_tay[os.path.basename(tep)] = ma_bam(tep)
