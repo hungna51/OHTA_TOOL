@@ -36,3 +36,6 @@ _backup/
 
 # Quy chuan noi bo cong ty (repo PUBLIC) - gui rieng, khong len GitHub
 _apps/OhtaTeams/data/quy_chuan/
+
+# Python tu sinh khi chay thu vien ve DXF (phong 4)
+__pycache__/

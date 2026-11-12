@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32;
+using OhtaTool.Plugin.Core;
 using TeamsTool.Core;
 
 namespace TeamsTool.Services
@@ -420,29 +421,165 @@ namespace TeamsTool.Services
             return ra;
         }
 
-        // ---------- Bản vẽ trải phẳng bằng text-to-cad ----------
+        // ---------- Bản vẽ trải phẳng bằng ezdxf (thư viện biên dạng _apps\OhtaTeams\ve_dxf) ----------
 
         public static string ThuMucBanVe(string tm) => Path.Combine(tm, PhongTiepNhan.ThuMucAi, "ban_ve");
-        public static string Bango(string title, int stt) => title + "-" + stt; // trùng cột エクスポート用 của trien_khai.csv
+        /// <summary>Mẫu AI đề xuất cho đơn này (vẽ thử) — chỉ máy Admin chép vào thư viện chung.</summary>
+        public static string ThuVienThu(string tm) => Path.Combine(ThuMucBanVe(tm), "mau_thu");
+        public static string ThuMucVeDxf => Path.Combine(Goc, "_apps", "OhtaTeams", "ve_dxf");
+        public static string ThuVienChung => Path.Combine(ThuMucVeDxf, "thu_vien");
+        /// <summary>Môi trường vẽ người dùng gửi (layer, kiểu chữ, kiểu dim) — nền của mọi bản vẽ.</summary>
+        public static string MoiTruongVe => Path.Combine(ThuMucQuyChuanPhong(4), "moi_truong", "moi-truong-ve.dxf");
 
-        /// <summary>Lệnh cad của text-to-cad (texttocad.dev): trên PATH hoặc %USERPROFILE%\.local\bin\cad.cmd; chưa cài → null.</summary>
-        public static string TimCad()
+        /// <summary>Máy Admin như tab Fname: registry Fname\ApprovalIsAdmin = 1 (tab admin Google Sheet) hoặc có cài Kev.</summary>
+        public static bool LaMayAdmin()
         {
-            foreach (string dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';').Where(d => d.Trim().Length > 0)
-                                   .Concat(new[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "bin") }))
-                foreach (string ten in new[] { "cad.cmd", "cad.exe" })
-                    try { string f = Path.Combine(dir.Trim().Trim('"'), ten); if (File.Exists(f)) return f; }
-                    catch (ArgumentException) { } // PATH có ký tự lạ
-            return null;
+            try
+            {
+                using (RegistryKey k = Registry.CurrentUser.OpenSubKey(@"Software\OFT_Lisp\OhtaTool\Fname"))
+                    if (k?.GetValue("ApprovalIsAdmin") is int v && v == 1) return true;
+                return File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OHTA_TOOL", "kev", ".venv", "Scripts", "python.exe"));
+            }
+            catch (Exception) { return false; }
         }
 
-        private static async Task<(int Ma, string Ra)> ChayCad(string cad, string thuMuc, CancellationToken huy, params string[] thamSo)
+        /// <summary>Kết quả ve.py --kiem: python thật đang dùng, phiên bản ezdxf (null = chưa cài), có matplotlib (ảnh xem trước) không.</summary>
+        public sealed class TinhTrangPython
         {
-            var psi = new System.Diagnostics.ProcessStartInfo(cad, string.Join(" ", thamSo.Select(a => "\"" + a + "\"")))
+            public string Python, Ezdxf, Loi;
+            public bool Matplotlib;
+            public bool SanSang => Python != null && Ezdxf != null;
+        }
+
+        private static TinhTrangPython _python;
+
+        /// <summary>Tìm Python (py -3, python) chạy được ve.py --kiem; nhớ kết quả tới khi gọi lại với lai = true (sau khi cài).</summary>
+        public static async Task<TinhTrangPython> KiemPython(bool lai = false)
+        {
+            if (_python != null && !lai) return _python;
+            string ve = Path.Combine(ThuMucVeDxf, "ve.py");
+            var kq = new TinhTrangPython { Loi = "Máy chưa có Python 3 — cài từ python.org hoặc Microsoft Store (Python 3.12+), rồi mở lại OhtaTeams." };
+            if (!File.Exists(ve)) kq.Loi = "Thiếu " + ve + " (cập nhật OHTA TOOL).";
+            else
+                foreach (var (exe, dau) in new[] { ("py", new[] { "-3" }), ("python", new string[0]) })
+                {
+                    try
+                    {
+                        var (ma, ra) = await ChayLenh(exe, ThuMucVeDxf, CancellationToken.None, dau.Concat(new[] { ve, "--kiem" }).ToArray());
+                        if (ma != 0 || !(JsonLite.Parse(ra.Trim().Split('\n').Last()) is JsonObject o)) continue;
+                        kq = new TinhTrangPython { Python = o.GetString("python"), Ezdxf = o.GetString("ezdxf"), Matplotlib = o.Get("matplotlib") is bool b && b };
+                        if (kq.Ezdxf == null) kq.Loi = "Máy có Python nhưng chưa có ezdxf — bấm Cài ezdxf.";
+                        break;
+                    }
+                    catch (Exception) { } // không có lệnh này: thử lệnh sau
+                }
+            _python = kq;
+            return kq;
+        }
+
+        /// <summary>Cài ezdxf (+ matplotlib cho ảnh xem trước) bằng pip của Python đã tìm thấy. Trả tình trạng sau khi cài.</summary>
+        public static async Task<TinhTrangPython> CaiEzdxf(Action<string> bao, CancellationToken huy)
+        {
+            TinhTrangPython tt = await KiemPython();
+            if (tt.Python == null) throw new InvalidOperationException(tt.Loi);
+            bao("Đang cài ezdxf + matplotlib (pip, cần mạng — khoảng 1 phút)…");
+            var (ma, ra) = await ChayLenh(tt.Python, ThuMucVeDxf, huy, "-m", "pip", "install", "--user", "--upgrade", "ezdxf", "matplotlib");
+            if (ma != 0) throw new InvalidOperationException("pip lỗi: " + DongCuoi(ra));
+            return await KiemPython(lai: true);
+        }
+
+        /// <summary>Mẫu biên dạng dùng được cho đơn: thư viện chung + mẫu thử của đơn (đè cùng tên). Python chưa sẵn sàng → rỗng.</summary>
+        public static async Task<List<(string Ten, string MoTa, string Tep)>> DanhSachMau(string tm)
+        {
+            var ds = new List<(string, string, string)>();
+            TinhTrangPython tt = await KiemPython();
+            if (!tt.SanSang) return ds;
+            var (ma, ra) = await ChayLenh(tt.Python, ThuMucVeDxf, CancellationToken.None, Path.Combine(ThuMucVeDxf, "ve.py"), "--thu-vien", ThuVienChung, ThuVienThu(tm));
+            if (ma != 0 || !(JsonLite.Parse(ra.Trim().Split('\n').Last()) is List<object> l)) return ds;
+            foreach (JsonObject o in l.OfType<JsonObject>())
+                ds.Add((o.GetString("ten") ?? "", o.GetString("mo_ta") ?? "", o.GetString("tep") ?? ""));
+            return ds;
+        }
+
+        /// <summary>Kết quả vẽ một tấm (tep / anh null khi lỗi).</summary>
+        public sealed class KetQuaVe
+        {
+            public string Bango, Tep, Anh, Loi;
+        }
+
+        /// <summary>
+        /// Vẽ trải phẳng mọi tấm vẽ được bằng ve_dxf\ve.py trên môi trường moi-truong-ve.dxf → ai\ban_ve\&lt;bango&gt;.dxf (+ .png).
+        /// Tệp đã sửa tay trên CAD không bị ghi đè (ve.py ghi &lt;bango&gt; (2).dxf).
+        /// </summary>
+        public static async Task<List<KetQuaVe>> VeBanVe(IList<(TamAi Tam, TamTrienKhai Tk)> ds, string title, string tm, Action<string> bao, CancellationToken huy)
+        {
+            TinhTrangPython tt = await KiemPython();
+            if (!tt.SanSang) throw new InvalidOperationException(tt.Loi);
+            if (!File.Exists(MoiTruongVe)) throw new InvalidOperationException("Thiếu môi trường vẽ " + MoiTruongVe + " (chép tay từ máy Admin).");
+            string dir = ThuMucBanVe(tm);
+            Directory.CreateDirectory(dir);
+            string viec = Path.Combine(dir, "viec.json");
+            File.WriteAllText(viec, PhongTrienKhai.ViecVe(title, ds, MoiTruongVe, dir, new[] { ThuVienChung, ThuVienThu(tm) }), Utf8);
+            bao("Phòng 4: ezdxf đang vẽ " + ds.Count(x => !x.Tk.LamTay) + " tấm…");
+            var (ma, ra) = await ChayLenh(tt.Python, ThuMucVeDxf, huy, Path.Combine(ThuMucVeDxf, "ve.py"), viec);
+            JsonObject o = null;
+            try { o = JsonLite.Parse(ra.Trim().Split('\n').Last()) as JsonObject; } catch (Exception) { }
+            if (ma != 0 || o == null) throw new InvalidOperationException("ve.py lỗi: " + DongCuoi(ra));
+            return (o.Get("ket_qua") as List<object> ?? new List<object>()).OfType<JsonObject>()
+                .Select(x => new KetQuaVe { Bango = x.GetString("bango"), Tep = x.GetString("tep"), Anh = x.GetString("anh"), Loi = x.GetString("loi") }).ToList();
+        }
+
+        /// <summary>
+        /// AI viết mẫu biên dạng mới cho tấm chưa có mẫu (đọc lại bản vẽ khách + mô tả + ví dụ be.py), kiểm an toàn (KiemMau),
+        /// lưu ai\ban_ve\mau_thu\&lt;ten&gt;.py và gán cho tấm. Trả mẫu (Loi khác null = không dùng được).
+        /// </summary>
+        public static async Task<PhongTrienKhai.MauMoi> DeXuatMau(TamAi tam, TamTrienKhai tk, KetQuaTrienKhai kq, string tm, Action<string> bao, CancellationToken huy)
+        {
+            string key = DocKey(4) ?? throw new InvalidOperationException("Chưa có key Claude: ⚙ → tab 🤖 AI → dán key");
+            string model = Model();
+            var daCo = (await DanhSachMau(tm)).Select(m => m.Ten).ToList();
+            string viDu = File.ReadAllText(Path.Combine(ThuVienChung, "be.py"), Encoding.UTF8);
+            string f = Path.Combine(ThuMucTep(tm), tam.Tep), pdf = null;
+            if (File.Exists(f) && f.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) && new FileInfo(f).Length <= PhongDocBanVe.PdfToiDa)
+                pdf = Convert.ToBase64String(File.ReadAllBytes(f));
+            bao("Phòng 4: AI viết mẫu vẽ mới cho " + tk.Ten + "…");
+            string body = PhongTrienKhai.BodyMauMoi(model, pdf, PhongTrienKhai.DauVaoMauMoi(tam, tk, daCo, viDu));
+            PhongTrienKhai.MauMoi m = PhongTrienKhai.DocMauMoi(await GuiClaude(key, PhongDocBanVe.CoFallback(model), body, huy), daCo);
+            kq.TokenVao += m.Vao + m.GhiCache + m.DocCache;
+            kq.TokenRa += m.Ra;
+            kq.Tien += PhongDocBanVe.Tien(model, m.Vao, m.GhiCache, m.DocCache, m.Ra);
+            if (m.Loi == null)
+            {
+                Directory.CreateDirectory(ThuVienThu(tm));
+                File.WriteAllText(Path.Combine(ThuVienThu(tm), m.Ten + ".py"), m.Ma, Utf8);
+                tk.BienDang = m.Ten;
+            }
+            Ghi(tm, kq);
+            return m;
+        }
+
+        /// <summary>Chỉ máy Admin: chép mẫu thử của đơn vào thư viện chung (không đè mẫu đã có).</summary>
+        public static string ThemVaoThuVien(string tm, string ten)
+        {
+            if (!LaMayAdmin()) throw new InvalidOperationException("Chỉ máy Admin được thêm mẫu vào thư viện chung.");
+            string nguon = Path.Combine(ThuVienThu(tm), ten + ".py"), dich = Path.Combine(ThuVienChung, ten + ".py");
+            if (!File.Exists(nguon)) throw new InvalidOperationException("Không thấy mẫu thử " + nguon);
+            if (File.Exists(dich)) throw new InvalidOperationException("Thư viện đã có mẫu '" + ten + "'.");
+            string loi = PhongTrienKhai.KiemMau(ten, File.ReadAllText(nguon, Encoding.UTF8), new string[0]);
+            if (loi != null) throw new InvalidOperationException(loi);
+            File.Copy(nguon, dich);
+            return dich;
+        }
+
+        /// <summary>Chạy lệnh, đợi tối đa 3 phút, trả (mã thoát, stdout + stderr). Huỷ → giết tiến trình.</summary>
+        private static async Task<(int Ma, string Ra)> ChayLenh(string exe, string thuMuc, CancellationToken huy, params string[] thamSo)
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo(exe, string.Join(" ", thamSo.Select(a => "\"" + a.TrimEnd('\\') + "\"")))
             {
                 WorkingDirectory = thuMuc, UseShellExecute = false, CreateNoWindow = true,
                 RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = Utf8, StandardErrorEncoding = Utf8,
             };
+            psi.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
             using (var p = System.Diagnostics.Process.Start(psi))
             {
                 Task<string> ra = p.StandardOutput.ReadToEndAsync(), loi = p.StandardError.ReadToEndAsync();
@@ -452,37 +589,6 @@ namespace TeamsTool.Services
                 huy.ThrowIfCancellationRequested();
                 return (p.ExitCode, (await ra) + (await loi));
             }
-        }
-
-        /// <summary>
-        /// Vẽ trải phẳng từng tấm bằng text-to-cad: &lt;bango&gt;.py (build123d) → cad run → cad export &lt;bango&gt;.dxf → cad snapshot &lt;bango&gt;.png,
-        /// trong ai\ban_ve. Tấm làm tay / thiếu X, Y thì bỏ. Trả số bản vẽ đã xuất.
-        /// </summary>
-        public static async Task<int> VeBanVe(IList<(TamAi Tam, TamTrienKhai Tk)> ds, string title, string tm, Action<string> bao, CancellationToken huy)
-        {
-            string cad = TimCad() ?? throw new InvalidOperationException("Máy chưa cài text-to-cad (lệnh cad). Cài: PowerShell → irm https://www.texttocad.dev/install.ps1 | iex");
-            string dir = ThuMucBanVe(tm);
-            Directory.CreateDirectory(dir);
-            var loi = new List<string>();
-            int xong = 0;
-            for (int i = 0; i < ds.Count; i++)
-            {
-                huy.ThrowIfCancellationRequested();
-                string ma = Bango(title, i + 1), script = PhongTrienKhai.ScriptCad(ma, ds[i].Tk);
-                if (script == null) { loi.Add(ma + ": làm tay / chưa có X × Y — không vẽ"); continue; }
-                bao("Phòng 4: text-to-cad vẽ " + (i + 1) + "/" + ds.Count + " — " + ma);
-                string ten = PhongTrienKhai.TenScript(ma);
-                File.WriteAllText(Path.Combine(dir, ten + ".py"), script, Utf8);
-                var (m1, r1) = await ChayCad(cad, dir, huy, "run", ten + ".py");
-                var id = System.Text.RegularExpressions.Regex.Match(r1, @"(?m)^\s*id:\s*(\S+)");
-                if (m1 != 0 || !id.Success) { loi.Add(ma + ": cad run lỗi — " + DongCuoi(r1)); continue; }
-                var (m2, r2) = await ChayCad(cad, dir, huy, "export", id.Groups[1].Value, ma + ".dxf");
-                if (m2 != 0) { loi.Add(ma + ": cad export lỗi — " + DongCuoi(r2)); continue; }
-                await ChayCad(cad, dir, huy, "snapshot", ma + ".dxf", ma + ".png", "--width", "900", "--height", "600"); // ảnh xem trước: lỗi thì thôi
-                xong++;
-            }
-            if (loi.Count > 0) bao("Vẽ xong " + xong + " bản, có tấm chưa vẽ được:\n" + string.Join("\n", loi));
-            return xong;
         }
 
         private static string DongCuoi(string s) => (s ?? "").Trim().Split('\n').LastOrDefault()?.Trim() ?? "";
@@ -497,6 +603,8 @@ namespace TeamsTool.Services
             var kq = new KetQuaTrienKhai { TuXacNhan = kt.XacNhan, TokenVao = cu?.TokenVao ?? 0, TokenRa = cu?.TokenRa ?? 0, Tien = cu?.Tien ?? 0 };
             var loi = new List<string>();
             var theoTep = ct.Tam.Where(t => t.Moi).GroupBy(t => t.Tep).ToList();
+            // mẫu biên dạng để AI chọn (máy chưa có Python / ezdxf → rỗng: AI để trống, vẽ thì tự suy)
+            var thuVien = (await DanhSachMau(tm)).Select(m => (m.Ten, m.MoTa)).ToList();
             int i = 0;
             foreach (var nhom in theoTep)
             {
@@ -514,7 +622,7 @@ namespace TeamsTool.Services
                     else dxf = DocDxf.TomTat(nhom.Key, DocDxf.DocFile(f));
                 }
                 catch (Exception ex) { loi.Add(nhom.Key + ": " + ex.Message); continue; }
-                string body = PhongTrienKhai.Body(model, quyChuan, pdf, PhongTrienKhai.DauVao(nhom.Key, nhom, kt.VanDe), dxf);
+                string body = PhongTrienKhai.Body(model, quyChuan, pdf, PhongTrienKhai.DauVao(nhom.Key, nhom, kt.VanDe, thuVien), dxf);
                 PhongTrienKhai.PhanHoi ph = PhongTrienKhai.DocPhanHoi(await GuiClaude(key, PhongDocBanVe.CoFallback(model), body, huy));
                 kq.TokenVao += ph.Vao + ph.GhiCache + ph.DocCache;
                 kq.TokenRa += ph.Ra;

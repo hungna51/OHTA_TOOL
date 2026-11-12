@@ -7,7 +7,7 @@ Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_oh
 - **OhtaTeams** — khu **🤖 AI** trong chi tiết đơn (máy Admin, đang thử): **▶ Bắt đầu** tải mọi tệp của đơn (đính kèm + chat) về thư mục đơn, gộp bản nháp `<mã>-番号.PDF`, rồi AI đọc từng bản vẽ PDF / DXF ra bảng tấm (vật liệu, độ dày, số lượng, kích thước, bẻ, lỗ, ghi chú JP + VI). Sửa thẳng trong bảng; ô ⚠ là AI không chắc.
 - Khu AI nằm ở khung bên phải danh sách đơn: **chuột phải vào đơn → 🤖 Mở trong phòng AI**. ⚙ Cài đặt chia tab, có tab **🤖 AI** (key Claude, model, quy chuẩn).
 - Phòng **Kiểm tra**: xác nhận bảng tấm → **▶ Kiểm tra** tìm cạnh bẻ ngắn / lỗ gần đường bẻ (Lmin bảng TV), R uốn, cuộn, taro, độ dày cần xác nhận, thiếu kích thước, mâu thuẫn… chia **Hỏi khách / Hỏi nội bộ / Tự xử lý**; soạn お問い合わせ / 連絡します và gửi lên chuỗi đơn; ô **Trả lời** cho từng vấn đề.
-- Phòng **Triển khai**: AI đọc tiết diện, chương trình trải phẳng theo bảng TV (V, δ như tab Fname; ấn 1 lần, cuộn), ra **X × Y** và **trien_khai.csv**, đổi V từng tấm, gửi bảng tóm tắt lên chuỗi đơn để người check kiểm. Nút **📐 Vẽ DXF (text-to-cad)** vẽ tấm phẳng + đường bẻ + khắc mã tấm cho từng tấm (máy cần cài text-to-cad).
+- Phòng **Triển khai**: AI đọc tiết diện, chương trình trải phẳng theo bảng TV (V, δ như tab Fname; ấn 1 lần, cuộn), ra **X × Y** và **trien_khai.csv**, đổi V từng tấm, gửi bảng tóm tắt lên chuỗi đơn để người check kiểm. Nút **📐 Vẽ DXF** vẽ bản trải phẳng (ezdxf, trên môi trường vẽ của xưởng: layer, kiểu chữ, dim, F-name thật) cho từng tấm theo thư viện mẫu biên dạng; gặp hình chưa có mẫu thì AI đề xuất mẫu mới, máy Admin duyệt thêm vào thư viện. Máy cần Python + ezdxf (app hỏi cài).
 
 ## v1.4.2
 

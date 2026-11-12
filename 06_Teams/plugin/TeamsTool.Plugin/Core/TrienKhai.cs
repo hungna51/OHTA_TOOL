@@ -36,7 +36,11 @@ namespace TeamsTool.Core
     public sealed class TamTrienKhai
     {
         public string Khoa = "", Ten = "", Kieu = "phang", GhiChu = "", VChon = "";
+        /// <summary>Mẫu biên dạng AI chọn trong thư viện ve_dxf (phang / be / hop / cuon… hoặc chua_co); "" = tự suy.</summary>
+        public string BienDang = "", MoTaBienDang = "";
         public TietDien X = new TietDien(), Y = new TietDien();
+        /// <summary>Dòng F-name của chỗ uốn: chữ V= của TraV (như tab Fname), ấn 1 lần 内R…-発押し…°.</summary>
+        public List<string> DongV = new List<string>();
         // Kết quả (tính lại mỗi lần vẽ, không lưu)
         public double? XPhang, YPhang;
         public bool LamTay;
@@ -77,7 +81,7 @@ namespace TeamsTool.Core
         public static void Tinh(TamTrienKhai tk, TamAi tam, Func<double, List<UngVienV>> traV, double tThuc, Func<string, double?> lmin = null)
         {
             tk.ChiTiet.Clear(); tk.CanhBao.Clear(); tk.CacV.Clear();
-            tk.BeX.Clear(); tk.BeY.Clear(); tk.DoanPhangX.Clear(); tk.DoanPhangY.Clear();
+            tk.BeX.Clear(); tk.BeY.Clear(); tk.DoanPhangX.Clear(); tk.DoanPhangY.Clear(); tk.DongV.Clear();
             tk.XPhang = tk.YPhang = null;
             tk.LamTay = tk.Kieu == "lam_tay";
             double T = PhongKiemTra.So(tam.T) ?? 0;
@@ -141,6 +145,8 @@ namespace TeamsTool.Core
                         if (chon == null) { tk.CanhBao.Add(huong + " chỗ " + (i + 1) + ": bảng TV không có góc " + F(u.Goc) + "° — tra tay / bẻ thử."); return null; }
                         tong -= 2 * chon.Delta;
                         cho.Add((chon.Delta, 0, chon.Delta));
+                        string dv = chon.Chu.Length > 0 ? chon.Chu : "V=" + chon.V.TrimStart('V') + "-" + F(chon.Delta) + "(" + F(u.Goc) + "°)";
+                        if (!tk.DongV.Contains(dv)) tk.DongV.Add(dv);
                         dong.Append(" | " + F(u.Goc) + "° " + chon.V + " δ" + F(chon.Delta) + " → −" + F(2 * chon.Delta) + (chon.Nguon.Length > 0 ? " (" + chon.Nguon + ")" : ""));
                         if (chon.CanhBao.Length > 0) tk.CanhBao.Add(huong + " chỗ " + (i + 1) + ": " + chon.CanhBao);
                         if (chon.V != tk.VChon && tk.VChon.Length > 0) tk.CanhBao.Add(huong + " chỗ " + (i + 1) + ": góc " + F(u.Goc) + "° không có " + tk.VChon + ", dùng " + chon.V + ".");
@@ -152,6 +158,8 @@ namespace TeamsTool.Core
                         double theta = 180 - u.Goc, rad = theta * Math.PI / 180, lui = (u.R + T) * Math.Tan(rad / 2), cung = (u.R + 0.45 * tThuc) * rad;
                         tong += cung - 2 * lui;
                         cho.Add((lui, cung, lui));
+                        string an = "内R" + F(u.R) + "-発押し" + F(u.Goc) + "°"; // như TraVCalculator.FormatPressOneTimeLine
+                        if (!tk.DongV.Contains(an)) tk.DongV.Add(an);
                         dong.Append(" | ấn 1 lần R" + F(u.R) + " " + F(u.Goc) + "°: −2×" + F(lui) + " + cung " + F(cung));
                         break;
                     }
@@ -197,54 +205,163 @@ namespace TeamsTool.Core
             return k.Count == 0 ? "" : k.Count == 1 ? k[0].ToString() : "*";
         }
 
-        // ---------- Bản vẽ trải phẳng (text-to-cad) ----------
+        // ---------- Bản vẽ trải phẳng (ezdxf — thư viện biên dạng _apps\OhtaTeams\ve_dxf) ----------
 
-        /// <summary>Tên hàm / tệp Python hợp lệ từ bango: "130672-1" → "tam_130672_1".</summary>
-        public static string TenScript(string ma) =>
-            "tam_" + new string((ma ?? "").Select(c => c < 128 && char.IsLetterOrDigit(c) ? char.ToLowerInvariant(c) : '_').ToArray()).Trim('_');
+        /// <summary>Mã biên dạng AI báo khi thư viện chưa có mẫu khớp.</summary>
+        public const string ChuaCoMau = "chua_co";
+
+        /// <summary>Loại biên dạng tự suy khi AI chưa chọn: cuộn / hộp (bẻ 2 hướng) / bẻ (một hướng) / phẳng; làm tay → "".</summary>
+        public static string BienDangMacDinh(TamTrienKhai tk)
+        {
+            if (tk.LamTay) return "";
+            var uon = tk.X.Uon.Concat(tk.Y.Uon).ToList();
+            if (uon.Any(u => u.Kieu == "cuon")) return "cuon";
+            if (tk.X.Uon.Count > 0 && tk.Y.Uon.Count > 0) return "hop";
+            return uon.Count > 0 ? "be" : "phang";
+        }
+
+        /// <summary>Biên dạng dùng để vẽ: AI chọn, không có thì tự suy.</summary>
+        public static string BienDangVe(TamTrienKhai tk) => tk.BienDang.Length > 0 ? tk.BienDang : BienDangMacDinh(tk);
+
+        /// <summary>Bango tạm &lt;title&gt;-&lt;stt&gt; (cột エクスポート用 của CSV, tên tệp bản vẽ). GRO đánh bango thật trên CAD.</summary>
+        public static string Bango(string title, int stt) => title + "-" + stt;
+
+        /// <summary>F-name như tab Fname: N=, M=, T=, Q=, các dòng V= của TraV / ấn 1 lần, Z=.</summary>
+        public static List<string> DongFname(TamAi tam, TamTrienKhai tk)
+        {
+            var d = new List<string> { "N=" + (tam.SoBanVe.Length > 0 ? tam.SoBanVe : tam.Ten), "M=" + tam.M, "T=" + tam.T, "Q=" + tam.Q };
+            d.AddRange(tk.DongV);
+            d.Add("Z=" + tam.Z);
+            return d;
+        }
 
         /// <summary>
-        /// Script build123d (một @model, text-to-cad) vẽ tấm phẳng X × Y: lớp 0-KAKOU = nét cắt (hộp: cắt 4 góc theo đoạn phẳng đầu / cuối),
-        /// BEND = đường bẻ (tên lớp có chữ bend để text-to-cad cho phép nét hở), 3-KEGAKI = khắc mã tấm (chữ dạng nét viền).
-        /// Không vẽ được (làm tay / thiếu X, Y) → null.
-        /// shortcut: chưa có lỗ (bảng tấm không có toạ độ lỗ), khe R góc hộp, F-name — bổ sung trên CAD.
+        /// Tệp việc cho ve_dxf\ve.py: môi trường, thư mục ra, các thư mục thư viện (sau đè trước), mỗi tấm vẽ được
+        /// (bango, biên dạng, X, Y, đường bẻ, đoạn phẳng, F-name, chi tiết). Tấm làm tay / thiếu X, Y bỏ.
         /// </summary>
-        public static string ScriptCad(string ma, TamTrienKhai tk)
+        public static string ViecVe(string title, IList<(TamAi Tam, TamTrienKhai Tk)> ds, string moiTruong, string thuMucRa, IEnumerable<string> thuVien)
         {
-            if (tk.LamTay || !(tk.XPhang is double x) || !(tk.YPhang is double y) || x <= 0 || y <= 0) return null;
-            string ten = TenScript(ma);
-            var goc = new List<string>();
-            if (tk.BeX.Count > 0 && tk.BeY.Count > 0 && tk.DoanPhangX.Count > 1 && tk.DoanPhangY.Count > 1)
+            List<object> So(IEnumerable<double> v) => v.Select(d => (object)new JsonNumber(F(d))).ToList();
+            var tam = new List<object>();
+            for (int i = 0; i < ds.Count; i++)
             {
-                double x0 = tk.DoanPhangX[0], x1 = tk.DoanPhangX[tk.DoanPhangX.Count - 1], y0 = tk.DoanPhangY[0], y1 = tk.DoanPhangY[tk.DoanPhangY.Count - 1];
-                goc.Add(Bo(0, 0, x0, y0)); goc.Add(Bo(x - x1, 0, x1, y0)); goc.Add(Bo(0, y - y1, x0, y1)); goc.Add(Bo(x - x1, y - y1, x1, y1));
+                var (t, tk) = ds[i];
+                if (tk.LamTay || !(tk.XPhang is double x) || !(tk.YPhang is double y)) continue;
+                var j = new JsonObject();
+                j.Set("bango", Bango(title, i + 1));
+                j.Set("bien_dang", BienDangVe(tk));
+                j.Set("x", new JsonNumber(F(x)));
+                j.Set("y", new JsonNumber(F(y)));
+                j.Set("be_x", So(tk.BeX)); j.Set("be_y", So(tk.BeY));
+                j.Set("doan_x", So(tk.DoanPhangX)); j.Set("doan_y", So(tk.DoanPhangY));
+                j.Set("fname", DongFname(t, tk).Cast<object>().ToList());
+                j.Set("ghi_chu", tk.ChiTiet.Cast<object>().ToList());
+                tam.Add(j);
             }
-            string ds(IEnumerable<double> v) => "[" + string.Join(", ", v.Select(F)) + "]";
+            var o = new JsonObject();
+            o.Set("moi_truong", moiTruong);
+            o.Set("thu_muc_ra", thuMucRa);
+            o.Set("thu_vien", thuVien.Cast<object>().ToList());
+            o.Set("tam", tam);
+            return JsonLite.Serialize(o);
+        }
+
+        // ---------- Đề xuất mẫu biên dạng mới (AI viết, Admin duyệt) ----------
+
+        public const string LoiDanMauMoi =
+@"Bạn viết MẪU BIÊN DẠNG mới cho thư viện vẽ trải phẳng của OHTA (Python 3, ezdxf). Một mẫu = một tệp Python:
+- MO_TA = ""..."": một câu tiếng Việt mô tả loại biên dạng (để AI phòng Triển khai chọn mẫu sau này) — mô tả LOẠI hình, không ghi số của tấm này.
+- def ve(nen, t): vẽ viền cắt + đường bẻ (+ dim riêng nếu cần) của tấm bằng các hàm của nen (moi_truong.NenVe). t là dict: x, y (kích thước trải), be_x (vị trí đường bẻ song song trục Y, mm từ mép trái), be_y (song song trục X, mm từ mép dưới), doan_x, doan_y (các đoạn phẳng giữa đường bẻ), ghi_chu (list chuỗi), fname (list chuỗi — KHÔNG tự vẽ, chương trình vẽ).
+- Đặt tấm từ gốc (0, 0). Viền cắt phải KÍN (nen.vien / nen.chu_nhat). Chỉ dùng hàm của nen, không tự đặt layer / kiểu chữ / kiểu dim. Dim tổng X, Y, F-name, Khung_IN chương trình tự thêm — không vẽ.
+- CHỈ được import: math, moi_truong (vd from moi_truong import LE_DIM). Không đọc / ghi tệp, không os / sys / subprocess / eval / exec.
+- Viết tổng quát cho mọi tấm cùng loại (đọc số từ t), không gắn cứng số của tấm này.
+Trả: ten (tên tệp: chữ thường không dấu, số, gạch dưới, 3–30 ký tự, khác tên đã có), mo_ta (= MO_TA), ma (toàn bộ mã Python).";
+
+        /// <summary>API của moi_truong.NenVe gửi kèm (AI chỉ được gọi các hàm này).</summary>
+        public const string ApiMoiTruong =
+@"nen.vien(diem)                 # viền cắt kín, diem = [(x, y), ...] không lặp đỉnh đầu (0-KAKOU)
+nen.chu_nhat(x0, y0, x1, y1)   # viền cắt chữ nhật
+nen.duong_be(a, b)             # đường bẻ (LINE 0-KAKOU, nét DASHED), a, b = (x, y)
+nen.slit(a, b)                 # nét rạch slit (4-SHT, không cần kín)
+nen.chu(x, y, noi_dung, cao=14.0)   # chữ ghi chú (1-SUNPOU, kiểu Text)
+nen.dim_ngang(x0, x1, y, y_dim)     # dim ngang đo x0 → x1 tại cao độ y, đường dim ở y_dim (ISO-26)
+nen.dim_doc(y0, y1, x, x_dim)       # dim dọc
+moi_truong.LE_DIM = 40.0       # khoảng viền → đường dim";
+
+        public static JsonObject SchemaMauMoi()
+        {
+            JsonObject s = Kieu("string");
+            return Obj(("ten", s), ("mo_ta", s), ("ma", s));
+        }
+
+        public static string DauVaoMauMoi(TamAi tam, TamTrienKhai tk, IEnumerable<string> tenDaCo, string maViDu)
+        {
             var sb = new StringBuilder();
-            sb.Append("# Ban ve trai phang (phong 4 OhtaTeams, text-to-cad) - sinh tu dong, sua tay se bi ghi de khi ve lai.\n");
-            sb.Append("import build123d as bd\nfrom cad import model\n\n");
-            sb.Append("X, Y = ").Append(F(x)).Append(", ").Append(F(y)).Append('\n');
-            sb.Append("BE_X = ").Append(ds(tk.BeX)).Append("  # duong be song song truc Y, mm tu mep trai\n");
-            sb.Append("BE_Y = ").Append(ds(tk.BeY)).Append("  # duong be song song truc X, mm tu mep duoi\n");
-            sb.Append("GOC = [").Append(string.Join(", ", goc)).Append("]  # hop: cat goc (x, y, rong, cao)\n");
-            sb.Append("MA = \"").Append((ma ?? "").Replace("\\", "").Replace("\"", "")).Append("\"\n\n\n");
-            sb.Append("@model\ndef ").Append(ten).Append("():\n");
-            sb.Append("    with bd.BuildSketch() as s:\n");
-            sb.Append("        bd.Rectangle(X, Y, align=(bd.Align.MIN, bd.Align.MIN))\n");
-            sb.Append("        for (gx, gy, gw, gh) in GOC:\n");
-            sb.Append("            with bd.Locations((gx, gy)):\n");
-            sb.Append("                bd.Rectangle(gw, gh, align=(bd.Align.MIN, bd.Align.MIN), mode=bd.Mode.SUBTRACT)\n");
-            sb.Append("    cat = s.sketch\n    cat.label = \"0-KAKOU\"\n    phan = [cat]\n");
-            sb.Append("    be = [bd.Edge.make_line((v, 0, 0), (v, Y, 0)) for v in BE_X] + [bd.Edge.make_line((0, v, 0), (X, v, 0)) for v in BE_Y]\n");
-            sb.Append("    if be:\n        phan.append(bd.Compound(be, label=\"BEND\"))\n");
-            sb.Append("    with bd.BuildSketch() as t:\n        with bd.Locations((X / 2, Y / 2)):\n            bd.Text(MA, font_size=min(8.0, Y / 6, X / max(len(MA), 1)))\n");
-            sb.Append("    chu = t.sketch\n    chu.label = \"3-KEGAKI\"\n    phan.append(chu)\n");
-            sb.Append("    return bd.Compound(children=phan, label=\"tam\")\n\n\n");
-            sb.Append("if __name__ == \"__main__\":\n    ").Append(ten).Append("()\n");
+            sb.Append("Tấm cần mẫu mới: ").Append(PhongKiemTra.TenTam(tam)).Append(" — ").Append(tam.M).Append(" t").Append(tam.T).Append('\n');
+            sb.Append("Mô tả biên dạng (phòng Triển khai): ").Append(tk.MoTaBienDang.Length > 0 ? tk.MoTaBienDang : "(không có)").Append('\n');
+            sb.Append("Số của tấm này (chỉ để hiểu, không gắn cứng): x=").Append(tk.XPhang.HasValue ? F(tk.XPhang.Value) : "?").Append(" y=").Append(tk.YPhang.HasValue ? F(tk.YPhang.Value) : "?")
+              .Append(" be_x=[").Append(string.Join(", ", tk.BeX.Select(F))).Append("] be_y=[").Append(string.Join(", ", tk.BeY.Select(F)))
+              .Append("] doan_x=[").Append(string.Join(", ", tk.DoanPhangX.Select(F))).Append("] doan_y=[").Append(string.Join(", ", tk.DoanPhangY.Select(F))).Append("]\n");
+            foreach (string c in tk.ChiTiet) sb.Append("  ").Append(c).Append('\n');
+            sb.Append("\nTên mẫu đã có (không trùng): ").Append(string.Join(", ", tenDaCo)).Append("\n\nHàm môi trường:\n").Append(ApiMoiTruong)
+              .Append("\n\nVí dụ một mẫu trong thư viện:\n```python\n").Append(maViDu).Append("\n```\n");
             return sb.ToString();
         }
 
-        private static string Bo(double x, double y, double w, double h) => "(" + F(x) + ", " + F(y) + ", " + F(w) + ", " + F(h) + ")";
+        public static string BodyMauMoi(string model, string pdfBase64, string dauVao) => BodyChung(model, LoiDanMauMoi, SchemaMauMoi(), null, pdfBase64, dauVao, null);
+
+        /// <summary>Kết quả AI đề xuất: tên tệp, mô tả, mã; Loi khác null = không dùng được.</summary>
+        public sealed class MauMoi
+        {
+            public string Ten = "", MoTa = "", Ma = "", Loi;
+            public long Vao, GhiCache, DocCache, Ra;
+        }
+
+        public static MauMoi DocMauMoi(string json, IEnumerable<string> tenDaCo)
+        {
+            var kq = new MauMoi();
+            PhongDocBanVe.PhanHoi p2 = PhongDocBanVe.DocPhanHoi(json);
+            kq.Vao = p2.Vao; kq.GhiCache = p2.GhiCache; kq.DocCache = p2.DocCache; kq.Ra = p2.Ra;
+            JsonObject goc;
+            try { goc = JsonLite.Parse(json ?? "") as JsonObject; } catch (Exception) { goc = null; }
+            string text = (goc?.Get("content") as List<object>)?.OfType<JsonObject>().FirstOrDefault(x => x.GetString("type") == "text")?.GetString("text");
+            JsonObject nd;
+            try { nd = text == null ? null : JsonLite.Parse(text) as JsonObject; } catch (Exception) { nd = null; }
+            if (nd == null) { kq.Loi = p2.Loi ?? "Phản hồi AI không đúng mẫu"; return kq; }
+            kq.Ten = (nd.GetString("ten") ?? "").Trim(); kq.MoTa = (nd.GetString("mo_ta") ?? "").Trim(); kq.Ma = nd.GetString("ma") ?? "";
+            kq.Loi = KiemMau(kq.Ten, kq.Ma, tenDaCo);
+            return kq;
+        }
+
+        private static readonly System.Text.RegularExpressions.Regex TenHopLe = new System.Text.RegularExpressions.Regex("^[a-z][a-z0-9_]{2,29}$");
+        private static readonly string[] TuCam = { "open(", "exec(", "eval(", "compile(", "__import__", "globals(", "getattr(", "setattr(", "subprocess", "socket", "shutil", "ctypes", "os.", "sys.", "pathlib", "urllib", "requests", "input(" };
+
+        /// <summary>
+        /// Kiểm mã mẫu trước khi chạy (mã AI viết chạy trên máy): tên hợp lệ, không trùng, có MO_TA + def ve(nen, t),
+        /// chỉ import math / moi_truong, không dùng hàm / module truy cập tệp, mạng, tiến trình. null = được.
+        /// </summary>
+        public static string KiemMau(string ten, string ma, IEnumerable<string> tenDaCo)
+        {
+            if (!TenHopLe.IsMatch(ten ?? "")) return "Tên mẫu không hợp lệ: '" + ten + "' (chữ thường không dấu, số, gạch dưới, 3–30 ký tự).";
+            if ((tenDaCo ?? Enumerable.Empty<string>()).Contains(ten)) return "Tên mẫu '" + ten + "' đã có trong thư viện.";
+            if (string.IsNullOrWhiteSpace(ma) || !ma.Contains("MO_TA") || !System.Text.RegularExpressions.Regex.IsMatch(ma, @"def\s+ve\s*\(\s*nen\s*,\s*t\s*\)"))
+                return "Mã thiếu MO_TA hoặc def ve(nen, t).";
+            foreach (string dong in ma.Replace("\r", "").Split('\n'))
+            {
+                string d = dong.Trim();
+                if (d.StartsWith("#")) continue;
+                var im = System.Text.RegularExpressions.Regex.Match(d, @"^(?:from\s+([\w.]+)\s+import\b|import\s+([\w.,\s]+))");
+                if (im.Success)
+                {
+                    var mods = im.Groups[1].Success ? new[] { im.Groups[1].Value } : im.Groups[2].Value.Split(',').Select(m => m.Trim().Split(' ')[0]).ToArray();
+                    string la = mods.FirstOrDefault(m => m != "math" && m != "moi_truong");
+                    if (la != null) return "Mã import '" + la + "' — chỉ được import math, moi_truong.";
+                }
+                string cam = TuCam.FirstOrDefault(c => d.Contains(c));
+                if (cam != null) return "Mã dùng '" + cam.TrimEnd('(') + "' — không được phép trong mẫu vẽ.";
+            }
+            return null;
+        }
 
         // ---------- CSV + tóm tắt ----------
 
@@ -257,7 +374,7 @@ namespace TeamsTool.Core
         public static string DongCsv(string title, int stt, TamAi tam, TamTrienKhai tk) =>
             string.Join(",", new[]
             {
-                title + "-" + stt, Csv(tam.Q), Csv(tam.M), Csv(tam.T), tk.KyHieu,
+                Bango(title, stt), Csv(tam.Q), Csv(tam.M), Csv(tam.T), tk.KyHieu,
                 tk.XPhang.HasValue ? F(tk.XPhang.Value) : "", tk.YPhang.HasValue ? F(tk.YPhang.Value) : "",
             });
 
@@ -296,20 +413,27 @@ Với MỖI tấm trong bảng, đọc TIẾT DIỆN để trải phẳng (khôn
   · Cuộn: uốn kieu cuon, r_trong = R trong, cung = góc cung (360 = tròn kín, 180 = nửa); doan kề là phần thẳng tiếp tuyến (0 nếu không có).
   · Hướng không uốn: một doan = chiều dài phẳng theo hướng đó, uon rỗng. Tấm phẳng: x = [dài], y = [rộng].
   · Hộp 3–4 cạnh: x và y đều có tiết diện (thành – đáy – thành).
-- ghi_chu: tiếng Việt, ngắn (vd hướng bẻ V / N, chỗ chưa chắc). Dùng câu trả lời đã có làm dữ liệu đúng. Không bịa: không đọc được thì để doan rỗng và ghi lý do.";
+- ghi_chu: tiếng Việt, ngắn (vd hướng bẻ V / N, chỗ chưa chắc). Dùng câu trả lời đã có làm dữ liệu đúng. Không bịa: không đọc được thì để doan rỗng và ghi lý do.
+- bien_dang: tên đúng MỘT mẫu trong ""Thư viện biên dạng"" (đầu vào) khớp hình trải phẳng của tấm; tấm làm tay → rỗng; không mẫu nào khớp → ""chua_co"".
+- mo_ta_bien_dang: chỉ khi chua_co — mô tả hình trải phẳng (viền, góc cắt, đường bẻ, lỗ / rãnh đặc biệt) đủ để lập trình viên viết mẫu vẽ mới; còn lại rỗng.";
 
         public static JsonObject Schema()
         {
             JsonObject s = Kieu("string"), n = Kieu("number");
             JsonObject uon = Obj(("kieu", LuaChon("be", "an_1_lan", "cuon", "pitchi")), ("goc", n), ("r_trong", n), ("cung", n));
             JsonObject td = Obj(("doan", Mang(n)), ("uon", Mang(uon)));
-            return Obj(("tam", Mang(Obj(("so_ban_ve", s), ("ten", s), ("kieu", LuaChon("phang", "be", "lam_tay")), ("x", td), ("y", td), ("ghi_chu", s)))));
+            return Obj(("tam", Mang(Obj(("so_ban_ve", s), ("ten", s), ("kieu", LuaChon("phang", "be", "lam_tay")), ("x", td), ("y", td), ("ghi_chu", s), ("bien_dang", s), ("mo_ta_bien_dang", s)))));
         }
 
         /// <summary>Phần chữ gửi kèm bản vẽ: bảng tấm của tệp + câu trả lời phòng 3.</summary>
-        public static string DauVao(string tenTep, IEnumerable<TamAi> tam, IEnumerable<VanDe> vanDe)
+        /// <param name="thuVien">Mẫu biên dạng có trong thư viện ve_dxf (tên, mô tả) — AI chọn một hoặc chua_co.</param>
+        public static string DauVao(string tenTep, IEnumerable<TamAi> tam, IEnumerable<VanDe> vanDe, IEnumerable<(string Ten, string MoTa)> thuVien = null)
         {
-            var sb = new StringBuilder("Tệp: " + tenTep + "\n\nBảng tấm:\n");
+            var sb = new StringBuilder("Tệp: " + tenTep + "\n\nThư viện biên dạng (bien_dang = tên):\n");
+            var tv = (thuVien ?? Enumerable.Empty<(string, string)>()).ToList();
+            if (tv.Count == 0) sb.Append("(trống — để bien_dang rỗng)\n");
+            foreach (var (ten, moTa) in tv) sb.Append("- ").Append(ten).Append(": ").Append(moTa).Append('\n');
+            sb.Append("\nBảng tấm:\n");
             foreach (TamAi t in tam)
                 sb.Append("- so_ban_ve=").Append(t.SoBanVe).Append(" ten=").Append(t.Ten).Append(" M=").Append(t.M).Append(" T=").Append(t.T).Append(" Q=").Append(t.Q)
                   .Append(" kích thước=").Append(t.KichThuoc).Append(" bẻ=").Append(t.CanhJson).Append(" ghi chú=").Append(t.GhiChuVi).Append('\n');
@@ -323,7 +447,11 @@ Với MỖI tấm trong bảng, đọc TIẾT DIỆN để trải phẳng (khôn
             return sb.ToString();
         }
 
-        public static string Body(string model, string quyChuan, string pdfBase64, string dauVao, string tomTatDxf)
+        public static string Body(string model, string quyChuan, string pdfBase64, string dauVao, string tomTatDxf) =>
+            BodyChung(model, LoiDan, Schema(), quyChuan, pdfBase64, dauVao, tomTatDxf);
+
+        /// <summary>Body POST /v1/messages: system = lời dặn (+ quy chuẩn có cache), user = PDF / chữ; trả JSON theo schema.</summary>
+        private static string BodyChung(string model, string loiDan, JsonObject schema, string quyChuan, string pdfBase64, string dauVao, string tomTatDxf)
         {
             var body = new JsonObject();
             body.Set("model", model);
@@ -331,14 +459,14 @@ Với MỖI tấm trong bảng, đọc TIẾT DIỆN để trải phẳng (khôn
             if (PhongDocBanVe.CoFallback(model)) body.Set("fallbacks", "default");
             var format = new JsonObject();
             format.Set("type", "json_schema");
-            format.Set("schema", Schema());
+            format.Set("schema", schema);
             var oc = new JsonObject();
             oc.Set("effort", "high");
             oc.Set("format", format);
             body.Set("output_config", oc);
             var cache = new JsonObject();
             cache.Set("type", "ephemeral");
-            body.Set("system", new List<object> { Khoi(LoiDan, null), Khoi(quyChuan, cache) });
+            body.Set("system", quyChuan == null ? new List<object> { Khoi(loiDan, null) } : new List<object> { Khoi(loiDan, null), Khoi(quyChuan, cache) });
             var nd = new List<object>();
             if (!string.IsNullOrEmpty(pdfBase64))
             {
@@ -380,6 +508,7 @@ Với MỖI tấm trong bảng, đọc TIẾT DIỆN để trải phẳng (khôn
                 var tk = new TamTrienKhai
                 {
                     Kieu = x.GetString("kieu") ?? "phang", GhiChu = x.GetString("ghi_chu") ?? "",
+                    BienDang = x.GetString("bien_dang") ?? "", MoTaBienDang = x.GetString("mo_ta_bien_dang") ?? "",
                     X = DocTd(x.Get("x") as JsonObject), Y = DocTd(x.Get("y") as JsonObject),
                 };
                 kq.Tam.Add((x.GetString("so_ban_ve") ?? "", x.GetString("ten") ?? "", tk));
@@ -410,7 +539,7 @@ Với MỖI tấm trong bảng, đọc TIẾT DIỆN để trải phẳng (khôn
             o.Set("tam", kq.Tam.Select(t =>
             {
                 var x = new JsonObject();
-                x.Set("khoa", t.Khoa); x.Set("ten", t.Ten); x.Set("kieu", t.Kieu); x.Set("ghi_chu", t.GhiChu); x.Set("v_chon", t.VChon);
+                x.Set("khoa", t.Khoa); x.Set("ten", t.Ten); x.Set("kieu", t.Kieu); x.Set("ghi_chu", t.GhiChu); x.Set("v_chon", t.VChon); x.Set("bien_dang", t.BienDang); x.Set("mo_ta_bien_dang", t.MoTaBienDang);
                 x.Set("x", GhiTd(t.X)); x.Set("y", GhiTd(t.Y));
                 return (object)x;
             }).ToList());
@@ -432,6 +561,7 @@ Với MỖI tấm trong bảng, đọc TIẾT DIỆN để trải phẳng (khôn
                 {
                     Khoa = x.GetString("khoa") ?? "", Ten = x.GetString("ten") ?? "", Kieu = x.GetString("kieu") ?? "phang",
                     GhiChu = x.GetString("ghi_chu") ?? "", VChon = x.GetString("v_chon") ?? "",
+                    BienDang = x.GetString("bien_dang") ?? "", MoTaBienDang = x.GetString("mo_ta_bien_dang") ?? "",
                     X = DocTd(x.Get("x") as JsonObject), Y = DocTd(x.Get("y") as JsonObject),
                 });
             return kq;

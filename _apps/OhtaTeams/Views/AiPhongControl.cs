@@ -40,6 +40,7 @@ namespace TeamsTool.Views
         private readonly StackPanel _than = new StackPanel();
         private readonly TextBlock _trangThai = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 6) };
         private CancellationTokenSource _huy;
+        private string _khoaMauMoi = ""; // tấm bấm ✨ AI đề xuất mẫu vẽ (Chay(6))
         private string _tm;
 
         private readonly Func<string, Task<string>> _guiChuoi;
@@ -119,10 +120,32 @@ namespace TeamsTool.Views
                 TiepNhan tn = AiDon.DocTiepNhan(_tm);
                 if (tu == 5)
                 {
+                    // Vẽ DXF bằng ezdxf: máy chưa có ezdxf thì hỏi cài trước
+                    AiDon.TinhTrangPython py = await AiDon.KiemPython(lai: true);
+                    if (!py.SanSang)
+                    {
+                        if (py.Python == null) { Bao(py.Loi); return; }
+                        if (MessageBox.Show("Máy chưa có thư viện ezdxf (Python) để vẽ DXF.\nCài ezdxf + matplotlib (ảnh xem trước) bằng pip ngay? Cần mạng, khoảng 1 phút.",
+                                            "Cài ezdxf", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) { Bao(py.Loi); return; }
+                        py = await AiDon.CaiEzdxf(Bao, _huy.Token);
+                        if (!py.SanSang) { Bao(py.Loi); return; }
+                    }
                     var ct5 = AiDon.DocChiTiet(_tm);
-                    int so = await AiDon.VeBanVe(AiDon.TinhLai(ct5, AiDon.DocTrienKhai(_tm), _d.Title, _tm), _d.Title, _tm, Bao, _huy.Token);
-                    if (!_trangThai.Text.StartsWith("Vẽ xong", StringComparison.Ordinal))
-                        Bao("Đã vẽ " + so + " bản trải phẳng (DXF) bằng text-to-cad trong ai\\ban_ve. Bấm ảnh để mở DXF.");
+                    List<AiDon.KetQuaVe> kq5 = await AiDon.VeBanVe(AiDon.TinhLai(ct5, AiDon.DocTrienKhai(_tm), _d.Title, _tm), _d.Title, _tm, Bao, _huy.Token);
+                    var loi5 = kq5.Where(k => k.Loi != null).Select(k => k.Bango + ": " + k.Loi).ToList();
+                    Bao("Đã vẽ " + kq5.Count(k => k.Loi == null) + " bản trải phẳng (ezdxf, môi trường moi-truong-ve.dxf) trong ai\\ban_ve. Bấm ảnh để mở DXF."
+                        + (loi5.Count > 0 ? "\nChưa vẽ được:\n" + string.Join("\n", loi5) : ""));
+                    return;
+                }
+                if (tu == 6)
+                {
+                    var ct6 = AiDon.DocChiTiet(_tm);
+                    KetQuaTrienKhai kq6 = AiDon.DocTrienKhai(_tm);
+                    var cap = AiDon.TinhLai(ct6, kq6, _d.Title, _tm).FirstOrDefault(x => x.Tk.Khoa == _khoaMauMoi);
+                    if (cap.Tk == null) { Bao("Không thấy tấm cần mẫu mới."); return; }
+                    PhongTrienKhai.MauMoi m = await AiDon.DeXuatMau(cap.Tam, cap.Tk, kq6, _tm, Bao, _huy.Token);
+                    Bao(m.Loi != null ? "AI đề xuất mẫu chưa dùng được: " + m.Loi
+                        : "AI đã viết mẫu '" + m.Ten + "' (" + m.MoTa + ") cho đơn này — bấm 📐 Vẽ DXF để vẽ thử, 📄 Xem mã để kiểm; máy Admin bấm ➕ Thêm vào thư viện khi đúng.");
                     return;
                 }
                 if (tu == 4)
@@ -457,11 +480,47 @@ namespace TeamsTool.Views
                 foreach (string c in tk.ChiTiet) the.Children.Add(Chu(c));
                 foreach (string c in tk.CanhBao) the.Children.Add(Chu("⚠ " + c, true));
                 if (tk.GhiChu.Length > 0) the.Children.Add(Chu("AI: " + tk.GhiChu));
-                // Bản vẽ text-to-cad: ảnh xem trước, bấm để mở DXF
-                string ma = AiDon.Bango(_d.Title, ++stt), dxf = Path.Combine(dirBv, ma + ".dxf"), png = Path.Combine(dirBv, ma + ".png");
-                if (File.Exists(dxf))
+                // Biên dạng (mẫu vẽ ezdxf): AI chọn / tự suy; chưa có mẫu → AI đề xuất; mẫu thử của đơn → Admin thêm vào thư viện
+                string bd = PhongTrienKhai.BienDangVe(tk), mauThu = Path.Combine(AiDon.ThuVienThu(_tm), bd + ".py");
+                if (!tk.LamTay)
                 {
-                    var link = new TextBlock { Text = "📐 " + ma + ".dxf" + (File.GetLastWriteTime(dxf) < File.GetLastWriteTime(AiDon.FileTrienKhai(_tm)) ? "  (cũ hơn kết quả triển khai — vẽ lại)" : ""),
+                    var hangBd = new WrapPanel { Margin = new Thickness(0, 3, 0, 0) };
+                    bool chuaCo = bd == PhongTrienKhai.ChuaCoMau;
+                    hangBd.Children.Add(new TextBlock
+                    {
+                        Text = chuaCo ? "Biên dạng: chưa có mẫu vẽ — " + tk.MoTaBienDang : "Biên dạng: " + bd + (tk.BienDang.Length == 0 ? " (tự suy)" : "") + (File.Exists(mauThu) ? " — mẫu thử của đơn" : ""),
+                        Foreground = chuaCo ? KieuTeams.Mau("#B42318") : KieuTeams.ChuPhu, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0),
+                    });
+                    string khoa = tk.Khoa;
+                    if (chuaCo)
+                        hangBd.Children.Add(NutNho("✨ AI đề xuất mẫu vẽ", !chay, () => { _khoaMauMoi = khoa; Chay(6, false); return false; }, null));
+                    if (File.Exists(mauThu))
+                    {
+                        hangBd.Children.Add(NutNho("📄 Xem mã", true, () => { Mo(mauThu); return false; }, null));
+                        if (AiDon.LaMayAdmin())
+                            hangBd.Children.Add(NutNho("➕ Thêm vào thư viện", !chay, () =>
+                            {
+                                if (MessageBox.Show("Thêm mẫu '" + bd + "' vào thư viện chung (ve_dxf\\thu_vien)? Mọi máy sẽ dùng mẫu này sau khi cập nhật.\nĐã vẽ thử và mở CAD kiểm chưa?",
+                                                    "Thêm mẫu biên dạng", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return false;
+                                try { string f = AiDon.ThemVaoThuVien(_tm, bd); File.Delete(mauThu); _trangThai.Text = "Đã thêm mẫu vào " + f + " — commit để máy khác nhận."; }
+                                catch (Exception ex) { _trangThai.Text = "Không thêm được: " + ex.Message; }
+                                Ve();
+                                return false;
+                            }, null));
+                    }
+                    the.Children.Add(hangBd);
+                }
+
+                // Bản vẽ ezdxf: tệp mới nhất của bango (kể cả "<bango> (2).dxf" khi bản trước đã sửa tay), ảnh xem trước, bấm để mở
+                string ma = PhongTrienKhai.Bango(_d.Title, ++stt);
+                string dxf = Directory.Exists(dirBv)
+                    ? Directory.GetFiles(dirBv, ma + "*.dxf").Where(f => Path.GetFileNameWithoutExtension(f) == ma || Path.GetFileNameWithoutExtension(f).StartsWith(ma + " (", StringComparison.Ordinal))
+                               .OrderByDescending(File.GetLastWriteTime).FirstOrDefault()
+                    : null;
+                string png = dxf == null ? null : Path.ChangeExtension(dxf, ".png");
+                if (dxf != null)
+                {
+                    var link = new TextBlock { Text = "📐 " + Path.GetFileName(dxf) + (File.GetLastWriteTime(dxf) < File.GetLastWriteTime(AiDon.FileTrienKhai(_tm)) ? "  (cũ hơn kết quả triển khai — vẽ lại)" : ""),
                                                Foreground = _mau, Cursor = System.Windows.Input.Cursors.Hand, ToolTip = "Mở DXF", Margin = new Thickness(0, 4, 0, 2) };
                     link.MouseLeftButtonUp += (s, e) => Mo(dxf);
                     the.Children.Add(link);
@@ -489,10 +548,11 @@ namespace TeamsTool.Views
 
             string tomTat = PhongTrienKhai.TomTat(_d.Title, ds);
             var nut = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
-            nut.Children.Add(KieuTeams.Nut("📐 Vẽ DXF (text-to-cad)", _mau, (s, e) => Chay(5, false), chinh: false).Also(b =>
+            nut.Children.Add(KieuTeams.Nut("📐 Vẽ DXF", _mau, (s, e) => Chay(5, false), chinh: false).Also(b =>
             {
                 b.IsEnabled = !chay && ds.Any(x => !x.Tk.LamTay && x.Tk.XPhang.HasValue && x.Tk.YPhang.HasValue);
-                b.ToolTip = "Vẽ tấm phẳng X × Y + đường bẻ + khắc mã tấm bằng text-to-cad (build123d) → ai\\ban_ve\\<bango>.dxf. Chưa có lỗ, F-name — bổ sung trên CAD.";
+                b.ToolTip = "Vẽ trải phẳng bằng ezdxf trên môi trường moi-truong-ve.dxf theo mẫu biên dạng: viền 0-KAKOU, đường bẻ DASHED, dim, F-name, Khung_IN → ai\\ban_ve\\<bango>.dxf. "
+                            + "Tệp đã sửa trên CAD không bị ghi đè. Chưa có lỗ — bổ sung trên CAD.";
             }));
             nut.Children.Add(KieuTeams.Nut("📄 Mở CSV", _mau, (s, e) => Mo(AiDon.FileCsv(_tm)), chinh: false).Also(b => b.ToolTip = "ai\\trien_khai.csv — bango tạm <mã>-<số>, GRO đánh bango thật trên CAD"));
             nut.Children.Add(KieuTeams.Nut("📋 Chép tóm tắt", _mau, (s, e) =>

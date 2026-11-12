@@ -83,15 +83,9 @@ namespace TeamsTool.Tests
             var hop = new TamTrienKhai { Kieu = "be", VChon = "V32",
                 X = new TietDien { Doan = { 20, 100, 20 }, Uon = { new Uon(), new Uon() } }, Y = new TietDien { Doan = { 20, 60, 20 }, Uon = { new Uon(), new Uon() } } };
             PhongTrienKhai.Tinh(hop, tam, TraV, 4.2, Lmin);
-            string py = PhongTrienKhai.ScriptCad("130672-3", hop);
-            Kiem("hop: X x Y, duong be 2 huong, cat 4 goc 16x16, script text-to-cad",
-                 hop.XPhang + "x" + hop.YPhang + "|" + string.Join(",", hop.BeX) + "|" + string.Join(",", hop.BeY) + "|" +
-                 py.Contains("GOC = [(0, 0, 16, 16), (108, 0, 16, 16), (0, 68, 16, 16), (108, 68, 16, 16)]") + "|" + py.Contains("def tam_130672_3():") + "|" +
-                 py.Contains("label=\"BEND\"") + "|" + py.Contains("cat.label = \"0-KAKOU\""),
-                 "124x84|16,108|16,68|True|True|True|True");
-            Kiem("script: tam phang khong co duong be / goc; lam tay -> null; ten script",
-                 PhongTrienKhai.ScriptCad("A", new TamTrienKhai { XPhang = 300, YPhang = 150 }).Contains("BE_X = []") + "|" + (PhongTrienKhai.ScriptCad("A", new TamTrienKhai { LamTay = true, XPhang = 1, YPhang = 1 }) == null) + "|" +
-                 PhongTrienKhai.TenScript("130672-1 (Ａ)"), "True|True|tam_130672_1");
+            Kiem("hop: X x Y, duong be 2 huong, doan phang dau / cuoi 16 (cat goc)",
+                 hop.XPhang + "x" + hop.YPhang + "|" + string.Join(",", hop.BeX) + "|" + string.Join(",", hop.BeY) + "|" + string.Join("+", hop.DoanPhangX), "124x84|16,108|16,68|16+92+16");
+
             var tk3 = new TamTrienKhai { Kieu = "be", X = L(18, 100), Y = Phang(200) };
             PhongTrienKhai.Tinh(tk3, tam, TraV, 4.2, Lmin);
             Kiem("be canh 18: bo V40 (Lmin 25) va giu V25 (15)", tk3.VChon, "V25");
@@ -110,6 +104,40 @@ namespace TeamsTool.Tests
             var tk8 = new TamTrienKhai { Kieu = "be", X = L(50, 100, "be", 120), Y = Phang(200) };
             PhongTrienKhai.Tinh(tk8, tam, TraV, 4.2, Lmin);
             Kiem("goc TV khong co -> canh bao tra tay", (tk8.XPhang == null) + "|" + tk8.CanhBao.Any(c => c.Contains("bảng TV không có góc 120")), "True|True");
+            // loại biên dạng mặc định + F-name + tệp việc vẽ ezdxf
+            var phangBd = new TamTrienKhai { X = Phang(300), Y = Phang(150) };
+            PhongTrienKhai.Tinh(phangBd, tam, TraV, 4.2, Lmin);
+            var cuonBd = new TamTrienKhai { X = new TietDien { Doan = { 0, 0 }, Uon = { new Uon { Kieu = "cuon", R = 100, Cung = 360 } } }, Y = Phang(500) };
+            PhongTrienKhai.Tinh(cuonBd, tam, TraV, 4.2, Lmin);
+            Kiem("bien dang mac dinh: be / hop / phang / cuon / lam tay; AI chon thi theo AI",
+                 PhongTrienKhai.BienDangVe(tk2) + "|" + PhongTrienKhai.BienDangVe(hop) + "|" + PhongTrienKhai.BienDangVe(phangBd) + "|" + PhongTrienKhai.BienDangVe(cuonBd) + "|" +
+                 PhongTrienKhai.BienDangVe(tk6) + "|" + PhongTrienKhai.BienDangVe(new TamTrienKhai { BienDang = "chu_u" }), "be|hop|phang|cuon||chu_u");
+            Kiem("F-name: N M T Q + dong V cua TraV (khong lap) + an 1 lan + Z",
+                 string.Join(";", PhongTrienKhai.DongFname(new TamAi { SoBanVe = "A-1", M = "SS400", T = "4.5", Q = "3", Z = "SS400" }, hop)) + "#" + string.Join(";", tk4.DongV),
+                 "N=A-1;M=SS400;T=4.5;Q=3;V=32-4(90°);Z=SS400#内R10-発押し90°");
+            string viec = PhongTrienKhai.ViecVe("130672", new List<(TamAi, TamTrienKhai)> { (tam, tk2), (tam, tk6), (tam, hop) }, "m.dxf", "ra", new[] { "tv1", "tv2" });
+            var vj = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(viec);
+            var vt = (List<object>)vj.Get("tam");
+            var v0 = (OhtaTool.Plugin.Core.JsonObject)vt[0];
+            var v1 = (OhtaTool.Plugin.Core.JsonObject)vt[1];
+            Kiem("viec ve: bo tam lam tay, bango theo thu tu (3 cho tam thu 3), so + F-name + thu vien",
+                 vt.Count + "|" + v0.GetString("bango") + "|" + v1.GetString("bango") + "|" + v1.GetString("bien_dang") + "|" + ((OhtaTool.Plugin.Core.JsonNumber)v0.Get("x")).Raw + "|" +
+                 ((List<object>)v0.Get("fname")).Count + "|" + ((List<object>)vj.Get("thu_vien")).Count + "|" + vj.GetString("moi_truong"), "2|130672-1|130672-3|hop|142|6|2|m.dxf");
+
+            // mẫu mới AI đề xuất: kiểm an toàn trước khi chạy
+            const string maTot = "\"\"\"x\"\"\"\nimport math\nfrom moi_truong import LE_DIM\n\nMO_TA = \"Chu U\"\n\n\ndef ve(nen, t):\n    nen.chu_nhat(0, 0, t[\"x\"], t[\"y\"])\n";
+            string[] daCo = { "be", "hop", "phang", "cuon" };
+            Kiem("kiem mau: tot / ten sai / trung / thieu ve / import os / open / os. / subprocess",
+                 (PhongTrienKhai.KiemMau("chu_u", maTot, daCo) ?? "ok") + "|" + (PhongTrienKhai.KiemMau("Chu U", maTot, daCo) != null) + "|" + (PhongTrienKhai.KiemMau("hop", maTot, daCo) != null) + "|" +
+                 (PhongTrienKhai.KiemMau("chu_u", "MO_TA = 1", daCo) != null) + "|" + PhongTrienKhai.KiemMau("chu_u", maTot + "import os\n", daCo) + "|" +
+                 (PhongTrienKhai.KiemMau("chu_u", maTot + "    f = open('a')\n", daCo) != null) + "|" + (PhongTrienKhai.KiemMau("chu_u", maTot.Replace("import math", "import math, subprocess"), daCo) != null) + "|" +
+                 (PhongTrienKhai.KiemMau("chu_u", maTot + "    x = __import__('os')\n", daCo) != null),
+                 "ok|True|True|True|Mã import 'os' — chỉ được import math, moi_truong.|True|True|True");
+            string tl = OhtaTool.Plugin.Core.JsonLite.Serialize("{\"ten\":\"chu_u\",\"mo_ta\":\"Chu U\",\"ma\":" + OhtaTool.Plugin.Core.JsonLite.Serialize(maTot) + "}");
+            var mm = PhongTrienKhai.DocMauMoi("{\"stop_reason\":\"end_turn\",\"usage\":{\"input_tokens\":9,\"output_tokens\":4},\"content\":[{\"type\":\"text\",\"text\":" + tl + "}]}", daCo);
+            Kiem("doc mau moi tu phan hoi AI", mm.Ten + "|" + mm.MoTa + "|" + (mm.Loi ?? "null") + "|" + mm.Ma.Contains("def ve(nen, t)") + "|" + mm.Vao, "chu_u|Chu U|null|True|9");
+            string bodyMau = PhongTrienKhai.BodyMauMoi("claude-opus-5-5", null, "dau vao");
+            Kiem("body mau moi: schema ten/mo_ta/ma, khong khoi quy chuan", bodyMau.Contains("\"ma\"") + "|" + bodyMau.Contains("cache_control"), "True|False");
             var phang = new TamTrienKhai { Kieu = "phang", X = Phang(300), Y = Phang(150) };
             PhongTrienKhai.Tinh(phang, new TamAi { T = "3.2", M = "SS400", Q = "1" }, TraV, 3, Lmin);
             Kiem("tam phang: X x Y, ky hieu rong, CSV", phang.XPhang + "x" + phang.YPhang + "|" + phang.KyHieu + "|" + PhongTrienKhai.DongCsv("130672", 2, new TamAi { T = "3.2", M = "SS400", Q = "1" }, phang),
