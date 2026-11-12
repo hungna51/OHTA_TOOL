@@ -157,9 +157,10 @@ namespace TeamsTool.Views
                         KetQuaTrienKhai kq6 = AiDon.TaoTrienKhai(ct6, _tm);
                         var cap = AiDon.TinhLai(ct6, kq6, _d.Title, _tm).FirstOrDefault(x => x.Tk.Khoa == _khoaMauMoi);
                         if (cap.Tk == null) { Bao("Không thấy tấm cần mẫu mới."); return; }
+                        _thuVien = null; // nạp lại để có mẫu thử mới
                         PhongTrienKhai.MauMoi m = await AiDon.DeXuatMau(ct6, cap.Tam, cap.Tk, kq6, _tm, _d.Title, Bao, _huy.Token);
                         Bao(m.Loi != null ? "AI đề xuất mẫu chưa dùng được: " + m.Loi
-                            : "AI đã viết mẫu '" + m.Ten + "' (" + m.MoTa + ") cho đơn này — bấm 📐 Vẽ DXF để vẽ thử, 📄 Xem mã để kiểm; máy Admin bấm ➕ Thêm vào thư viện khi đúng.");
+                            : "AI đã viết mẫu '" + m.Ten + "' (" + m.MoTa + ") cho đơn này — sang phòng 3 bấm 📐 Vẽ DXF để vẽ thử, 📄 Xem mã để kiểm; máy Admin bấm ➕ Thêm vào thư viện khi đúng.");
                         return;
                     }
                     case 7:
@@ -301,6 +302,7 @@ namespace TeamsTool.Views
                 return The(TenPhong2, p);
             }
             bool sua = !chay && ct.XacNhan.Length == 0, nuaRepeat = tn?.LoaiDon == PhongTiepNhan.NuaRepeat;
+            NapThuVien(); // mô tả mẫu vẽ + ô chọn mẫu (nạp nền một lần, xong thì vẽ lại)
             if (nuaRepeat) p.Children.Add(Chu("Đơn nửa repeat: bỏ tích \"Mới\" ở tấm repeat — chỉ kiểm và triển khai tấm mới (tấm mới mới được đánh số)."));
             var danhSo = PhongHoSo.DanhSo(ct, _d.Title).ToDictionary(x => x.Tam, x => x.Ten);
             var vanDe = kt?.VanDe ?? new List<VanDe>();
@@ -388,6 +390,7 @@ namespace TeamsTool.Views
                     Text = "Ghi chú đặc biệt: " + (t.GhiChuVi.Trim().Length > 0 ? t.GhiChuVi.Trim() : t.GhiChuJp.Trim()), TextWrapping = TextWrapping.Wrap,
                     ToolTip = t.GhiChuJp, FontWeight = FontWeights.Normal, Margin = new Thickness(0, 0, 0, 4),
                 });
+            if (t.KieuTd != "lam_tay") than.Children.Add(DongMau(t, ten.Length > 0 && sua));
             foreach (VanDe v in vd.OrderBy(v => v.ConMo ? 0 : 1).ThenBy(v => v.Muc == VanDe.Do ? 0 : v.Muc == VanDe.Vang ? 1 : 2))
                 than.Children.Add(DongVanDe(kt, v, sua));
             var nut = new WrapPanel { Margin = new Thickness(0, 2, 0, 0) };
@@ -403,11 +406,50 @@ namespace TeamsTool.Views
             return ex;
         }
 
+        /// <summary>
+        /// Dòng "Mẫu vẽ" của tấm ở phòng 2: mẫu AI chọn trong thư viện lúc đọc (kèm mô tả), mẫu thử của đơn, hoặc chưa có mẫu →
+        /// ✨ AI đề xuất mẫu ngay ở phòng 2 (không đợi phòng 3).
+        /// </summary>
+        private UIElement DongMau(TamAi t, bool deXuat)
+        {
+            string bd = t.BienDang;
+            bool chuaCo = bd == PhongTrienKhai.ChuaCoMau || bd.Length == 0, thu = bd.Length > 0 && File.Exists(Path.Combine(AiDon.ThuVienThu(_tm), bd + ".py"));
+            string moTa = _thuVien?.FirstOrDefault(m => m.Ten == bd).MoTa ?? "";
+            var hang = new WrapPanel { Margin = new Thickness(0, 0, 0, 4) };
+            hang.Children.Add(new TextBlock
+            {
+                Text = bd == PhongTrienKhai.ChuaCoMau ? "Mẫu vẽ: chưa có trong thư viện" + (t.MoTaBienDang.Length > 0 ? " — " + t.MoTaBienDang : "")
+                     : bd.Length == 0 ? "Mẫu vẽ: chưa chọn" + (_thuVien != null && _thuVien.Count == 0 ? " (máy chưa có Python / ezdxf để đọc thư viện)" : " — đọc lại bản vẽ hoặc ✎ chọn mẫu")
+                     : "Mẫu vẽ: " + bd + (thu ? " (mẫu thử của đơn — Admin duyệt ở phòng 3)" : moTa.Length > 0 ? " — " + moTa : ""),
+                Foreground = chuaCo ? KieuTeams.Mau("#B42318") : KieuTeams.ChuPhu, TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.Normal,
+                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0),
+            });
+            string khoa = t.Khoa;
+            if (chuaCo && deXuat)
+                hang.Children.Add(NutNho("✨ AI đề xuất mẫu vẽ", !DangChay.Contains(_d.Id), () => { _khoaMauMoi = khoa; Chay(6, false); return false; }, null)
+                    .Also(b => b.ToolTip = "AI viết mẫu Python cho hình này từ hồ sơ tấm + bản vẽ; vẽ thử ở phòng 3, máy Admin duyệt vào thư viện"));
+            return hang;
+        }
+
+        /// <summary>Thư viện mẫu (tên, mô tả) nạp một lần cho khung — null = đang / chưa nạp; rỗng = máy chưa có Python / ezdxf.</summary>
+        private List<(string Ten, string MoTa, string Tep)> _thuVien;
+        private bool _dangNapThuVien;
+
+        private async void NapThuVien()
+        {
+            if (_thuVien != null || _dangNapThuVien || _tm == null) return;
+            _dangNapThuVien = true;
+            try { _thuVien = await AiDon.DanhSachMau(_tm); }
+            catch (Exception) { _thuVien = new List<(string, string, string)>(); }
+            _dangNapThuVien = false;
+            if (!DangChay.Contains(_d.Id)) Ve();
+        }
+
         private static readonly (string Nhom, (string O, string Nhan)[] O)[] NhomO =
         {
             ("Bản vẽ khách", new[] { ("so_ban_ve", "Số BV"), ("ten", "Tên") }),
             ("Thông số", new[] { ("M", "M (vật liệu)"), ("Z", "Z"), ("T", "T (độ dày)"), ("Q", "Q (số lượng)"), ("mat", "Mặt"), ("kich_thuoc", "Kích thước"), ("dung_sai", "Dung sai") }),
-            ("Tiết diện", new[] { ("kieu_td", "Kiểu"), ("td_x", "X"), ("td_y", "Y"), ("ghi_chu_td", "Ghi chú") }),
+            ("Tiết diện", new[] { ("kieu_td", "Kiểu"), ("td_x", "X"), ("td_y", "Y"), ("ghi_chu_td", "Ghi chú"), ("bien_dang", "Mẫu vẽ") }),
             ("Mô tả & ghi chú", new[] { ("mo_ta", "Mô tả chi tiết"), ("ghi_chu_jp", "Ghi chú JP"), ("ghi_chu_vi", "Ghi chú VI") }),
             ("Lý do sửa", new[] { ("ly_do_sua", "Lý do (không bắt buộc)") }),
         };
@@ -444,9 +486,12 @@ namespace TeamsTool.Views
                                               ToolTip = t.GiaTriAi.TryGetValue(o, out string ai) ? "AI đọc: " + ai : null };
                     Brush nen = t.KhongChac.Contains(o) || (o.StartsWith("td_", StringComparison.Ordinal) && t.KhongChac.Contains("tiet_dien")) ? KieuTeams.Mau("#FFF6E0") : Brushes.White;
                     Control oNhap;
-                    if (o == "kieu_td")
+                    if (o == "kieu_td" || (o == "bien_dang" && _thuVien != null))
                     {
-                        var cb = new ComboBox { ItemsSource = new[] { "phang", "be", "lam_tay" }, SelectedItem = giaTri, IsEnabled = sua, Margin = new Thickness(0, 1, 0, 1), HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 120 };
+                        var muc = o == "kieu_td" ? new List<string> { "phang", "be", "lam_tay" }
+                                                 : new List<string> { "" }.Concat(_thuVien.Select(m => m.Ten)).Concat(new[] { PhongTrienKhai.ChuaCoMau }).ToList();
+                        if (!muc.Contains(giaTri)) muc.Add(giaTri); // mẫu thử của đơn
+                        var cb = new ComboBox { ItemsSource = muc, SelectedItem = giaTri, IsEnabled = sua, Margin = new Thickness(0, 1, 0, 1), HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 120 };
                         cb.SelectionChanged += (s, e) => LuuO(ct, t, o, cb.SelectedItem as string ?? "");
                         oNhap = cb;
                     }

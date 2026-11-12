@@ -117,6 +117,10 @@ namespace TeamsTool.Tests
             var luat = PhongKiemTra.Luat(new[] { sai, thieu, cu }, new List<PhongKiemTra.DongTv>(), "");
             Kiem("luat: td sai do / thieu td vang / ban cu khong bao",
                  luat.Count(v => v.Ma.EndsWith("|td_sai_X") && v.Muc == VanDe.Do) + "|" + luat.Count(v => v.Ma.EndsWith("|thieu_td")) + "|" + luat.Count(v => v.Ma.Contains("|c||") && v.Ma.Contains("td")), "1|1|0");
+            var khongMau = new TamAi { SoBanVe = "N", M = "SPCC", T = "1.6", Q = "1", KieuTd = "phang", TdX = "100", TdY = "50", BienDang = PhongTrienKhai.ChuaCoMau };
+            var lamTay = new TamAi { SoBanVe = "L", M = "SPCC", T = "1.6", Q = "1", KieuTd = "lam_tay", BienDang = PhongTrienKhai.ChuaCoMau };
+            var luatMau = PhongKiemTra.Luat(new[] { khongMau, lamTay }, new List<PhongKiemTra.DongTv>(), "");
+            Kiem("luat: chua co mau ve (bo qua lam tay)", luatMau.Count(v => v.Ma.EndsWith("|chua_co_mau")) + "|" + luatMau.Any(v => v.Ma == "luat|" + lamTay.Khoa + "|chua_co_mau"), "1|False");
             Kiem("co tiet dien", PhongTrienKhai.CoTietDien(t2) + "|" + PhongTrienKhai.CoTietDien(cu) + "|" + PhongTrienKhai.CoTietDien(new TamAi { KieuTd = "lam_tay" }), "True|False|True");
             TamTrienKhai tk = PhongTrienKhai.TuTam(t2);
             Kiem("tu tam: tiet dien + bien dang", tk.Kieu + "|" + tk.X.Doan.Count + "|" + tk.X.Uon.Count + "|" + tk.Y.Doan[0] + "|" + tk.BienDang, "be|2|1|200|be");

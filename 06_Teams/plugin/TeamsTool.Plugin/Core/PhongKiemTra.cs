@@ -170,6 +170,8 @@ namespace TeamsTool.Core
                 foreach (var (chu, huong) in new[] { (t.TdX, "X"), (t.TdY, "Y") })
                     if (chu.Trim().Length > 0 && PhongTrienKhai.DocChuTd(chu, out string loiTd) == null)
                         Them("td_sai_" + huong, VanDe.Do, VanDe.TuXuLy, "", "Tiết diện " + huong + " viết sai: " + loiTd + " — ✎ Sửa thông số → Tiết diện " + huong + ".");
+                if (t.BienDang == PhongTrienKhai.ChuaCoMau && t.KieuTd != "lam_tay")
+                    Them("chua_co_mau", VanDe.Vang, VanDe.TuXuLy, "", "Thư viện chưa có mẫu vẽ cho hình này — bấm ✨ AI đề xuất mẫu vẽ (hoặc ✎ chọn mẫu).");
                 if (t.KieuTd.Length > 0 && t.KieuTd != "lam_tay" && t.TdX.Trim().Length == 0 && t.TdY.Trim().Length == 0)
                     Them("thieu_td", VanDe.Vang, VanDe.TuXuLy, "", "Chưa có tiết diện — ✎ Sửa thông số → Tiết diện X / Y để trải phẳng.");
 
