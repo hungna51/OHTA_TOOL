@@ -228,11 +228,11 @@ namespace TeamsTool.Core
 
         /// <summary>
         /// F-name như tab Fname: N=, M=, T=, Q=, các dòng V= của TraV / ấn 1 lần, Z=. Theo bản chuẩn xưởng (12/11):
-        /// N= trống thì lấy bango; T luôn có phần thập phân (12 → 12.0).
+        /// N= = tên tấm &lt;đơn&gt;-n (số bản vẽ khách giữ ở hồ sơ); T luôn có phần thập phân (12 → 12.0).
         /// </summary>
         public static List<string> DongFname(TamAi tam, TamTrienKhai tk, string bango = "")
         {
-            string n = tam.SoBanVe.Length > 0 ? tam.SoBanVe : tam.Ten.Length > 0 ? tam.Ten : bango;
+            string n = bango.Length > 0 ? bango : tam.SoBanVe.Length > 0 ? tam.SoBanVe : tam.Ten; // 12/11: N= luôn là tên tấm <đơn>-n
             string t = double.TryParse((tam.T ?? "").Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double so) ? so.ToString("0.0##", CultureInfo.InvariantCulture) : tam.T;
             var d = new List<string> { "N=" + n, "M=" + tam.M, "T=" + t, "Q=" + tam.Q };
             d.AddRange(tk.DongV);

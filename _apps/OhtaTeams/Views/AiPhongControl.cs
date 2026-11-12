@@ -96,7 +96,7 @@ namespace TeamsTool.Views
             KiemTra kt = AiDon.DocKiemTra(_tm);
             // Chưa kiểm, hoặc kiem_tra.json của bản 4 phòng cũ (có tu_xac_nhan) → chạy luật ngay (không gọi AI)
             if (ct != null && !chay && (kt == null || kt.TuXacNhan.Length > 0))
-                try { kt = AiDon.KiemLuat(ct, _tm); } catch (Exception ex) { _trangThai.Text = "Không chạy được luật kiểm tra: " + ex.Message; }
+                try { kt = AiDon.KiemLuat(ct, _tm, _d.Title); } catch (Exception ex) { _trangThai.Text = "Không chạy được luật kiểm tra: " + ex.Message; }
             _than.Children.Add(Phong1(tn, ct, chay));
             _than.Children.Add(Phong2(tn, ct, kt, chay));
             _than.Children.Add(Phong3(ct, chay));
@@ -132,15 +132,17 @@ namespace TeamsTool.Views
                     {
                         // Vẽ DXF bằng ezdxf: máy chưa có ezdxf thì hỏi cài trước
                         AiDon.TinhTrangPython py = await AiDon.KiemPython(lai: true);
-                        if (!py.SanSang)
+                        if (!py.SanSang || !py.Pymupdf)
                         {
                             if (py.Python == null) { Bao(py.Loi); return; }
-                            if (MessageBox.Show("Máy chưa có thư viện ezdxf (Python) để vẽ DXF.\nCài ezdxf + matplotlib (ảnh xem trước) bằng pip ngay? Cần mạng, khoảng 1 phút.",
-                                                "Cài ezdxf", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) { Bao(py.Loi); return; }
-                            py = await AiDon.CaiEzdxf(Bao, _huy.Token);
+                            string thieu = py.SanSang ? "PyMuPDF (cắt ảnh tấm từ PDF)" : "ezdxf (vẽ DXF)";
+                            bool cai = MessageBox.Show("Máy chưa có " + thieu + ".\nCài ezdxf + matplotlib + PyMuPDF bằng pip ngay? Cần mạng, khoảng 1 phút.",
+                                                       "Cài thư viện Python", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
+                            if (cai) py = await AiDon.CaiEzdxf(Bao, _huy.Token);
                             if (!py.SanSang) { Bao(py.Loi); return; }
                         }
                         ChiTiet ct5 = AiDon.DocChiTiet(_tm);
+                        await AiDon.CatAnh(ct5, _tm, _d.Title, _huy.Token); // ảnh tấm còn thiếu (máy vừa cài PyMuPDF)
                         List<AiDon.KetQuaVe> kq5 = await AiDon.VeBanVe(AiDon.TinhLai(ct5, AiDon.TaoTrienKhai(ct5, _tm), _d.Title, _tm), _d.Title, _tm, Bao, _huy.Token);
                         var loi5 = kq5.Where(k => k.Loi != null).Select(k => k.Bango + ": " + k.Loi).ToList();
                         var thieu5 = kq5.Where(k => k.ThieuDim.Count > 0).Select(k => k.Bango + ": " + string.Join(", ", k.ThieuDim)).ToList();
@@ -155,7 +157,7 @@ namespace TeamsTool.Views
                         KetQuaTrienKhai kq6 = AiDon.TaoTrienKhai(ct6, _tm);
                         var cap = AiDon.TinhLai(ct6, kq6, _d.Title, _tm).FirstOrDefault(x => x.Tk.Khoa == _khoaMauMoi);
                         if (cap.Tk == null) { Bao("Không thấy tấm cần mẫu mới."); return; }
-                        PhongTrienKhai.MauMoi m = await AiDon.DeXuatMau(ct6, cap.Tam, cap.Tk, kq6, _tm, Bao, _huy.Token);
+                        PhongTrienKhai.MauMoi m = await AiDon.DeXuatMau(ct6, cap.Tam, cap.Tk, kq6, _tm, _d.Title, Bao, _huy.Token);
                         Bao(m.Loi != null ? "AI đề xuất mẫu chưa dùng được: " + m.Loi
                             : "AI đã viết mẫu '" + m.Ten + "' (" + m.MoTa + ") cho đơn này — bấm 📐 Vẽ DXF để vẽ thử, 📄 Xem mã để kiểm; máy Admin bấm ➕ Thêm vào thư viện khi đúng.");
                         return;
@@ -175,7 +177,7 @@ namespace TeamsTool.Views
                         return;
                     }
                     case 3:
-                        await AiDon.KiemLaiAi(tn, AiDon.DocChiTiet(_tm), _tm, Bao, _huy.Token);
+                        await AiDon.KiemLaiAi(tn, AiDon.DocChiTiet(_tm), _tm, _d.Title, Bao, _huy.Token);
                         return;
                 }
                 if (tu == 1 || tn == null) tn = await AiDon.TiepNhan(_d, _listUrl, _listId, _tm, Bao, _huy.Token);
@@ -184,9 +186,11 @@ namespace TeamsTool.Views
                 else
                 {
                     ChiTiet ct = await AiDon.DocBanVe(tn, _tm, docLaiHet, Bao, _huy.Token);
-                    KiemTra kt = AiDon.KiemLuat(ct, _tm);
+                    string anh = await AiDon.CatAnh(ct, _tm, _d.Title, _huy.Token); // ảnh tấm cho phòng 2 + hồ sơ
+                    KiemTra kt = AiDon.KiemLuat(ct, _tm, _d.Title);
                     if (!_trangThai.Text.StartsWith("Có tệp chưa đọc", StringComparison.Ordinal))
-                        Bao("Xong phòng 1: " + ct.Tam.Count + " tấm, " + kt.VanDe.Count + " vấn đề (" + kt.DoConMo + " đỏ). Sang phòng 2: sửa ô sai (ô ⚠ là AI không chắc), trả lời câu hỏi, rồi ✓ Xác nhận → Triển khai.");
+                        Bao("Xong phòng 1: " + ct.Tam.Count + " tấm, " + kt.VanDe.Count + " vấn đề (" + kt.DoConMo + " đỏ). Sang phòng 2: trả lời câu hỏi từng tấm, ✎ sửa thông số nếu sai, rồi ✓ Xác nhận → Triển khai."
+                            + (anh != null ? "\n" + anh : ""));
                 }
             }
             catch (OperationCanceledException) { Bao("Đã huỷ. Phần đã xong vẫn được lưu."); }
@@ -281,11 +285,13 @@ namespace TeamsTool.Views
 
         // ---------- Phòng 2: Kiểm tra & Hỏi ----------
 
-        private static readonly (string Nhom, string Ten)[] NhomVanDe =
-        {
-            (VanDe.Khach, "Hỏi khách"), (VanDe.NoiBo, "Hỏi nội bộ"), (VanDe.TuXuLy, "Tự xử lý theo QC"),
-        };
+        private readonly HashSet<string> _dongTam = new HashSet<string>(); // khoá tấm người dùng đã gập (mặc định mở)
+        private string _suaTam = "";                                       // khoá tấm đang mở khung ✎ Sửa thông số
 
+        /// <summary>
+        /// Phòng 2 (12/11): mỗi bản vẽ một mục, trong đó mỗi tấm một mục tên &lt;đơn&gt;-n: M · T · Q, ảnh cắt từ bản vẽ, ghi chú đặc biệt,
+        /// câu hỏi của tấm + ô trả lời; ✎ Sửa thông số mở khung sửa; 📄 Hồ sơ mở ai\ho_so\&lt;đơn&gt;-n.md. Mục "Chung cả đơn": ghi chú chung + câu hỏi không thuộc tấm nào.
+        /// </summary>
         private Border Phong2(TiepNhan tn, ChiTiet ct, KiemTra kt, bool chay)
         {
             var p = new StackPanel();
@@ -294,68 +300,36 @@ namespace TeamsTool.Views
                 p.Children.Add(Chu("Chờ phòng 1 đọc bản vẽ."));
                 return The(TenPhong2, p);
             }
-            bool daXn = ct.XacNhan.Length > 0;
-            if (tn?.LoaiDon == PhongTiepNhan.NuaRepeat) p.Children.Add(Chu("Đơn nửa repeat: bỏ tích \"Mới\" ở tấm repeat — chỉ kiểm và triển khai tấm mới."));
+            bool sua = !chay && ct.XacNhan.Length == 0, nuaRepeat = tn?.LoaiDon == PhongTiepNhan.NuaRepeat;
+            if (nuaRepeat) p.Children.Add(Chu("Đơn nửa repeat: bỏ tích \"Mới\" ở tấm repeat — chỉ kiểm và triển khai tấm mới (tấm mới mới được đánh số)."));
+            var danhSo = PhongHoSo.DanhSo(ct, _d.Title).ToDictionary(x => x.Tam, x => x.Ten);
+            var vanDe = kt?.VanDe ?? new List<VanDe>();
+            foreach (var nhom in ct.Tam.GroupBy(t => t.Tep))
+            {
+                var tep = new StackPanel { Margin = new Thickness(12, 2, 0, 4) };
+                foreach (TamAi t in nhom)
+                    tep.Children.Add(TheTam(ct, kt, t, danhSo.TryGetValue(t, out string ten) ? ten : "", vanDe.Where(v => PhongHoSo.CuaTam(v, t, ct)).ToList(), sua, nuaRepeat));
+                p.Children.Add(new Expander { Header = new TextBlock { Text = "📄 " + nhom.Key + " — " + nhom.Count() + " tấm", FontWeight = FontWeights.SemiBold }, Content = tep, IsExpanded = true, Margin = new Thickness(0, 4, 0, 0) });
+            }
 
-            var g = new DataGrid
+            // Chung cả đơn: ghi chú chung của khách + câu hỏi không thuộc tấm nào
+            var chung = vanDe.Where(v => !ct.Tam.Any(t => t.Moi && PhongHoSo.CuaTam(v, t, ct)))
+                             .OrderBy(v => v.ConMo ? 0 : 1).ThenBy(v => v.Muc == VanDe.Do ? 0 : v.Muc == VanDe.Vang ? 1 : 2).ToList();
+            var ghi = ct.GhiChuDon.Where(kv => kv.Value.Trim().Length > 0).ToList();
+            if (chung.Count > 0 || ghi.Count > 0)
             {
-                ItemsSource = ct.Tam, AutoGenerateColumns = false, CanUserAddRows = false, CanUserDeleteRows = false,
-                MaxHeight = 420, Margin = new Thickness(0, 6, 0, 6), HeadersVisibility = DataGridHeadersVisibility.Column,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, IsReadOnly = chay || daXn, // đã xác nhận: khoá, ↩ Bỏ xác nhận để sửa
-            };
-            if (tn?.LoaiDon == PhongTiepNhan.NuaRepeat) g.Columns.Add(new DataGridCheckBoxColumn { Header = "Mới", Binding = new Binding("Moi") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged }, SortMemberPath = "moi" });
-            Cot(g, "Tệp", "Tep", null);
-            Cot(g, "Tr.", "Trang", null);
-            Cot(g, "⚠", "CanhBao", null);
-            Cot(g, "Số BV", "SoBanVe", "so_ban_ve");
-            Cot(g, "Tên", "Ten", "ten");
-            Cot(g, "M", "M", "M");
-            Cot(g, "Z", "Z", "Z");
-            Cot(g, "T", "T", "T");
-            Cot(g, "Q", "Q", "Q");
-            Cot(g, "Mặt", "Mat", "mat");
-            Cot(g, "Kích thước", "KichThuoc", "kich_thuoc");
-            g.Columns.Add(new DataGridComboBoxColumn
-            {
-                Header = "Kiểu TD", ItemsSource = new[] { "phang", "be", "lam_tay" }, SortMemberPath = "kieu_td",
-                SelectedItemBinding = new Binding("KieuTd") { Mode = BindingMode.TwoWay },
-            });
-            Cot(g, "Tiết diện X", "TdX", "td_x", 170);
-            Cot(g, "Tiết diện Y", "TdY", "td_y", 170);
-            Cot(g, "Ghi chú TD", "GhiChuTd", "ghi_chu_td", 180);
-            Cot(g, "Bẻ", "TomTatCanh", null);
-            Cot(g, "Lỗ", "TomTatLo", null);
-            Cot(g, "ケガキ", "TomTatKeGaki", null);
-            Cot(g, "Dim khách", "TomTatDimKhach", null);
-            Cot(g, "Dung sai", "DungSai", "dung_sai");
-            Cot(g, "Ghi chú (JP)", "GhiChuJp", "ghi_chu_jp", 220);
-            Cot(g, "Ghi chú (VI)", "GhiChuVi", "ghi_chu_vi", 220);
-            Cot(g, "Lý do sửa", "LyDoSua", "ly_do_sua", 180);
-            g.CellEditEnding += (s, e) =>
-            {
-                if (e.EditAction != DataGridEditAction.Commit || !(e.Row.Item is TamAi t)) return;
-                string o = e.Column.SortMemberPath;
-                bool theoDoi = o != "moi" && o != "ly_do_sua";
-                // Sự kiện chạy trước khi binding ghi giá trị mới → còn đọc được giá trị AI (lần sửa đầu của ô)
-                if (theoDoi && !t.DaSua.Contains(o) && !t.GiaTriAi.ContainsKey(o)) t.GiaTriAi[o] = PhongDocBanVe.Lay(t, o);
-                Dispatcher.BeginInvoke(new Action(() =>
+                var c = new StackPanel { Margin = new Thickness(12, 2, 0, 4) };
+                foreach (var kv in ghi) c.Children.Add(new TextBlock { Text = kv.Key + ":\n" + kv.Value.Trim(), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 4), FontWeight = FontWeights.Normal });
+                foreach (VanDe v in chung) c.Children.Add(DongVanDe(kt, v, sua));
+                string md = Path.Combine(AiDon.ThuMucHoSo(_tm), PhongHoSo.TepDon);
+                if (File.Exists(md)) c.Children.Add(NutNho("📄 Hồ sơ chung", true, () => { Mo(md); return false; }, null).Also(b => b.HorizontalAlignment = HorizontalAlignment.Left));
+                p.Children.Add(new Expander
                 {
-                    if (theoDoi)
-                    {
-                        if (t.GiaTriAi.TryGetValue(o, out string ai) && ai == PhongDocBanVe.Lay(t, o)) { t.DaSua.Remove(o); t.GiaTriAi.Remove(o); } // sửa về như AI đọc
-                        else { t.DaSua.Add(o); t.KhongChac.Remove(o); }
-                        if (o == "kieu_td" || o == "td_x" || o == "td_y") t.KhongChac.Remove("tiet_dien");
-                    }
-                    try
-                    {
-                        AiDon.Ghi(_tm, ct);
-                        VeVanDe(tn, ct, AiDon.KiemLuat(ct, _tm), chay); // luật chạy lại ngay sau mỗi ô sửa
-                    }
-                    catch (Exception ex) { _trangThai.Text = "Không lưu / kiểm được: " + ex.Message; }
-                }));
-            };
-            p.Children.Add(g);
-            p.Children.Add(Chu("Tiết diện: " + PhongTrienKhai.HuongDanTd + " Ô bạn sửa được ghi lại; khi ✓ Xác nhận, AI xem mình đọc sai ở đâu để rút bài học."));
+                    Header = new TextBlock { Text = "📋 Chung cả đơn" + (chung.Count(v => v.ConMo) > 0 ? " — " + chung.Count(v => v.ConMo) + " câu chưa xong" : ""), FontWeight = FontWeights.SemiBold },
+                    Content = c, IsExpanded = true, Margin = new Thickness(0, 6, 0, 0),
+                });
+            }
+
             _khungVanDe = new StackPanel();
             p.Children.Add(_khungVanDe);
             VeVanDe(tn, ct, kt, chay);
@@ -364,7 +338,173 @@ namespace TeamsTool.Views
             return The(TenPhong2, p);
         }
 
-        /// <summary>Danh sách vấn đề (luật + nghi vấn AI), bản nháp gửi khách, câu hỏi nội bộ, ✓ Xác nhận → Triển khai. Vẽ lại riêng sau mỗi ô sửa.</summary>
+        /// <summary>Một tấm: tiêu đề &lt;đơn&gt;-n · M · T · Q (+ ⚠, số câu chưa xong), nội dung: ảnh, ghi chú, câu hỏi, nút sửa / hồ sơ.</summary>
+        private UIElement TheTam(ChiTiet ct, KiemTra kt, TamAi t, string ten, List<VanDe> vd, bool sua, bool nuaRepeat)
+        {
+            var dau = new WrapPanel();
+            if (nuaRepeat)
+            {
+                var moi = new CheckBox { Content = "Mới", IsChecked = t.Moi, IsEnabled = sua, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
+                void DoiMoi() { t.Moi = moi.IsChecked == true; LuuTam(ct); Ve(); }
+                moi.Checked += (s, e) => DoiMoi();
+                moi.Unchecked += (s, e) => DoiMoi();
+                dau.Children.Add(moi);
+            }
+            dau.Children.Add(new TextBlock { Text = ten.Length > 0 ? ten : "(repeat)", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) });
+            dau.Children.Add(new TextBlock
+            {
+                Text = (t.M.Length > 0 ? t.M : "M?") + " · t" + (t.T.Length > 0 ? t.T : "?") + " · ×" + (t.Q.Length > 0 ? t.Q : "?") + (t.KichThuoc.Length > 0 ? " · " + t.KichThuoc : "")
+                       + (t.SoBanVe.Length > 0 ? " · BV " + t.SoBanVe : ""),
+                FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center,
+            });
+            if (t.KhongChac.Count > 0) dau.Children.Add(new TextBlock { Text = "  " + t.CanhBao, Foreground = KieuTeams.Mau("#B54708"), FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center });
+            int mo = vd.Count(v => v.ConMo && v.Muc != VanDe.ThongTin);
+            if (mo > 0)
+                dau.Children.Add(new TextBlock
+                {
+                    Text = "  ● " + mo + " câu chưa xong", FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = KieuTeams.Mau(vd.Any(v => v.ConMo && v.Muc == VanDe.Do) ? "#D92D20" : "#F79009"),
+                });
+
+            var than = new StackPanel { Margin = new Thickness(4, 4, 0, 6) };
+            string hs = AiDon.ThuMucHoSo(_tm), png = Path.Combine(hs, ten + ".png"), md = Path.Combine(hs, ten + ".md");
+            if (ten.Length > 0 && File.Exists(png))
+                try
+                {
+                    var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                    bmp.BeginInit();
+                    bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; // nhả tệp — cắt lại ghi đè được
+                    bmp.CreateOptions = System.Windows.Media.Imaging.BitmapCreateOptions.IgnoreImageCache;
+                    bmp.UriSource = new Uri(png);
+                    bmp.EndInit();
+                    var anh = new Image { Source = bmp, MaxHeight = 220, HorizontalAlignment = HorizontalAlignment.Left, Cursor = System.Windows.Input.Cursors.Hand, ToolTip = "Ảnh cắt từ bản vẽ khách — bấm để mở" };
+                    anh.MouseLeftButtonUp += (s, e) => Mo(png);
+                    than.Children.Add(new Border { Child = anh, BorderBrush = KieuTeams.Mau("#D0D5DD"), BorderThickness = new Thickness(1), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 4) });
+                }
+                catch (Exception) { } // ảnh hỏng: bỏ qua, hồ sơ vẫn có
+            if (t.GhiChuVi.Trim().Length > 0 || t.GhiChuJp.Trim().Length > 0)
+                than.Children.Add(new TextBlock
+                {
+                    Text = "Ghi chú đặc biệt: " + (t.GhiChuVi.Trim().Length > 0 ? t.GhiChuVi.Trim() : t.GhiChuJp.Trim()), TextWrapping = TextWrapping.Wrap,
+                    ToolTip = t.GhiChuJp, FontWeight = FontWeights.Normal, Margin = new Thickness(0, 0, 0, 4),
+                });
+            foreach (VanDe v in vd.OrderBy(v => v.ConMo ? 0 : 1).ThenBy(v => v.Muc == VanDe.Do ? 0 : v.Muc == VanDe.Vang ? 1 : 2))
+                than.Children.Add(DongVanDe(kt, v, sua));
+            var nut = new WrapPanel { Margin = new Thickness(0, 2, 0, 0) };
+            string khoa = t.Khoa;
+            nut.Children.Add(NutNho(_suaTam == khoa ? "✓ Xong sửa" : "✎ Sửa thông số", true, () => { _suaTam = _suaTam == khoa ? "" : khoa; Ve(); return false; }, null));
+            if (File.Exists(md)) nut.Children.Add(NutNho("📄 Hồ sơ " + ten + ".md", true, () => { Mo(md); return false; }, null));
+            than.Children.Add(nut);
+            if (_suaTam == khoa) than.Children.Add(KhungSua(ct, t, sua));
+
+            var ex = new Expander { Header = dau, Content = than, IsExpanded = !_dongTam.Contains(khoa), Margin = new Thickness(0, 2, 0, 0) };
+            ex.Expanded += (s, e) => _dongTam.Remove(khoa);
+            ex.Collapsed += (s, e) => _dongTam.Add(khoa);
+            return ex;
+        }
+
+        private static readonly (string Nhom, (string O, string Nhan)[] O)[] NhomO =
+        {
+            ("Bản vẽ khách", new[] { ("so_ban_ve", "Số BV"), ("ten", "Tên") }),
+            ("Thông số", new[] { ("M", "M (vật liệu)"), ("Z", "Z"), ("T", "T (độ dày)"), ("Q", "Q (số lượng)"), ("mat", "Mặt"), ("kich_thuoc", "Kích thước"), ("dung_sai", "Dung sai") }),
+            ("Tiết diện", new[] { ("kieu_td", "Kiểu"), ("td_x", "X"), ("td_y", "Y"), ("ghi_chu_td", "Ghi chú") }),
+            ("Mô tả & ghi chú", new[] { ("mo_ta", "Mô tả chi tiết"), ("ghi_chu_jp", "Ghi chú JP"), ("ghi_chu_vi", "Ghi chú VI") }),
+            ("Lý do sửa", new[] { ("ly_do_sua", "Lý do (không bắt buộc)") }),
+        };
+
+        /// <summary>
+        /// Khung ✎ Sửa thông số: các ô theo nhóm, ô AI không chắc tô vàng, ô đã sửa có ✎. Rời ô = lưu, nhớ giá trị AI (rút bài học),
+        /// chạy lại luật + ghi hồ sơ md (không vẽ lại cả khung để khỏi mất chỗ con trỏ — bấm ✓ Xong sửa để cập nhật danh sách).
+        /// </summary>
+        private UIElement KhungSua(ChiTiet ct, TamAi t, bool sua)
+        {
+            var luoi = new Grid { Margin = new Thickness(0, 6, 0, 0) };
+            luoi.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(130) });
+            luoi.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            int hang = 0;
+            void Them(UIElement nhan, UIElement o)
+            {
+                luoi.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                Grid.SetRow(nhan, hang);
+                luoi.Children.Add(nhan);
+                if (o == null) Grid.SetColumnSpan(nhan, 2);
+                else { Grid.SetRow(o, hang); Grid.SetColumn(o, 1); luoi.Children.Add(o); }
+                hang++;
+            }
+            foreach (var (nhom, cacO) in NhomO)
+            {
+                luoi.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                var tieuDe = new TextBlock { Text = nhom, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 6, 0, 2) };
+                Grid.SetRow(tieuDe, hang++); Grid.SetColumnSpan(tieuDe, 2);
+                luoi.Children.Add(tieuDe);
+                foreach (var (o, nhan) in cacO)
+                {
+                    string giaTri = o == "ly_do_sua" ? t.LyDoSua : PhongDocBanVe.Lay(t, o);
+                    var lbl = new TextBlock { Text = nhan + (t.DaSua.Contains(o) ? " ✎" : ""), FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center,
+                                              ToolTip = t.GiaTriAi.TryGetValue(o, out string ai) ? "AI đọc: " + ai : null };
+                    Brush nen = t.KhongChac.Contains(o) || (o.StartsWith("td_", StringComparison.Ordinal) && t.KhongChac.Contains("tiet_dien")) ? KieuTeams.Mau("#FFF6E0") : Brushes.White;
+                    Control oNhap;
+                    if (o == "kieu_td")
+                    {
+                        var cb = new ComboBox { ItemsSource = new[] { "phang", "be", "lam_tay" }, SelectedItem = giaTri, IsEnabled = sua, Margin = new Thickness(0, 1, 0, 1), HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 120 };
+                        cb.SelectionChanged += (s, e) => LuuO(ct, t, o, cb.SelectedItem as string ?? "");
+                        oNhap = cb;
+                    }
+                    else
+                    {
+                        bool dai = o == "mo_ta" || o.StartsWith("ghi_chu", StringComparison.Ordinal);
+                        var tb = new TextBox { Text = giaTri, IsReadOnly = !sua, Background = nen, Margin = new Thickness(0, 1, 0, 1), Padding = new Thickness(3, 1, 3, 1),
+                                               AcceptsReturn = dai, TextWrapping = dai ? TextWrapping.Wrap : TextWrapping.NoWrap, MaxHeight = dai ? 160 : double.PositiveInfinity,
+                                               VerticalScrollBarVisibility = dai ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled, FontWeight = FontWeights.Normal,
+                                               ToolTip = o.StartsWith("td_", StringComparison.Ordinal) ? PhongTrienKhai.HuongDanTd : null };
+                        tb.LostFocus += (s, e) => LuuO(ct, t, o, tb.Text.Trim());
+                        oNhap = tb;
+                    }
+                    Them(lbl, oNhap);
+                }
+            }
+            Them(new TextBlock
+            {
+                Text = "Chỉ xem: " + string.Join(" · ", new[] { t.TomTatCanh, t.TomTatLo, t.TomTatKeGaki, t.TomTatDimKhach }.Where(x => x.Length > 0).DefaultIfEmpty("không có bẻ / lỗ / ケガキ / dim khách")),
+                Foreground = KieuTeams.ChuPhu, FontWeight = FontWeights.Normal, Margin = new Thickness(0, 6, 0, 0), TextWrapping = TextWrapping.Wrap,
+                ToolTip = "bẻ " + t.CanhJson + "\nlỗ " + t.LoJson + "\nケガキ " + t.KeGakiJson + "\ndim khách " + t.DimKhachJson + "\n(chi tiết trong hồ sơ md)",
+            }, null);
+            return new Border { Child = luoi, Padding = new Thickness(8, 4, 8, 6), Background = KieuTeams.Mau("#F8F9FC"), CornerRadius = new CornerRadius(4), Margin = new Thickness(0, 4, 0, 0) };
+        }
+
+        /// <summary>Lưu một ô: nhớ giá trị AI lần sửa đầu, sửa về như AI thì bỏ dấu sửa; lưu JSON, chạy luật, ghi hồ sơ md.</summary>
+        private void LuuO(ChiTiet ct, TamAi t, string o, string moi)
+        {
+            if (o == "ly_do_sua")
+            {
+                if (moi == t.LyDoSua) return;
+                t.LyDoSua = moi;
+            }
+            else
+            {
+                string cu = PhongDocBanVe.Lay(t, o);
+                if (moi == cu) return;
+                if (!t.DaSua.Contains(o) && !t.GiaTriAi.ContainsKey(o)) t.GiaTriAi[o] = cu;
+                PhongDocBanVe.Dat(t, o, moi);
+                if (t.GiaTriAi.TryGetValue(o, out string ai) && ai == moi) { t.DaSua.Remove(o); t.GiaTriAi.Remove(o); }
+                else { t.DaSua.Add(o); t.KhongChac.Remove(o); }
+                if (o == "kieu_td" || o == "td_x" || o == "td_y") t.KhongChac.Remove("tiet_dien");
+            }
+            LuuTam(ct);
+        }
+
+        /// <summary>Lưu bảng tấm + chạy lại luật + ghi hồ sơ md.</summary>
+        private void LuuTam(ChiTiet ct)
+        {
+            try
+            {
+                AiDon.Ghi(_tm, ct);
+                AiDon.KiemLuat(ct, _tm, _d.Title);
+            }
+            catch (Exception ex) { _trangThai.Text = "Không lưu / kiểm được: " + ex.Message; }
+        }
+
+        /// <summary>Tóm tắt vấn đề, bản nháp gửi khách, câu hỏi nội bộ, kiểm lại, ✓ Xác nhận → Triển khai.</summary>
         private void VeVanDe(TiepNhan tn, ChiTiet ct, KiemTra kt, bool chay)
         {
             StackPanel p = _khungVanDe;
@@ -374,15 +514,6 @@ namespace TeamsTool.Views
             p.Children.Add(Chu(string.Format(CultureInfo.InvariantCulture, "● đỏ (chặn) {0} · ● vàng (xác nhận) {1} · ℹ ghi chú {2} — còn {3} mục đỏ chưa xử lý · kiểm lúc {4}{5}",
                 kt.VanDe.Count(v => v.Muc == VanDe.Do), kt.VanDe.Count(v => v.Muc == VanDe.Vang), kt.VanDe.Count(v => v.Muc == VanDe.ThongTin), kt.DoConMo, kt.Luc,
                 kt.Tien > 0 ? string.Format(CultureInfo.InvariantCulture, " · AI kiểm lại ≈ ${0:0.00}", kt.Tien) : "")));
-
-            foreach (var (nhom, ten) in NhomVanDe)
-            {
-                var ds = kt.VanDe.Where(v => v.Nhom == nhom).OrderBy(v => v.ConMo ? 0 : 1).ThenBy(v => v.Muc == VanDe.Do ? 0 : v.Muc == VanDe.Vang ? 1 : 2).ToList();
-                if (ds.Count == 0) continue;
-                p.Children.Add(new TextBlock { Text = ten + " (" + ds.Count(v => v.ConMo) + " / " + ds.Count + ")", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 8, 0, 2) });
-                foreach (VanDe v in ds) p.Children.Add(DongVanDe(kt, v, sua));
-            }
-            if (kt.VanDe.Count == 0) p.Children.Add(Chu("Không thấy vấn đề nào."));
 
             // Bản nháp gửi khách + câu hỏi nội bộ
             foreach (bool lienLac in new[] { false, true })
@@ -517,13 +648,18 @@ namespace TeamsTool.Views
             }
             KetQuaTrienKhai kq;
             List<(TamAi Tam, TamTrienKhai Tk)> ds;
-            try { kq = AiDon.TaoTrienKhai(ct, _tm); ds = AiDon.TinhLai(ct, kq, _d.Title, _tm); }
+            try
+            {
+                kq = AiDon.TaoTrienKhai(ct, _tm);
+                ds = AiDon.TinhLai(ct, kq, _d.Title, _tm);
+                AiDon.GhiHoSo(ct, AiDon.DocKiemTra(_tm), _tm, _d.Title, ds); // hồ sơ thêm mục trải phẳng
+            }
             catch (Exception ex) { p.Children.Add(Chu("Không tính được: " + ex.Message, true)); return The(TenPhong3, p); }
 
             int thieu = ct.Tam.Count(t => t.Moi && !PhongTrienKhai.CoTietDien(t));
             if (thieu > 0)
             {
-                p.Children.Add(Chu(thieu + " tấm đọc bằng bản cũ, chưa có tiết diện — AI đọc bù (hoặc ↩ Bỏ xác nhận rồi nhập cột Tiết diện X / Y ở phòng 2).", true));
+                p.Children.Add(Chu(thieu + " tấm đọc bằng bản cũ, chưa có tiết diện — AI đọc bù (hoặc ↩ Bỏ xác nhận rồi ✎ Sửa thông số → Tiết diện X / Y ở phòng 2).", true));
                 p.Children.Add(KieuTeams.Nut("🤖 AI đọc bù tiết diện", _mau, (s, e) => Chay(4, false)).Also(b => { b.IsEnabled = !chay; b.HorizontalAlignment = HorizontalAlignment.Left; }));
             }
             p.Children.Add(Chu(string.Format(CultureInfo.InvariantCulture, "{0} tấm · {1} làm tay · {2} tấm có cảnh báo{3}",
@@ -679,7 +815,7 @@ namespace TeamsTool.Views
             {
                 if (traLoi.Text.Trim() == v.TraLoi) return;
                 v.TraLoi = traLoi.Text.Trim();
-                try { AiDon.Ghi(_tm, kt); } catch (IOException ex) { _trangThai.Text = "Không lưu được câu trả lời: " + ex.Message; }
+                try { LuuKt(kt); } catch (IOException ex) { _trangThai.Text = "Không lưu được câu trả lời: " + ex.Message; }
             }
             traLoi.LostFocus += (s, e) => LuuTraLoi();
             traLoi.Unloaded += (s, e) => LuuTraLoi(); // đóng khung / vẽ lại khi con trỏ còn trong ô
@@ -715,25 +851,22 @@ namespace TeamsTool.Views
 
         private Button NutNho(string chu, bool bat, Action lam, KiemTra kt) => NutNho(chu, bat, () => { lam(); return true; }, kt);
 
+        /// <summary>Lưu kiem_tra.json (trạng thái / câu trả lời) + ghi lại hồ sơ md — câu trả lời vào hồ sơ tấm cho phòng 3.</summary>
+        private void LuuKt(KiemTra kt)
+        {
+            if (kt == null) return;
+            AiDon.Ghi(_tm, kt);
+            ChiTiet ct = AiDon.DocChiTiet(_tm);
+            if (ct != null) AiDon.GhiHoSo(ct, kt, _tm, _d.Title);
+        }
+
         private Button NutNho(string chu, bool bat, Func<bool> lam, KiemTra kt)
         {
-            Button b = KieuTeams.Nut(chu, _mau, (s, e) => { if (lam()) { AiDon.Ghi(_tm, kt); Ve(); } }, chinh: false);
+            Button b = KieuTeams.Nut(chu, _mau, (s, e) => { if (lam()) { LuuKt(kt); Ve(); } }, chinh: false);
             b.IsEnabled = bat;
             b.Padding = new Thickness(8, 1, 8, 1);
             b.FontSize = 11;
             return b;
-        }
-
-        /// <summary>o = tên ô JSON (null = chỉ xem) — giữ ở SortMemberPath để biết ô nào người dùng sửa.</summary>
-        private static void Cot(DataGrid g, string tieuDe, string thuocTinh, string o, double rong = double.NaN)
-        {
-            var c = new DataGridTextColumn
-            {
-                Header = tieuDe, Binding = new Binding(thuocTinh) { Mode = o == null ? BindingMode.OneWay : BindingMode.TwoWay },
-                IsReadOnly = o == null, SortMemberPath = o ?? thuocTinh,
-            };
-            if (!double.IsNaN(rong)) c.Width = rong;
-            g.Columns.Add(c);
         }
 
         // ---------- tiện ích ----------

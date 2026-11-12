@@ -2,6 +2,7 @@
 
     python ve.py --kiem                 → {"python", "ezdxf", "matplotlib"}  (ezdxf thiếu → "ezdxf": null)
     python ve.py --thu-vien DIR [DIR…]  → [{"ten", "mo_ta", "tep"}]  mẫu biên dạng (thư mục sau đè thư mục trước)
+    python ve.py --cat-anh ANH.json     → [{"ra", "loi"}]  cắt ảnh tấm từ bản vẽ khách (PDF: PyMuPDF; DXF: ezdxf)
     python ve.py VIEC.json              → {"ket_qua": [{"bango", "tep", "anh", "loi", "thieu_dim"}]}
 
 VIEC.json (OhtaTeams ghi): {"moi_truong": dxf, "thu_muc_ra": dir, "thu_vien": [dir…],
@@ -27,7 +28,12 @@ def in_json(o):
 
 
 def kiem():
-    kq = {"python": sys.executable, "ezdxf": None, "matplotlib": False}
+    kq = {"python": sys.executable, "ezdxf": None, "matplotlib": False, "pymupdf": False}
+    try:
+        import fitz  # noqa: F401 — PyMuPDF: cắt ảnh tấm từ PDF khách
+        kq["pymupdf"] = True
+    except ImportError:
+        pass
     try:
         import ezdxf
         kq["ezdxf"] = ezdxf.__version__
@@ -188,6 +194,43 @@ def ve_tam(viec, t, mau, so_tay, co_anh):
     return tep, anh, thieu
 
 
+LE_ANH = 0.03  # nới vùng tấm 3% mỗi bên
+
+
+def cat_anh(tep_viec):
+    """ANH.json: [{"nguon": pdf / dxf, "trang": 1, "vung": {"x0", "y0", "x1", "y1"} tỉ lệ 0–1 gốc trái trên (rỗng = cả trang), "ra": png}]."""
+    with open(tep_viec, encoding="utf-8") as f:
+        ds = json.load(f)
+    kq = []
+    for v in ds:
+        try:
+            vg = v.get("vung") or {}
+            hop = None
+            if vg:
+                hop = (max(0.0, float(vg["x0"]) - LE_ANH), max(0.0, float(vg["y0"]) - LE_ANH),
+                       min(1.0, float(vg["x1"]) + LE_ANH), min(1.0, float(vg["y1"]) + LE_ANH))
+            if v["nguon"].lower().endswith(".pdf"):
+                import fitz
+                with fitz.open(v["nguon"]) as d:
+                    trang = d[min(max(int(v.get("trang") or 1), 1), d.page_count) - 1]
+                    r = trang.rect
+                    vung = r if hop is None else fitz.Rect(r.x0 + r.width * hop[0], r.y0 + r.height * hop[1], r.x0 + r.width * hop[2], r.y0 + r.height * hop[3])
+                    trang.get_pixmap(dpi=200, clip=vung).save(v["ra"])
+            else:
+                import ezdxf
+                from ezdxf.addons.drawing import matplotlib as dm
+                dm.qsave(ezdxf.readfile(v["nguon"]).modelspace(), v["ra"], bg="#FFFFFF", dpi=150)
+                if hop is not None:
+                    from PIL import Image
+                    with Image.open(v["ra"]) as a:
+                        w, h = a.size
+                        a.crop((int(w * hop[0]), int(h * hop[1]), int(w * hop[2]), int(h * hop[3]))).save(v["ra"])
+            kq.append({"ra": v["ra"], "loi": None})
+        except Exception as ex:
+            kq.append({"ra": v.get("ra"), "loi": "%s: %s" % (type(ex).__name__, ex)})
+    return kq
+
+
 def ve_viec(tep_viec):
     with open(tep_viec, encoding="utf-8") as f:
         viec = json.load(f)
@@ -218,6 +261,8 @@ def ve_viec(tep_viec):
 def main(argv):
     if len(argv) > 1 and argv[1] == "--kiem":
         in_json(kiem())
+    elif len(argv) > 2 and argv[1] == "--cat-anh":
+        in_json(cat_anh(argv[2]))
     elif len(argv) > 1 and argv[1] == "--thu-vien":
         ds = []
         for ten, tep in sorted(cac_mau(argv[2:]).items()):

@@ -22,6 +22,8 @@ namespace TeamsTool.Core
         public string DungSai { get; set; } = "";
         public string GhiChuJp { get; set; } = "";
         public string GhiChuVi { get; set; } = "";
+        /// <summary>Mô tả chi tiết hình tấm (AI viết lúc đọc) — vào hồ sơ md, phòng 3 dùng khi AI viết mẫu vẽ.</summary>
+        public string MoTa { get; set; } = "";
         /// <summary>Đơn nửa repeat: tấm mới (phòng 3–4 chỉ chạy tấm được tích).</summary>
         public bool Moi { get; set; } = true;
         /// <summary>Tiết diện (đọc cùng lượt đọc bản vẽ): phang / be / lam_tay; "" = tấm đọc bằng bản cũ, chưa có tiết diện.</summary>
@@ -37,6 +39,8 @@ namespace TeamsTool.Core
         public string CanhJson = "[]", LoJson = "[]";
         /// <summary>Dấu khắc vạch ケガキ / マーキング: [{x, y}] mm trên hình trải phẳng, gốc góc trái dưới.</summary>
         public string KeGakiJson = "[]";
+        /// <summary>Vùng của tấm trên trang (tỉ lệ 0–1, gốc trái trên): {"x0","y0","x1","y1"} — cắt ảnh tấm; "" = chưa có.</summary>
+        public string VungJson = "";
         /// <summary>Kích thước khách ghi trên bản vẽ còn đúng trên hình trải phẳng: [{loai, gia_tri, tu, den}] — bản vẽ phải dim đủ.</summary>
         public string DimKhachJson = "[]";
         public HashSet<string> KhongChac = new HashSet<string>(); // ô AI không chắc / AI tự chọn
@@ -72,6 +76,8 @@ namespace TeamsTool.Core
         public string XacNhan = "";
         /// <summary>Nghi vấn AI thấy khi đọc bản vẽ (Nguon = "doc") — phòng Kiểm tra gộp với luật.</summary>
         public List<VanDe> NghiVan = new List<VanDe>();
+        /// <summary>Tệp bản vẽ → ghi chú chung cả đơn AI đọc được trên tệp đó (lời nhắn, yêu cầu chung) — ho_so\_don.md.</summary>
+        public Dictionary<string, string> GhiChuDon = new Dictionary<string, string>();
         /// <summary>Bài học AI đề xuất từ chỗ người sửa (chờ Admin duyệt) + chữ ký các chỗ sửa đã gửi rút bài học.</summary>
         public List<DeXuatBaiHoc> BaiHoc = new List<DeXuatBaiHoc>();
         public HashSet<string> DaRutBaiHoc = new HashSet<string>();
@@ -81,7 +87,7 @@ namespace TeamsTool.Core
     public static class PhongDocBanVe
     {
         /// <summary>Các ô chữ (tên JSON ↔ thuộc tính).</summary>
-        public static readonly string[] O = { "so_ban_ve", "ten", "M", "Z", "T", "Q", "mat", "kich_thuoc", "dung_sai", "ghi_chu_jp", "ghi_chu_vi" };
+        public static readonly string[] O = { "so_ban_ve", "ten", "M", "Z", "T", "Q", "mat", "kich_thuoc", "dung_sai", "ghi_chu_jp", "ghi_chu_vi", "mo_ta" };
         /// <summary>Ô chữ của tiết diện (lưu chi_tiet.json; AI trả dạng cấu trúc x / y, đổi sang chữ khi đọc).</summary>
         public static readonly string[] OTd = { "kieu_td", "td_x", "td_y", "ghi_chu_td", "bien_dang", "mo_ta_bien_dang" };
 
@@ -93,7 +99,7 @@ namespace TeamsTool.Core
                 case "bien_dang": return t.BienDang; case "mo_ta_bien_dang": return t.MoTaBienDang;
                 case "so_ban_ve": return t.SoBanVe; case "ten": return t.Ten; case "M": return t.M; case "Z": return t.Z;
                 case "T": return t.T; case "Q": return t.Q; case "mat": return t.Mat; case "kich_thuoc": return t.KichThuoc;
-                case "dung_sai": return t.DungSai; case "ghi_chu_jp": return t.GhiChuJp; case "ghi_chu_vi": return t.GhiChuVi;
+                case "dung_sai": return t.DungSai; case "ghi_chu_jp": return t.GhiChuJp; case "ghi_chu_vi": return t.GhiChuVi; case "mo_ta": return t.MoTa;
                 default: return "";
             }
         }
@@ -107,7 +113,7 @@ namespace TeamsTool.Core
                 case "bien_dang": t.BienDang = v; break; case "mo_ta_bien_dang": t.MoTaBienDang = v; break;
                 case "so_ban_ve": t.SoBanVe = v; break; case "ten": t.Ten = v; break; case "M": t.M = v; break; case "Z": t.Z = v; break;
                 case "T": t.T = v; break; case "Q": t.Q = v; break; case "mat": t.Mat = v; break; case "kich_thuoc": t.KichThuoc = v; break;
-                case "dung_sai": t.DungSai = v; break; case "ghi_chu_jp": t.GhiChuJp = v; break; case "ghi_chu_vi": t.GhiChuVi = v; break;
+                case "dung_sai": t.DungSai = v; break; case "ghi_chu_jp": t.GhiChuJp = v; break; case "ghi_chu_vi": t.GhiChuVi = v; break; case "mo_ta": t.MoTa = v; break;
             }
         }
 
@@ -155,6 +161,7 @@ namespace TeamsTool.Core
                 x.Set("canh", SafeParse(t.CanhJson));
                 x.Set("lo", SafeParse(t.LoJson));
                 x.Set("ke_gaki", SafeParse(t.KeGakiJson));
+                if (!string.IsNullOrEmpty(t.VungJson)) x.Set("vung", SafeParse(t.VungJson));
                 x.Set("dim_khach", SafeParse(t.DimKhachJson));
                 x.Set("moi", t.Moi);
                 x.Set("khong_chac", t.KhongChac.OrderBy(s => s).Cast<object>().ToList());
@@ -165,6 +172,9 @@ namespace TeamsTool.Core
                 return (object)x;
             }).ToList());
             o.Set("nghi_van", ct.NghiVan.Select(v => (object)PhongKiemTra.GhiVanDe(v)).ToList());
+            var gcd = new JsonObject();
+            foreach (var kv in ct.GhiChuDon) gcd.Set(kv.Key, kv.Value);
+            o.Set("ghi_chu_don", gcd);
             o.Set("bai_hoc", ct.BaiHoc.Select(b => (object)PhongBaiHoc.GhiDeXuat(b)).ToList());
             o.Set("da_rut_bai_hoc", ct.DaRutBaiHoc.OrderBy(s => s).Cast<object>().ToList());
             return JsonLite.Serialize(o);
@@ -189,6 +199,7 @@ namespace TeamsTool.Core
                     foreach (var kv in ai.Items) t.GiaTriAi[kv.Key] = Chu(kv.Value);
                 ct.Tam.Add(t);
             }
+            if (o.Get("ghi_chu_don") is JsonObject g) foreach (var kv in g.Items) ct.GhiChuDon[kv.Key] = Chu(kv.Value);
             foreach (JsonObject x in (o.Get("nghi_van") as List<object> ?? new List<object>()).OfType<JsonObject>()) ct.NghiVan.Add(PhongKiemTra.DocVanDe(x));
             foreach (JsonObject x in (o.Get("bai_hoc") as List<object> ?? new List<object>()).OfType<JsonObject>()) ct.BaiHoc.Add(PhongBaiHoc.DocDeXuat(x));
             ct.DaRutBaiHoc.UnionWith(DsChu(o.Get("da_rut_bai_hoc")));
@@ -256,7 +267,7 @@ namespace TeamsTool.Core
 - canh: mỗi chỗ bẻ / nhấn / cuộn: dai_ngoai = các kích thước ngoài hai cạnh kề (mm), goc (độ), r_trong (mm, 0 nếu không ghi), kieu (be / an_1_lan / pitchi / cuon / khac), huong (V hoặc N, rỗng nếu không rõ).
 - lo: mỗi nhóm lỗ: d (Ø mm), so_luong, taro (vd ""M6"" nếu là lỗ ren, rỗng nếu không), sara (true nếu là lỗ 皿), ghi_chu, cach_duong_be = khoảng cách nhỏ nhất (mm) từ MÉP lỗ tới đường bẻ gần nhất, tính từ kích thước ghi trên bản vẽ (-1 nếu tấm không bẻ hoặc không tính được).
 - mat: bề mặt đặc biệt (HL, #400, 縞板/sima, ミガキ…), rỗng nếu thường. dung_sai: các dung sai ghi trên bản vẽ.
-- ghi_chu_jp: ghi chú tiếng Nhật giữ nguyên chữ; ghi_chu_vi: dịch sang tiếng Việt, ngắn gọn.
+- ghi_chu_jp: ghi chú tiếng Nhật CỦA RIÊNG tấm này, giữ nguyên chữ (lời nhắn / yêu cầu chung cả đơn đưa vào ghi_chu_don, không lặp ở đây); ghi_chu_vi: dịch sang tiếng Việt, ngắn gọn.
 - trang: số trang PDF chứa tấm (1 = trang đầu); DXF để rỗng.
 - khong_chac: tên các ô bạn đọc không chắc hoặc tự chọn (so_ban_ve, ten, M, Z, T, Q, mat, kich_thuoc, dung_sai, canh, lo, tiet_dien). Không bịa: không đọc được thì để rỗng và đưa vào khong_chac.
 - Trang không phải bản vẽ chi tiết (đơn đặt hàng, email, bảng kê) → không tạo tấm cho trang đó.
@@ -269,8 +280,12 @@ TIẾT DIỆN của mỗi tấm (để trải phẳng — KHÔNG tự tính tr�
   · Hướng không uốn: một doan = chiều dài phẳng theo hướng đó, uon rỗng. Tấm phẳng: x = [dài], y = [rộng]. Hộp 3–4 cạnh: x và y đều có tiết diện (thành – đáy – thành).
 - ghi_chu_td: tiếng Việt, ngắn (hướng bẻ V / N, chỗ chưa chắc). Không đọc được tiết diện → doan rỗng, ghi lý do, thêm tiet_dien vào khong_chac.
 - ke_gaki: mỗi dấu khắc vạch (マーキング / ケガキ / 罫書き — dấu vạch, KHÔNG phải lỗ): x, y = toạ độ tâm (mm) trên hình TRẢI PHẲNG, gốc ở góc trái dưới của tấm, x theo hướng tiết diện x; không có → rỗng. Bản vẽ chỉ ghi số dấu mà thiếu vị trí → để rỗng và hỏi trong van_de.
+- vung: khung bao TRỌN hình vẽ của tấm trên trang PDF (mọi hình chiếu + dim + ghi chú của tấm, không gồm khung tên / ghi chú chung), tỉ lệ 0–1 theo bề rộng / cao trang, gốc trái TRÊN (x0, y0 = góc trái trên; x1, y1 = góc phải dưới). DXF: theo khung bao bản vẽ.
+- mo_ta: tiếng Việt, mô tả CHI TIẾT hình tấm đủ để người khác vẽ lại không cần xem bản vẽ: hình dạng tổng thể, từng cạnh / cung (R, lõm / lồi, vị trí), lỗ (Ø, số, vị trí), ケガキ, chỗ bẻ (hướng, góc), chi tiết đặc biệt. Chỉ điều có trên bản vẽ, không suy đoán.
 - dim_khach: MỌI kích thước khách ghi trên bản vẽ của tấm mà còn đúng nguyên trên hình TRẢI PHẲNG (tấm phẳng: tất cả; tấm bẻ: kích thước nằm trong mặt phẳng tấm — song song đường bẻ, vị trí lỗ / ケガキ trên cùng một mặt; KHÔNG gồm kích thước ngoài qua chỗ bẻ). loai: ngang (theo x) / doc (theo y) / r (bán kính) / phi (đường kính lỗ) / goc (độ); gia_tri đúng số khách ghi; tu, den = toạ độ hai đầu trên hình trải phẳng (ngang: x, doc: y, gốc góc trái dưới; r: tu, den = tâm x, y; phi / goc: 0). Bản vẽ OHTA phải dim đủ các kích thước này.
 - bien_dang: tên đúng MỘT mẫu trong ""Thư viện biên dạng"" (phần người dùng) khớp hình trải phẳng; làm tay → rỗng; không mẫu nào khớp → ""chua_co"". mo_ta_bien_dang: chỉ khi chua_co — mô tả hình trải phẳng (viền, góc cắt, đường bẻ, lỗ / rãnh đặc biệt) đủ để viết mẫu vẽ mới; còn lại rỗng.
+
+GHI CHÚ CHUNG (ghi_chu_don, cho cả tệp): lời nhắn / yêu cầu chung của khách không thuộc riêng tấm nào (vd ""t=12mm切り板～2枚"", ""下図の手配をお願いします"", yêu cầu đóng gói, hạn) — giữ chữ gốc, mỗi ý một dòng kèm dịch tiếng Việt ngắn trong ngoặc; không có → rỗng.
 
 NGHI VẤN (van_de, cho cả tệp): vấn đề có thật trên bản vẽ cần hỏi / xác nhận trước khi triển khai, theo QUY CHUẨN — không bịa:
 - Thiếu kích thước cần để triển khai (bao, cạnh bẻ, vị trí lỗ, góc), kích thước cộng không khớp tổng.
@@ -340,10 +355,11 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             tt.Add(("kieu_td", kieuTd)); tt.Add(("x", td)); tt.Add(("y", td));
             tt.Add(("ghi_chu_td", s)); tt.Add(("bien_dang", s)); tt.Add(("mo_ta_bien_dang", s));
             tt.Add(("ke_gaki", Mang(Obj(("x", n), ("y", n)))));
+            tt.Add(("vung", Obj(("x0", n), ("y0", n), ("x1", n), ("y1", n))));
             JsonObject loaiDim = Kieu("string");
             loaiDim.Set("enum", new List<object> { "ngang", "doc", "r", "phi", "goc" });
             tt.Add(("dim_khach", Mang(Obj(("loai", loaiDim), ("gia_tri", n), ("tu", n), ("den", n)))));
-            return Obj(("tam", Mang(Obj(tt.ToArray()))), ("van_de", Mang(PhongKiemTra.SchemaVanDe())));
+            return Obj(("tam", Mang(Obj(tt.ToArray()))), ("van_de", Mang(PhongKiemTra.SchemaVanDe())), ("ghi_chu_don", s));
         }
 
         /// <summary>Kết quả đọc phản hồi: tấm (Tep gán bên ngoài), nghi vấn, token, lỗi (null = được).</summary>
@@ -351,6 +367,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
         {
             public List<TamAi> Tam = new List<TamAi>();
             public List<VanDe> VanDe = new List<VanDe>();
+            public string GhiChuDon = "";
             public long Vao, GhiCache, DocCache, Ra;
             public string Loi;
         }
@@ -388,6 +405,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             if (!(nd?.Get("tam") is List<object> ds)) { kq.Loi = "Phản hồi AI không đúng mẫu"; return kq; }
             foreach (JsonObject x in ds.OfType<JsonObject>()) kq.Tam.Add(DocTam(x));
             if (nd.Get("van_de") is List<object> vd) kq.VanDe = PhongKiemTra.DocDsVanDe(vd, tenTep, "doc");
+            kq.GhiChuDon = (nd.GetString("ghi_chu_don") ?? "").Trim();
             return kq;
         }
 
@@ -417,6 +435,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             t.CanhJson = JsonLite.Serialize(x.Get("canh") as List<object> ?? new List<object>());
             t.LoJson = JsonLite.Serialize(x.Get("lo") as List<object> ?? new List<object>());
             t.KeGakiJson = JsonLite.Serialize(x.Get("ke_gaki") as List<object> ?? new List<object>());
+            t.VungJson = x.Get("vung") is JsonObject vg ? JsonLite.Serialize(vg) : "";
             t.DimKhachJson = JsonLite.Serialize(x.Get("dim_khach") as List<object> ?? new List<object>());
             t.KhongChac.UnionWith(DsChu(x.Get("khong_chac")));
             return t;

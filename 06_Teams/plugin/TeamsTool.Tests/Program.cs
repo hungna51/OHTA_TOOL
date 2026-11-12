@@ -131,15 +131,36 @@ namespace TeamsTool.Tests
             var tamF = new TamAi { M = "SS400", T = "12", Q = "2", Z = "SS400" };
             Kiem("fname: N= bango, T=12.0", string.Join(",", PhongTrienKhai.DongFname(tamF, new TamTrienKhai(), "test-1")), "N=test-1,M=SS400,T=12.0,Q=2,Z=SS400");
             tamF.T = "1.6"; tamF.SoBanVe = "A-1";
-            Kiem("fname: so BV truoc bango, T=1.6 giu", string.Join(",", PhongTrienKhai.DongFname(tamF, new TamTrienKhai(), "x-1").Take(3)), "N=A-1,M=SS400,T=1.6");
+            Kiem("fname: N= luon ten tam (khong lay so BV), T=1.6 giu", string.Join(",", PhongTrienKhai.DongFname(tamF, new TamTrienKhai(), "x-1").Take(3)), "N=x-1,M=SS400,T=1.6");
             tamK.Moi = true;
             tamK.DimKhachJson = "[{\"loai\":\"ngang\",\"gia_tri\":120,\"tu\":0,\"den\":120}]";
             Kiem("dim khach: luu + tom tat + schema", PhongDocBanVe.Doc(PhongDocBanVe.Ghi(new ChiTiet { Tam = { tamK } })).Tam[0].TomTatDimKhach + "|"
                  + PhongDocBanVe.Body("claude-opus-5-5", "d", "q", "A.pdf", null, null).Contains("\"dim_khach\""), "1 dim|True");
+            // Hồ sơ tấm (12/11): đánh số <đơn>-n chỉ tấm Mới, câu hỏi theo tấm, md có ảnh / mô tả / trả lời, _don.md
+            var a1 = new TamAi { Tep = "a.pdf", SoBanVe = "A1", M = "SS400", T = "3.2", Q = "1", MoTa = "Tấm L" };
+            var rp = new TamAi { Tep = "a.pdf", SoBanVe = "A2", Moi = false };
+            var b1 = new TamAi { Tep = "b.pdf", Ten = "Nắp", VungJson = "{\"x0\":0.1,\"y0\":0.1,\"x1\":0.5,\"y1\":0.5}" };
+            var ctH = new ChiTiet { Tam = { a1, rp, b1 } };
+            ctH.GhiChuDon["a.pdf"] = "下図の手配をお願いします";
+            Kiem("ho so: danh so tam Moi", string.Join(",", PhongHoSo.DanhSo(ctH, "D").Select(x => x.Tam.SoBanVe + x.Tam.Ten + "=" + x.Ten)), "A1=D-1,Nắp=D-2");
+            var vLuat = new VanDe { Ma = "luat|" + a1.Khoa + "|thieu_q", NoiDung = "Thiếu Q" };
+            var vTen = new VanDe { Ma = "ai|a.pdf|a1|x", Tam = "A1", NoiDung = "Lỗ?" };
+            var vMotTep = new VanDe { Ma = "ai|b.pdf||y", Tam = "", NoiDung = "R?" };
+            var vChung = new VanDe { Ma = "ai|c.pdf||z", Tam = "", NoiDung = "Hạn giao?" }; // tệp không có tấm nào → chung
+            Kiem("ho so: cau hoi thuoc tam (luat / ten / tep 1 tam / chung)",
+                 PhongHoSo.CuaTam(vLuat, a1, ctH) + "|" + PhongHoSo.CuaTam(vLuat, b1, ctH) + "|" + PhongHoSo.CuaTam(vTen, a1, ctH) + "|" + PhongHoSo.CuaTam(vMotTep, b1, ctH) + "|" + PhongHoSo.CuaTam(vChung, a1, ctH),
+                 "True|False|True|True|False");
+            vTen.TraLoi = "Ø10"; vTen.TrangThai = VanDe.Xong;
+            string md = PhongHoSo.Md("D-1", a1, new[] { vTen }, null, "D-1.png");
+            Kiem("ho so md: anh + mo ta + tra loi", md.Contains("![D-1](D-1.png)") + "|" + md.Contains("Tấm L") + "|" + md.Contains("Trả lời: Ø10") + "|" + md.Contains("Đã xử lý"), "True|True|True|True");
+            string mdDon = PhongHoSo.MdDon("D", "", ctH, new[] { vChung });
+            Kiem("ho so _don: ghi chu chung + cau chung + cac tam", mdDon.Contains("下図の手配") + "|" + mdDon.Contains("Hạn giao?") + "|" + mdDon.Contains("D-1, D-2"), "True|True|True");
+            Kiem("doc lai: vung + mo ta giu", PhongDocBanVe.Doc(PhongDocBanVe.Ghi(ctH)).Tam[2].VungJson.Contains("0.5") + "|" + PhongDocBanVe.Doc(PhongDocBanVe.Ghi(ctH)).Tam[0].MoTa + "|"
+                 + PhongDocBanVe.Doc(PhongDocBanVe.Ghi(ctH)).GhiChuDon["a.pdf"], "True|Tấm L|下図の手配をお願いします");
             var tkK = PhongTrienKhai.TuTam(tamK);
             tkK.XPhang = 80; tkK.YPhang = 200;
             string viec = PhongTrienKhai.ViecVe("test", new List<(TamAi, TamTrienKhai)> { (tamK, tkK) }, "m.dxf", "ra", new[] { "tv" });
-            Kiem("viec ve: ke_gaki + N=so BV", System.Text.RegularExpressions.Regex.Replace(viec, @"\s", "").Contains("\"ke_gaki\":[[120,27.5]]") + "|" + viec.Contains("N=A-1") + "|"
+            Kiem("viec ve: ke_gaki + N=ten tam", System.Text.RegularExpressions.Regex.Replace(viec, @"\s", "").Contains("\"ke_gaki\":[[120,27.5]]") + "|" + viec.Contains("N=test-1") + "|"
                  + System.Text.RegularExpressions.Regex.Replace(viec, @"\s", "").Contains("\"dim_khach\":[{\"loai\":\"ngang\",\"gia_tri\":120"), "True|True|True");
         }
 

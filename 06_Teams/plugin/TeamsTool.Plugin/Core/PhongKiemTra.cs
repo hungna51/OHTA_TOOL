@@ -164,14 +164,14 @@ namespace TeamsTool.Core
                 // Ô AI chưa chắc (người dùng chưa sửa)
                 var chuaChac = t.KhongChac.Where(k => !t.DaSua.Contains(k)).OrderBy(k => k).ToList();
                 if (chuaChac.Count > 0)
-                    Them("khong_chac", VanDe.Vang, VanDe.NoiBo, "", "AI chưa chắc ô: " + string.Join(", ", chuaChac) + " — đối chiếu lại bản vẽ (sửa ở bảng).");
+                    Them("khong_chac", VanDe.Vang, VanDe.NoiBo, "", "AI chưa chắc ô: " + string.Join(", ", chuaChac) + " — đối chiếu lại bản vẽ (✎ Sửa thông số của tấm).");
 
                 // Tiết diện (đọc cùng lượt đọc bản vẽ; KieuTd rỗng = đọc bằng bản cũ → phòng Triển khai đọc bù)
                 foreach (var (chu, huong) in new[] { (t.TdX, "X"), (t.TdY, "Y") })
                     if (chu.Trim().Length > 0 && PhongTrienKhai.DocChuTd(chu, out string loiTd) == null)
-                        Them("td_sai_" + huong, VanDe.Do, VanDe.TuXuLy, "", "Tiết diện " + huong + " viết sai: " + loiTd + " — sửa ở cột Tiết diện " + huong + ".");
+                        Them("td_sai_" + huong, VanDe.Do, VanDe.TuXuLy, "", "Tiết diện " + huong + " viết sai: " + loiTd + " — ✎ Sửa thông số → Tiết diện " + huong + ".");
                 if (t.KieuTd.Length > 0 && t.KieuTd != "lam_tay" && t.TdX.Trim().Length == 0 && t.TdY.Trim().Length == 0)
-                    Them("thieu_td", VanDe.Vang, VanDe.TuXuLy, "", "Chưa có tiết diện — nhập cột Tiết diện X / Y để trải phẳng.");
+                    Them("thieu_td", VanDe.Vang, VanDe.TuXuLy, "", "Chưa có tiết diện — ✎ Sửa thông số → Tiết diện X / Y để trải phẳng.");
 
                 double? T = So(t.T), Q = So(t.Q);
                 if (T == null || T <= 0) Them("thieu_t", VanDe.Do, VanDe.Khach, "II.1", "Bản vẽ không ghi / không đọc được độ dày T.");

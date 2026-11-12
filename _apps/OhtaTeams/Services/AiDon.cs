@@ -382,12 +382,17 @@ namespace TeamsTool.Services
                 foreach (TamAi tam in ph.Tam) tam.Tep = t.Ten;
                 moi.AddRange(ph.Tam);
                 nghiVan.AddRange(ph.VanDe);
+                ct2.GhiChuDon[t.Ten] = ph.GhiChuDon;
                 docLai.Add(t.Ten);
                 ct2.MaBamDaDoc[t.Ten] = t.MaBam;
             }
             // Tệp đã bị bỏ khỏi đơn / đổi sang loại khác → bỏ tấm của nó
             var conLai = new HashSet<string>(tn.Tep.Where(t => t.Loai == PhongTiepNhan.BanVe).Select(t => t.Ten));
             ct2.Tam = PhongDocBanVe.Gop(cu.Tam.Where(x => conLai.Contains(x.Tep)).ToList(), moi, docLai);
+            // Thứ tự bản vẽ như danh sách tệp, trong bản vẽ giữ thứ tự AI đọc → tên tấm <đơn>-n đánh theo thứ tự này (OrderBy giữ ổn định)
+            var thuTu = tn.Tep.Select((t, i) => (t.Ten, i)).GroupBy(x => x.Ten).ToDictionary(g => g.Key, g => g.First().i);
+            ct2.Tam = ct2.Tam.OrderBy(x => thuTu.TryGetValue(x.Tep, out int i) ? i : int.MaxValue).ToList();
+            foreach (var kv in cu.GhiChuDon.Where(kv => conLai.Contains(kv.Key) && !docLai.Contains(kv.Key))) ct2.GhiChuDon[kv.Key] = kv.Value;
             // Nghi vấn: tệp vừa đọc lại lấy mới, tệp không đọc lại giữ cũ (mã nghi vấn = "ai|<tệp>|…")
             bool CuaTep(VanDe v, string tep) => v.Ma.StartsWith("ai|" + tep.ToLowerInvariant() + "|", StringComparison.Ordinal);
             ct2.NghiVan = cu.NghiVan.Where(v => conLai.Any(f => CuaTep(v, f)) && !docLai.Any(f => CuaTep(v, f))).Concat(nghiVan).ToList();
@@ -404,7 +409,7 @@ namespace TeamsTool.Services
         /// Luật C# (bảng TV + catalog như tab Fname) trên bảng tấm hiện tại + nghi vấn AI thấy khi đọc + vấn đề AI kiểm lại bằng chữ (giữ từ lần trước).
         /// Không gọi AI, chạy ngay — gọi sau mỗi lần đọc / sửa bảng. Giữ trạng thái, câu trả lời người dùng (theo mã vấn đề).
         /// </summary>
-        public static KiemTra KiemLuat(ChiTiet ct, string tm)
+        public static KiemTra KiemLuat(ChiTiet ct, string tm, string title)
         {
             KiemTra cu = DocKiemTra(tm);
             var vanDe = PhongKiemTra.Luat(ct.Tam.Where(t => t.Moi), PhongKiemTra.DocTv(BangFname("trav_90")), BangFname("catalog"));
@@ -418,16 +423,86 @@ namespace TeamsTool.Services
                 Luc = DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture),
             };
             Ghi(tm, kt);
+            GhiHoSo(ct, kt, tm, title);
             return kt;
+        }
+
+        // ---------- Hồ sơ tấm (ai\ho_so\<đơn>-n.md + .png) ----------
+
+        public static string ThuMucHoSo(string tm) => Path.Combine(tm, PhongTiepNhan.ThuMucAi, PhongHoSo.ThuMuc);
+
+        /// <summary>
+        /// Ghi hồ sơ md mỗi tấm mới + _don.md từ chi_tiet.json / kiem_tra.json (ds = kết quả trải phẳng khi đã xác nhận).
+        /// Gọi sau mỗi lần kiểm luật / trả lời / triển khai — chỉ ghi tệp có nội dung đổi.
+        /// </summary>
+        public static void GhiHoSo(ChiTiet ct, KiemTra kt, string tm, string title, IList<(TamAi Tam, TamTrienKhai Tk)> ds = null)
+        {
+            string dir = ThuMucHoSo(tm);
+            Directory.CreateDirectory(dir);
+            var vanDe = kt?.VanDe ?? new List<VanDe>();
+            var danhSo = PhongHoSo.DanhSo(ct, title);
+            foreach (var (t, ten) in danhSo)
+            {
+                string anh = File.Exists(Path.Combine(dir, ten + ".png")) ? ten + ".png" : null;
+                TamTrienKhai tk = ds?.FirstOrDefault(x => ReferenceEquals(x.Tam, t)).Tk;
+                GhiNeuDoi(Path.Combine(dir, ten + ".md"), PhongHoSo.Md(ten, t, vanDe.Where(v => PhongHoSo.CuaTam(v, t, ct)), tk, anh));
+            }
+            var chung = vanDe.Where(v => !danhSo.Any(x => PhongHoSo.CuaTam(v, x.Tam, ct)));
+            GhiNeuDoi(Path.Combine(dir, PhongHoSo.TepDon), PhongHoSo.MdDon(title, DocTiepNhan(tm)?.CongTy, ct, chung));
+        }
+
+        private static void GhiNeuDoi(string f, string noiDung)
+        {
+            try
+            {
+                if (!File.Exists(f) || File.ReadAllText(f, Encoding.UTF8) != noiDung) GhiAnToan(f, noiDung);
+            }
+            catch (IOException) { } // tệp md đang mở khoá: lần sau ghi lại, dữ liệu gốc vẫn ở JSON
+        }
+
+        /// <summary>
+        /// Cắt ảnh từng tấm mới từ bản vẽ khách (vùng AI đọc) → ho_so\<đơn>-n.png bằng ve.py --cat-anh (PyMuPDF / ezdxf).
+        /// Máy chưa có Python / PyMuPDF → trả câu báo, không lỗi. Trả null khi cắt xong hết.
+        /// </summary>
+        public static async Task<string> CatAnh(ChiTiet ct, string tm, string title, CancellationToken huy)
+        {
+            TinhTrangPython tt = await KiemPython();
+            if (tt.Python == null) return "Chưa cắt ảnh tấm: " + tt.Loi;
+            string dir = ThuMucHoSo(tm);
+            Directory.CreateDirectory(dir);
+            var viec = new List<object>();
+            foreach (var (t, ten) in PhongHoSo.DanhSo(ct, title))
+            {
+                string f = Path.Combine(ThuMucTep(tm), t.Tep);
+                bool pdf = f.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+                if (!File.Exists(f) || (pdf && !tt.Pymupdf) || (!pdf && tt.Ezdxf == null)) continue;
+                var o = new JsonObject();
+                o.Set("nguon", f);
+                o.Set("trang", new JsonNumber(((int)(PhongKiemTra.So(t.Trang) ?? 1)).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                if (!string.IsNullOrEmpty(t.VungJson)) o.Set("vung", JsonLite.Parse(t.VungJson));
+                o.Set("ra", Path.Combine(dir, ten + ".png"));
+                viec.Add(o);
+            }
+            string bao = !tt.Pymupdf && ct.Tam.Any(t => t.Tep.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                ? "Chưa cắt ảnh tấm từ PDF: máy chưa có PyMuPDF — bấm 📐 Vẽ DXF ở phòng 3 để cài (hoặc pip install pymupdf)." : null;
+            if (viec.Count == 0) return bao;
+            string tep = Path.Combine(dir, "anh.json");
+            File.WriteAllText(tep, JsonLite.Serialize(viec), Utf8);
+            var (ma, ra) = await ChayLenh(tt.Python, ThuMucVeDxf, huy, Path.Combine(ThuMucVeDxf, "ve.py"), "--cat-anh", tep);
+            List<object> kq = null;
+            try { kq = JsonLite.Parse(ra.Trim().Split('\n').Last()) as List<object>; } catch (Exception) { }
+            if (ma != 0 || kq == null) return "Chưa cắt được ảnh tấm: " + DongCuoi(ra);
+            var loi = kq.OfType<JsonObject>().Where(x => x.GetString("loi") != null).Select(x => Path.GetFileName(x.GetString("ra")) + ": " + x.GetString("loi")).ToList();
+            return loi.Count > 0 ? "Có ảnh tấm chưa cắt được:\n" + string.Join("\n", loi) : bao;
         }
 
         /// <summary>
         /// Kiểm lại sau khi có câu trả lời: luật + AI đọc bảng tấm và câu trả lời (CHỈ GỬI CHỮ, không gửi bản vẽ) theo QC kiểm tra,
         /// thêm vấn đề mới phát sinh. Chưa có câu trả lời nào → chỉ chạy luật.
         /// </summary>
-        public static async Task<KiemTra> KiemLaiAi(TiepNhan tn, ChiTiet ct, string tm, Action<string> bao, CancellationToken huy)
+        public static async Task<KiemTra> KiemLaiAi(TiepNhan tn, ChiTiet ct, string tm, string title, Action<string> bao, CancellationToken huy)
         {
-            KiemTra kt = KiemLuat(ct, tm);
+            KiemTra kt = KiemLuat(ct, tm, title);
             if (!kt.VanDe.Any(v => v.TraLoi.Trim().Length > 0)) { bao("Chưa có câu trả lời nào — đã chạy lại luật, không gọi AI."); return kt; }
             string key = KeyPhong(3), model = Model();
             bao("Phòng 2: AI xem câu trả lời (chỉ gửi chữ)…");
@@ -440,6 +515,7 @@ namespace TeamsTool.Services
             var moi = ph.VanDe.Where(v => !kt.VanDe.Any(x => x.Ma == v.Ma)).GroupBy(v => v.Ma).Select(g => g.First()).ToList();
             kt.VanDe.AddRange(moi);
             Ghi(tm, kt);
+            GhiHoSo(ct, kt, tm, title);
             bao("Kiểm lại xong: AI thêm " + moi.Count + " vấn đề mới.");
             return kt;
         }
@@ -556,7 +632,7 @@ namespace TeamsTool.Services
         public sealed class TinhTrangPython
         {
             public string Python, Ezdxf, Loi;
-            public bool Matplotlib;
+            public bool Matplotlib, Pymupdf;
             public bool SanSang => Python != null && Ezdxf != null;
         }
 
@@ -576,7 +652,7 @@ namespace TeamsTool.Services
                     {
                         var (ma, ra) = await ChayLenh(exe, ThuMucVeDxf, CancellationToken.None, dau.Concat(new[] { ve, "--kiem" }).ToArray());
                         if (ma != 0 || !(JsonLite.Parse(ra.Trim().Split('\n').Last()) is JsonObject o)) continue;
-                        kq = new TinhTrangPython { Python = o.GetString("python"), Ezdxf = o.GetString("ezdxf"), Matplotlib = o.Get("matplotlib") is bool b && b };
+                        kq = new TinhTrangPython { Python = o.GetString("python"), Ezdxf = o.GetString("ezdxf"), Matplotlib = o.Get("matplotlib") is bool b && b, Pymupdf = o.Get("pymupdf") is bool p && p };
                         if (kq.Ezdxf == null) kq.Loi = "Máy có Python nhưng chưa có ezdxf — bấm Cài ezdxf.";
                         break;
                     }
@@ -591,8 +667,8 @@ namespace TeamsTool.Services
         {
             TinhTrangPython tt = await KiemPython();
             if (tt.Python == null) throw new InvalidOperationException(tt.Loi);
-            bao("Đang cài ezdxf + matplotlib (pip, cần mạng — khoảng 1 phút)…");
-            var (ma, ra) = await ChayLenh(tt.Python, ThuMucVeDxf, huy, "-m", "pip", "install", "--user", "--upgrade", "ezdxf", "matplotlib");
+            bao("Đang cài ezdxf + matplotlib + PyMuPDF (pip, cần mạng — khoảng 1 phút)…");
+            var (ma, ra) = await ChayLenh(tt.Python, ThuMucVeDxf, huy, "-m", "pip", "install", "--user", "--upgrade", "ezdxf", "matplotlib", "pymupdf");
             if (ma != 0) throw new InvalidOperationException("pip lỗi: " + DongCuoi(ra));
             return await KiemPython(lai: true);
         }
@@ -648,7 +724,7 @@ namespace TeamsTool.Services
         /// AI viết mẫu biên dạng mới cho tấm chưa có mẫu (đọc lại bản vẽ khách + mô tả + ví dụ be.py), kiểm an toàn (KiemMau),
         /// lưu ai\ban_ve\mau_thu\&lt;ten&gt;.py và gán cho tấm. Trả mẫu (Loi khác null = không dùng được).
         /// </summary>
-        public static async Task<PhongTrienKhai.MauMoi> DeXuatMau(ChiTiet ct, TamAi tam, TamTrienKhai tk, KetQuaTrienKhai kq, string tm, Action<string> bao, CancellationToken huy)
+        public static async Task<PhongTrienKhai.MauMoi> DeXuatMau(ChiTiet ct, TamAi tam, TamTrienKhai tk, KetQuaTrienKhai kq, string tm, string title, Action<string> bao, CancellationToken huy)
         {
             string key = KeyPhong(4);
             string model = Model();
@@ -658,9 +734,13 @@ namespace TeamsTool.Services
             string f = Path.Combine(ThuMucTep(tm), tam.Tep), pdf = null;
             if (File.Exists(f) && f.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) && new FileInfo(f).Length <= PhongDocBanVe.PdfToiDa)
                 pdf = Convert.ToBase64String(File.ReadAllBytes(f));
-            bao("Phòng 4: AI viết mẫu vẽ mới cho " + tk.Ten + "…");
+            bao("Phòng 3: AI viết mẫu vẽ mới cho " + tk.Ten + "…");
             string qcVe = Path.Combine(ThuMucVeDxf, "QUY_CHUAN_VE.md"); // quy ước vẽ theo bản chuẩn xưởng
-            string body = PhongTrienKhai.BodyMauMoi(model, File.Exists(qcVe) ? File.ReadAllText(qcVe, Encoding.UTF8) : null, pdf, PhongTrienKhai.DauVaoMauMoi(tam, tk, daCo, viDu));
+            // Hồ sơ tấm đã xác nhận (thông số, mô tả, câu trả lời, trải phẳng) + ghi chú chung đơn
+            string tenTam = PhongHoSo.DanhSo(ct, title).FirstOrDefault(x => ReferenceEquals(x.Tam, tam)).Ten ?? "";
+            string hoSo = string.Join("\n\n", new[] { tenTam + ".md", PhongHoSo.TepDon }.Select(x => Path.Combine(ThuMucHoSo(tm), x)).Where(File.Exists).Select(x => File.ReadAllText(x, Encoding.UTF8)));
+            string dauVao = PhongTrienKhai.DauVaoMauMoi(tam, tk, daCo, viDu) + (hoSo.Length > 0 ? "\n\nHỒ SƠ TẤM ĐÃ XÁC NHẬN (dữ liệu đúng — vẽ theo đây):\n" + hoSo : "");
+            string body = PhongTrienKhai.BodyMauMoi(model, File.Exists(qcVe) ? File.ReadAllText(qcVe, Encoding.UTF8) : null, pdf, dauVao);
             PhongTrienKhai.MauMoi m = PhongTrienKhai.DocMauMoi(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, huy), daCo);
             kq.TokenVao += m.Vao + m.GhiCache + m.DocCache;
             kq.TokenRa += m.Ra;
