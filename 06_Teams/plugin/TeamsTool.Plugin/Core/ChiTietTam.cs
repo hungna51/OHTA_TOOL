@@ -282,7 +282,11 @@ namespace TeamsTool.Core
 - ghi_chu_jp: ghi chú tiếng Nhật CỦA RIÊNG tấm này, giữ nguyên chữ (lời nhắn / yêu cầu chung cả đơn đưa vào ghi_chu_don, không lặp ở đây); ghi_chu_vi: dịch sang tiếng Việt, ngắn gọn.
 - trang: số trang PDF chứa tấm (1 = trang đầu); DXF để rỗng.
 - khong_chac: tên các ô bạn đọc không chắc hoặc tự chọn (so_ban_ve, ten, M, Z, T, Q, mat, kich_thuoc, dung_sai, canh, lo, tiet_dien). Không bịa: không đọc được thì để rỗng và đưa vào khong_chac.
-- Trang không phải bản vẽ chi tiết (đơn đặt hàng, email, bảng kê) → không tạo tấm cho trang đó.
+- Trang không phải bản vẽ chi tiết (đơn đặt hàng, email, bảng kê) → không tạo tấm cho trang đó, TRỪ dòng hàng là TẤM CẮT HÌNH ĐƠN GIẢN không kèm bản vẽ (vd レーザー品(角), 切板, シャーリング品, 角板, 丸板, hoặc kích thước dạng ""T × rộng × dài"" / ""2.50 X 84.7 X 804.0"") → TẠO một tấm cho mỗi dòng:
+  M = mác vật liệu (SUS304, SS400…), T = số đầu (độ dày), kich_thuoc = ""rộng x dài"", Q = số lượng của dòng, mat = bề mặt / film (2B, HL, #400, 両面ファイバーガード…),
+  kieu_td = phang, td_x = dài, td_y = rộng (丸 = tròn: td_x = td_y = Ø, ghi rõ hình tròn ở mo_ta), bien_dang = phang (tròn: chọn mẫu tròn nếu thư viện có, không thì chua_co),
+  ghi_chu_jp = ghi chú của dòng (vd 両面めん取り, 目方向の矢印を記載), ghi_chu_vi = dịch + ""tấm theo dòng đơn hàng, không có bản vẽ"", mo_ta = hình + kích thước + yêu cầu gia công của dòng.
+  Ghi chú chung của đơn (hạn giao, 請書要, ステンシル不可…) vẫn vào ghi_chu_don.
 
 TIẾT DIỆN của mỗi tấm (để trải phẳng — KHÔNG tự tính trải phẳng, chương trình tính theo bảng TV):
 - kieu_td: phang (không uốn) / be (bẻ, ấn, cuộn tính được) / lam_tay (pitchi, kakumaru, ensui, ống co, hình 3D phức tạp — td_x, td_y để rỗng).
