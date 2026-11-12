@@ -161,6 +161,14 @@ namespace TeamsTool.Tests
             Kiem("ho so _don: ghi chu chung + cau chung + cac tam", mdDon.Contains("下図の手配") + "|" + mdDon.Contains("Hạn giao?") + "|" + mdDon.Contains("D-1, D-2"), "True|True|True");
             Kiem("doc lai: vung + mo ta giu", PhongDocBanVe.Doc(PhongDocBanVe.Ghi(ctH)).Tam[2].VungJson.Contains("0.5") + "|" + PhongDocBanVe.Doc(PhongDocBanVe.Ghi(ctH)).Tam[0].MoTa + "|"
                  + PhongDocBanVe.Doc(PhongDocBanVe.Ghi(ctH)).GhiChuDon["a.pdf"], "True|Tấm L|下図の手配をお願いします");
+            // Thông số mẫu (12/11): AI trả mảng {ten, gia_tri} → chữ; chữ → dict cho ve.py; mẫu mới phải khai THAM_SO + VI_DU
+            var tamTs = PhongDocBanVe.DocPhanHoi("{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":" + OhtaTool.Plugin.Core.JsonLite.Serialize(
+                text.Replace("\"mo_ta_bien_dang\":\"\"}", "\"mo_ta_bien_dang\":\"\",\"tham_so\":[{\"ten\":\"r1\",\"gia_tri\":20},{\"ten\":\"r2\",\"gia_tri\":27.5}]}")) + "}]}").Tam[0];
+            Kiem("tham so: doc AI + luu lai", tamTs.ThamSo + "|" + PhongDocBanVe.Doc(PhongDocBanVe.Ghi(new ChiTiet { Tam = { tamTs } })).Tam[0].ThamSo, "r1=20; r2=27.5|r1=20; r2=27.5");
+            Kiem("tham so: chu -> so (bo muc hong)", string.Join(",", PhongTrienKhai.ThamSo("r1=20; r2 = 27,5; x; =3; a=abc").Select(kv => kv.Key + ":" + kv.Value.ToString(System.Globalization.CultureInfo.InvariantCulture))), "r1:20,r2:27.5");
+            string maDu = "from moi_truong import LE_DIM\nMO_TA = \"a\"\nTHAM_SO = [(\"x\", \"dai\", \"tự tính\")]\nVI_DU = {\"x\": 1}\ndef ve(nen, t):\n    pass\n";
+            Kiem("kiem mau: thieu THAM_SO / VI_DU bi tu choi", (PhongTrienKhai.KiemMau("mau_a", maDu, null) ?? "null") + "|"
+                 + (PhongTrienKhai.KiemMau("mau_a", maDu.Replace("VI_DU = {\"x\": 1}\n", ""), null) ?? "null").StartsWith("Mã thiếu THAM_SO"), "null|True");
             var tkK = PhongTrienKhai.TuTam(tamK);
             tkK.XPhang = 80; tkK.YPhang = 200;
             string viec = PhongTrienKhai.ViecVe("test", new List<(TamAi, TamTrienKhai)> { (tamK, tkK) }, "m.dxf", "ra", new[] { "tv" });
@@ -264,7 +272,7 @@ namespace TeamsTool.Tests
                  ((List<object>)v0.Get("fname")).Count + "|" + ((List<object>)vj.Get("thu_vien")).Count + "|" + vj.GetString("moi_truong"), "2|130672-1|130672-3|hop|142|6|2|m.dxf");
 
             // mẫu mới AI đề xuất: kiểm an toàn trước khi chạy
-            const string maTot = "\"\"\"x\"\"\"\nimport math\nfrom moi_truong import LE_DIM\n\nMO_TA = \"Chu U\"\n\n\ndef ve(nen, t):\n    nen.chu_nhat(0, 0, t[\"x\"], t[\"y\"])\n";
+            const string maTot = "\"\"\"x\"\"\"\nimport math\nfrom moi_truong import LE_DIM\n\nMO_TA = \"Chu U\"\nTHAM_SO = [(\"x\", \"dai\", \"tự tính\"), (\"y\", \"rong\", \"tự tính\")]\nVI_DU = {\"x\": 100, \"y\": 50}\n\n\ndef ve(nen, t):\n    nen.chu_nhat(0, 0, t[\"x\"], t[\"y\"])\n";
             string[] daCo = { "be", "hop", "phang", "cuon" };
             Kiem("kiem mau: tot / ten sai / trung / thieu ve / import os / open / os. / subprocess",
                  (PhongTrienKhai.KiemMau("chu_u", maTot, daCo) ?? "ok") + "|" + (PhongTrienKhai.KiemMau("Chu U", maTot, daCo) != null) + "|" + (PhongTrienKhai.KiemMau("hop", maTot, daCo) != null) + "|" +

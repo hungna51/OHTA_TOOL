@@ -3,6 +3,11 @@
 MO_TA = ("Hộp / khay bẻ cả 2 hướng (3–4 cạnh): hình chữ thập — chữ nhật X × Y cắt 4 góc theo đoạn phẳng đầu / cuối "
          "mỗi hướng, đường bẻ DASHED chỉ trong phần đáy, dim chuỗi 2 hướng (phía dưới / phải). Liên kết góc hở / kín, khe R chưa vẽ.")
 
+# (tên, ý nghĩa, mặc định — None = bắt buộc; "tự tính" = chương trình tính)
+THAM_SO = [("x", "Chiều dài trải phẳng (thành – đáy – thành theo X)", "tự tính"),
+           ("y", "Chiều rộng trải phẳng (thành – đáy – thành theo Y)", "tự tính")]
+VI_DU = {"x": 260, "y": 200, "be_x": [40, 220], "be_y": [40, 160], "doan_x": [40, 180, 40], "doan_y": [40, 120, 40]}
+
 
 def ve(nen, t):
     x, y = t["x"], t["y"]

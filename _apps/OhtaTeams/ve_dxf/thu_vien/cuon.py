@@ -3,6 +3,11 @@
 MO_TA = ("Cuộn / lốc (ống tròn, nửa ống, cung): hình chữ nhật X × Y (chiều trải theo đường trung bình 0.5 × T thực), "
          "không vẽ đường bẻ; ghi chú cuộn trên 1-SUNPOU.")
 
+# (tên, ý nghĩa, mặc định — None = bắt buộc; "tự tính" = chương trình tính)
+THAM_SO = [("x", "Chiều dài trải phẳng theo hướng cuộn (đường trung bình 0.5 × T thực)", "tự tính"),
+           ("y", "Chiều rộng", "tự tính")]
+VI_DU = {"x": 314, "y": 120}
+
 
 def ve(nen, t):
     x, y = t["x"], t["y"]

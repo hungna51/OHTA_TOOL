@@ -151,5 +151,5 @@ def bao_tat_ca(nen):
 def khung_bao(nen):
     """Khung bao các đối tượng trên 0-KAKOU (để đặt dim, F-name, Khung_IN)."""
     from ezdxf import bbox
-    b = bbox.extents(nen.msp.query('*[layer=="%s"]' % LOP_CAT), fast=True)
+    b = bbox.extents(nen.msp.query('*[layer=="%s"]' % LOP_CAT), fast=False)  # cung: chế độ nhanh vượt mép (điểm điều khiển Bezier)
     return (b.extmin.x, b.extmin.y, b.extmax.x, b.extmax.y) if b.has_data else (0.0, 0.0, 0.0, 0.0)

@@ -36,6 +36,8 @@ namespace TeamsTool.Core
         public string LyDoSua { get; set; } = "";
         /// <summary>Mẫu biên dạng ve_dxf AI chọn (chua_co = chưa có mẫu) + mô tả khi chưa có.</summary>
         public string BienDang = "", MoTaBienDang = "";
+        /// <summary>Thông số riêng của mẫu vẽ dạng chữ "r1=45; r2=38" (tên theo THAM_SO của mẫu) — AI đọc, người sửa ở ✎.</summary>
+        public string ThamSo = "";
         public string CanhJson = "[]", LoJson = "[]";
         /// <summary>Dấu khắc vạch ケガキ / マーキング: [{x, y}] mm trên hình trải phẳng, gốc góc trái dưới.</summary>
         public string KeGakiJson = "[]";
@@ -89,14 +91,14 @@ namespace TeamsTool.Core
         /// <summary>Các ô chữ (tên JSON ↔ thuộc tính).</summary>
         public static readonly string[] O = { "so_ban_ve", "ten", "M", "Z", "T", "Q", "mat", "kich_thuoc", "dung_sai", "ghi_chu_jp", "ghi_chu_vi", "mo_ta" };
         /// <summary>Ô chữ của tiết diện (lưu chi_tiet.json; AI trả dạng cấu trúc x / y, đổi sang chữ khi đọc).</summary>
-        public static readonly string[] OTd = { "kieu_td", "td_x", "td_y", "ghi_chu_td", "bien_dang", "mo_ta_bien_dang" };
+        public static readonly string[] OTd = { "kieu_td", "td_x", "td_y", "ghi_chu_td", "bien_dang", "mo_ta_bien_dang", "tham_so" };
 
         public static string Lay(TamAi t, string o)
         {
             switch (o)
             {
                 case "kieu_td": return t.KieuTd; case "td_x": return t.TdX; case "td_y": return t.TdY; case "ghi_chu_td": return t.GhiChuTd;
-                case "bien_dang": return t.BienDang; case "mo_ta_bien_dang": return t.MoTaBienDang;
+                case "bien_dang": return t.BienDang; case "mo_ta_bien_dang": return t.MoTaBienDang; case "tham_so": return t.ThamSo;
                 case "so_ban_ve": return t.SoBanVe; case "ten": return t.Ten; case "M": return t.M; case "Z": return t.Z;
                 case "T": return t.T; case "Q": return t.Q; case "mat": return t.Mat; case "kich_thuoc": return t.KichThuoc;
                 case "dung_sai": return t.DungSai; case "ghi_chu_jp": return t.GhiChuJp; case "ghi_chu_vi": return t.GhiChuVi; case "mo_ta": return t.MoTa;
@@ -110,7 +112,7 @@ namespace TeamsTool.Core
             switch (o)
             {
                 case "kieu_td": t.KieuTd = v; break; case "td_x": t.TdX = v; break; case "td_y": t.TdY = v; break; case "ghi_chu_td": t.GhiChuTd = v; break;
-                case "bien_dang": t.BienDang = v; break; case "mo_ta_bien_dang": t.MoTaBienDang = v; break;
+                case "bien_dang": t.BienDang = v; break; case "mo_ta_bien_dang": t.MoTaBienDang = v; break; case "tham_so": t.ThamSo = v; break;
                 case "so_ban_ve": t.SoBanVe = v; break; case "ten": t.Ten = v; break; case "M": t.M = v; break; case "Z": t.Z = v; break;
                 case "T": t.T = v; break; case "Q": t.Q = v; break; case "mat": t.Mat = v; break; case "kich_thuoc": t.KichThuoc = v; break;
                 case "dung_sai": t.DungSai = v; break; case "ghi_chu_jp": t.GhiChuJp = v; break; case "ghi_chu_vi": t.GhiChuVi = v; break; case "mo_ta": t.MoTa = v; break;
@@ -280,6 +282,7 @@ TIẾT DIỆN của mỗi tấm (để trải phẳng — KHÔNG tự tính tr�
   · Hướng không uốn: một doan = chiều dài phẳng theo hướng đó, uon rỗng. Tấm phẳng: x = [dài], y = [rộng]. Hộp 3–4 cạnh: x và y đều có tiết diện (thành – đáy – thành).
 - ghi_chu_td: tiếng Việt, ngắn (hướng bẻ V / N, chỗ chưa chắc). Không đọc được tiết diện → doan rỗng, ghi lý do, thêm tiet_dien vào khong_chac.
 - ke_gaki: mỗi dấu khắc vạch (マーキング / ケガキ / 罫書き — dấu vạch, KHÔNG phải lỗ): x, y = toạ độ tâm (mm) trên hình TRẢI PHẲNG, gốc ở góc trái dưới của tấm, x theo hướng tiết diện x; không có → rỗng. Bản vẽ chỉ ghi số dấu mà thiếu vị trí → để rỗng và hỏi trong van_de.
+- tham_so: khi bien_dang là mẫu có ""thông số"" riêng (liệt kê trong Thư viện biên dạng): mỗi thông số một phần tử {ten, gia_tri} đúng tên của mẫu, số đọc từ bản vẽ (mm). Không ghi trên bản vẽ → bỏ (chương trình dùng mặc định); bắt buộc mà không đọc được → hỏi trong van_de. Mẫu không có thông số riêng → rỗng.
 - vung: khung bao TRỌN hình vẽ của tấm trên trang PDF (mọi hình chiếu + dim + ghi chú của tấm, không gồm khung tên / ghi chú chung), tỉ lệ 0–1 theo bề rộng / cao trang, gốc trái TRÊN (x0, y0 = góc trái trên; x1, y1 = góc phải dưới). DXF: theo khung bao bản vẽ.
 - mo_ta: tiếng Việt, mô tả CHI TIẾT hình tấm đủ để người khác vẽ lại không cần xem bản vẽ: hình dạng tổng thể, từng cạnh / cung (R, lõm / lồi, vị trí), lỗ (Ø, số, vị trí), ケガキ, chỗ bẻ (hướng, góc), chi tiết đặc biệt. Chỉ điều có trên bản vẽ, không suy đoán.
 - dim_khach: MỌI kích thước khách ghi trên bản vẽ của tấm mà còn đúng nguyên trên hình TRẢI PHẲNG (tấm phẳng: tất cả; tấm bẻ: kích thước nằm trong mặt phẳng tấm — song song đường bẻ, vị trí lỗ / ケガキ trên cùng một mặt; KHÔNG gồm kích thước ngoài qua chỗ bẻ). loai: ngang (theo x) / doc (theo y) / r (bán kính) / phi (đường kính lỗ) / goc (độ); gia_tri đúng số khách ghi; tu, den = toạ độ hai đầu trên hình trải phẳng (ngang: x, doc: y, gốc góc trái dưới; r: tu, den = tâm x, y; phi / goc: 0). Bản vẽ OHTA phải dim đủ các kích thước này.
@@ -356,6 +359,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             tt.Add(("ghi_chu_td", s)); tt.Add(("bien_dang", s)); tt.Add(("mo_ta_bien_dang", s));
             tt.Add(("ke_gaki", Mang(Obj(("x", n), ("y", n)))));
             tt.Add(("vung", Obj(("x0", n), ("y0", n), ("x1", n), ("y1", n))));
+            tt.Add(("tham_so", Mang(Obj(("ten", s), ("gia_tri", n)))));
             JsonObject loaiDim = Kieu("string");
             loaiDim.Set("enum", new List<object> { "ngang", "doc", "r", "phi", "goc" });
             tt.Add(("dim_khach", Mang(Obj(("loai", loaiDim), ("gia_tri", n), ("tu", n), ("den", n)))));
@@ -436,6 +440,8 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             t.LoJson = JsonLite.Serialize(x.Get("lo") as List<object> ?? new List<object>());
             t.KeGakiJson = JsonLite.Serialize(x.Get("ke_gaki") as List<object> ?? new List<object>());
             t.VungJson = x.Get("vung") is JsonObject vg ? JsonLite.Serialize(vg) : "";
+            if (x.Get("tham_so") is List<object> tsAi) // AI trả mảng {ten, gia_tri} → chữ "r1=45; r2=38"
+                t.ThamSo = string.Join("; ", tsAi.OfType<JsonObject>().Where(o => (o.GetString("ten") ?? "").Trim().Length > 0).Select(o => o.GetString("ten").Trim() + "=" + Chu(o.Get("gia_tri"))));
             t.DimKhachJson = JsonLite.Serialize(x.Get("dim_khach") as List<object> ?? new List<object>());
             t.KhongChac.UnionWith(DsChu(x.Get("khong_chac")));
             return t;

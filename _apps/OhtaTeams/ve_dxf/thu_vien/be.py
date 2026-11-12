@@ -3,6 +3,11 @@
 MO_TA = ("Bẻ hoặc ấn 1 lần theo MỘT hướng (L, C, Z, U, nhiều đường bẻ song song): hình chữ nhật X × Y, "
          "đường bẻ DASHED chạy hết bề rộng, dim chuỗi các đoạn phẳng (phía dưới / phải).")
 
+# (tên, ý nghĩa, mặc định — None = bắt buộc; "tự tính" = chương trình tính)
+THAM_SO = [("x", "Chiều dài trải phẳng (đường bẻ song song trục Y tính sẵn từ tiết diện)", "tự tính"),
+           ("y", "Chiều rộng trải phẳng", "tự tính")]
+VI_DU = {"x": 300, "y": 120, "be_x": [70, 230]}
+
 
 def ve(nen, t):
     x, y = t["x"], t["y"]

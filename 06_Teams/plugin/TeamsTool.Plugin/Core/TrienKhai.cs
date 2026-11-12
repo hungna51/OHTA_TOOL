@@ -261,6 +261,9 @@ namespace TeamsTool.Core
                 j.Set("doan_x", So(tk.DoanPhangX)); j.Set("doan_y", So(tk.DoanPhangY));
                 j.Set("ke_gaki", KeGaki(t).Select(k => (object)So(new[] { k.X, k.Y })).ToList());
                 j.Set("dim_khach", DsJson(t.DimKhachJson));
+                var ts = new JsonObject();
+                foreach (var kv in ThamSo(t.ThamSo)) ts.Set(kv.Key, new JsonNumber(F(kv.Value)));
+                j.Set("tham_so", ts);
                 j.Set("fname", DongFname(t, tk, Bango(title, i + 1)).Cast<object>().ToList());
                 j.Set("ghi_chu", tk.ChiTiet.Cast<object>().ToList());
                 tam.Add(j);
@@ -271,6 +274,20 @@ namespace TeamsTool.Core
             o.Set("thu_vien", thuVien.Cast<object>().ToList());
             o.Set("tam", tam);
             return JsonLite.Serialize(o);
+        }
+
+        /// <summary>"r1=45; r2=38" → {r1: 45, r2: 38} (tách theo ; hoặc xuống dòng); mục hỏng (thiếu =, không phải số) bỏ qua.</summary>
+        public static Dictionary<string, double> ThamSo(string chu)
+        {
+            var d = new Dictionary<string, double>();
+            foreach (string muc in (chu ?? "").Split(';', '\n')) // không tách theo dấu phẩy: 27,5 là số thập phân
+            {
+                int i = muc.IndexOf('=');
+                if (i <= 0) continue;
+                string ten = muc.Substring(0, i).Trim();
+                if (ten.Length > 0 && PhongKiemTra.So(muc.Substring(i + 1)) is double v) d[ten] = v;
+            }
+            return d;
         }
 
         private static List<object> DsJson(string json)
@@ -294,7 +311,10 @@ namespace TeamsTool.Core
         public const string LoiDanMauMoi =
 @"Bạn viết MẪU BIÊN DẠNG mới cho thư viện vẽ trải phẳng của OHTA (Python 3, ezdxf). Một mẫu = một tệp Python:
 - MO_TA = ""..."": một câu tiếng Việt mô tả loại biên dạng (để AI phòng Triển khai chọn mẫu sau này) — mô tả LOẠI hình, không ghi số của tấm này.
-- def ve(nen, t): vẽ viền cắt + đường bẻ (+ dim riêng nếu cần) của tấm bằng các hàm của nen (moi_truong.NenVe). t là dict: x, y (kích thước trải), be_x (vị trí đường bẻ song song trục Y, mm từ mép trái), be_y (song song trục X, mm từ mép dưới), doan_x, doan_y (các đoạn phẳng giữa đường bẻ), ghi_chu (list chuỗi), fname (list chuỗi — KHÔNG tự vẽ, chương trình vẽ).
+- THAM_SO = [(""tên"", ""ý nghĩa"", mặc định), ...]: ĐỦ mọi thông số hình cần, đặt tên chữ cái ngắn (x, y, x1, y1, r1, r2, a1…). x, y luôn có, mặc định ""tự tính"" (chương trình tính trải phẳng). Thông số riêng: mặc định là chữ mô tả (vd ""y/2"") hoặc None nếu bắt buộc. Mẫu đọc thông số riêng từ t[""tham_so""] (dict tên → số), thiếu thì dùng mặc định.
+- VI_DU = {""x"": …, ""y"": …, ""tham_so"": {…}} (+ be_x / be_y / doan_x / doan_y nếu hình cần): số ví dụ để vẽ ảnh hướng dẫn — MỌI số phải khác nhau (ảnh ghi tên thông số vào dim có số đó).
+- Hình không hợp lệ với thông số (vd R nhỏ hơn nửa bề rộng) → raise ValueError(""…"") giải thích.
+- def ve(nen, t): vẽ viền cắt + đường bẻ (+ dim riêng nếu cần) của tấm bằng các hàm của nen (moi_truong.NenVe). t là dict: x, y (kích thước trải), tham_so (dict), be_x (vị trí đường bẻ song song trục Y, mm từ mép trái), be_y (song song trục X, mm từ mép dưới), doan_x, doan_y (các đoạn phẳng giữa đường bẻ), ghi_chu (list chuỗi), fname (list chuỗi — KHÔNG tự vẽ, chương trình vẽ).
 - Đặt tấm từ gốc (0, 0). Viền cắt phải KÍN. Cạnh thẳng + cung: nen.duong + nen.cung (CUNG THẬT — không chia cung thành nhiều điểm); toàn cạnh thẳng: nen.vien / nen.chu_nhat. Chỉ dùng hàm của nen, không tự đặt layer / kiểu chữ / kiểu dim.
 - Dim theo bản chuẩn xưởng: chuỗi dim chi tiết ở PHÍA DƯỚI (và bên phải) — chương trình tự dựng từ be_x / be_y / ケガキ / nen.moc_x, nen.moc_y; mẫu chỉ thêm mốc (nen.moc_x.append(...)). Cung cần ghi R: nen.cung(..., dim=True) (tự dim R + đưa tâm vào chuỗi). Dim riêng của hình (vd 2 dim nửa chiều cao tới tâm cung) đặt cách viền LE_DIM, chữ đoạn ngắn đưa ra ngoài bằng vi_tri_chu.
 - KHÔNG vẽ: dim tổng X, Y (1-XY), ケガキ, F-name, Khung_IN — chương trình tự thêm. Theo QUY CHUẨN VẼ ở khối sau nếu có.
@@ -375,6 +395,10 @@ moi_truong.LE_DIM = 80.0       # khoảng viền → đường dim chi tiết";
             if ((tenDaCo ?? Enumerable.Empty<string>()).Contains(ten)) return "Tên mẫu '" + ten + "' đã có trong thư viện.";
             if (string.IsNullOrWhiteSpace(ma) || !ma.Contains("MO_TA") || !System.Text.RegularExpressions.Regex.IsMatch(ma, @"def\s+ve\s*\(\s*nen\s*,\s*t\s*\)"))
                 return "Mã thiếu MO_TA hoặc def ve(nen, t).";
+            // 12/11: mẫu phải khai đủ thông số (chữ cái) + số ví dụ để có ảnh hướng dẫn và cho AI điền khi đọc
+            if (!System.Text.RegularExpressions.Regex.IsMatch(ma, @"^THAM_SO\s*=", System.Text.RegularExpressions.RegexOptions.Multiline)
+                || !System.Text.RegularExpressions.Regex.IsMatch(ma, @"^VI_DU\s*=", System.Text.RegularExpressions.RegexOptions.Multiline))
+                return "Mã thiếu THAM_SO (thông số của mẫu) hoặc VI_DU (số ví dụ).";
             foreach (string dong in ma.Replace("\r", "").Split('\n'))
             {
                 string d = dong.Trim();

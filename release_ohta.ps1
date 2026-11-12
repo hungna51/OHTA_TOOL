@@ -77,7 +77,7 @@ $Files = $Tracked | Where-Object {
     if ($p -match '^[^/]+/plugin/' -or $p -match '\.gs$' -or $p -match 'google_sheet\.key$' -or $p -match 'ai\.key' -or $p -match '^05_AI/log/') { return $false }
     if ($top -eq '_Template_Module') { return $true }
     # Thu vien mau bien dang ve DXF (ezdxf) cua phong 4 OhtaTeams - may doi chay Python tu day
-    if ($p -like '_apps/OhtaTeams/ve_dxf/*' -and ($p -match '\.py$' -or $p -like '*/QUY_CHUAN_VE.md')) { return $true }
+    if ($p -like '_apps/OhtaTeams/ve_dxf/*' -and ($p -match '\.py$' -or $p -like '*/QUY_CHUAN_VE.md' -or $p -like '*/thu_vien/*.png')) { return $true }
     return -not ($top.StartsWith('_') -or $top.StartsWith('.') -or $top -eq 'rules')
 }
 $Files = @($Files) + $Dlls

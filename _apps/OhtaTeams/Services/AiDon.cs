@@ -348,7 +348,7 @@ namespace TeamsTool.Services
                 BaiHoc = cu.BaiHoc, DaRutBaiHoc = cu.DaRutBaiHoc,
             };
             // Một lượt đọc trả cả thông số + tiết diện + nghi vấn; mẫu biên dạng để AI chọn (máy chưa có Python / ezdxf → rỗng)
-            string them = PhongDocBanVe.DauVao(tn.CongTy, (await DanhSachMau(tm)).Select(m => (m.Ten, m.MoTa)));
+            string them = PhongDocBanVe.DauVao(tn.CongTy, (await DanhSachMau(tm)).Select(m => (m.Ten, m.MoTa + (m.ThamSoChu.Length > 0 ? " | thông số: " + m.ThamSoChu : ""))));
             var nghiVan = new List<VanDe>();
 
             var canDoc = tn.Tep.Where(t => t.Loai == PhongTiepNhan.BanVe && (t.Ten.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) || t.Ten.EndsWith(".dxf", StringComparison.OrdinalIgnoreCase)))
@@ -673,17 +673,97 @@ namespace TeamsTool.Services
             return await KiemPython(lai: true);
         }
 
-        /// <summary>Mẫu biên dạng dùng được cho đơn: thư viện chung + mẫu thử của đơn (đè cùng tên). Python chưa sẵn sàng → rỗng.</summary>
-        public static async Task<List<(string Ten, string MoTa, string Tep)>> DanhSachMau(string tm)
+        /// <summary>Một mẫu biên dạng: tên, mô tả, tệp, thông số (tên, ý nghĩa, mặc định — null = bắt buộc), số ví dụ, ảnh hướng dẫn.</summary>
+        public sealed class MauVe
         {
-            var ds = new List<(string, string, string)>();
+            public string Ten = "", MoTa = "", Tep = "", Anh, Loi;
+            public List<(string Ten, string YNghia, string MacDinh)> ThamSo = new List<(string, string, string)>();
+            public JsonObject ViDu = new JsonObject();
+            /// <summary>Mẫu thử của đơn (chưa vào thư viện chung).</summary>
+            public bool LaMauThu;
+
+            /// <summary>Thông số riêng AI cần đọc (bỏ x, y… chương trình tự tính) — "r1 (ý nghĩa; mặc định y/2), …".</summary>
+            public string ThamSoChu => string.Join(", ", ThamSo.Where(x => x.MacDinh != "tự tính")
+                .Select(x => x.Ten + " (" + x.YNghia + (x.MacDinh == null ? "; bắt buộc" : "; mặc định " + x.MacDinh) + ")"));
+        }
+
+        /// <summary>Mẫu biên dạng dùng được cho đơn: thư viện chung + mẫu thử của đơn (đè cùng tên). Python chưa sẵn sàng → rỗng.</summary>
+        public static async Task<List<MauVe>> DanhSachMau(string tm)
+        {
+            var ds = new List<MauVe>();
             TinhTrangPython tt = await KiemPython();
             if (!tt.SanSang) return ds;
-            var (ma, ra) = await ChayLenh(tt.Python, ThuMucVeDxf, CancellationToken.None, Path.Combine(ThuMucVeDxf, "ve.py"), "--thu-vien", ThuVienChung, ThuVienThu(tm));
+            var thuMuc = new List<string> { ThuVienChung };
+            if (tm != null) thuMuc.Add(ThuVienThu(tm));
+            var (ma, ra) = await ChayLenh(tt.Python, ThuMucVeDxf, CancellationToken.None, new[] { Path.Combine(ThuMucVeDxf, "ve.py"), "--thu-vien" }.Concat(thuMuc).ToArray());
             if (ma != 0 || !(JsonLite.Parse(ra.Trim().Split('\n').Last()) is List<object> l)) return ds;
             foreach (JsonObject o in l.OfType<JsonObject>())
-                ds.Add((o.GetString("ten") ?? "", o.GetString("mo_ta") ?? "", o.GetString("tep") ?? ""));
+            {
+                var m = new MauVe
+                {
+                    Ten = o.GetString("ten") ?? "", MoTa = o.GetString("mo_ta") ?? "", Tep = o.GetString("tep") ?? "", Anh = o.GetString("anh"), Loi = o.GetString("loi"),
+                    ViDu = o.Get("vi_du") as JsonObject ?? new JsonObject(),
+                };
+                m.LaMauThu = tm != null && m.Tep.StartsWith(ThuVienThu(tm), StringComparison.OrdinalIgnoreCase);
+                foreach (List<object> ts in (o.Get("tham_so") as List<object> ?? new List<object>()).OfType<List<object>>())
+                    m.ThamSo.Add((ts.Count > 0 ? ts[0] as string ?? "" : "", ts.Count > 1 ? ts[1] as string ?? "" : "", ts.Count > 2 ? ts[2] as string : null));
+                ds.Add(m);
+            }
             return ds;
+        }
+
+        /// <summary>Vẽ lại ảnh hướng dẫn &lt;ten&gt;.png cho mọi mẫu trong thư mục (thư viện chung / mẫu thử). Trả lỗi (rỗng = được).</summary>
+        public static async Task<string> TaoAnhHuongDan(string thuMuc, CancellationToken huy)
+        {
+            TinhTrangPython tt = await KiemPython();
+            if (!tt.SanSang) return tt.Loi;
+            if (!File.Exists(MoiTruongVe)) return "Thiếu môi trường vẽ " + MoiTruongVe;
+            var (ma, ra) = await ChayLenh(tt.Python, ThuMucVeDxf, huy, Path.Combine(ThuMucVeDxf, "ve.py"), "--huong-dan", MoiTruongVe, thuMuc);
+            if (ma != 0) return "ve.py lỗi: " + DongCuoi(ra);
+            List<object> kq = null;
+            try { kq = JsonLite.Parse(ra.Trim().Split('\n').Last()) as List<object>; } catch (Exception) { }
+            return string.Join("; ", (kq ?? new List<object>()).OfType<JsonObject>().Where(x => x.GetString("loi") != null).Select(x => x.GetString("ten") + ": " + x.GetString("loi")));
+        }
+
+        /// <summary>
+        /// Vẽ thử một mẫu với số người nhập (cửa sổ Thư viện mẫu): x, y, thông số riêng + đường bẻ / đoạn của số ví dụ.
+        /// Ra %TEMP%\OHTA_TOOL\thu_mau\thu-&lt;ten&gt;.dxf (+ .png). Trả kết quả vẽ.
+        /// </summary>
+        public static async Task<KetQuaVe> VeThuMau(MauVe m, double x, double y, IDictionary<string, double> thamSo, string tm, CancellationToken huy)
+        {
+            TinhTrangPython tt = await KiemPython();
+            if (!tt.SanSang) throw new InvalidOperationException(tt.Loi);
+            if (!File.Exists(MoiTruongVe)) throw new InvalidOperationException("Thiếu môi trường vẽ " + MoiTruongVe + " (chép tay từ máy Admin).");
+            string dir = Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "thu_mau");
+            Directory.CreateDirectory(dir);
+            var tam = new JsonObject();
+            tam.Set("bango", "thu-" + m.Ten);
+            tam.Set("bien_dang", m.Ten);
+            tam.Set("x", new JsonNumber(PhongTrienKhai.F(x)));
+            tam.Set("y", new JsonNumber(PhongTrienKhai.F(y)));
+            var ts = new JsonObject();
+            foreach (var kv in thamSo) ts.Set(kv.Key, new JsonNumber(PhongTrienKhai.F(kv.Value)));
+            tam.Set("tham_so", ts);
+            foreach (string k in new[] { "be_x", "be_y", "doan_x", "doan_y" }) tam.Set(k, m.ViDu.Get(k) as List<object> ?? new List<object>());
+            tam.Set("fname", new List<object> { "N=thu-" + m.Ten, "M=", "T=", "Q=" });
+            var viec = new JsonObject();
+            viec.Set("moi_truong", MoiTruongVe);
+            viec.Set("thu_muc_ra", dir);
+            viec.Set("thu_vien", new List<object> { ThuVienChung, tm == null ? "" : ThuVienThu(tm) });
+            viec.Set("tam", new List<object> { tam });
+            string tep = Path.Combine(dir, "viec.json");
+            File.WriteAllText(tep, JsonLite.Serialize(viec), Utf8);
+            File.Delete(Path.Combine(dir, ".ve_dxf.json")); // vẽ thử: luôn ghi đè, không giữ bản sửa tay
+            var (ma, ra) = await ChayLenh(tt.Python, ThuMucVeDxf, huy, Path.Combine(ThuMucVeDxf, "ve.py"), tep);
+            JsonObject o = null;
+            try { o = JsonLite.Parse(ra.Trim().Split('\n').Last()) as JsonObject; } catch (Exception) { }
+            JsonObject x0 = (o?.Get("ket_qua") as List<object>)?.OfType<JsonObject>().FirstOrDefault();
+            if (ma != 0 || x0 == null) throw new InvalidOperationException("ve.py lỗi: " + DongCuoi(ra));
+            return new KetQuaVe
+            {
+                Bango = x0.GetString("bango"), Tep = x0.GetString("tep"), Anh = x0.GetString("anh"), Loi = x0.GetString("loi"),
+                ThieuDim = (x0.Get("thieu_dim") as List<object> ?? new List<object>()).OfType<string>().ToList(),
+            };
         }
 
         /// <summary>Kết quả vẽ một tấm (tep / anh null khi lỗi).</summary>
@@ -749,6 +829,8 @@ namespace TeamsTool.Services
             {
                 Directory.CreateDirectory(ThuVienThu(tm));
                 File.WriteAllText(Path.Combine(ThuVienThu(tm), m.Ten + ".py"), m.Ma, Utf8);
+                string loiAnh = await TaoAnhHuongDan(ThuVienThu(tm), huy); // ảnh hướng dẫn để kiểm ở 📚 Thư viện mẫu
+                if (loiAnh.Length > 0) bao("Mẫu thử đã lưu, chưa vẽ được ảnh hướng dẫn: " + loiAnh);
                 tk.BienDang = tam.BienDang = m.Ten; // biên dạng nằm trong bảng tấm — trien_khai.json dựng lại từ đó
                 Ghi(tm, ct);
             }
@@ -766,6 +848,8 @@ namespace TeamsTool.Services
             string loi = PhongTrienKhai.KiemMau(ten, File.ReadAllText(nguon, Encoding.UTF8), new string[0]);
             if (loi != null) throw new InvalidOperationException(loi);
             File.Copy(nguon, dich);
+            string anh = Path.ChangeExtension(nguon, ".png"); // ảnh hướng dẫn đi kèm mẫu
+            if (File.Exists(anh) && !File.Exists(Path.ChangeExtension(dich, ".png"))) File.Copy(anh, Path.ChangeExtension(dich, ".png"));
             return dich;
         }
 

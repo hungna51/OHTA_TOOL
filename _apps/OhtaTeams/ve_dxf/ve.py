@@ -1,12 +1,14 @@
 """Vẽ bản trải phẳng phòng 4 (OhtaTeams) bằng ezdxf trên môi trường moi-truong-ve.dxf.
 
     python ve.py --kiem                 → {"python", "ezdxf", "matplotlib"}  (ezdxf thiếu → "ezdxf": null)
-    python ve.py --thu-vien DIR [DIR…]  → [{"ten", "mo_ta", "tep"}]  mẫu biên dạng (thư mục sau đè thư mục trước)
+    python ve.py --thu-vien DIR [DIR…]  → [{"ten", "mo_ta", "tep", "tham_so": [[tên, ý nghĩa, mặc định]], "vi_du", "anh"}]
+                                          mẫu biên dạng (thư mục sau đè thư mục trước); anh = <ten>.png hướng dẫn nếu có
+    python ve.py --huong-dan MOI_TRUONG DIR → [{"ten", "anh", "loi"}]  vẽ ảnh hướng dẫn <ten>.png cho mọi mẫu trong DIR
     python ve.py --cat-anh ANH.json     → [{"ra", "loi"}]  cắt ảnh tấm từ bản vẽ khách (PDF: PyMuPDF; DXF: ezdxf)
     python ve.py VIEC.json              → {"ket_qua": [{"bango", "tep", "anh", "loi", "thieu_dim"}]}
 
 VIEC.json (OhtaTeams ghi): {"moi_truong": dxf, "thu_muc_ra": dir, "thu_vien": [dir…],
-  "tam": [{"bango", "bien_dang", "x", "y", "be_x", "be_y", "doan_x", "doan_y", "ke_gaki": [[x, y]…], "dim_khach": [{"loai", "gia_tri", "tu", "den"}], "fname": [dòng], "ghi_chu": [dòng]}]}
+  "tam": [{"bango", "bien_dang", "x", "y", "tham_so": {tên: số}, "be_x", "be_y", "doan_x", "doan_y", "ke_gaki": [[x, y]…], "dim_khach": [{"loai", "gia_tri", "tu", "den"}], "fname": [dòng], "ghi_chu": [dòng]}]}
 Mẫu biên dạng (thu_vien/<ten>.py): MO_TA + ve(nen, t) vẽ viền / đường bẻ / dim riêng của hình; ケガキ, chuỗi dim dưới / phải,
 dim tổng (1-XY), F-name, Khung_IN thêm ở đây (them_chung) theo bản chuẩn xưởng.
 Tệp đã sửa tay trên CAD (mã băm khác lần ghi trước, nhớ trong .ve_dxf.json) không bị ghi đè: ghi "<bango> (2).dxf".
@@ -20,6 +22,7 @@ import traceback
 
 DAY = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, DAY)
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")  # numpy (matplotlib) nhiều luồng có lúc hết bộ nhớ khi vẽ ảnh
 
 
 def in_json(o):
@@ -83,6 +86,49 @@ def ten_ra(thu_muc, bango, so_tay):
         i += 1
 
 
+def tham_so_mau(mod):
+    """THAM_SO của mẫu: [(tên, ý nghĩa, mặc định)] — mặc định None = bắt buộc, "tự tính" = chương trình tính (x, y…)."""
+    kq = []
+    for ts in getattr(mod, "THAM_SO", []) or []:
+        ts = list(ts) + [None] * 3
+        kq.append((str(ts[0]), str(ts[1] or ""), None if ts[2] is None else str(ts[2])))
+    return kq
+
+
+def anh_huong_dan(moi_truong, thu_muc):
+    """Ảnh hướng dẫn mỗi mẫu trong thu_muc → <ten>.png cạnh mẫu: vẽ VI_DU, dim nào bằng số của x / y / tham số thì ghi tên
+    (x, y, r1…) thay cho số. Số trong VI_DU phải khác nhau để nhận ra. Trả [{"ten", "anh", "loi"}]."""
+    import moi_truong as mt
+    from ezdxf.addons.drawing import matplotlib as dm
+    kq = []
+    for ten, tep in sorted(cac_mau([thu_muc]).items()):
+        try:
+            mod = nap(tep)
+            vd = dict(getattr(mod, "VI_DU", None) or {})
+            if not vd:
+                raise ValueError("mẫu chưa có VI_DU (số ví dụ)")
+            t = {"x": float(vd.get("x", 300)), "y": float(vd.get("y", 100)), "tham_so": dict(vd.get("tham_so") or {})}
+            for k in ("be_x", "be_y", "doan_x", "doan_y"):
+                t[k] = list(vd.get(k, []))
+            nen = mt.NenVe(moi_truong)
+            mod.ve(nen, t)
+            x0, y0, x1, y1 = mt.khung_bao(nen)
+            them_chung(nen, t, x0, y0, x1, y1, chi_dim=True)
+            nhan = [(t["x"], "x"), (t["y"], "y")] + [(float(v), k) for k, v in t["tham_so"].items()]
+            for e in list(nen.msp.query("DIMENSION")):
+                so = float(e.get_measurement())
+                chu = next((k for v, k in nhan if abs(v - so) <= 0.01), None)
+                if chu:
+                    e.dxf.text = chu
+                    e.override().render()
+            anh = os.path.join(thu_muc, ten + ".png")
+            dm.qsave(nen.msp, anh, bg="#FFFFFF", size_inches=(6, 4), dpi=110)
+            kq.append({"ten": ten, "anh": anh, "loi": None})
+        except Exception as ex:
+            kq.append({"ten": ten, "anh": None, "loi": "%s: %s" % (type(ex).__name__, ex)})
+    return kq
+
+
 def chuoi(moc, a, b):
     """Mốc trong [a, b] (gồm 2 đầu), sắp xếp, bỏ trùng (< 0.01 mm)."""
     kq = []
@@ -131,8 +177,16 @@ def du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y):
         elif loai == "doc" and abs((b - a) - so) <= 0.5 and y0 - 0.01 <= a and b <= y1 + 0.01:
             nen.dim_doc(a, b, x1, x1 + mt.LE_DIM + hang_y * mt.BUOC_DIM)
             hang_y += 1
-        elif loai == "r" and (tu or den):
-            d2 = nen.msp.add_radius_dim(center=(tu, den), radius=so, angle=45, dimstyle=nen.kieu_dim, dxfattribs={"layer": mt.LOP_DIM})
+        elif loai == "r":
+            # chỉ dim R khi bản vẽ thật sự có cung bán kính đó (gần tâm khách ghi nếu có) — không thì báo lệch, không dim sai
+            cung = [e for e in nen.msp.query('ARC[layer=="%s"]' % mt.LOP_CAT) if abs(float(e.dxf.radius) - so) <= 0.05]
+            if tu or den:
+                cung.sort(key=lambda e: (e.dxf.center.x - tu) ** 2 + (e.dxf.center.y - den) ** 2)
+            if not cung:
+                thieu.append("R%g lệch — bản vẽ không có cung R%g (kiểm thông số mẫu)" % (so, so))
+                continue
+            c = cung[0].dxf.center
+            d2 = nen.msp.add_radius_dim(center=(c.x, c.y), radius=so, angle=45, dimstyle=nen.kieu_dim, dxfattribs={"layer": mt.LOP_DIM})
             d2.render()
         else:
             thieu.append(("R" if loai == "r" else "Ø" if loai == "phi" else "") + ("%g" % so) + ("°" if loai == "goc" else "") + " (" + loai + ")")
@@ -141,9 +195,9 @@ def du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y):
     return hang_x, hang_y, thieu
 
 
-def them_chung(nen, t, x0, y0, x1, y1):
+def them_chung(nen, t, x0, y0, x1, y1, chi_dim=False):
     """Phần chung mọi tấm theo bản chuẩn xưởng (12/11): ケガキ + leader, chuỗi dim chi tiết dưới / phải (1-SUNPOU),
-    dim tổng X dưới cùng + Y bên phải (1-XY), F-name dưới tấm, Khung_IN tỉ lệ khổ A ngang."""
+    dim tổng X dưới cùng + Y bên phải (1-XY), F-name dưới tấm, Khung_IN tỉ lệ khổ A ngang. chi_dim: bỏ F-name + khung (ảnh hướng dẫn)."""
     import moi_truong as mt
     kg = sorted(([float(k[0]), float(k[1])] for k in t.get("ke_gaki", [])), key=lambda k: k[0])
     for kx, ky in kg:
@@ -163,6 +217,8 @@ def them_chung(nen, t, x0, y0, x1, y1):
     y_tong = y0 - mt.LE_DIM - hx * mt.BUOC_DIM  # dim tổng luôn ngoài cùng
     nen.dim_ngang(x0, x1, y0, y_tong, lop=mt.LOP_XY)
     nen.dim_doc(y0, y1, x1, x1 + mt.LE_DIM + hy * mt.BUOC_DIM, lop=mt.LOP_XY)
+    if chi_dim:
+        return thieu
     nen.fname(x0 + mt.LECH_FNAME, y_tong - mt.DUOI_FNAME, t.get("fname", []))
     bx0, by0, bx1, by1 = mt.bao_tat_ca(nen)
     nen.khung_in(*mt.khung_a(bx0 - mt.LE_KHUNG, by0 - mt.LE_KHUNG, bx1 + mt.LE_KHUNG, by1 + mt.LE_KHUNG))
@@ -175,7 +231,11 @@ def ve_tam(viec, t, mau, so_tay, co_anh):
     if ten not in mau:
         raise ValueError("chưa có mẫu biên dạng '%s' trong thư viện" % ten)
     nen = mt.NenVe(viec["moi_truong"])
-    nap(mau[ten]).ve(nen, t)
+    mod = nap(mau[ten])
+    thieu_ts = [ts[0] for ts in tham_so_mau(mod) if ts[2] is None and ts[0] not in (t.get("tham_so") or {})]
+    if thieu_ts:
+        raise ValueError("thiếu thông số mẫu '%s': %s — nhập ở ✎ Sửa thông số → Thông số mẫu" % (ten, ", ".join(thieu_ts)))
+    mod.ve(nen, t)
     x0, y0, x1, y1 = mt.khung_bao(nen)
     if x1 <= x0 or y1 <= y0:
         raise ValueError("mẫu '%s' không vẽ viền cắt nào" % ten)
@@ -266,11 +326,16 @@ def main(argv):
     elif len(argv) > 1 and argv[1] == "--thu-vien":
         ds = []
         for ten, tep in sorted(cac_mau(argv[2:]).items()):
+            anh = os.path.splitext(tep)[0] + ".png"
             try:
-                ds.append({"ten": ten, "mo_ta": getattr(nap(tep), "MO_TA", ""), "tep": tep})
+                mod = nap(tep)
+                ds.append({"ten": ten, "mo_ta": getattr(mod, "MO_TA", ""), "tep": tep, "tham_so": [list(x) for x in tham_so_mau(mod)],
+                           "vi_du": getattr(mod, "VI_DU", None) or {}, "anh": anh if os.path.exists(anh) else None})
             except Exception as ex:
-                ds.append({"ten": ten, "mo_ta": "", "tep": tep, "loi": str(ex)})
+                ds.append({"ten": ten, "mo_ta": "", "tep": tep, "loi": str(ex), "tham_so": [], "vi_du": {}, "anh": None})
         in_json(ds)
+    elif len(argv) > 3 and argv[1] == "--huong-dan":
+        in_json(anh_huong_dan(argv[2], argv[3]))
     elif len(argv) > 1:
         in_json(ve_viec(argv[1]))
     else:
