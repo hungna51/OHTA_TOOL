@@ -831,6 +831,7 @@ namespace TeamsTool.Services
             {
                 Bango = x0.GetString("bango"), Tep = x0.GetString("tep"), Anh = x0.GetString("anh"), Loi = x0.GetString("loi"),
                 ThieuDim = (x0.Get("thieu_dim") as List<object> ?? new List<object>()).OfType<string>().ToList(),
+                CanhBao = (x0.Get("canh_bao") as List<object> ?? new List<object>()).OfType<string>().ToList(),
             };
         }
 
@@ -840,6 +841,36 @@ namespace TeamsTool.Services
             public string Bango, Tep, Anh, Loi;
             /// <summary>Dim khách chưa có trên bản vẽ mà không tự thêm được (Ø lỗ, góc…) — người vẽ bổ sung trên CAD.</summary>
             public List<string> ThieuDim = new List<string>();
+            /// <summary>Khoét chạm / vượt viền, đè lỗ / khoét khác, mép mỏng hơn T (goc_khoet.py) — vẫn vẽ, người kiểm.</summary>
+            public List<string> CanhBao = new List<string>();
+        }
+
+        /// <summary>
+        /// Sơ đồ đỉnh (12/11): ảnh viền ngoài + khoét có ghi số đỉnh → ho_so\&lt;đơn&gt;-n-dinh.png cho mọi tấm đã có mẫu vẽ (tấm bẻ: trải phẳng
+        /// tạm theo bảng TV). Người / AI chỉ đỉnh vát / bo theo số này. Máy chưa có Python / ezdxf / môi trường vẽ → trả câu báo, không lỗi.
+        /// </summary>
+        public static async Task<string> VeSoDo(ChiTiet ct, string tm, string title, CancellationToken huy)
+        {
+            TinhTrangPython tt = await KiemPython();
+            if (!tt.SanSang) return "Chưa vẽ sơ đồ đỉnh: " + tt.Loi;
+            if (!File.Exists(MoiTruongVe)) return "Chưa vẽ sơ đồ đỉnh: thiếu môi trường vẽ " + MoiTruongVe;
+            var ds = TinhLai(ct, TaoTrienKhai(ct, tm), title, tm);
+            if (ds.Count == 0) return null;
+            string dir = ThuMucHoSo(tm);
+            Directory.CreateDirectory(dir);
+            string viec = Path.Combine(Path.GetTempPath(), "ohta_so_do_" + Guid.NewGuid().ToString("N") + ".json");
+            File.WriteAllText(viec, PhongTrienKhai.ViecVe(title, ds, MoiTruongVe, dir, new[] { ThuVienChung, ThuVienThu(tm) }), Utf8);
+            try
+            {
+                var (ma, ra) = await ChayLenh(tt.Python, ThuMucVeDxf, huy, Path.Combine(ThuMucVeDxf, "ve.py"), "--so-do", viec);
+                List<object> l = null;
+                try { l = JsonLite.Parse(ra.Trim().Split('\n').Last()) as List<object>; } catch (Exception) { }
+                if (ma != 0 || l == null) return "Sơ đồ đỉnh lỗi: " + DongCuoi(ra);
+                foreach (JsonObject x in l.OfType<JsonObject>().Where(x => x.GetString("loi") != null)) // tấm chưa có mẫu / khoét sai: bỏ ảnh cũ
+                    try { File.Delete(Path.Combine(dir, x.GetString("bango") + "-dinh.png")); } catch (IOException) { }
+                return null;
+            }
+            finally { try { File.Delete(viec); } catch (IOException) { } }
         }
 
         /// <summary>
@@ -865,6 +896,7 @@ namespace TeamsTool.Services
                 {
                     Bango = x.GetString("bango"), Tep = x.GetString("tep"), Anh = x.GetString("anh"), Loi = x.GetString("loi"),
                     ThieuDim = (x.Get("thieu_dim") as List<object> ?? new List<object>()).OfType<string>().ToList(),
+                    CanhBao = (x.Get("canh_bao") as List<object> ?? new List<object>()).OfType<string>().ToList(),
                 }).ToList();
         }
 

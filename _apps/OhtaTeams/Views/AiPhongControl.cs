@@ -111,7 +111,7 @@ namespace TeamsTool.Views
         private async void Chay(int tu, bool docLaiHet)
         {
             if (DangChay.Contains(_d.Id)) return;
-            if (tu != 5 && tu != 8 && !AiDon.DaDongY) // 5, 8 = vẽ DXF trên máy (8 chỉ gửi AI khi có ô sửa — đã đồng ý từ lúc đọc)
+            if (tu != 5 && tu != 8 && tu != 10 && !AiDon.DaDongY) // 5, 8, 10 = vẽ trên máy (8 chỉ gửi AI khi có ô sửa — đã đồng ý từ lúc đọc)
             {
                 if (MessageBox.Show("Khu AI gửi tệp bản vẽ của đơn lên dịch vụ AI (Claude của Anthropic; Gemini của Google nếu Nguồn AI = Antigravity; Ling của Ant Group nếu Nguồn AI = Ling — phần chữ) để đọc.\nCông ty đã cho phép gửi bản vẽ khách hàng ra dịch vụ AI chưa?\n\nĐồng ý → máy này không hỏi lại.",
                                     "AI đọc bản vẽ", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
@@ -131,6 +131,12 @@ namespace TeamsTool.Views
                     case 5:
                         await VeDxf();
                         return;
+                    case 10:
+                    {
+                        string sd = await AiDon.VeSoDo(AiDon.DocChiTiet(_tm), _tm, _d.Title, _huy.Token); // sau ✓ Xong sửa
+                        Bao(sd ?? "Đã lưu thông số, vẽ lại sơ đồ đỉnh.");
+                        return;
+                    }
                     case 8:
                     {
                         // Sau ✓ Xác nhận: rút bài học (nếu có ô sửa) rồi vẽ DXF luôn, không đợi bấm
@@ -178,7 +184,8 @@ namespace TeamsTool.Views
                     case 9:
                     {
                         PhongCapNhat.KetQua kq9 = await AiDon.CapNhatTheoTraLoi(AiDon.DocChiTiet(_tm), _tm, _d.Title, Bao, _huy.Token);
-                        Bao("Đã cập nhật theo câu trả lời: " + kq9.DaXuLy.Count + " câu xử lý xong, " + kq9.Doi.Count(x => !x.StartsWith("⚠", StringComparison.Ordinal)) + " ô đổi"
+                        string sd9 = await AiDon.VeSoDo(AiDon.DocChiTiet(_tm), _tm, _d.Title, _huy.Token);
+                        Bao((sd9 != null ? sd9 + "\n" : "") + "Đã cập nhật theo câu trả lời: " + kq9.DaXuLy.Count + " câu xử lý xong, " + kq9.Doi.Count(x => !x.StartsWith("⚠", StringComparison.Ordinal)) + " ô đổi"
                             + (kq9.VanDeMoi.Count > 0 ? ", " + kq9.VanDeMoi.Count + " câu cần hỏi lại" : "") + "."
                             + (kq9.Doi.Count > 0 ? "\n" + string.Join("\n", kq9.Doi) : "\n(Không ô nào cần đổi.)"));
                         return;
@@ -196,6 +203,8 @@ namespace TeamsTool.Views
                     try { phongTo = await AiDon.DocPhongTo(ct, _tm, _d.Title, Bao, _huy.Token); } // đọc kỹ lại từng tấm trên ảnh cắt
                     catch (Exception ex) when (!(ex is OperationCanceledException)) { phongTo = "Chưa đọc phóng to được: " + ex.Message; }
                     KiemTra kt = AiDon.KiemLuat(ct, _tm, _d.Title);
+                    string soDo = await AiDon.VeSoDo(AiDon.DocChiTiet(_tm), _tm, _d.Title, _huy.Token); // số đỉnh để chỉ vát / bo
+                    if (soDo != null) anh = (anh != null ? anh + "\n" : "") + soDo;
                     Bao((loiDoc != null ? loiDoc + "\n" : "")
                         + "Xong phòng 1: " + ct.Tam.Count + " tấm, " + kt.VanDe.Count + " vấn đề (" + kt.DoConMo + " đỏ). Sang phòng 2: trả lời câu hỏi từng tấm, ✎ sửa thông số nếu sai, rồi ✓ Xác nhận → Triển khai."
                         + (phongTo != null ? "\n" + phongTo : "") + (anh != null ? "\n" + anh : ""));
@@ -231,8 +240,10 @@ namespace TeamsTool.Views
             List<AiDon.KetQuaVe> kq5 = await AiDon.VeBanVe(AiDon.TinhLai(ct5, AiDon.TaoTrienKhai(ct5, _tm), _d.Title, _tm), _d.Title, _tm, Bao, _huy.Token);
             var loi5 = kq5.Where(k => k.Loi != null).Select(k => k.Bango + ": " + k.Loi).ToList();
             var thieu5 = kq5.Where(k => k.ThieuDim.Count > 0).Select(k => k.Bango + ": " + string.Join(", ", k.ThieuDim)).ToList();
+            var canh5 = kq5.Where(k => k.CanhBao.Count > 0).Select(k => k.Bango + ": " + string.Join("; ", k.CanhBao)).ToList();
             string bao = "Đã vẽ " + kq5.Count(k => k.Loi == null) + " bản trải phẳng (ezdxf, môi trường moi-truong-ve.dxf) trong ai\\ban_ve — xem ở phòng 3, bấm ảnh để mở DXF."
                          + (thieu5.Count > 0 ? "\n⚠ Còn thiếu dim của khách (bổ sung trên CAD):\n" + string.Join("\n", thieu5) : "")
+                         + (canh5.Count > 0 ? "\n⚠ Góc / khoét cần kiểm:\n" + string.Join("\n", canh5) : "")
                          + (loi5.Count > 0 ? "\nChưa vẽ được:\n" + string.Join("\n", loi5) : "");
             Bao(bao);
             return bao;
@@ -403,20 +414,10 @@ namespace TeamsTool.Views
 
             var than = new StackPanel { Margin = new Thickness(4, 4, 0, 6) };
             string hs = AiDon.ThuMucHoSo(_tm), png = Path.Combine(hs, ten + ".png"), md = Path.Combine(hs, ten + ".md");
-            if (ten.Length > 0 && File.Exists(png))
-                try
-                {
-                    var bmp = new System.Windows.Media.Imaging.BitmapImage();
-                    bmp.BeginInit();
-                    bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; // nhả tệp — cắt lại ghi đè được
-                    bmp.CreateOptions = System.Windows.Media.Imaging.BitmapCreateOptions.IgnoreImageCache;
-                    bmp.UriSource = new Uri(png);
-                    bmp.EndInit();
-                    var anh = new Image { Source = bmp, MaxHeight = 220, HorizontalAlignment = HorizontalAlignment.Left, Cursor = System.Windows.Input.Cursors.Hand, ToolTip = "Ảnh cắt từ bản vẽ khách — bấm để mở" };
-                    anh.MouseLeftButtonUp += (s, e) => Mo(png);
-                    than.Children.Add(new Border { Child = anh, BorderBrush = KieuTeams.Mau("#D0D5DD"), BorderThickness = new Thickness(1), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 4) });
-                }
-                catch (Exception) { } // ảnh hỏng: bỏ qua, hồ sơ vẫn có
+            var hangAnh = new WrapPanel();
+            if (ten.Length > 0) ThemAnh(hangAnh, png, "Ảnh cắt từ bản vẽ khách — bấm để mở");
+            if (ten.Length > 0) ThemAnh(hangAnh, Path.Combine(hs, ten + "-dinh.png"), "Sơ đồ đỉnh: số đỉnh viền ngoài (1 = trái dưới, theo chiều kim đồng hồ) và đỉnh khoét k1.1… — dùng cho ô Góc vát / bo");
+            if (hangAnh.Children.Count > 0) than.Children.Add(hangAnh);
             if (t.GhiChuVi.Trim().Length > 0 || t.GhiChuJp.Trim().Length > 0)
                 than.Children.Add(new TextBlock
                 {
@@ -428,7 +429,14 @@ namespace TeamsTool.Views
                 than.Children.Add(DongVanDe(kt, v, sua));
             var nut = new WrapPanel { Margin = new Thickness(0, 2, 0, 0) };
             string khoa = t.Khoa;
-            nut.Children.Add(NutNho(_suaTam == khoa ? "✓ Xong sửa" : "✎ Sửa thông số", true, () => { _suaTam = _suaTam == khoa ? "" : khoa; Ve(); return false; }, null));
+            nut.Children.Add(NutNho(_suaTam == khoa ? "✓ Xong sửa" : "✎ Sửa thông số", true, () =>
+            {
+                bool xong = _suaTam == khoa;
+                _suaTam = xong ? "" : khoa;
+                Ve();
+                if (xong) Chay(10, false); // vẽ lại sơ đồ đỉnh theo tiết diện / mẫu / khoét mới
+                return false;
+            }, null));
             if (File.Exists(md)) nut.Children.Add(NutNho("📄 Hồ sơ " + ten + ".md", true, () => { Mo(md); return false; }, null));
             than.Children.Add(nut);
             if (_suaTam == khoa) than.Children.Add(KhungSua(ct, t, sua));
@@ -489,12 +497,30 @@ namespace TeamsTool.Views
             if (!DangChay.Contains(_d.Id)) Ve();
         }
 
+        private void ThemAnh(Panel p, string f, string goiY)
+        {
+            if (!File.Exists(f)) return;
+            try
+            {
+                var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                bmp.BeginInit();
+                bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; // nhả tệp — cắt / vẽ lại ghi đè được
+                bmp.CreateOptions = System.Windows.Media.Imaging.BitmapCreateOptions.IgnoreImageCache;
+                bmp.UriSource = new Uri(f);
+                bmp.EndInit();
+                var anh = new Image { Source = bmp, MaxHeight = 220, HorizontalAlignment = HorizontalAlignment.Left, Cursor = System.Windows.Input.Cursors.Hand, ToolTip = goiY };
+                anh.MouseLeftButtonUp += (s, e) => Mo(f);
+                p.Children.Add(new Border { Child = anh, BorderBrush = KieuTeams.Mau("#D0D5DD"), BorderThickness = new Thickness(1), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 6, 4) });
+            }
+            catch (Exception) { } // ảnh hỏng: bỏ qua, hồ sơ vẫn có
+        }
+
         private static readonly (string Nhom, (string O, string Nhan)[] O)[] NhomO =
         {
             ("Bản vẽ khách", new[] { ("so_ban_ve", "Số BV"), ("ten", "Tên") }),
             ("Thông số", new[] { ("M", "M (vật liệu)"), ("Z", "Z"), ("T", "T (độ dày)"), ("Q", "Q (số lượng)"), ("mat", "Mặt"), ("kich_thuoc", "Kích thước"), ("dung_sai", "Dung sai") }),
             ("Tiết diện", new[] { ("kieu_td", "Kiểu"), ("td_x", "X"), ("td_y", "Y"), ("ghi_chu_td", "Ghi chú"), ("bien_dang", "Mẫu vẽ"), ("tham_so", "Thông số mẫu") }),
-            ("Lỗ & ケガキ (JSON)", new[] { ("lo", "Lỗ"), ("ke_gaki", "ケガキ") }),
+            ("Lỗ, ケガキ, góc, khoét", new[] { ("lo", "Lỗ (JSON)"), ("ke_gaki", "ケガキ"), ("goc", "Góc vát / bo"), ("khoet", "Khoét trong") }),
             ("Mô tả & ghi chú", new[] { ("mo_ta", "Mô tả chi tiết"), ("ghi_chu_jp", "Ghi chú JP"), ("ghi_chu_vi", "Ghi chú VI") }),
             ("Lý do sửa", new[] { ("ly_do_sua", "Lý do (không bắt buộc)") }),
         };
@@ -526,7 +552,7 @@ namespace TeamsTool.Views
                 luoi.Children.Add(tieuDe);
                 foreach (var (o, nhan) in cacO)
                 {
-                    string giaTri = o == "ly_do_sua" ? t.LyDoSua : PhongDocBanVe.Lay(t, o);
+                    string giaTri = o == "ly_do_sua" ? t.LyDoSua : o == "ke_gaki" ? PhongGocKhoet.KeGakiChu(t.KeGakiJson) : PhongDocBanVe.Lay(t, o);
                     var lbl = new TextBlock { Text = nhan + (t.TheoTraLoi.Contains(o) ? " ↺" : t.DaSua.Contains(o) ? " ✎" : ""), FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center,
                                               ToolTip = t.TheoTraLoi.Contains(o) ? "Đổi theo câu trả lời của khách / quản lý" : t.GiaTriAi.TryGetValue(o, out string ai) ? "AI đọc: " + ai : null };
                     Brush nen = t.KhongChac.Contains(o) || (o.StartsWith("td_", StringComparison.Ordinal) && t.KhongChac.Contains("tiet_dien")) ? KieuTeams.Mau("#FFF6E0") : Brushes.White;
@@ -542,13 +568,15 @@ namespace TeamsTool.Views
                     }
                     else
                     {
-                        bool dai = o == "mo_ta" || o == "lo" || o == "ke_gaki" || o.StartsWith("ghi_chu", StringComparison.Ordinal);
+                        bool dai = o == "mo_ta" || o == "lo" || o == "khoet" || o.StartsWith("ghi_chu", StringComparison.Ordinal);
                         var tb = new TextBox { Text = giaTri, IsReadOnly = !sua, Background = nen, Margin = new Thickness(0, 1, 0, 1), Padding = new Thickness(3, 1, 3, 1),
                                                AcceptsReturn = dai, TextWrapping = dai ? TextWrapping.Wrap : TextWrapping.NoWrap, MaxHeight = dai ? 160 : double.PositiveInfinity,
                                                VerticalScrollBarVisibility = dai ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled, FontWeight = FontWeights.Normal,
                                                ToolTip = o.StartsWith("td_", StringComparison.Ordinal) ? PhongTrienKhai.HuongDanTd
                                                        : o == "lo" ? "Mỗi nhóm: {\"d\":10, \"so_luong\":2, \"taro\":\"\", \"sara\":false, \"loai\":\"tron\", \"vi_tri\":[{\"x\":50,\"y\":20}, …]} — tâm lỗ trên hình trải phẳng, gốc trái dưới; lỗ dài: \"loai\":\"dai\", \"rong\", \"dai\", \"goc\""
-                                                       : o == "ke_gaki" ? "[{\"x\":120,\"y\":27.5}, …] — tâm dấu trên hình trải phẳng, gốc trái dưới"
+                                                       : o == "ke_gaki" ? "120,27.5; 180,27.5 — tâm dấu x,y trên hình trải phẳng (gốc trái dưới), cách nhau bằng ;"
+                                                       : o == "goc" ? PhongGocKhoet.HuongDanGoc
+                                                       : o == "khoet" ? PhongGocKhoet.HuongDanKhoet
                                                        : o == "tham_so" ? "Dạng r1=45; r2=38. Mẫu " + t.BienDang + ": " + (_thuVien?.FirstOrDefault(m => m.Ten == t.BienDang)?.ThamSoChu is string tsc && tsc.Length > 0 ? tsc : "không có thông số riêng") + " — bấm 📚 Thư viện mẫu xem ảnh hướng dẫn"
                                                        : null };
                         tb.LostFocus += (s, e) => LuuO(ct, t, o, tb.Text.Trim());
@@ -576,12 +604,17 @@ namespace TeamsTool.Views
             }
             else
             {
-                if (o == "lo" || o == "ke_gaki")
+                string loi = null;
+                if (o == "lo")
                 {
                     object j = null;
                     try { j = OhtaTool.Plugin.Core.JsonLite.Parse(moi.Length > 0 ? moi : "[]"); } catch (Exception) { }
-                    if (!(j is List<object>)) { _trangThai.Text = (o == "lo" ? "Lỗ" : "ケガキ") + ": JSON sai (phải là mảng [ … ]) — chưa lưu."; return; }
+                    if (!(j is List<object>)) loi = "JSON sai (phải là mảng [ … ])";
                 }
+                else if (o == "ke_gaki") moi = PhongGocKhoet.KeGakiJson(moi, out loi) ?? "";
+                else if (o == "goc") PhongGocKhoet.DocGoc(moi, out loi);
+                else if (o == "khoet") PhongGocKhoet.DocKhoet(moi, out loi);
+                if (loi != null) { _trangThai.Text = o + ": " + loi + " — chưa lưu."; return; }
                 string cu = PhongDocBanVe.Lay(t, o);
                 if (moi == cu) return;
                 if (!t.DaSua.Contains(o) && !t.GiaTriAi.ContainsKey(o)) t.GiaTriAi[o] = cu;

@@ -51,6 +51,9 @@ namespace TeamsTool.Core
             sb.Append("\n## Tiết diện\n");
             Dong(sb, "Kiểu", t.KieuTd); Dong(sb, "X", t.TdX); Dong(sb, "Y", t.TdY); Dong(sb, "Ghi chú", t.GhiChuTd);
             Dong(sb, "Mẫu biên dạng", t.BienDang + (t.MoTaBienDang.Length > 0 ? " — " + t.MoTaBienDang : ""));
+            Dong(sb, "Thông số mẫu", t.ThamSo);
+            Dong(sb, "Góc vát / bo", t.Goc);
+            Dong(sb, "Khoét trong", t.Khoet);
             sb.Append("(cú pháp: ").Append(PhongTrienKhai.HuongDanTd).Append(")\n");
             Ds(sb, "Bẻ / nhấn / cuộn", t.CanhJson); Ds(sb, "Lỗ", t.LoJson); Ds(sb, "ケガキ (toạ độ trên hình trải phẳng, gốc trái dưới)", t.KeGakiJson);
             Ds(sb, "Kích thước khách (phải có đủ trên bản vẽ OHTA)", t.DimKhachJson);

@@ -20,6 +20,7 @@ namespace TeamsTool.Core
 Đọc KỸ ảnh và trả lại bản ĐÚNG của các ô dưới đây (giữ đúng giá trị đầu vào nếu ảnh không cho thấy khác):
 - M, T, Q, kich_thuoc (""rộng x dài""), td_x, td_y (tiết diện dạng chữ: số = đoạn mm xen chỗ uốn b<góc> / a<góc>r<R> / c<cung>r<R> / p<góc>), tham_so (""r1=45; r2=38"" nếu mẫu có thông số riêng), mo_ta (mô tả chi tiết hình đủ để vẽ lại).
 - lo: mỗi nhóm lỗ {d, so_luong, taro, kieu ("""" tròn / ""sara D"" / ""dai RxL G""), ghi_chu, cach_duong_be, vi_tri [[x, y], …] = TÂM từng lỗ trên hình TRẢI PHẲNG, gốc góc trái dưới của tấm, tính từ kích thước ghi trên bản vẽ (vd ""100P×5=500"" = 6 lỗ cách đều 100)}.
+- goc: vát / bo góc viền ngoài ""<đỉnh> C10; <đỉnh> R5"" (đỉnh = trai_duoi / phai_duoi / phai_tren / trai_tren hoặc x,y). khoet: khoét trong (không phải lỗ) ""□rộngxcao R<r> G<góc> @ x,y; x,y"" hoặc ""[x,y x,y …] @ x,y"", cách nhau |.
 - ke_gaki: [[x, y], …] tâm từng dấu khắc vạch. dim_khach: MỌI kích thước khách ghi cho tấm {loai ngang / doc / r / phi / goc, gia_tri, tu, den}.
 - ĐỐI CHIẾU ghi chú (vd ""140*600"", ""PL9"", ""数量2個"") với dim trên hình: khớp → dùng; KHÔNG khớp → để kich_thuoc theo ghi chú, thêm kich_thuoc vào khong_chac và tạo van_de muc do nhom khach nêu cả hai số.
 - khong_chac: các ô vẫn chưa chắc sau khi xem ảnh. van_de: vấn đề MỚI thấy trên ảnh (cùng cách viết: tam, muc do / vang / info, nhom tu_xu_ly / noi_bo / khach, muc_qc, noi_dung một ý ~20 từ, lien_lac).
@@ -29,7 +30,7 @@ Không bịa: không đọc được thì giữ đầu vào và đưa vào khong
         public static JsonObject Schema()
         {
             JsonObject s = Kieu("string"), n = Kieu("number"), cap = Mang(Mang(n));
-            return Obj(("M", s), ("T", s), ("Q", s), ("kich_thuoc", s), ("td_x", s), ("td_y", s), ("tham_so", s), ("mo_ta", s),
+            return Obj(("M", s), ("T", s), ("Q", s), ("kich_thuoc", s), ("td_x", s), ("td_y", s), ("tham_so", s), ("goc", s), ("khoet", s), ("mo_ta", s),
                        ("lo", Mang(Obj(("d", n), ("so_luong", n), ("taro", s), ("kieu", s), ("ghi_chu", s), ("cach_duong_be", n), ("vi_tri", cap)))),
                        ("ke_gaki", cap), ("dim_khach", Mang(Obj(("loai", s), ("gia_tri", n), ("tu", n), ("den", n)))),
                        ("khong_chac", Mang(s)), ("van_de", Mang(PhongKiemTra.SchemaVanDe())), ("bo_nghi_van", Mang(n)));
@@ -42,7 +43,7 @@ Không bịa: không đọc được thì giữ đầu vào và đưa vào khong
             sb.Append("Tấm: ").Append(PhongKiemTra.TenTam(t)).Append(" (tệp ").Append(t.Tep).Append(", trang ").Append(t.Trang).Append(")\n");
             sb.Append("Dữ liệu lượt đọc cả trang:\n");
             foreach (var (o, v) in new[] { ("M", t.M), ("T", t.T), ("Q", t.Q), ("kich_thuoc", t.KichThuoc), ("mat", t.Mat), ("kieu_td", t.KieuTd), ("td_x", t.TdX), ("td_y", t.TdY),
-                                           ("bien_dang", t.BienDang + (bienDangMoTa.Length > 0 ? " — " + bienDangMoTa : "")), ("tham_so", t.ThamSo), ("mo_ta", t.MoTa),
+                                           ("bien_dang", t.BienDang + (bienDangMoTa.Length > 0 ? " — " + bienDangMoTa : "")), ("tham_so", t.ThamSo), ("goc", t.Goc), ("khoet", t.Khoet), ("mo_ta", t.MoTa),
                                            ("ghi_chu_jp", t.GhiChuJp), ("lo", t.LoJson), ("ke_gaki", t.KeGakiJson), ("dim_khach", t.DimKhachJson) })
                 sb.Append("- ").Append(o).Append(": ").Append(string.IsNullOrWhiteSpace(v) ? "(trống)" : v.Replace("\r", "").Replace("\n", " ")).Append('\n');
             if (t.DaSua.Count > 0) sb.Append("(Người dùng đã sửa — coi là đúng: ").Append(string.Join(", ", t.DaSua.OrderBy(x => x))).Append(")\n");
@@ -107,7 +108,7 @@ Không bịa: không đọc được thì giữ đầu vào và đưa vào khong
         public static List<string> ApDung(TamAi t, JsonObject nd)
         {
             var doi = new List<string>();
-            foreach (string o in new[] { "M", "T", "Q", "kich_thuoc", "td_x", "td_y", "tham_so", "mo_ta" })
+            foreach (string o in new[] { "M", "T", "Q", "kich_thuoc", "td_x", "td_y", "tham_so", "goc", "khoet", "mo_ta" })
             {
                 string v = Chu(nd.Get(o)).Trim();
                 if (v.Length == 0 || t.DaSua.Contains(o) || v == PhongDocBanVe.Lay(t, o)) continue;

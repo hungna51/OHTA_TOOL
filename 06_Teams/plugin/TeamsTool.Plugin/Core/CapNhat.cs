@@ -17,15 +17,15 @@ namespace TeamsTool.Core
         public static readonly string[] ODoi =
         {
             "M", "Z", "T", "Q", "mat", "kich_thuoc", "dung_sai", "ghi_chu_jp", "ghi_chu_vi", "mo_ta",
-            "kieu_td", "td_x", "td_y", "ghi_chu_td", "bien_dang", "tham_so", "lo", "ke_gaki",
+            "kieu_td", "td_x", "td_y", "ghi_chu_td", "bien_dang", "tham_so", "goc", "khoet", "lo", "ke_gaki",
         };
 
         public const string LoiDan =
 @"Bạn là kỹ sư triển khai kim loại tấm của OHTA. Đầu vào: thông số các tấm của đơn (AI đọc từ bản vẽ, người có thể đã sửa) và các câu hỏi đã được khách / quản lý TRẢ LỜI.
 Nhiệm vụ: cập nhật thông số tấm cho ĐÚNG với câu trả lời. Với mỗi tấm có ô cần đổi, trả doi = các {o, gia_tri, ly_do}:
-- o: tên ô, đúng một trong: M, Z, T, Q, mat, kich_thuoc, dung_sai, ghi_chu_jp, ghi_chu_vi, mo_ta, kieu_td (phang / be / lam_tay), td_x, td_y (tiết diện dạng chữ: số = đoạn mm xen chỗ uốn b<góc> / a<góc>r<R> / c<cung>r<R> / p<góc>), ghi_chu_td, bien_dang (tên mẫu trong Thư viện), tham_so (""tên=số; …"" theo thông số của mẫu, vd ""c1=10; c2=10""), lo, ke_gaki.
+- o: tên ô, đúng một trong: M, Z, T, Q, mat, kich_thuoc, dung_sai, ghi_chu_jp, ghi_chu_vi, mo_ta, kieu_td (phang / be / lam_tay), td_x, td_y (tiết diện dạng chữ: số = đoạn mm xen chỗ uốn b<góc> / a<góc>r<R> / c<cung>r<R> / p<góc>), ghi_chu_td, bien_dang (tên mẫu trong Thư viện), tham_so (""tên=số; …"" theo thông số của mẫu), goc (vát / bo góc viền ngoài: ""<đỉnh> C10; <đỉnh> R5"" — đỉnh = tên góc trai_duoi / phai_duoi / phai_tren / trai_tren, số trên sơ đồ đỉnh, toạ độ x,y hoặc k1.2), khoet (khoét trong: ""□40x60 R5 @ x,y; x,y"" hoặc ""[x,y …] @ x,y"", các khoét cách nhau |), lo, ke_gaki.
 - gia_tri: giá trị MỚI đầy đủ của ô (không ghi phần thay đổi). lo: JSON mảng các nhóm {d, so_luong, taro, kieu ("""" tròn / ""sara D"" / ""dai RxL G""), ghi_chu, cach_duong_be, vi_tri [[x, y], …]}; ke_gaki: JSON mảng [[x, y], …].
-- Giữ thông số cũ khi gộp: vd tham_so cũ ""r1=45"" + câu trả lời thêm vát C10 góc 1 → ""r1=45; c1=10"". Ô kéo theo cũng phải đổi (đổi kích thước thì đổi cả td_x / td_y; đổi hình thì đổi bien_dang + tham_so; đổi T thì kiểm tiết diện).
+- Giữ thông số cũ khi gộp: vd goc cũ ""trai_duoi R5"" + câu trả lời thêm vát C10 góc phải dưới → ""trai_duoi R5; phai_duoi C10"". Ô kéo theo cũng phải đổi (đổi kích thước thì đổi cả td_x / td_y; đổi hình thì đổi bien_dang + tham_so; đổi T thì kiểm tiết diện).
 - ly_do: ngắn, dẫn câu trả lời (vd ""khách: vẫn vát C10"").
 - Câu trả lời không đổi thông số (vd ""đúng"", ""giữ nguyên"") → không tạo doi, nhưng vẫn đưa số câu đó vào da_xu_ly.
 - da_xu_ly: SỐ THỨ TỰ các câu trả lời đã được áp / không cần đổi gì. Câu trả lời mơ hồ, mâu thuẫn hoặc thiếu số → KHÔNG đưa vào da_xu_ly, tạo van_de hỏi lại (muc vang, nhom khach / noi_bo, noi_dung một ý ~20 từ).

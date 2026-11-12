@@ -14,6 +14,7 @@
 - Đường bẻ: LINE `0-KAKOU`, nét DASHED (`nen.duong_be`).
 
 ## Dim
+- **Vát / bo góc, khoét trong** (`goc_khoet.py`, chung mọi mẫu): vát = đoạn thẳng LINE `0-KAKOU`, bo = ARC thật, cùng layer viền; nhãn gom theo nhóm bằng leader `n-C10` / `n-R5` (không thêm dim R riêng — dim khách R trùng nhãn coi là đủ). Khoét = viền kín `0-KAKOU` (bo R mỗi góc nếu có); **không** thêm chuỗi dim riêng — chỉ dim như khách dim (`dim_khach`).
 - **Luôn đủ kích thước của khách**: mọi kích thước khách ghi trên bản vẽ còn đúng trên hình trải phẳng (`dim_khach`, AI đọc lúc đọc bản vẽ) phải có trên bản vẽ OHTA, cùng số. `ve.py` so với các dim đã vẽ: thiếu dim ngang / dọc → tự thêm một hàng dim (sau chuỗi dim, trước dim tổng); thiếu R → dim R chỉ khi bản vẽ có đúng cung R đó, không có thì báo **lệch** (không dim sai); còn lại (Ø lỗ, góc…) báo "còn thiếu dim của khách" để bổ sung trên CAD.
 - **Dim tổng** X (dưới cùng) và Y (bên phải): layer **`1-XY`**, kiểu `ISO-26` — `ve.py` tự thêm.
 - **Chuỗi dim chi tiết**: layer `1-SUNPOU`, giữa tấm và dim tổng — chuỗi ngang **phía dưới**, chuỗi dọc **bên phải**. Mốc: mép tấm, đường bẻ, dấu ケガキ, tâm cung có ghi R, mốc mẫu thêm (`nen.moc_x`, `nen.moc_y`). `ve.py` tự dựng.

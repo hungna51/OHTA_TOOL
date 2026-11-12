@@ -38,6 +38,10 @@ namespace TeamsTool.Core
         public string BienDang = "", MoTaBienDang = "";
         /// <summary>Thông số riêng của mẫu vẽ dạng chữ "r1=45; r2=38" (tên theo THAM_SO của mẫu) — AI đọc, người sửa ở ✎.</summary>
         public string ThamSo = "";
+        /// <summary>Góc vát / bo dạng chữ gọn "1 C10; trai_tren R5; 120,40 C5" (PhongGocKhoet) — chung mọi mẫu.</summary>
+        public string Goc = "";
+        /// <summary>Khoét trong dạng chữ gọn "□40x60 R5 @ 100,50 | [0,0 40,0 40,20] @ 10,10" (PhongGocKhoet) — chung mọi mẫu.</summary>
+        public string Khoet = "";
         public string CanhJson = "[]", LoJson = "[]";
         /// <summary>Dấu khắc vạch ケガキ / マーキング: [{x, y}] mm trên hình trải phẳng, gốc góc trái dưới.</summary>
         public string KeGakiJson = "[]";
@@ -101,14 +105,14 @@ namespace TeamsTool.Core
         /// <summary>Các ô chữ (tên JSON ↔ thuộc tính).</summary>
         public static readonly string[] O = { "so_ban_ve", "ten", "M", "Z", "T", "Q", "mat", "kich_thuoc", "dung_sai", "ghi_chu_jp", "ghi_chu_vi", "mo_ta" };
         /// <summary>Ô chữ của tiết diện (lưu chi_tiet.json; AI trả dạng cấu trúc x / y, đổi sang chữ khi đọc).</summary>
-        public static readonly string[] OTd = { "kieu_td", "td_x", "td_y", "ghi_chu_td", "bien_dang", "mo_ta_bien_dang", "tham_so" };
+        public static readonly string[] OTd = { "kieu_td", "td_x", "td_y", "ghi_chu_td", "bien_dang", "mo_ta_bien_dang", "tham_so", "goc", "khoet" };
 
         public static string Lay(TamAi t, string o)
         {
             switch (o)
             {
                 case "kieu_td": return t.KieuTd; case "td_x": return t.TdX; case "td_y": return t.TdY; case "ghi_chu_td": return t.GhiChuTd;
-                case "bien_dang": return t.BienDang; case "mo_ta_bien_dang": return t.MoTaBienDang; case "tham_so": return t.ThamSo;
+                case "bien_dang": return t.BienDang; case "mo_ta_bien_dang": return t.MoTaBienDang; case "tham_so": return t.ThamSo; case "goc": return t.Goc; case "khoet": return t.Khoet;
                 case "lo": return t.LoJson; case "ke_gaki": return t.KeGakiJson; // JSON — sửa ở khung ✎ (không gửi AI dạng ô chữ)
                 case "so_ban_ve": return t.SoBanVe; case "ten": return t.Ten; case "M": return t.M; case "Z": return t.Z;
                 case "T": return t.T; case "Q": return t.Q; case "mat": return t.Mat; case "kich_thuoc": return t.KichThuoc;
@@ -123,7 +127,7 @@ namespace TeamsTool.Core
             switch (o)
             {
                 case "kieu_td": t.KieuTd = v; break; case "td_x": t.TdX = v; break; case "td_y": t.TdY = v; break; case "ghi_chu_td": t.GhiChuTd = v; break;
-                case "bien_dang": t.BienDang = v; break; case "mo_ta_bien_dang": t.MoTaBienDang = v; break; case "tham_so": t.ThamSo = v; break;
+                case "bien_dang": t.BienDang = v; break; case "mo_ta_bien_dang": t.MoTaBienDang = v; break; case "tham_so": t.ThamSo = v; break; case "goc": t.Goc = v; break; case "khoet": t.Khoet = v; break;
                 case "lo": t.LoJson = v.Length > 0 ? v : "[]"; break; case "ke_gaki": t.KeGakiJson = v.Length > 0 ? v : "[]"; break;
                 case "so_ban_ve": t.SoBanVe = v; break; case "ten": t.Ten = v; break; case "M": t.M = v; break; case "Z": t.Z = v; break;
                 case "T": t.T = v; break; case "Q": t.Q = v; break; case "mat": t.Mat = v; break; case "kich_thuoc": t.KichThuoc = v; break;
@@ -304,6 +308,8 @@ TIẾT DIỆN của mỗi tấm (để trải phẳng — KHÔNG tự tính tr�
   · Hướng không uốn: một số = chiều dài phẳng theo hướng đó. Tấm phẳng: td_x = ""dài"", td_y = ""rộng"". Hộp 3–4 cạnh: td_x và td_y đều có chỗ uốn (thành – đáy – thành).
 - ghi_chu_td: tiếng Việt, ngắn (hướng bẻ V / N, chỗ chưa chắc). Không đọc được tiết diện → để rỗng, ghi lý do, thêm tiet_dien vào khong_chac.
 - ke_gaki: mỗi dấu khắc vạch (マーキング / ケガキ / 罫書き — dấu vạch, KHÔNG phải lỗ) một cặp [x, y] = toạ độ tâm (mm) trên hình TRẢI PHẲNG, gốc ở góc trái dưới của tấm, x theo hướng td_x; không có → rỗng. Bản vẽ chỉ ghi số dấu mà thiếu vị trí → để rỗng và hỏi trong van_de.
+- goc: vát C / bo R ở GÓC VIỀN NGOÀI, chữ dạng ""<đỉnh> C<số>; <đỉnh> R<số>"" — đỉnh là tên góc khung bao trai_duoi / phai_duoi / phai_tren / trai_tren hoặc toạ độ ""x,y"" trên hình TRẢI PHẲNG (gốc trái dưới); vd ""trai_duoi C10; phai_duoi C10"". Không có → rỗng. (Không ghi vát mép chiều dày 面取り ở đây — đó là ghi chú gia công.)
+- khoet: khoét trong KHÔNG phải lỗ tròn / lỗ dài (ô vuông, chữ nhật, hình đa giác), chữ dạng ""□rộngxcao R<bo góc> G<góc xoay> @ x,y; x,y"" (tâm từng vị trí) hoặc đa giác ""[x,y x,y x,y …] @ x,y"" (đỉnh so với điểm đặt), các khoét cách nhau bằng |; toạ độ trên hình trải phẳng, gốc trái dưới. Không có → rỗng.
 - tham_so: khi bien_dang là mẫu có ""thông số"" riêng (liệt kê trong Thư viện biên dạng): chữ dạng ""r1=45; r2=38"" — đúng tên của mẫu, số đọc từ bản vẽ (mm). Không ghi trên bản vẽ → bỏ (chương trình dùng mặc định); bắt buộc mà không đọc được → hỏi trong van_de. Mẫu không có thông số riêng → rỗng.
 - vung: [x0, y0, x1, y1] khung bao TRỌN hình vẽ của tấm trên trang PDF (mọi hình chiếu + dim + ghi chú của tấm, không gồm khung tên / ghi chú chung; tấm chỉ định bằng ô ghi chú có mũi tên / đường dẫn → vùng phải ôm cả KHUNG HÌNH mà mũi tên chỉ tới, không chỉ ô ghi chú), tỉ lệ 0–1 theo bề rộng / cao trang, gốc trái TRÊN (x0, y0 = góc trái trên; x1, y1 = góc phải dưới). DXF: theo khung bao bản vẽ.
 - mo_ta: tiếng Việt, mô tả CHI TIẾT hình tấm đủ để người khác vẽ lại không cần xem bản vẽ: hình dạng tổng thể, từng cạnh / cung (R, lõm / lồi, vị trí), lỗ (Ø, số, vị trí), ケガキ, chỗ bẻ (hướng, góc), chi tiết đặc biệt. Chỉ điều có trên bản vẽ, không suy đoán.
@@ -481,6 +487,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
                 t.KhongChac.Add("tiet_dien");
             }
             t.KhongChac.UnionWith(DsChu(x.Get("khong_chac")));
+            PhongGocKhoet.DoiGocCu(t); // c1…c4 / r1…r4 cũ của mẫu phang → ô Góc chung
             return t;
         }
 

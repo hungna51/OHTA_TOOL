@@ -224,7 +224,7 @@ namespace TeamsTool.Tests
             var tGoc = new TamAi { SoBanVe = "G", M = "SS400", T = "9", Q = "2", KieuTd = "phang", TdX = "600", TdY = "140", BienDang = "phang", MoTa = "Tấm phẳng, vát góc C10 ở 2 đầu cạnh dài" };
             int coGoc() => PhongKiemTra.Luat(new[] { tGoc }, new List<PhongKiemTra.DongTv>(), "").Count(v => v.Ma.EndsWith("|thieu_goc"));
             int truoc = coGoc();
-            tGoc.ThamSo = "c1=10; c2=10";
+            tGoc.Goc = "trai_duoi C10; phai_duoi C10";
             Kiem("luat: mo ta vat goc ma thieu c / r", truoc + "|" + coGoc(), "1|0");
             // 🔄 Cập nhật theo câu trả lời: áp ô theo tên tấm, lo JSON, ô lạ / tấm lạ báo ⚠, câu đã xử lý, không tính bài học
             var tCn = new TamAi { Tep = "c.pdf", SoBanVe = "C1", M = "SS400", T = "9", KieuTd = "phang", TdX = "600", TdY = "140", BienDang = "phang", ThamSo = "" };
@@ -240,6 +240,24 @@ namespace TeamsTool.Tests
                  "c1=10; c2=10|SUS304|True|2|1,3|1|lo,M,tham_so");
             var ctCn = new ChiTiet { Tam = { tCn } };
             Kiem("cap nhat theo tra loi: khong rut bai hoc, giu khi luu", PhongBaiHoc.CacChoSua(ctCn).Count + "|" + string.Join(",", PhongDocBanVe.Doc(PhongDocBanVe.Ghi(ctCn)).Tam[0].TheoTraLoi.OrderBy(x => x)), "0|lo,M,tham_so");
+            // Góc vát / bo + khoét trong + ケガキ dạng chữ gọn (12/11)
+            string loiG;
+            var g1 = PhongGocKhoet.DocGoc("1 C10; trai_tren r5; 120 , 40 C5; k1.2 R3", out loiG);
+            Kiem("goc: doc 4 kieu dinh", string.Join("|", g1.Select(g => g.Dinh + g.Kieu + g.GiaTri)) + "|" + (loiG ?? "null"), "1C10|trai_trenR5|120,40C5|k1.2R3|null");
+            Kiem("goc: loi C + R cung dinh / dinh la / thieu so",
+                 (PhongGocKhoet.DocGoc("1 C10; 1 R5", out loiG) == null && loiG.Contains("vừa vát")) + "|" + (PhongGocKhoet.DocGoc("giua C5", out loiG) == null) + "|" + (PhongGocKhoet.DocGoc("1 C", out loiG) == null), "True|True|True");
+            var kh = PhongGocKhoet.DocKhoet("□40x60 R5 G30 @ 100,50; 300,50 | [0,0 40,0 40,20 0,20] @ 10,10", out loiG);
+            Kiem("khoet: chu nhat + da giac", kh.Count + "|" + kh[0].Rong + "x" + kh[0].Cao + " R" + kh[0].R + " G" + kh[0].GocXoay + " n" + kh[0].ViTri.Count + "|" + kh[1].Kieu + " " + kh[1].Dinh.Count + "|" + (loiG ?? "null"),
+                 "2|40x60 R5 G30 n2|da_giac 4|null");
+            Kiem("khoet: loi thieu @ / R qua lon / da giac 2 dinh",
+                 (PhongGocKhoet.DocKhoet("□40x60", out loiG) == null) + "|" + (PhongGocKhoet.DocKhoet("□40x60 R25 @ 1,1", out loiG) == null) + "|" + (PhongGocKhoet.DocKhoet("[0,0 1,1] @ 1,1", out loiG) == null), "True|True|True");
+            string kgJ = PhongGocKhoet.KeGakiJson("120,27.5; 180,27.5", out loiG);
+            Kiem("ke gaki: chu <-> json", PhongGocKhoet.KeGakiChu(kgJ) + "|" + (PhongGocKhoet.KeGakiJson("120;5", out loiG) == null), "120,27.5; 180,27.5|True");
+            var tCu = new TamAi { BienDang = "phang", ThamSo = "r9=3; c1=10; c2=10", Goc = "" };
+            Kiem("goc: doi c1..c4 cu sang o Goc", PhongGocKhoet.DoiGocCu(tCu) + "|" + tCu.Goc + "|" + tCu.ThamSo, "True|trai_duoi C10; phai_duoi C10|r9=3");
+            var tGk = new TamAi { SoBanVe = "GK", M = "SS400", T = "3", Q = "1", KieuTd = "phang", TdX = "100", TdY = "50", BienDang = "phang", Goc = "1 C10; 1 R5", Khoet = "□40x60" };
+            var luatGk = PhongKiemTra.Luat(new[] { tGk }, new List<PhongKiemTra.DongTv>(), "");
+            Kiem("luat: goc / khoet viet sai", luatGk.Count(v => v.Ma.EndsWith("|goc_sai")) + "|" + luatGk.Count(v => v.Ma.EndsWith("|khoet_sai")), "1|1");
             string schema = System.Text.RegularExpressions.Regex.Replace(OhtaTool.Plugin.Core.JsonLite.Serialize(PhongDocBanVe.Schema()), @"\s", "");
             Console.WriteLine("  (do dai schema doc ban ve: " + schema.Length + ")");
             Kiem("schema gon: khong enum, khong tiet dien long", schema.Contains("\"enum\"") + "|" + schema.Contains("\"uon\"") + "|" + (schema.Length < 6000), "False|False|True");

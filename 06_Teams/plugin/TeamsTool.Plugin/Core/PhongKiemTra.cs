@@ -174,11 +174,14 @@ namespace TeamsTool.Core
                 int loThieu = DsJson(t.LoJson).OfType<JsonObject>().Count(l => !(l.Get("vi_tri") is List<object> vt && vt.Count > 0));
                 if (t.KieuTd.Length > 0 && t.KieuTd != "lam_tay" && loThieu > 0)
                     Them("lo_thieu_vi_tri", VanDe.Vang, VanDe.TuXuLy, "", loThieu + " nhóm lỗ chưa có vị trí — ✎ Sửa thông số → Lỗ (vi_tri x, y từ góc trái dưới hình trải phẳng).");
-                // Mô tả có vát / bo góc mà thông số mẫu chưa có c… / r… → bản vẽ sẽ thiếu góc vát (vd test2 C10)
+                // Góc vát / bo + khoét trong (dạng chữ gọn) — sai cú pháp thì chặn; mô tả có vát / bo góc mà ô Góc trống thì nhắc (vd test2 C10)
+                if (PhongGocKhoet.DocGoc(t.Goc, out string loiGoc) == null)
+                    Them("goc_sai", VanDe.Do, VanDe.TuXuLy, "", "Ô Góc viết sai: " + loiGoc + " — ✎ Sửa thông số → Góc.");
+                if (PhongGocKhoet.DocKhoet(t.Khoet, out string loiKhoet) == null)
+                    Them("khoet_sai", VanDe.Do, VanDe.TuXuLy, "", "Ô Khoét viết sai: " + loiKhoet + " — ✎ Sửa thông số → Khoét.");
                 string moTaThuong = (t.MoTa + " " + t.GhiChuVi).ToLowerInvariant();
-                if (t.KieuTd.Length > 0 && (moTaThuong.Contains("vát góc") || moTaThuong.Contains("bo góc"))
-                    && !System.Text.RegularExpressions.Regex.IsMatch(t.ThamSo ?? "", @"(^|;)\s*[cr]\d\s*="))
-                    Them("thieu_goc", VanDe.Vang, VanDe.TuXuLy, "", "Mô tả có vát / bo góc nhưng chưa có thông số mẫu (c1…c4 vát, r1…r4 bo; góc 1 trái dưới → 4 trái trên) — ✎ Sửa thông số → Thông số mẫu.");
+                if (t.KieuTd.Length > 0 && (moTaThuong.Contains("vát góc") || moTaThuong.Contains("bo góc")) && t.Goc.Trim().Length == 0)
+                    Them("thieu_goc", VanDe.Vang, VanDe.TuXuLy, "", "Mô tả có vát / bo góc nhưng ô Góc trống — ✎ Sửa thông số → Góc (vd trai_duoi C10; xem số đỉnh trên sơ đồ đỉnh).");
                 if (t.BienDang == PhongTrienKhai.ChuaCoMau && t.KieuTd != "lam_tay")
                     Them("chua_co_mau", VanDe.Vang, VanDe.TuXuLy, "", "Thư viện chưa có mẫu vẽ cho hình này — bấm ✨ AI đề xuất mẫu vẽ (hoặc ✎ chọn mẫu).");
                 if (t.KieuTd.Length > 0 && t.KieuTd != "lam_tay" && t.TdX.Trim().Length == 0 && t.TdY.Trim().Length == 0)

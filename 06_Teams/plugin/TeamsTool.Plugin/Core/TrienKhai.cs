@@ -265,6 +265,9 @@ namespace TeamsTool.Core
                 var ts = new JsonObject();
                 foreach (var kv in ThamSo(t.ThamSo)) ts.Set(kv.Key, new JsonNumber(F(kv.Value)));
                 j.Set("tham_so", ts);
+                j.Set("goc", PhongGocKhoet.GocJson(PhongGocKhoet.DocGoc(t.Goc, out _) ?? new List<GocVat>()));     // sai cú pháp: luật phòng 2 đã chặn
+                j.Set("khoet", PhongGocKhoet.KhoetJson(PhongGocKhoet.DocKhoet(t.Khoet, out _) ?? new List<Khoet>()));
+                j.Set("t_day", new JsonNumber(F(PhongKiemTra.So(t.T) ?? 0)));                                     // kiểm mép khoét mỏng
                 j.Set("fname", DongFname(t, tk, Bango(title, i + 1)).Cast<object>().ToList());
                 j.Set("ghi_chu", tk.ChiTiet.Cast<object>().ToList());
                 tam.Add(j);

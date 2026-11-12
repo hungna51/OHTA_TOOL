@@ -4,11 +4,13 @@
     python ve.py --thu-vien DIR [DIR…]  → [{"ten", "mo_ta", "tep", "tham_so": [[tên, ý nghĩa, mặc định]], "vi_du", "anh"}]
                                           mẫu biên dạng (thư mục sau đè thư mục trước); anh = <ten>.png hướng dẫn nếu có
     python ve.py --huong-dan MOI_TRUONG DIR → [{"ten", "anh", "loi"}]  vẽ ảnh hướng dẫn <ten>.png cho mọi mẫu trong DIR
+    python ve.py --so-do VIEC.json      → [{"bango", "anh", "so_dinh", "loi"}]  ảnh sơ đồ đỉnh (viền + khoét, số đỉnh) mỗi tấm
     python ve.py --cat-anh ANH.json     → [{"ra", "loi"}]  cắt ảnh tấm từ bản vẽ khách (PDF: PyMuPDF; DXF: ezdxf)
-    python ve.py VIEC.json              → {"ket_qua": [{"bango", "tep", "anh", "loi", "thieu_dim"}]}
+    python ve.py VIEC.json              → {"ket_qua": [{"bango", "tep", "anh", "loi", "thieu_dim", "canh_bao"}]}
 
 VIEC.json (OhtaTeams ghi): {"moi_truong": dxf, "thu_muc_ra": dir, "thu_vien": [dir…],
-  "tam": [{"bango", "bien_dang", "x", "y", "tham_so": {tên: số}, "be_x", "be_y", "doan_x", "doan_y", "ke_gaki": [[x, y]…], "dim_khach": [{"loai", "gia_tri", "tu", "den"}], "fname": [dòng], "ghi_chu": [dòng]}]}
+  "tam": [{"bango", "bien_dang", "x", "y", "tham_so": {tên: số}, "be_x", "be_y", "doan_x", "doan_y", "ke_gaki": [[x, y]…], "dim_khach": [{"loai", "gia_tri", "tu", "den"}], "fname": [dòng], "ghi_chu": [dòng],
+  "goc": [{"dinh", "kieu" C/R, "gia_tri"}], "khoet": [{"kieu", "rong", "cao", "goc_xoay", "r", "dinh", "vi_tri"}], "t_day": số}]}  (xem goc_khoet.py)
 Mẫu biên dạng (thu_vien/<ten>.py): MO_TA + ve(nen, t) vẽ viền / đường bẻ / dim riêng của hình; ケガキ, chuỗi dim dưới / phải,
 dim tổng (1-XY), F-name, Khung_IN thêm ở đây (them_chung) theo bản chuẩn xưởng.
 Tệp đã sửa tay trên CAD (mã băm khác lần ghi trước, nhớ trong .ve_dxf.json) không bị ghi đè: ghi "<bango> (2).dxf".
@@ -232,12 +234,12 @@ def ve_lo(nen, t, y1, nhan_dau):
     return xs, ys, phi, thieu
 
 
-def du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y, lo_phi=()):
+def du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y, lo_phi=(), r_nhan=()):
     """Quy tắc 12/11: bản vẽ phải có ĐỦ kích thước khách (dim_khach). So với dim đã vẽ (kể cả dim tổng sắp vẽ);
     thiếu dim ngang / dọc → thêm một hàng dim (dưới / phải, sau chuỗi dim); thiếu R có tâm → dim R; còn lại báo thiếu.
     Trả (số hàng ngang, số hàng dọc đã dùng, [mô tả dim thiếu])."""
     import moi_truong as mt
-    co = dim_da_ve(nen) + [("ngang", x1 - x0), ("doc", y1 - y0)] + [("phi", d) for d in lo_phi]  # Ø lỗ: nhãn nhóm lỗ là đủ
+    co = dim_da_ve(nen) + [("ngang", x1 - x0), ("doc", y1 - y0)] + [("phi", d) for d in lo_phi] + [("r", r) for r in r_nhan]  # Ø lỗ / R góc: nhãn nhóm là đủ
     thieu = []
     for d in t.get("dim_khach", []):
         loai, so = d.get("loai", ""), float(d.get("gia_tri", 0) or 0)
@@ -269,7 +271,7 @@ def du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y, lo_phi=()):
     return hang_x, hang_y, thieu
 
 
-def them_chung(nen, t, x0, y0, x1, y1, chi_dim=False):
+def them_chung(nen, t, x0, y0, x1, y1, chi_dim=False, r_nhan=()):
     """Phần chung mọi tấm theo bản chuẩn xưởng (12/11): ケガキ + leader, chuỗi dim chi tiết dưới / phải (1-SUNPOU),
     dim tổng X dưới cùng + Y bên phải (1-XY), F-name dưới tấm, Khung_IN tỉ lệ khổ A ngang. chi_dim: bỏ F-name + khung (ảnh hướng dẫn)."""
     import moi_truong as mt
@@ -292,7 +294,7 @@ def them_chung(nen, t, x0, y0, x1, y1, chi_dim=False):
         for a, b in zip(my[i:i + mt.MOC_TOI_DA + 1], my[i + 1:i + mt.MOC_TOI_DA + 1]):
             nen.dim_doc(a, b, x1, x1 + mt.LE_DIM + hang_y * mt.BUOC_DIM)
         hang_y += 1
-    hx, hy, thieu = du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y, lo_phi)
+    hx, hy, thieu = du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y, lo_phi, r_nhan)
     thieu = thieu_lo + thieu
     y_tong = y0 - mt.LE_DIM - hx * mt.BUOC_DIM  # dim tổng luôn ngoài cùng
     nen.dim_ngang(x0, x1, y0, y_tong, lop=mt.LOP_XY)
@@ -316,10 +318,12 @@ def ve_tam(viec, t, mau, so_tay, co_anh):
     if thieu_ts:
         raise ValueError("thiếu thông số mẫu '%s': %s — nhập ở ✎ Sửa thông số → Thông số mẫu" % (ten, ", ".join(thieu_ts)))
     mod.ve(nen, t)
+    import goc_khoet
+    _, r_nhan, canh_bao = goc_khoet.ap_dung(nen, t, lo_tron(t))   # vát / bo theo đỉnh + khoét trong (chung mọi mẫu)
     x0, y0, x1, y1 = mt.khung_bao(nen)
     if x1 <= x0 or y1 <= y0:
         raise ValueError("mẫu '%s' không vẽ viền cắt nào" % ten)
-    thieu = them_chung(nen, t, x0, y0, x1, y1)
+    thieu = them_chung(nen, t, x0, y0, x1, y1, r_nhan=r_nhan)
     tep = ten_ra(viec["thu_muc_ra"], t["bango"], so_tay)
     nen.luu(tep)
     so_tay[os.path.basename(tep)] = ma_bam(tep)
@@ -331,7 +335,7 @@ def ve_tam(viec, t, mau, so_tay, co_anh):
             dm.qsave(nen.msp, anh, bg="#FFFFFF", size_inches=(6, 4), dpi=110)
         except Exception:  # ảnh xem trước hỏng không làm hỏng bản vẽ
             anh = None
-    return tep, anh, thieu
+    return tep, anh, thieu, canh_bao
 
 
 LE_ANH = 0.03       # nới tối thiểu 3% trang mỗi bên
@@ -374,6 +378,45 @@ def cat_anh(tep_viec):
     return kq
 
 
+def lo_tron(t):
+    """Lỗ của tấm → [(x, y, bán kính, nhãn)] để kiểm khoét đè lỗ."""
+    kq = []
+    for g in t.get("lo", []) or []:
+        if not isinstance(g, dict):
+            continue
+        taro = str(g.get("taro") or "").strip().upper()
+        co = "M" + taro.lstrip("M").split("X")[0].split("×")[0].split("-")[0].strip() if taro else ""
+        dai = str(g.get("loai") or "") == "dai" and float(g.get("dai") or 0) > float(g.get("rong") or 0) > 0
+        d = float(g["dai"]) if dai else TARO_MOI.get(co, float(g.get("d") or 0)) if taro else float(g.get("d") or 0)
+        nhan = co or ("%g×%g" % (float(g["rong"]), float(g["dai"])) if dai else "Ø%g" % d)
+        for p in g.get("vi_tri") or []:
+            if isinstance(p, dict) and p.get("x") is not None and p.get("y") is not None:
+                kq.append((float(p["x"]), float(p["y"]), d / 2.0, nhan))
+    return kq
+
+
+def so_do_viec(tep_viec):
+    """VIEC.json như khi vẽ; mỗi tấm → ảnh sơ đồ đỉnh t["anh_dinh"] (mặc định <thu_muc_ra>/<bango>-dinh.png)."""
+    import goc_khoet
+    import moi_truong as mt
+    with open(tep_viec, encoding="utf-8") as f:
+        viec = json.load(f)
+    mau = cac_mau(viec.get("thu_vien", []))
+    kq = []
+    for t in viec["tam"]:
+        ra = t.get("anh_dinh") or os.path.join(viec["thu_muc_ra"], t.get("bango", "tam") + "-dinh.png")
+        try:
+            if t.get("bien_dang", "") not in mau:
+                raise ValueError("chưa có mẫu biên dạng '%s'" % t.get("bien_dang", ""))
+            nen = mt.NenVe(viec["moi_truong"])
+            nap(mau[t["bien_dang"]]).ve(nen, t)
+            os.makedirs(os.path.dirname(ra) or ".", exist_ok=True)
+            kq.append({"bango": t.get("bango"), "anh": ra, "so_dinh": goc_khoet.so_do(nen, t, ra), "loi": None})
+        except Exception as ex:
+            kq.append({"bango": t.get("bango"), "anh": None, "so_dinh": 0, "loi": "%s: %s" % (type(ex).__name__, ex)})
+    return kq
+
+
 def ve_viec(tep_viec):
     with open(tep_viec, encoding="utf-8") as f:
         viec = json.load(f)
@@ -391,8 +434,8 @@ def ve_viec(tep_viec):
     kq = []
     for t in viec["tam"]:
         try:
-            tep, anh, thieu = ve_tam(viec, t, mau, so_tay, co_anh)
-            kq.append({"bango": t["bango"], "tep": tep, "anh": anh, "loi": None, "thieu_dim": thieu})
+            tep, anh, thieu, canh_bao = ve_tam(viec, t, mau, so_tay, co_anh)
+            kq.append({"bango": t["bango"], "tep": tep, "anh": anh, "loi": None, "thieu_dim": thieu, "canh_bao": canh_bao})
         except Exception as ex:
             kq.append({"bango": t.get("bango", "?"), "tep": None, "anh": None,
                        "loi": "%s: %s" % (type(ex).__name__, ex), "chi_tiet": traceback.format_exc(limit=3)})
@@ -404,6 +447,8 @@ def ve_viec(tep_viec):
 def main(argv):
     if len(argv) > 1 and argv[1] == "--kiem":
         in_json(kiem())
+    elif len(argv) > 2 and argv[1] == "--so-do":
+        in_json(so_do_viec(argv[2]))
     elif len(argv) > 2 and argv[1] == "--cat-anh":
         in_json(cat_anh(argv[2]))
     elif len(argv) > 1 and argv[1] == "--thu-vien":
