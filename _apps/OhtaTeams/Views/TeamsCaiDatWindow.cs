@@ -169,12 +169,15 @@ namespace TeamsTool.Views
                 new KeyValuePair<string, string>(AiCli.Api, "Key API Claude (mặc định — tính tiền theo token)"),
                 new KeyValuePair<string, string>(AiCli.ClaudeCode, "Claude Code CLI (claude — gói Claude của người đăng nhập, " + CoCli(AiCli.ClaudeCode) + ")"),
                 new KeyValuePair<string, string>(AiCli.Antigravity, "Antigravity CLI (agy — gói Google, model Gemini, " + CoCli(AiCli.Antigravity) + ")"),
+                new KeyValuePair<string, string>(AiCli.Ling, "Ling (tbox, " + AiDon.ModelLing() + " — " + (AiDon.KeyLing() != null ? "đã có ling.key" : "chưa có ling.key") + "; bản vẽ PDF / ảnh vẫn đọc bằng key Claude)"),
             };
             _nguon.SelectedValue = AiDon.NguonAi;
             n.Children.Add(_nguon);
             n.Children.Add(Phu("CLI: không cần key, không hiện $ (tính trong gói), chậm hơn ~10–30 giây mỗi lần, không cache quy chuẩn, dễ chạm giới hạn gói khi đọc nhiều PDF. "
                                + "Mỗi máy đăng nhập bằng tài khoản của chính người dùng — dùng chung một tài khoản gói cá nhân cho nhiều người có thể trái điều khoản. "
-                               + "Antigravity dùng model Gemini: lời dặn viết theo Claude, kiểm kết quả kỹ trước khi dùng rộng."));
+                               + "Antigravity dùng model Gemini: lời dặn viết theo Claude, kiểm kết quả kỹ trước khi dùng rộng. "
+                               + "Ling: dùng chung key + model với tab AI trên CAD (05_AI\\data\\ling.key, model chọn ở ⚙ tab AI); Ling chỉ đọc chữ — việc chữ (kiểm lại câu trả lời, rút bài học, đọc DXF dạng chữ) chạy Ling, "
+                               + "lượt đọc bản vẽ PDF / phóng to vẫn gọi Claude bằng key ở dưới (không có key thì báo). Ling hay báo 429 khi gọi dồn — app gửi từng lượt và tự thử lại."));
             p.Children.Add(KieuTeams.The(n));
 
             var k = new StackPanel();

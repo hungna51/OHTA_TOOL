@@ -13,7 +13,69 @@ namespace TeamsTool.Core
     /// </summary>
     public static class AiCli
     {
-        public const string Api = "api", ClaudeCode = "claude_code", Antigravity = "antigravity";
+        public const string Api = "api", ClaudeCode = "claude_code", Antigravity = "antigravity", Ling = "ling";
+
+        // ---------- Ling (tbox, kiểu OpenAI chat/completions — như tab AI trên CAD) ----------
+
+        public const string UrlLing = "https://api.tbox.cn/api/llm/v1/chat/completions";
+        public const string ModelLingMacDinh = "Ling-3.2-flash";
+
+        /// <summary>Body Claude có PDF / ảnh không (Ling chỉ đọc chữ → việc này phải dùng Claude).</summary>
+        public static bool CoTep(string bodyClaude)
+        {
+            var o = JsonLite.Parse(bodyClaude) as JsonObject;
+            return (o?.Get("messages") as List<object> ?? new List<object>()).OfType<JsonObject>()
+                .SelectMany(m => (m.Get("content") as List<object> ?? new List<object>()).OfType<JsonObject>())
+                .Any(k => k.GetString("type") == "document" || k.GetString("type") == "image");
+        }
+
+        /// <summary>
+        /// Body Claude (/v1/messages) → body Ling: system = lời dặn + quy chuẩn + mẫu JSON bắt buộc (Ling không có json_schema),
+        /// user = các khối chữ. PDF / ảnh bỏ (gọi CoTep trước để không gửi việc cần bản vẽ cho Ling).
+        /// </summary>
+        public static string BodyLing(string bodyClaude, string modelLing)
+        {
+            YeuCau yc = TachBody(bodyClaude);
+            var goc = (JsonObject)JsonLite.Parse(bodyClaude);
+            var sys = new StringBuilder();
+            foreach (JsonObject k in (goc.Get("system") as List<object> ?? new List<object>()).OfType<JsonObject>()) sys.Append(k.GetString("text")).Append("\n\n");
+            if (yc.Schema.Length > 0)
+                sys.Append("# ĐỊNH DẠNG TRẢ LỜI (BẮT BUỘC)\nChỉ trả về DUY NHẤT một đối tượng JSON đúng JSON Schema dưới (đủ mọi trường required), không giải thích, không bọc ```.\n").Append(yc.Schema);
+            var user = new StringBuilder();
+            foreach (JsonObject m in (goc.Get("messages") as List<object> ?? new List<object>()).OfType<JsonObject>())
+                foreach (JsonObject k in (m.Get("content") as List<object> ?? new List<object>()).OfType<JsonObject>())
+                    if (k.GetString("type") == "text") user.Append(k.GetString("text")).Append("\n\n");
+            var tin = new List<object>();
+            var s = new JsonObject(); s.Set("role", "system"); s.Set("content", sys.ToString().Trim()); tin.Add(s);
+            var u = new JsonObject(); u.Set("role", "user"); u.Set("content", user.ToString().Trim()); tin.Add(u);
+            var body = new JsonObject();
+            body.Set("model", string.IsNullOrWhiteSpace(modelLing) ? ModelLingMacDinh : modelLing.Trim());
+            body.Set("stream", false);
+            body.Set("messages", tin);
+            return JsonLite.Serialize(body);
+        }
+
+        /// <summary>Phản hồi Ling → dạng phản hồi Claude (usage = 0: giá Ling khác Claude, không hiện $ sai). Lỗi → {"type":"error"}.</summary>
+        public static string DoiPhanHoiLing(string json)
+        {
+            JsonObject goc;
+            try { goc = JsonLite.Parse(json ?? "") as JsonObject; } catch (Exception) { goc = null; }
+            if (goc == null) return Loi("Phản hồi Ling không đọc được: " + DongCuoi(json));
+            if (goc.Get("error") is JsonObject e) return Loi("Ling: " + (e.GetString("message") ?? "lỗi không rõ"));
+            var choice = (goc.Get("choices") as List<object>)?.OfType<JsonObject>().FirstOrDefault();
+            string text = ((choice?.Get("message") as JsonObject)?.GetString("content") ?? "").Trim();
+            int a = text.IndexOf('{'), b = text.LastIndexOf('}');
+            if (a < 0 || b <= a) return Loi("Ling không trả JSON" + (text.Length > 0 ? ": " + DongCuoi(text) : ""));
+            var kq = new JsonObject();
+            kq.Set("stop_reason", choice?.GetString("finish_reason") == "length" ? "max_tokens" : "end_turn");
+            var us = new JsonObject();
+            us.Set("input_tokens", new JsonNumber("0")); us.Set("output_tokens", new JsonNumber("0"));
+            kq.Set("usage", us);
+            var k = new JsonObject();
+            k.Set("type", "text"); k.Set("text", text.Substring(a, b - a + 1));
+            kq.Set("content", new List<object> { k });
+            return JsonLite.Serialize(kq);
+        }
 
         /// <summary>Phần cần cho CLI tách từ body API.</summary>
         public sealed class YeuCau

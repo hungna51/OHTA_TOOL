@@ -989,7 +989,7 @@ namespace TeamsTool.Services
         /// <summary>Nguồn AI chọn ở ⚙ → 🤖 AI: api (mặc định) / claude_code / antigravity.</summary>
         public static string NguonAi
         {
-            get { string v = CaiDatTeams.Doc("ai_nguon", AiCli.Api); return v == AiCli.ClaudeCode || v == AiCli.Antigravity ? v : AiCli.Api; }
+            get { string v = CaiDatTeams.Doc("ai_nguon", AiCli.Api); return v == AiCli.ClaudeCode || v == AiCli.Antigravity || v == AiCli.Ling ? v : AiCli.Api; }
             set => CaiDatTeams.Ghi("ai_nguon", value ?? AiCli.Api);
         }
 
@@ -1010,11 +1010,72 @@ namespace TeamsTool.Services
 
         /// <summary>Key cho phòng khi nguồn là API (thiếu → báo); nguồn CLI không cần key → "".</summary>
         public static string KeyPhong(int phong) =>
-            NguonAi != AiCli.Api ? "" : DocKey(phong) ?? throw new InvalidOperationException("Chưa có key Claude: ⚙ → tab 🤖 AI → dán key (hoặc chọn Nguồn AI = Claude Code / Antigravity)");
+            NguonAi == AiCli.Ling ? DocKey(phong) ?? "" // Ling: key Claude chỉ dùng cho việc có PDF / ảnh (có thể không có)
+            : NguonAi != AiCli.Api ? "" : DocKey(phong) ?? throw new InvalidOperationException("Chưa có key Claude: ⚙ → tab 🤖 AI → dán key (hoặc chọn Nguồn AI = Claude Code / Antigravity / Ling)");
+
+        // ---------- Ling (dùng chung key + model với tab AI trên CAD) ----------
+
+        public static string FileKeyLing => Path.Combine(Goc, "05_AI", "data", "ling.key");
+
+        public static string KeyLing()
+        {
+            if (!File.Exists(FileKeyLing)) return null;
+            return File.ReadAllLines(FileKeyLing).Select(x => x.Trim()).FirstOrDefault(x => x.Length > 0 && !x.StartsWith("#", StringComparison.Ordinal));
+        }
+
+        /// <summary>Model Ling như tab AI trên CAD (registry ling_model), không có → Ling-3.2-flash.</summary>
+        public static string ModelLing()
+        {
+            try { using (RegistryKey k = Registry.CurrentUser.OpenSubKey(@"Software\OFT_Lisp\OhtaTool\AI")) if (k?.GetValue("ling_model") is string m && m.Trim().Length > 0) return m.Trim(); }
+            catch (Exception) { }
+            return AiCli.ModelLingMacDinh;
+        }
+
+        // tbox trả 429 khi gọi dồn → Ling gửi từng lượt một
+        private static readonly SemaphoreSlim MotLuotLing = new SemaphoreSlim(1, 1);
+
+        /// <summary>POST chat/completions Ling (Bearer ling.key); 429 / 5xx thử lại 3 lần (5, 10, 20 s); trả phản hồi dạng Claude.</summary>
+        private static async Task<string> GuiLing(string bodyClaude, CancellationToken ct)
+        {
+            string key = KeyLing() ?? throw new InvalidOperationException("Chưa có key Ling: " + FileKeyLing + " (nhập ở ⚙ của tab AI trên CAD) — hoặc đổi Nguồn AI ở ⚙ → 🤖 AI.");
+            string body = AiCli.BodyLing(bodyClaude, ModelLing());
+            await MotLuotLing.WaitAsync(ct);
+            try
+            {
+                for (int lan = 0; ; lan++)
+                {
+                    using (var req = new HttpRequestMessage(HttpMethod.Post, AiCli.UrlLing))
+                    {
+                        if (!req.Headers.TryAddWithoutValidation("Authorization", "Bearer " + key)) throw new InvalidOperationException("Key Ling có ký tự không hợp lệ");
+                        req.Content = new StringContent(body, Utf8, "application/json");
+                        using (HttpResponseMessage res = await Http.SendAsync(req, ct))
+                        {
+                            string text = await res.Content.ReadAsStringAsync();
+                            int ma = (int)res.StatusCode;
+                            if (res.IsSuccessStatusCode) return AiCli.DoiPhanHoiLing(text);
+                            if ((ma != 429 && ma < 500) || lan >= 3)
+                                return "{\"type\":\"error\",\"error\":{\"type\":\"ling_error\",\"message\":" + JsonLite.Serialize("Ling trả lỗi HTTP " + ma + (ma == 429 ? " (quá giới hạn tần suất — đợi rồi thử lại)" : "")) + "}}";
+                        }
+                    }
+                    await Task.Delay(TimeSpan.FromSeconds(5 << lan), ct);
+                }
+            }
+            finally { MotLuotLing.Release(); }
+        }
 
         /// <summary>Gửi body /v1/messages theo nguồn đang chọn; trả phản hồi dạng API (CLI được đổi về cùng dạng).</summary>
-        private static Task<string> GuiAi(string key, bool fallback, string body, CancellationToken ct) =>
-            NguonAi == AiCli.Api ? GuiClaude(key, fallback, body, ct) : GuiCli(NguonAi, body, ct);
+        private static Task<string> GuiAi(string key, bool fallback, string body, CancellationToken ct)
+        {
+            if (NguonAi == AiCli.Ling)
+            {
+                if (!AiCli.CoTep(body)) return GuiLing(body, ct);
+                // Ling chỉ đọc chữ: việc có bản vẽ PDF / ảnh dùng key Claude của máy
+                if (string.IsNullOrEmpty(key))
+                    throw new InvalidOperationException("Ling không đọc được bản vẽ PDF / ảnh — cần key Claude cho lượt đọc bản vẽ (⚙ → 🤖 AI → dán key), hoặc đổi Nguồn AI sang Claude Code / Antigravity.");
+                return GuiClaude(key, fallback, body, ct);
+            }
+            return NguonAi == AiCli.Api ? GuiClaude(key, fallback, body, ct) : GuiCli(NguonAi, body, ct);
+        }
 
         /// <summary>
         /// Chạy claude -p / agy -p trong thư mục tạm: yeu_cau.md (lời dặn + quy chuẩn + phần người dùng) + ban_ve.pdf, chỉ cho đọc tệp,

@@ -113,7 +113,7 @@ namespace TeamsTool.Views
             if (DangChay.Contains(_d.Id)) return;
             if (tu != 5 && tu != 8 && !AiDon.DaDongY) // 5, 8 = vẽ DXF trên máy (8 chỉ gửi AI khi có ô sửa — đã đồng ý từ lúc đọc)
             {
-                if (MessageBox.Show("Khu AI gửi tệp bản vẽ của đơn lên dịch vụ AI (Claude của Anthropic, hoặc Gemini của Google nếu Nguồn AI = Antigravity) để đọc.\nCông ty đã cho phép gửi bản vẽ khách hàng ra dịch vụ AI chưa?\n\nĐồng ý → máy này không hỏi lại.",
+                if (MessageBox.Show("Khu AI gửi tệp bản vẽ của đơn lên dịch vụ AI (Claude của Anthropic; Gemini của Google nếu Nguồn AI = Antigravity; Ling của Ant Group nếu Nguồn AI = Ling — phần chữ) để đọc.\nCông ty đã cho phép gửi bản vẽ khách hàng ra dịch vụ AI chưa?\n\nĐồng ý → máy này không hỏi lại.",
                                     "AI đọc bản vẽ", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
                 AiDon.DaDongY = true;
             }

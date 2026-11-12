@@ -211,6 +211,16 @@ namespace TeamsTool.Tests
             Kiem("phong to: body co anh png", PhongPhongTo.Body("claude-opus-5-5", "q", "QUJD", "dv").Contains("\"media_type\":\"image/png\"")
                  || System.Text.RegularExpressions.Regex.Replace(PhongPhongTo.Body("claude-opus-5-5", "q", "QUJD", "dv"), @"\s", "").Contains("\"media_type\":\"image/png\""), true);
             Kiem("cli: tach anh tu body", AiCli.TachBody(PhongPhongTo.Body("claude-opus-5-5", "q", "QUJD", "dv")).AnhBase64 + "|" + AiCli.LoiNhan(false, true).Contains(AiCli.TepAnh), "QUJD|True");
+            // Ling (12/11): body Claude → chat/completions kèm schema trong lời dặn; có PDF / ảnh → không gửi Ling; phản hồi → dạng Claude
+            string bodyChu = PhongKiemTra.Body("claude-opus-5-5", "QC3", null, "dau vao", null, PhongKiemTra.LoiDanChu);
+            var bl = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse(AiCli.BodyLing(bodyChu, ""));
+            var tinL = (List<object>)bl.Get("messages");
+            Kiem("ling: body (model mac dinh, system co schema, user co chu)", bl.GetString("model") + "|" + ((OhtaTool.Plugin.Core.JsonObject)tinL[0]).GetString("content").Contains("\"van_de\"")
+                 + "|" + ((OhtaTool.Plugin.Core.JsonObject)tinL[1]).GetString("content") + "|" + AiCli.CoTep(bodyChu) + "|" + AiCli.CoTep(PhongDocBanVe.Body("claude-opus-5-5", "d", "q", "a.pdf", "UERG", null)),
+                 "Ling-3.2-flash|True|dau vao|False|True");
+            var phL = PhongKiemTra.DocPhanHoi(AiCli.DoiPhanHoiLing("{\"choices\":[{\"message\":{\"content\":\"```json\\n{\\\"van_de\\\":[{\\\"tam\\\":\\\"A\\\",\\\"muc\\\":\\\"do\\\",\\\"nhom\\\":\\\"khach\\\",\\\"muc_qc\\\":\\\"\\\",\\\"noi_dung\\\":\\\"R?\\\",\\\"lien_lac\\\":false}]}\\n```\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":5}}"), "don");
+            Kiem("ling: doc phan hoi (bo rao ```) + loi", phL.VanDe.Count + "|" + phL.VanDe[0].NoiDung + "|" + phL.Vao + "|"
+                 + PhongKiemTra.DocPhanHoi(AiCli.DoiPhanHoiLing("{\"error\":{\"message\":\"Rate Limit Exceeded\"}}"), "d").Loi, "1|R?|0|Ling: Rate Limit Exceeded");
             string schema = System.Text.RegularExpressions.Regex.Replace(OhtaTool.Plugin.Core.JsonLite.Serialize(PhongDocBanVe.Schema()), @"\s", "");
             Console.WriteLine("  (do dai schema doc ban ve: " + schema.Length + ")");
             Kiem("schema gon: khong enum, khong tiet dien long", schema.Contains("\"enum\"") + "|" + schema.Contains("\"uon\"") + "|" + (schema.Length < 6000), "False|False|True");
