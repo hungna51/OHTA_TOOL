@@ -226,6 +226,20 @@ namespace TeamsTool.Tests
             int truoc = coGoc();
             tGoc.ThamSo = "c1=10; c2=10";
             Kiem("luat: mo ta vat goc ma thieu c / r", truoc + "|" + coGoc(), "1|0");
+            // 🔄 Cập nhật theo câu trả lời: áp ô theo tên tấm, lo JSON, ô lạ / tấm lạ báo ⚠, câu đã xử lý, không tính bài học
+            var tCn = new TamAi { Tep = "c.pdf", SoBanVe = "C1", M = "SS400", T = "9", KieuTd = "phang", TdX = "600", TdY = "140", BienDang = "phang", ThamSo = "" };
+            tCn.GiaTriAi["M"] = "SS400";
+            var dsCn = new List<(TamAi, string)> { (tCn, "D-1") };
+            string ndCn = "{\"tam\":[{\"ten\":\"D-1\",\"doi\":[{\"o\":\"tham_so\",\"gia_tri\":\"c1=10; c2=10\",\"ly_do\":\"khách: vẫn vát C10\"},{\"o\":\"M\",\"gia_tri\":\"SUS304\",\"ly_do\":\"đổi vật liệu\"},"
+                + "{\"o\":\"lo\",\"gia_tri\":\"[{\\\"d\\\":10,\\\"so_luong\\\":1,\\\"kieu\\\":\\\"\\\",\\\"vi_tri\\\":[[50,70]]}]\",\"ly_do\":\"\"},{\"o\":\"xyz\",\"gia_tri\":\"1\",\"ly_do\":\"\"}]},{\"ten\":\"D-9\",\"doi\":[]}],"
+                + "\"da_xu_ly\":[1,3],\"van_de\":[{\"tam\":\"D-1\",\"muc\":\"vang\",\"nhom\":\"khach\",\"muc_qc\":\"\",\"noi_dung\":\"Lỗ Ø10 hay M10?\",\"lien_lac\":false}]}";
+            var kqCn = PhongCapNhat.ApDung("{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":" + OhtaTool.Plugin.Core.JsonLite.Serialize(ndCn) + "}]}", dsCn);
+            Kiem("cap nhat theo tra loi: ap o + lo + bao o / tam la",
+                 tCn.ThamSo + "|" + tCn.M + "|" + System.Text.RegularExpressions.Regex.Replace(tCn.LoJson, @"\s", "").Contains("{\"x\":50,\"y\":70}") + "|" + kqCn.Doi.Count(x => x.StartsWith("⚠")) + "|"
+                 + string.Join(",", kqCn.DaXuLy.OrderBy(i => i)) + "|" + kqCn.VanDeMoi.Count + "|" + string.Join(",", tCn.TheoTraLoi.OrderBy(x => x)),
+                 "c1=10; c2=10|SUS304|True|2|1,3|1|lo,M,tham_so");
+            var ctCn = new ChiTiet { Tam = { tCn } };
+            Kiem("cap nhat theo tra loi: khong rut bai hoc, giu khi luu", PhongBaiHoc.CacChoSua(ctCn).Count + "|" + string.Join(",", PhongDocBanVe.Doc(PhongDocBanVe.Ghi(ctCn)).Tam[0].TheoTraLoi.OrderBy(x => x)), "0|lo,M,tham_so");
             string schema = System.Text.RegularExpressions.Regex.Replace(OhtaTool.Plugin.Core.JsonLite.Serialize(PhongDocBanVe.Schema()), @"\s", "");
             Console.WriteLine("  (do dai schema doc ban ve: " + schema.Length + ")");
             Kiem("schema gon: khong enum, khong tiet dien long", schema.Contains("\"enum\"") + "|" + schema.Contains("\"uon\"") + "|" + (schema.Length < 6000), "False|False|True");

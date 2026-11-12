@@ -49,6 +49,8 @@ namespace TeamsTool.Core
         public HashSet<string> DaSua = new HashSet<string>();     // ô người dùng đã sửa — chạy lại không ghi đè
         /// <summary>Đã qua lượt AI đọc phóng to ảnh cắt vùng tấm (đọc lại bản vẽ → tấm mới → phóng to lại).</summary>
         public bool DaPhongTo;
+        /// <summary>Ô đổi theo câu trả lời của khách / quản lý (🔄 Cập nhật theo câu trả lời) — giữ như ô người sửa, nhưng không rút bài học.</summary>
+        public HashSet<string> TheoTraLoi = new HashSet<string>();
         /// <summary>Ô → giá trị AI đọc trước khi người sửa (để AI rút bài học).</summary>
         public Dictionary<string, string> GiaTriAi = new Dictionary<string, string>();
 
@@ -144,6 +146,7 @@ namespace TeamsTool.Core
                     foreach (string o in c.DaSua) { Dat(t, o, Lay(c, o)); t.KhongChac.Remove(o); }
                     t.DaSua.UnionWith(c.DaSua);
                     foreach (var kv in c.GiaTriAi) t.GiaTriAi[kv.Key] = kv.Value;
+                    t.TheoTraLoi.UnionWith(c.TheoTraLoi);
                     t.LyDoSua = c.LyDoSua;
                     t.Moi = c.Moi;
                 }
@@ -177,6 +180,7 @@ namespace TeamsTool.Core
                 x.Set("dim_khach", SafeParse(t.DimKhachJson));
                 x.Set("moi", t.Moi);
                 x.Set("da_phong_to", t.DaPhongTo);
+                x.Set("theo_tra_loi", t.TheoTraLoi.OrderBy(s => s).Cast<object>().ToList());
                 x.Set("khong_chac", t.KhongChac.OrderBy(s => s).Cast<object>().ToList());
                 x.Set("da_sua", t.DaSua.OrderBy(s => s).Cast<object>().ToList());
                 var ai = new JsonObject();
@@ -208,6 +212,7 @@ namespace TeamsTool.Core
                 t.Moi = !(x.Get("moi") is bool b) || b;
                 t.LyDoSua = Chu(x.Get("ly_do_sua"));
                 t.DaPhongTo = x.Get("da_phong_to") is bool pt && pt;
+                t.TheoTraLoi.UnionWith(DsChu(x.Get("theo_tra_loi")));
                 t.DaSua.UnionWith(DsChu(x.Get("da_sua")));
                 if (x.Get("gia_tri_ai") is JsonObject ai)
                     foreach (var kv in ai.Items) t.GiaTriAi[kv.Key] = Chu(kv.Value);

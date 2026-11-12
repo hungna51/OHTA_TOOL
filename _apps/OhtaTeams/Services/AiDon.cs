@@ -537,6 +537,34 @@ namespace TeamsTool.Services
         }
 
         /// <summary>
+        /// 🔄 Cập nhật theo câu trả lời: AI đọc câu trả lời + thông số tấm (chỉ chữ — chạy được bằng Ling) và áp các ô cần đổi;
+        /// câu đã áp → ✓ Đã xử lý; câu mơ hồ → AI hỏi lại. Chạy lại luật + ghi hồ sơ. Trả danh sách ô đã đổi.
+        /// </summary>
+        public static async Task<PhongCapNhat.KetQua> CapNhatTheoTraLoi(ChiTiet ct, string tm, string title, Action<string> bao, CancellationToken huy)
+        {
+            KiemTra kt = KiemLuat(ct, tm, title);
+            List<VanDe> traLoi = PhongCapNhat.CauDaTraLoi(kt.VanDe.Where(v => v.ConMo));
+            if (traLoi.Count == 0) throw new InvalidOperationException("Chưa có câu trả lời mới nào (câu còn mở có ô Trả lời) để cập nhật.");
+            string key = KeyPhong(3), model = Model();
+            var danhSo = PhongHoSo.DanhSo(ct, title);
+            var thuVien = (await DanhSachMau(tm)).Select(m => m.Ten + ": " + m.MoTa + (m.ThamSoChu.Length > 0 ? " | thông số: " + m.ThamSoChu : ""));
+            bao("Phòng 2: AI cập nhật thông số theo " + traLoi.Count + " câu trả lời (chỉ gửi chữ)…");
+            string body = PhongCapNhat.Body(model, QuyChuan(3), PhongCapNhat.DauVao(danhSo, thuVien, traLoi));
+            PhongCapNhat.KetQua kq = PhongCapNhat.ApDung(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, huy), danhSo);
+            kt.TokenVao += kq.Vao + kq.GhiCache + kq.DocCache;
+            kt.TokenRa += kq.Ra;
+            kt.Tien += PhongDocBanVe.Tien(model, kq.Vao, kq.GhiCache, kq.DocCache, kq.Ra);
+            if (kq.Loi != null) { Ghi(tm, kt); throw new InvalidOperationException("AI chưa cập nhật được: " + kq.Loi); }
+            for (int i = 0; i < traLoi.Count; i++)
+                if (kq.DaXuLy.Contains(i + 1)) traLoi[i].TrangThai = VanDe.Xong;
+            kt.VanDe.AddRange(kq.VanDeMoi.Where(v => !kt.VanDe.Any(x => x.Ma == v.Ma)));
+            Ghi(tm, kt);   // trạng thái câu đã áp + câu hỏi lại — KiemLuat dưới giữ theo mã
+            Ghi(tm, ct);
+            KiemLuat(ct, tm, title); // luật chạy lại trên thông số mới + ghi hồ sơ md
+            return kq;
+        }
+
+        /// <summary>
         /// Kiểm lại sau khi có câu trả lời: luật + AI đọc bảng tấm và câu trả lời (CHỈ GỬI CHỮ, không gửi bản vẽ) theo QC kiểm tra,
         /// thêm vấn đề mới phát sinh. Chưa có câu trả lời nào → chỉ chạy luật.
         /// </summary>

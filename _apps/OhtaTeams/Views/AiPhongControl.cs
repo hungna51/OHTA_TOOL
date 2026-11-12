@@ -175,6 +175,14 @@ namespace TeamsTool.Views
                     case 3:
                         await AiDon.KiemLaiAi(tn, AiDon.DocChiTiet(_tm), _tm, _d.Title, Bao, _huy.Token);
                         return;
+                    case 9:
+                    {
+                        PhongCapNhat.KetQua kq9 = await AiDon.CapNhatTheoTraLoi(AiDon.DocChiTiet(_tm), _tm, _d.Title, Bao, _huy.Token);
+                        Bao("Đã cập nhật theo câu trả lời: " + kq9.DaXuLy.Count + " câu xử lý xong, " + kq9.Doi.Count(x => !x.StartsWith("⚠", StringComparison.Ordinal)) + " ô đổi"
+                            + (kq9.VanDeMoi.Count > 0 ? ", " + kq9.VanDeMoi.Count + " câu cần hỏi lại" : "") + "."
+                            + (kq9.Doi.Count > 0 ? "\n" + string.Join("\n", kq9.Doi) : "\n(Không ô nào cần đổi.)"));
+                        return;
+                    }
                 }
                 if (tu == 1 || tn == null) tn = await AiDon.TiepNhan(_d, _listUrl, _listId, _tm, Bao, _huy.Token);
                 if (PhongTiepNhan.DungSauTiepNhan(tn.LoaiDon))
@@ -519,8 +527,8 @@ namespace TeamsTool.Views
                 foreach (var (o, nhan) in cacO)
                 {
                     string giaTri = o == "ly_do_sua" ? t.LyDoSua : PhongDocBanVe.Lay(t, o);
-                    var lbl = new TextBlock { Text = nhan + (t.DaSua.Contains(o) ? " ✎" : ""), FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center,
-                                              ToolTip = t.GiaTriAi.TryGetValue(o, out string ai) ? "AI đọc: " + ai : null };
+                    var lbl = new TextBlock { Text = nhan + (t.TheoTraLoi.Contains(o) ? " ↺" : t.DaSua.Contains(o) ? " ✎" : ""), FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center,
+                                              ToolTip = t.TheoTraLoi.Contains(o) ? "Đổi theo câu trả lời của khách / quản lý" : t.GiaTriAi.TryGetValue(o, out string ai) ? "AI đọc: " + ai : null };
                     Brush nen = t.KhongChac.Contains(o) || (o.StartsWith("td_", StringComparison.Ordinal) && t.KhongChac.Contains("tiet_dien")) ? KieuTeams.Mau("#FFF6E0") : Brushes.White;
                     Control oNhap;
                     if (o == "kieu_td" || (o == "bien_dang" && _thuVien != null))
@@ -643,6 +651,12 @@ namespace TeamsTool.Views
                     try { Clipboard.SetText(noiBo); _trangThai.Text = "Đã chép " + kt.VanDe.Count(v => v.Nhom == VanDe.NoiBo && v.ConMo) + " câu hỏi nội bộ — dán gửi quản lý."; }
                     catch (Exception ex) { _trangThai.Text = "Không chép được: " + ex.Message; }
                 }, chinh: false));
+            int soTraLoi = kt.VanDe.Count(v => v.ConMo && v.TraLoi.Trim().Length > 0);
+            nutKiem.Children.Add(KieuTeams.Nut("🔄 Cập nhật theo câu trả lời" + (soTraLoi > 0 ? " (" + soTraLoi + ")" : ""), _mau, (s, e) => Chay(9, false), chinh: soTraLoi > 0).Also(b =>
+            {
+                b.IsEnabled = sua && soTraLoi > 0;
+                b.ToolTip = "Trả lời đủ các câu hỏi rồi bấm: AI đọc câu trả lời (chỉ gửi chữ) và sửa thông số tấm theo đó (vật liệu, kích thước, tiết diện, mẫu vẽ, thông số mẫu, lỗ…); câu đã áp → ✓ Đã xử lý.";
+            }));
             nutKiem.Children.Add(KieuTeams.Nut("🤖 Kiểm lại câu trả lời", _mau, (s, e) => Chay(3, false), chinh: false).Also(b =>
             {
                 b.IsEnabled = sua;

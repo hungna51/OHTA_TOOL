@@ -46,6 +46,7 @@ namespace TeamsTool.Core
             foreach (TamAi t in ct.Tam.Where(x => x.Moi))
                 foreach (string o in t.DaSua.OrderBy(x => x))
                 {
+                    if (t.TheoTraLoi.Contains(o)) continue; // đổi theo câu trả lời của khách — không phải AI đọc sai
                     if (!t.GiaTriAi.TryGetValue(o, out string ai)) continue; // sửa từ bản cũ, không biết AI đọc gì
                     string dung = PhongDocBanVe.Lay(t, o);
                     var c = new ChoSua { Tam = t, O = o, Ai = ai, Dung = dung };
