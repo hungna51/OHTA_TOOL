@@ -185,7 +185,7 @@ namespace TeamsTool.Core
                 if (string.IsNullOrWhiteSpace(t.M)) Them("thieu_m", VanDe.Do, VanDe.Khach, "II.1", "Bản vẽ không ghi vật liệu.");
 
                 string loai = LoaiTv(t.M, t.Mat, catalogCsv, tv);
-                List<object> canh = DsJson(t.CanhJson), lo = DsJson(t.LoJson);
+                List<object> canh = t.KieuTd.Length > 0 ? CanhTuTd(t) : DsJson(t.CanhJson), lo = DsJson(t.LoJson); // bản mới: chỗ bẻ suy từ tiết diện
                 bool coBe = canh.Count > 0;
 
                 // Độ dày cần xác nhận (QC B-1 chú ý, C-1)
@@ -372,7 +372,8 @@ Mỗi vấn đề: tam, muc (do / vang / info), nhom (tu_xu_ly / noi_bo / khach)
         public static JsonObject SchemaVanDe()
         {
             JsonObject s = Kieu("string");
-            return Obj(("tam", s), ("muc", LuaChon("do", "vang", "info")), ("nhom", LuaChon("tu_xu_ly", "noi_bo", "khach")),
+            // không enum (schema gọn — API giới hạn độ phức tạp); muc / nhom lạ → Mot() đưa về mặc định
+            return Obj(("tam", s), ("muc", s), ("nhom", s),
                        ("muc_qc", s), ("noi_dung", s), ("lien_lac", Kieu("boolean")));
         }
 
@@ -534,6 +535,30 @@ Mỗi vấn đề: tam, muc (do / vang / info), nhom (tu_xu_ly / noi_bo / khach)
 
         private static string Mot(string v, string macDinh, params string[] hopLe) => hopLe.Contains(v) ? v : macDinh;
 
+        /// <summary>Chỗ bẻ suy từ tiết diện td_x / td_y (schema gọn không hỏi riêng): {dai_ngoai: [đoạn trước, đoạn sau], goc, r_trong, kieu}.</summary>
+        public static List<object> CanhTuTd(TamAi t)
+        {
+            var ds = new List<object>();
+            foreach (string chu in new[] { t.TdX, t.TdY })
+            {
+                TietDien td = PhongTrienKhai.DocChuTd(chu, out _);
+                if (td == null) continue;
+                for (int i = 0; i < td.Uon.Count; i++)
+                {
+                    var c = new JsonObject();
+                    var dai = new List<object>();
+                    if (i < td.Doan.Count) dai.Add(new JsonNumber(F(td.Doan[i])));
+                    if (i + 1 < td.Doan.Count) dai.Add(new JsonNumber(F(td.Doan[i + 1])));
+                    c.Set("dai_ngoai", dai);
+                    c.Set("goc", new JsonNumber(F(td.Uon[i].Goc)));
+                    c.Set("r_trong", new JsonNumber(F(td.Uon[i].R)));
+                    c.Set("kieu", td.Uon[i].Kieu);
+                    ds.Add(c);
+                }
+            }
+            return ds;
+        }
+
         private static List<object> DsJson(string json)
         {
             try { return JsonLite.Parse(json ?? "[]") as List<object> ?? new List<object>(); } catch (Exception) { return new List<object>(); }
@@ -567,7 +592,6 @@ Mỗi vấn đề: tam, muc (do / vang / info), nhom (tu_xu_ly / noi_bo / khach)
         private static string F(double d) => d.ToString("0.##", CultureInfo.InvariantCulture);
 
         private static JsonObject Kieu(string type) { var o = new JsonObject(); o.Set("type", type); return o; }
-        private static JsonObject LuaChon(params string[] gt) { JsonObject o = Kieu("string"); o.Set("enum", gt.Cast<object>().ToList()); return o; }
         private static JsonObject Mang(JsonObject item) { JsonObject a = Kieu("array"); a.Set("items", item); return a; }
 
         private static JsonObject Obj(params (string Ten, JsonObject Kieu)[] tt)

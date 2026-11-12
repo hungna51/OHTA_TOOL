@@ -179,12 +179,35 @@ namespace TeamsTool.Tests
             var tkLo = PhongTrienKhai.TuTam(tamLo); tkLo.XPhang = 200; tkLo.YPhang = 100;
             string viecLo = System.Text.RegularExpressions.Regex.Replace(PhongTrienKhai.ViecVe("D", new List<(TamAi, TamTrienKhai)> { (tamLo, tkLo) }, "m", "r", new[] { "t" }), @"\s", "");
             Kiem("viec ve: gui lo kem vi tri", viecLo.Contains("\"lo\":[{\"d\":10,\"so_luong\":2,\"vi_tri\":[{\"x\":50,\"y\":50}"), true);
+            // Schema gọn (12/11, lỗi "compiled grammar is too large"): tiết diện / thông số là chữ, toạ độ là cặp số, không enum
+            string textGon = "{\"tam\":[{\"so_ban_ve\":\"G\",\"ten\":\"\",\"M\":\"SS400\",\"Z\":\"\",\"T\":\"3\",\"Q\":\"1\",\"mat\":\"\",\"kich_thuoc\":\"\",\"dung_sai\":\"\",\"ghi_chu_jp\":\"\",\"ghi_chu_vi\":\"\",\"mo_ta\":\"\",\"trang\":\"1\","
+                + "\"canh\":[],\"lo\":[{\"d\":10,\"so_luong\":2,\"taro\":\"\",\"sara\":false,\"d_sara\":0,\"ghi_chu\":\"\",\"cach_duong_be\":-1,\"loai\":\"tron\",\"rong\":0,\"dai\":0,\"goc\":0,\"vi_tri\":[[50,20],[150,20]]}],"
+                + "\"khong_chac\":[],\"kieu_td\":\"be\",\"td_x\":\"50 b90 100\",\"td_y\":\"200\",\"ghi_chu_td\":\"\",\"bien_dang\":\"be\",\"mo_ta_bien_dang\":\"\",\"tham_so\":\"r1=5\","
+                + "\"ke_gaki\":[[10,5]],\"vung\":[0.1,0.2,0.6,0.7],\"dim_khach\":[]}],\"van_de\":[{\"tam\":\"G\",\"muc\":\"la\",\"nhom\":\"khach\",\"muc_qc\":\"\",\"noi_dung\":\"x?\",\"lien_lac\":false}],\"ghi_chu_don\":\"\"}";
+            var phGon = PhongDocBanVe.DocPhanHoi("{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":" + OhtaTool.Plugin.Core.JsonLite.Serialize(textGon) + "}]}", "g.pdf");
+            TamAi g = phGon.Tam[0];
+            Kiem("schema gon: td chu + vi tri cap + ke gaki + vung + tham so + muc la",
+                 g.TdX + "|" + g.TdY + "|" + PhongTrienKhai.KeGaki(g).Count + "|" + System.Text.RegularExpressions.Regex.Replace(g.LoJson, @"\s", "").Contains("{\"x\":50,\"y\":20}") + "|" + System.Text.RegularExpressions.Regex.Replace(g.VungJson, @"\s", "").Contains("\"x1\":0.6") + "|" + g.ThamSo + "|" + phGon.VanDe[0].Muc,
+                 "50 b90 100|200|1|True|True|r1=5|vang");
+            var loK = new OhtaTool.Plugin.Core.JsonObject(); loK.Set("kieu", "dai 10x30 45");
+            TachKieuLoThu(loK);
+            var loS = new OhtaTool.Plugin.Core.JsonObject(); loS.Set("kieu", "sara 12");
+            TachKieuLoThu(loS);
+            Kiem("lo: tach kieu (lo dai / sara)", loK.GetString("loai") + "|" + ((OhtaTool.Plugin.Core.JsonNumber)loK.Get("dai")).Raw + "|" + ((OhtaTool.Plugin.Core.JsonNumber)loK.Get("goc")).Raw + "|" + (loS.Get("sara") is bool sb && sb) + "|" + ((OhtaTool.Plugin.Core.JsonNumber)loS.Get("d_sara")).Raw, "dai|30|45|True|12");
+            var canhTd = PhongKiemTra.CanhTuTd(new TamAi { KieuTd = "be", TdX = "50 b90 100 a90r10 40", TdY = "200" });
+            Kiem("luat: cho be suy tu tiet dien", canhTd.Count + "|" + ((OhtaTool.Plugin.Core.JsonObject)canhTd[1]).GetString("kieu") + "|" + System.Text.RegularExpressions.Regex.Replace(OhtaTool.Plugin.Core.JsonLite.Serialize(canhTd[0]), @"\s", "").Contains("\"dai_ngoai\":[50,100]")
+                 + "|" + new TamAi { KieuTd = "be", TdX = "50 b90 100 a90r10 40" }.TomTatCanh, "2|an_1_lan|True|2 chỗ bẻ");
+            string schema = System.Text.RegularExpressions.Regex.Replace(OhtaTool.Plugin.Core.JsonLite.Serialize(PhongDocBanVe.Schema()), @"\s", "");
+            Console.WriteLine("  (do dai schema doc ban ve: " + schema.Length + ")");
+            Kiem("schema gon: khong enum, khong tiet dien long", schema.Contains("\"enum\"") + "|" + schema.Contains("\"uon\"") + "|" + (schema.Length < 6000), "False|False|True");
             var tkK = PhongTrienKhai.TuTam(tamK);
             tkK.XPhang = 80; tkK.YPhang = 200;
             string viec = PhongTrienKhai.ViecVe("test", new List<(TamAi, TamTrienKhai)> { (tamK, tkK) }, "m.dxf", "ra", new[] { "tv" });
             Kiem("viec ve: ke_gaki + N=ten tam", System.Text.RegularExpressions.Regex.Replace(viec, @"\s", "").Contains("\"ke_gaki\":[[120,27.5]]") + "|" + viec.Contains("N=test-1") + "|"
                  + System.Text.RegularExpressions.Regex.Replace(viec, @"\s", "").Contains("\"dim_khach\":[{\"loai\":\"ngang\",\"gia_tri\":120"), "True|True|True");
         }
+
+        private static void TachKieuLoThu(OhtaTool.Plugin.Core.JsonObject l) => PhongDocBanVe.TachKieuLo(l);
 
         private static void TestAiCli()
         {

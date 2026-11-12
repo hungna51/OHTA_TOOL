@@ -50,7 +50,13 @@ namespace TeamsTool.Core
         /// <summary>Ô → giá trị AI đọc trước khi người sửa (để AI rút bài học).</summary>
         public Dictionary<string, string> GiaTriAi = new Dictionary<string, string>();
 
-        public string TomTatCanh => TomTat(CanhJson, "chỗ bẻ");
+        public string TomTatCanh => KieuTd.Length > 0 ? DemUon() : TomTat(CanhJson, "chỗ bẻ"); // bản mới: chỗ bẻ nằm trong tiết diện
+
+        private string DemUon()
+        {
+            int n = (PhongTrienKhai.DocChuTd(TdX, out _)?.Uon.Count ?? 0) + (PhongTrienKhai.DocChuTd(TdY, out _)?.Uon.Count ?? 0);
+            return n == 0 ? "" : n + " chỗ bẻ";
+        }
         public string TomTatLo => TomTat(LoJson, "lỗ");
         public string TomTatKeGaki => TomTat(KeGakiJson, "ケガキ");
         public string TomTatDimKhach => TomTat(DimKhachJson, "dim");
@@ -268,10 +274,10 @@ namespace TeamsTool.Core
 @"Bạn là kỹ sư triển khai kim loại tấm của OHTA. Đọc bản vẽ khách hàng gửi (PDF, hoặc tóm tắt DXF) và liệt kê MỖI TẤM một phần tử trong ""tam"".
 - Theo QUY CHUẨN ở khối sau. Vật liệu M và chế độ cắt Z dùng đúng tên trong bảng của quy chuẩn (C-1, C-2). Bản vẽ không ghi vật liệu → chọn theo C-1 và thêm ""M"" vào khong_chac.
 - T: độ dày danh nghĩa (số, mm). Q: số lượng (số). kich_thuoc: kích thước bao ""dài x rộng"" (mm).
-- canh: mỗi chỗ bẻ / nhấn / cuộn: dai_ngoai = các kích thước ngoài hai cạnh kề (mm), goc (độ), r_trong (mm, 0 nếu không ghi), kieu (be / an_1_lan / pitchi / cuon / khac), huong (V hoặc N, rỗng nếu không rõ).
-- lo: mỗi nhóm lỗ (cùng cỡ, cùng kiểu): d (Ø mm; lỗ 皿 = Ø lỗ thông), so_luong, taro (vd ""M6"" nếu là lỗ ren, rỗng nếu không), sara (true nếu là lỗ 皿), d_sara (Ø miệng côn của 皿, 0 nếu không), ghi_chu, cach_duong_be = khoảng cách nhỏ nhất (mm) từ MÉP lỗ tới đường bẻ gần nhất, tính từ kích thước ghi trên bản vẽ (-1 nếu tấm không bẻ hoặc không tính được).
-  loai: tron (lỗ tròn) / dai (lỗ dài, oval, slot — rong = bề rộng, dai = chiều dài tổng, goc = góc trục dài so với trục x, độ); lỗ tròn thì rong = dai = goc = 0.
-  vi_tri: TÂM từng lỗ (so_luong phần tử) trên hình TRẢI PHẲNG, gốc góc trái dưới của tấm (như ケガキ), tính từ kích thước ghi trên bản vẽ; không tính được → rỗng và hỏi trong van_de.
+- lo: mỗi nhóm lỗ (cùng cỡ, cùng kiểu): d (Ø mm; lỗ 皿 = Ø lỗ thông), so_luong, taro (vd ""M6"" nếu là lỗ ren, rỗng nếu không), ghi_chu, cach_duong_be = khoảng cách nhỏ nhất (mm) từ MÉP lỗ tới đường bẻ gần nhất, tính từ kích thước ghi trên bản vẽ (-1 nếu tấm không bẻ hoặc không tính được).
+  kieu: rỗng = lỗ tròn thường; ""sara D"" = lỗ 皿 với D = Ø miệng côn (vd ""sara 12""); ""dai RxL G"" = lỗ dài / oval / slot rộng R, dài tổng L, trục dài nghiêng G độ so với trục x (vd ""dai 10x30 0"").
+  vi_tri: TÂM từng lỗ dạng [[x, y], …] (so_luong cặp) trên hình TRẢI PHẲNG, gốc góc trái dưới của tấm (như ケガキ), tính từ kích thước ghi trên bản vẽ; không tính được → rỗng và hỏi trong van_de.
+- Chỗ bẻ / nhấn / cuộn (góc, R, đoạn hai bên) đọc vào td_x / td_y ở phần TIẾT DIỆN — không liệt kê riêng.
 - mat: bề mặt đặc biệt (HL, #400, 縞板/sima, ミガキ…), rỗng nếu thường. dung_sai: các dung sai ghi trên bản vẽ.
 - ghi_chu_jp: ghi chú tiếng Nhật CỦA RIÊNG tấm này, giữ nguyên chữ (lời nhắn / yêu cầu chung cả đơn đưa vào ghi_chu_don, không lặp ở đây); ghi_chu_vi: dịch sang tiếng Việt, ngắn gọn.
 - trang: số trang PDF chứa tấm (1 = trang đầu); DXF để rỗng.
@@ -279,15 +285,14 @@ namespace TeamsTool.Core
 - Trang không phải bản vẽ chi tiết (đơn đặt hàng, email, bảng kê) → không tạo tấm cho trang đó.
 
 TIẾT DIỆN của mỗi tấm (để trải phẳng — KHÔNG tự tính trải phẳng, chương trình tính theo bảng TV):
-- kieu_td: phang (không uốn) / be (bẻ, ấn, cuộn tính được) / lam_tay (pitchi, kakumaru, ensui, ống co, hình 3D phức tạp — x, y để rỗng).
-- x, y: tiết diện theo 2 hướng vuông góc của tấm. doan = các đoạn theo thứ tự dọc tiết diện; uon = các chỗ uốn giữa 2 đoạn liền nhau (số uon = số doan − 1).
-  · Bẻ / ấn: doan là kích thước NGOÀI (tới giao điểm cạnh ngoài) như ghi trên bản vẽ; uon kieu be (R nhỏ, dao V) hoặc an_1_lan (R trong ghi trên bản vẽ là bội 5, < 50); goc = góc trong giữa 2 đoạn (90 = vuông, 135 = mở, 60 = nhọn); r_trong (0 nếu không ghi); cung = 0.
-  · Cuộn: uon kieu cuon, r_trong = R trong, cung = góc cung (360 = tròn kín, 180 = nửa); doan kề là phần thẳng tiếp tuyến (0 nếu không có).
-  · Hướng không uốn: một doan = chiều dài phẳng theo hướng đó, uon rỗng. Tấm phẳng: x = [dài], y = [rộng]. Hộp 3–4 cạnh: x và y đều có tiết diện (thành – đáy – thành).
-- ghi_chu_td: tiếng Việt, ngắn (hướng bẻ V / N, chỗ chưa chắc). Không đọc được tiết diện → doan rỗng, ghi lý do, thêm tiet_dien vào khong_chac.
-- ke_gaki: mỗi dấu khắc vạch (マーキング / ケガキ / 罫書き — dấu vạch, KHÔNG phải lỗ): x, y = toạ độ tâm (mm) trên hình TRẢI PHẲNG, gốc ở góc trái dưới của tấm, x theo hướng tiết diện x; không có → rỗng. Bản vẽ chỉ ghi số dấu mà thiếu vị trí → để rỗng và hỏi trong van_de.
-- tham_so: khi bien_dang là mẫu có ""thông số"" riêng (liệt kê trong Thư viện biên dạng): mỗi thông số một phần tử {ten, gia_tri} đúng tên của mẫu, số đọc từ bản vẽ (mm). Không ghi trên bản vẽ → bỏ (chương trình dùng mặc định); bắt buộc mà không đọc được → hỏi trong van_de. Mẫu không có thông số riêng → rỗng.
-- vung: khung bao TRỌN hình vẽ của tấm trên trang PDF (mọi hình chiếu + dim + ghi chú của tấm, không gồm khung tên / ghi chú chung), tỉ lệ 0–1 theo bề rộng / cao trang, gốc trái TRÊN (x0, y0 = góc trái trên; x1, y1 = góc phải dưới). DXF: theo khung bao bản vẽ.
+- kieu_td: phang (không uốn) / be (bẻ, ấn, cuộn tính được) / lam_tay (pitchi, kakumaru, ensui, ống co, hình 3D phức tạp — td_x, td_y để rỗng).
+- td_x, td_y: tiết diện theo 2 hướng vuông góc của tấm, viết dạng CHỮ: các đoạn (số mm) xen các chỗ uốn, vd ""50 b90 100 b90 50"". Chỗ uốn: b<góc> = bẻ dao V (b90r2 nếu ghi R trong), a<góc>r<R> = ấn 1 lần (R trong ghi trên bản vẽ là bội 5, < 50), c<cung>r<R> = cuộn (cung 360 = tròn kín, 180 = nửa), p<góc> = pitchi. Góc = góc TRONG giữa 2 đoạn (90 = vuông, 135 = mở, 60 = nhọn).
+  · Bẻ / ấn: đoạn là kích thước NGOÀI (tới giao điểm cạnh ngoài) như ghi trên bản vẽ. Cuộn: đoạn kề là phần thẳng tiếp tuyến (0 nếu không có).
+  · Hướng không uốn: một số = chiều dài phẳng theo hướng đó. Tấm phẳng: td_x = ""dài"", td_y = ""rộng"". Hộp 3–4 cạnh: td_x và td_y đều có chỗ uốn (thành – đáy – thành).
+- ghi_chu_td: tiếng Việt, ngắn (hướng bẻ V / N, chỗ chưa chắc). Không đọc được tiết diện → để rỗng, ghi lý do, thêm tiet_dien vào khong_chac.
+- ke_gaki: mỗi dấu khắc vạch (マーキング / ケガキ / 罫書き — dấu vạch, KHÔNG phải lỗ) một cặp [x, y] = toạ độ tâm (mm) trên hình TRẢI PHẲNG, gốc ở góc trái dưới của tấm, x theo hướng td_x; không có → rỗng. Bản vẽ chỉ ghi số dấu mà thiếu vị trí → để rỗng và hỏi trong van_de.
+- tham_so: khi bien_dang là mẫu có ""thông số"" riêng (liệt kê trong Thư viện biên dạng): chữ dạng ""r1=45; r2=38"" — đúng tên của mẫu, số đọc từ bản vẽ (mm). Không ghi trên bản vẽ → bỏ (chương trình dùng mặc định); bắt buộc mà không đọc được → hỏi trong van_de. Mẫu không có thông số riêng → rỗng.
+- vung: [x0, y0, x1, y1] khung bao TRỌN hình vẽ của tấm trên trang PDF (mọi hình chiếu + dim + ghi chú của tấm, không gồm khung tên / ghi chú chung), tỉ lệ 0–1 theo bề rộng / cao trang, gốc trái TRÊN (x0, y0 = góc trái trên; x1, y1 = góc phải dưới). DXF: theo khung bao bản vẽ.
 - mo_ta: tiếng Việt, mô tả CHI TIẾT hình tấm đủ để người khác vẽ lại không cần xem bản vẽ: hình dạng tổng thể, từng cạnh / cung (R, lõm / lồi, vị trí), lỗ (Ø, số, vị trí), ケガキ, chỗ bẻ (hướng, góc), chi tiết đặc biệt. Chỉ điều có trên bản vẽ, không suy đoán.
 - dim_khach: MỌI kích thước khách ghi trên bản vẽ của tấm mà còn đúng nguyên trên hình TRẢI PHẲNG (tấm phẳng: tất cả; tấm bẻ: kích thước nằm trong mặt phẳng tấm — song song đường bẻ, vị trí lỗ / ケガキ trên cùng một mặt; KHÔNG gồm kích thước ngoài qua chỗ bẻ). loai: ngang (theo x) / doc (theo y) / r (bán kính) / phi (đường kính lỗ) / goc (độ); gia_tri đúng số khách ghi; tu, den = toạ độ hai đầu trên hình trải phẳng (ngang: x, doc: y, gốc góc trái dưới; r: tu, den = tâm x, y; phi / goc: 0). Bản vẽ OHTA phải dim đủ các kích thước này.
 - bien_dang: tên đúng MỘT mẫu trong ""Thư viện biên dạng"" (phần người dùng) khớp hình trải phẳng; làm tay → rỗng; không mẫu nào khớp → ""chua_co"". mo_ta_bien_dang: chỉ khi chua_co — mô tả hình trải phẳng (viền, góc cắt, đường bẻ, lỗ / rãnh đặc biệt) đủ để viết mẫu vẽ mới; còn lại rỗng.
@@ -353,23 +358,16 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             var tt = new List<(string, JsonObject)>();
             foreach (string o in O) tt.Add((o, s));
             tt.Add(("trang", s));
-            tt.Add(("canh", Mang(Obj(("dai_ngoai", Mang(n)), ("goc", n), ("r_trong", n), ("kieu", s), ("huong", s)))));
-            JsonObject loaiLo = Kieu("string");
-            loaiLo.Set("enum", new List<object> { "tron", "dai" });
-            tt.Add(("lo", Mang(Obj(("d", n), ("so_luong", n), ("taro", s), ("sara", Kieu("boolean")), ("d_sara", n), ("ghi_chu", s), ("cach_duong_be", n),
-                                    ("loai", loaiLo), ("rong", n), ("dai", n), ("goc", n), ("vi_tri", Mang(Obj(("x", n), ("y", n))))))));
+            // Giữ schema GỌN (12/11: API báo "compiled grammar is too large"): tiết diện / thông số mẫu là chữ, toạ độ là mảng số,
+            // không dùng enum — giá trị lạ chương trình tự kiểm khi đọc (luật, Mot()).
+            JsonObject cap = Mang(Mang(n));
+            // chỗ bẻ (canh) không hỏi riêng — luật suy từ td_x / td_y; lỗ dài / 皿 gom vào ô chữ "kieu" (tách lại khi đọc)
+            tt.Add(("lo", Mang(Obj(("d", n), ("so_luong", n), ("taro", s), ("kieu", s), ("ghi_chu", s), ("cach_duong_be", n), ("vi_tri", cap)))));
             tt.Add(("khong_chac", Mang(s)));
-            JsonObject td = PhongTrienKhai.SchemaTd();
-            JsonObject kieuTd = Kieu("string");
-            kieuTd.Set("enum", new List<object> { "phang", "be", "lam_tay" });
-            tt.Add(("kieu_td", kieuTd)); tt.Add(("x", td)); tt.Add(("y", td));
-            tt.Add(("ghi_chu_td", s)); tt.Add(("bien_dang", s)); tt.Add(("mo_ta_bien_dang", s));
-            tt.Add(("ke_gaki", Mang(Obj(("x", n), ("y", n)))));
-            tt.Add(("vung", Obj(("x0", n), ("y0", n), ("x1", n), ("y1", n))));
-            tt.Add(("tham_so", Mang(Obj(("ten", s), ("gia_tri", n)))));
-            JsonObject loaiDim = Kieu("string");
-            loaiDim.Set("enum", new List<object> { "ngang", "doc", "r", "phi", "goc" });
-            tt.Add(("dim_khach", Mang(Obj(("loai", loaiDim), ("gia_tri", n), ("tu", n), ("den", n)))));
+            foreach (string o in OTd) tt.Add((o, s)); // kieu_td, td_x, td_y, ghi_chu_td, bien_dang, mo_ta_bien_dang, tham_so
+            tt.Add(("ke_gaki", cap));
+            tt.Add(("vung", Mang(n)));
+            tt.Add(("dim_khach", Mang(Obj(("loai", s), ("gia_tri", n), ("tu", n), ("den", n)))));
             return Obj(("tam", Mang(Obj(tt.ToArray()))), ("van_de", Mang(PhongKiemTra.SchemaVanDe())), ("ghi_chu_don", s));
         }
 
@@ -444,14 +442,69 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             if (x.Get("x") is JsonObject tx) t.TdX = PhongTrienKhai.ChuTd(PhongTrienKhai.DocTd(tx));
             if (x.Get("y") is JsonObject ty) t.TdY = PhongTrienKhai.ChuTd(PhongTrienKhai.DocTd(ty));
             t.CanhJson = JsonLite.Serialize(x.Get("canh") as List<object> ?? new List<object>());
-            t.LoJson = JsonLite.Serialize(x.Get("lo") as List<object> ?? new List<object>());
-            t.KeGakiJson = JsonLite.Serialize(x.Get("ke_gaki") as List<object> ?? new List<object>());
-            t.VungJson = x.Get("vung") is JsonObject vg ? JsonLite.Serialize(vg) : "";
+            // AI trả toạ độ dạng cặp [x, y] (schema gọn) → lưu dạng {x, y} như trước; dạng {x, y} cũ giữ nguyên
+            var lo = x.Get("lo") as List<object> ?? new List<object>();
+            foreach (JsonObject l in lo.OfType<JsonObject>())
+            {
+                if (l.Get("vi_tri") is List<object> vt) l.Set("vi_tri", Diem(vt));
+                TachKieuLo(l);
+            }
+            t.LoJson = JsonLite.Serialize(lo);
+            t.KeGakiJson = JsonLite.Serialize(Diem(x.Get("ke_gaki") as List<object> ?? new List<object>()));
+            if (x.Get("vung") is List<object> vl && vl.Count == 4)
+            {
+                var vg4 = new JsonObject();
+                string[] k = { "x0", "y0", "x1", "y1" };
+                for (int i = 0; i < 4; i++) vg4.Set(k[i], vl[i]);
+                t.VungJson = JsonLite.Serialize(vg4);
+            }
+            else t.VungJson = x.Get("vung") is JsonObject vg ? JsonLite.Serialize(vg) : "";
             if (x.Get("tham_so") is List<object> tsAi) // AI trả mảng {ten, gia_tri} → chữ "r1=45; r2=38"
                 t.ThamSo = string.Join("; ", tsAi.OfType<JsonObject>().Where(o => (o.GetString("ten") ?? "").Trim().Length > 0).Select(o => o.GetString("ten").Trim() + "=" + Chu(o.Get("gia_tri"))));
             t.DimKhachJson = JsonLite.Serialize(x.Get("dim_khach") as List<object> ?? new List<object>());
+            if (t.KieuTd.Length > 0 && t.KieuTd != "phang" && t.KieuTd != "be" && t.KieuTd != "lam_tay") // schema không còn enum
+            {
+                t.KieuTd = (t.TdX + t.TdY).Any(char.IsLetter) ? "be" : "phang";
+                t.KhongChac.Add("tiet_dien");
+            }
             t.KhongChac.UnionWith(DsChu(x.Get("khong_chac")));
             return t;
+        }
+
+        /// <summary>Ô chữ "kieu" của lỗ (schema gọn) → các trường ve.py / luật dùng: "sara 12" → sara, d_sara; "dai 10x30 0" → loai dai, rong, dai, goc.</summary>
+        public static void TachKieuLo(JsonObject l)
+        {
+            string k = (l.GetString("kieu") ?? "").Trim().ToLowerInvariant();
+            if (k.Length == 0) return;
+            var so = System.Text.RegularExpressions.Regex.Matches(k.Replace(',', '.'), @"\d+(?:\.\d+)?").Cast<System.Text.RegularExpressions.Match>()
+                          .Select(m => m.Value).ToList();
+            if (k.StartsWith("sara", StringComparison.Ordinal) || k.StartsWith("皿", StringComparison.Ordinal))
+            {
+                l.Set("sara", true);
+                if (so.Count > 0) l.Set("d_sara", new JsonNumber(so[0]));
+            }
+            else if (k.StartsWith("dai", StringComparison.Ordinal) && so.Count >= 2)
+            {
+                l.Set("loai", "dai");
+                l.Set("rong", new JsonNumber(so[0]));
+                l.Set("dai", new JsonNumber(so[1]));
+                l.Set("goc", new JsonNumber(so.Count > 2 ? so[2] : "0"));
+            }
+        }
+
+        /// <summary>[[x, y], …] → [{x, y}, …]; phần tử đã là {x, y} giữ nguyên, phần tử hỏng bỏ.</summary>
+        private static List<object> Diem(List<object> ds)
+        {
+            var kq = new List<object>();
+            foreach (object p in ds)
+            {
+                if (p is JsonObject o) { kq.Add(o); continue; }
+                if (!(p is List<object> c) || c.Count < 2) continue;
+                var d = new JsonObject();
+                d.Set("x", c[0]); d.Set("y", c[1]);
+                kq.Add(d);
+            }
+            return kq;
         }
 
         private static IEnumerable<string> DsChu(object v) => (v as List<object> ?? new List<object>()).Select(Chu).Where(s => s.Length > 0);
