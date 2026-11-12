@@ -18,7 +18,7 @@ namespace TeamsTool.Core
         /// <summary>Phần cần cho CLI tách từ body API.</summary>
         public sealed class YeuCau
         {
-            public string Model = "", Effort = "high", Schema = "", HuongDan = "", PdfBase64;
+            public string Model = "", Effort = "high", Schema = "", HuongDan = "", PdfBase64, AnhBase64;
         }
 
         /// <summary>Body POST /v1/messages → lời dặn + quy chuẩn + phần người dùng (một văn bản), PDF base64, mẫu JSON, model, effort.</summary>
@@ -35,6 +35,7 @@ namespace TeamsTool.Core
                 {
                     if (k.GetString("type") == "text") sb.Append(k.GetString("text")).Append("\n\n");
                     else if (k.GetString("type") == "document" && k.Get("source") is JsonObject src) yc.PdfBase64 = src.GetString("data");
+                    else if (k.GetString("type") == "image" && k.Get("source") is JsonObject srcA) yc.AnhBase64 = srcA.GetString("data");
                 }
             yc.HuongDan = sb.ToString().TrimEnd();
             if (o.Get("output_config") is JsonObject oc)
@@ -45,17 +46,18 @@ namespace TeamsTool.Core
             return yc;
         }
 
-        public const string TepYeuCau = "yeu_cau.md", TepPdf = "ban_ve.pdf";
+        public const string TepYeuCau = "yeu_cau.md", TepPdf = "ban_ve.pdf", TepAnh = "anh_tam.png";
 
         /// <summary>Lời nhắn ngắn trên dòng lệnh (lời dặn dài nằm trong yeu_cau.md — dòng lệnh Windows giới hạn ~32 nghìn ký tự).</summary>
-        public static string LoiNhan(bool coPdf) =>
+        public static string LoiNhan(bool coPdf, bool coAnh = false) =>
             "Đọc tệp " + TepYeuCau + " trong thư mục làm việc và làm đúng theo hướng dẫn trong đó" + (coPdf ? "; bản vẽ cần đọc là tệp " + TepPdf + " cùng thư mục" : "") +
+            (coAnh ? "; ảnh cần xem là tệp " + TepAnh + " cùng thư mục" : "") +
             ". Chỉ đọc tệp — không sửa, không tạo tệp, không chạy lệnh. Trả kết quả đúng JSON schema đã cho.";
 
         /// <summary>Tham số dòng lệnh cho claude -p / agy -p (thư mục làm việc = thuMuc).</summary>
         public static List<string> ThamSo(string nguon, YeuCau yc, string thuMuc)
         {
-            var a = new List<string> { "-p", LoiNhan(yc.PdfBase64 != null), "--output-format", "json", "--json-schema", yc.Schema, "--effort", yc.Effort };
+            var a = new List<string> { "-p", LoiNhan(yc.PdfBase64 != null, yc.AnhBase64 != null), "--output-format", "json", "--json-schema", yc.Schema, "--effort", yc.Effort };
             if (nguon == ClaudeCode)
             {
                 a.AddRange(new[] { "--allowed-tools", "Read" }); // chỉ cho đọc tệp; công cụ khác bị từ chối trong chế độ -p

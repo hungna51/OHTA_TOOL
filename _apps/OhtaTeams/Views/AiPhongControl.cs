@@ -182,11 +182,15 @@ namespace TeamsTool.Views
                 else
                 {
                     ChiTiet ct = await AiDon.DocBanVe(tn, _tm, docLaiHet, Bao, _huy.Token);
+                    string loiDoc = _trangThai.Text.StartsWith("Có tệp chưa đọc", StringComparison.Ordinal) ? _trangThai.Text : null;
                     string anh = await AiDon.CatAnh(ct, _tm, _d.Title, _huy.Token); // ảnh tấm cho phòng 2 + hồ sơ
+                    string phongTo = null;
+                    try { phongTo = await AiDon.DocPhongTo(ct, _tm, _d.Title, Bao, _huy.Token); } // đọc kỹ lại từng tấm trên ảnh cắt
+                    catch (Exception ex) when (!(ex is OperationCanceledException)) { phongTo = "Chưa đọc phóng to được: " + ex.Message; }
                     KiemTra kt = AiDon.KiemLuat(ct, _tm, _d.Title);
-                    if (!_trangThai.Text.StartsWith("Có tệp chưa đọc", StringComparison.Ordinal))
-                        Bao("Xong phòng 1: " + ct.Tam.Count + " tấm, " + kt.VanDe.Count + " vấn đề (" + kt.DoConMo + " đỏ). Sang phòng 2: trả lời câu hỏi từng tấm, ✎ sửa thông số nếu sai, rồi ✓ Xác nhận → Triển khai."
-                            + (anh != null ? "\n" + anh : ""));
+                    Bao((loiDoc != null ? loiDoc + "\n" : "")
+                        + "Xong phòng 1: " + ct.Tam.Count + " tấm, " + kt.VanDe.Count + " vấn đề (" + kt.DoConMo + " đỏ). Sang phòng 2: trả lời câu hỏi từng tấm, ✎ sửa thông số nếu sai, rồi ✓ Xác nhận → Triển khai."
+                        + (phongTo != null ? "\n" + phongTo : "") + (anh != null ? "\n" + anh : ""));
                 }
             }
             catch (OperationCanceledException) { Bao("Đã huỷ. Phần đã xong vẫn được lưu."); }

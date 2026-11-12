@@ -320,7 +320,9 @@ def ve_tam(viec, t, mau, so_tay, co_anh):
     return tep, anh, thieu
 
 
-LE_ANH = 0.03  # nới vùng tấm 3% mỗi bên
+LE_ANH = 0.03       # nới tối thiểu 3% trang mỗi bên
+LE_ANH_VUNG = 1.0   # và 100% kích thước vùng mỗi bên (ảnh gấp 3 vùng) — vùng AI chọn hay lệch (vd ôm ô ghi chú, sót khung hình mũi tên chỉ tới)
+DPI_ANH = 250       # đủ nét cho lượt AI đọc phóng to
 
 
 def cat_anh(tep_viec):
@@ -333,15 +335,16 @@ def cat_anh(tep_viec):
             vg = v.get("vung") or {}
             hop = None
             if vg:
-                hop = (max(0.0, float(vg["x0"]) - LE_ANH), max(0.0, float(vg["y0"]) - LE_ANH),
-                       min(1.0, float(vg["x1"]) + LE_ANH), min(1.0, float(vg["y1"]) + LE_ANH))
+                x0, y0, x1, y1 = float(vg["x0"]), float(vg["y0"]), float(vg["x1"]), float(vg["y1"])
+                lx, ly = max(LE_ANH, (x1 - x0) * LE_ANH_VUNG), max(LE_ANH, (y1 - y0) * LE_ANH_VUNG)
+                hop = (max(0.0, x0 - lx), max(0.0, y0 - ly), min(1.0, x1 + lx), min(1.0, y1 + ly))
             if v["nguon"].lower().endswith(".pdf"):
                 import fitz
                 with fitz.open(v["nguon"]) as d:
                     trang = d[min(max(int(v.get("trang") or 1), 1), d.page_count) - 1]
                     r = trang.rect
                     vung = r if hop is None else fitz.Rect(r.x0 + r.width * hop[0], r.y0 + r.height * hop[1], r.x0 + r.width * hop[2], r.y0 + r.height * hop[3])
-                    trang.get_pixmap(dpi=200, clip=vung).save(v["ra"])
+                    trang.get_pixmap(dpi=DPI_ANH, clip=vung).save(v["ra"])
             else:
                 import ezdxf
                 from ezdxf.addons.drawing import matplotlib as dm

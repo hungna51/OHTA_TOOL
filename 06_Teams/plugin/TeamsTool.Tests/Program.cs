@@ -197,6 +197,20 @@ namespace TeamsTool.Tests
             var canhTd = PhongKiemTra.CanhTuTd(new TamAi { KieuTd = "be", TdX = "50 b90 100 a90r10 40", TdY = "200" });
             Kiem("luat: cho be suy tu tiet dien", canhTd.Count + "|" + ((OhtaTool.Plugin.Core.JsonObject)canhTd[1]).GetString("kieu") + "|" + System.Text.RegularExpressions.Regex.Replace(OhtaTool.Plugin.Core.JsonLite.Serialize(canhTd[0]), @"\s", "").Contains("\"dai_ngoai\":[50,100]")
                  + "|" + new TamAi { KieuTd = "be", TdX = "50 b90 100 a90r10 40" }.TomTatCanh, "2|an_1_lan|True|2 chỗ bẻ");
+            // Lượt phóng to: áp kết quả, giữ ô người sửa, lọc khong_chac về tên ô, bỏ nghi vấn đã rõ
+            var tPt = new TamAi { Tep = "p.pdf", KichThuoc = "1400 x 600", T = "9", TdX = "1400", TdY = "600", LoJson = "[]" };
+            tPt.DaSua.Add("T");
+            var ndPt = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse("{\"M\":\"\",\"T\":\"10\",\"Q\":\"\",\"kich_thuoc\":\"140 x 600\",\"td_x\":\"140\",\"td_y\":\"600\",\"tham_so\":\"\",\"mo_ta\":\"\","
+                + "\"lo\":[{\"d\":18,\"so_luong\":2,\"taro\":\"\",\"kieu\":\"dai 18x30 90\",\"ghi_chu\":\"\",\"cach_duong_be\":-1,\"vi_tri\":[[40,50],[40,150]]}],\"ke_gaki\":[],\"dim_khach\":[],"
+                + "\"khong_chac\":[\"kich_thuoc\",\"lo.d\",\"vát C10 hai góc hay C5\"],\"van_de\":[],\"bo_nghi_van\":[2]}");
+            var doiPt = PhongPhongTo.ApDung(tPt, ndPt);
+            Kiem("phong to: ap ket qua, giu o nguoi sua, loc khong_chac",
+                 string.Join(",", doiPt) + "|" + tPt.T + "|" + tPt.KichThuoc + "|" + System.Text.RegularExpressions.Regex.Replace(tPt.LoJson, @"\s", "").Contains("\"rong\":18,\"dai\":30,\"goc\":90")
+                 + "|" + string.Join(",", tPt.KhongChac.OrderBy(x => x)) + "|" + string.Join(",", PhongPhongTo.NghiVanDaRo(ndPt)),
+                 "kich_thuoc,td_x,lo|9|140 x 600|True|kich_thuoc,lo|2");
+            Kiem("phong to: body co anh png", PhongPhongTo.Body("claude-opus-5-5", "q", "QUJD", "dv").Contains("\"media_type\":\"image/png\"")
+                 || System.Text.RegularExpressions.Regex.Replace(PhongPhongTo.Body("claude-opus-5-5", "q", "QUJD", "dv"), @"\s", "").Contains("\"media_type\":\"image/png\""), true);
+            Kiem("cli: tach anh tu body", AiCli.TachBody(PhongPhongTo.Body("claude-opus-5-5", "q", "QUJD", "dv")).AnhBase64 + "|" + AiCli.LoiNhan(false, true).Contains(AiCli.TepAnh), "QUJD|True");
             string schema = System.Text.RegularExpressions.Regex.Replace(OhtaTool.Plugin.Core.JsonLite.Serialize(PhongDocBanVe.Schema()), @"\s", "");
             Console.WriteLine("  (do dai schema doc ban ve: " + schema.Length + ")");
             Kiem("schema gon: khong enum, khong tiet dien long", schema.Contains("\"enum\"") + "|" + schema.Contains("\"uon\"") + "|" + (schema.Length < 6000), "False|False|True");

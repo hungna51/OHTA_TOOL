@@ -497,6 +497,46 @@ namespace TeamsTool.Services
         }
 
         /// <summary>
+        /// Lượt AI đọc PHÓNG TO (12/11): mỗi tấm mới đọc (chưa DaPhongTo, có vùng + ảnh cắt từ PDF) gửi ảnh cắt 250 dpi + dữ liệu đã đọc
+        /// cho AI đọc kỹ lại số, lỗ, ケガキ, dim khách; bỏ nghi vấn đã rõ, thêm nghi vấn mới. Trả câu báo (null = không có gì để làm).
+        /// </summary>
+        public static async Task<string> DocPhongTo(ChiTiet ct, string tm, string title, Action<string> bao, CancellationToken huy)
+        {
+            string dir = ThuMucHoSo(tm);
+            var ds = PhongHoSo.DanhSo(ct, title)
+                .Where(x => !x.Tam.DaPhongTo && !string.IsNullOrEmpty(x.Tam.VungJson) && x.Tam.Tep.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) && File.Exists(Path.Combine(dir, x.Ten + ".png")))
+                .ToList();
+            if (ds.Count == 0) return null;
+            string key = KeyPhong(2), model = Model(), quyChuan = QuyChuan(2);
+            var thuVien = await DanhSachMau(tm);
+            var loi = new List<string>();
+            int sua = 0, i = 0;
+            foreach (var (t, ten) in ds)
+            {
+                huy.ThrowIfCancellationRequested();
+                bao("Phòng 1: AI đọc phóng to " + (++i) + "/" + ds.Count + " — " + ten + " (ảnh cắt vùng tấm)…");
+                // nghi vấn của tấm + nghi vấn chung của tệp (AI có thể đã trả lời được khi nhìn rõ)
+                string dauTep = "ai|" + t.Tep.ToLowerInvariant() + "|";
+                var nv = ct.NghiVan.Where(v => PhongHoSo.CuaTam(v, t, ct) || (v.Tam.Trim().Length == 0 && v.Ma.StartsWith(dauTep, StringComparison.Ordinal))).ToList();
+                string moTaMau = thuVien.FirstOrDefault(m => m.Ten == t.BienDang)?.ThamSoChu ?? "";
+                string body = PhongPhongTo.Body(model, quyChuan, Convert.ToBase64String(File.ReadAllBytes(Path.Combine(dir, ten + ".png"))), PhongPhongTo.DauVao(t, moTaMau, nv));
+                PhongPhongTo.PhanHoi ph = PhongPhongTo.DocPhanHoi(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, huy));
+                ct.TokenVao += ph.Vao + ph.GhiCache + ph.DocCache;
+                ct.TokenRa += ph.Ra;
+                ct.Tien += PhongDocBanVe.Tien(model, ph.Vao, ph.GhiCache, ph.DocCache, ph.Ra);
+                if (ph.Loi != null) { loi.Add(ten + ": " + ph.Loi); continue; }
+                sua += PhongPhongTo.ApDung(t, ph.Nd).Count;
+                var daRo = PhongPhongTo.NghiVanDaRo(ph.Nd);
+                for (int k = 0; k < nv.Count; k++) if (daRo.Contains(k + 1)) ct.NghiVan.Remove(nv[k]);
+                if (ph.Nd.Get("van_de") is List<object> vd)
+                    foreach (VanDe v in PhongKiemTra.DocDsVanDe(vd, t.Tep, "doc").Where(v => !ct.NghiVan.Any(x => x.Ma == v.Ma))) ct.NghiVan.Add(v);
+                t.DaPhongTo = true;
+            }
+            Ghi(tm, ct);
+            return "AI đọc phóng to " + (ds.Count - loi.Count) + " tấm, sửa " + sua + " ô." + (loi.Count > 0 ? "\nChưa đọc phóng to được: " + string.Join("; ", loi) : "");
+        }
+
+        /// <summary>
         /// Kiểm lại sau khi có câu trả lời: luật + AI đọc bảng tấm và câu trả lời (CHỈ GỬI CHỮ, không gửi bản vẽ) theo QC kiểm tra,
         /// thêm vấn đề mới phát sinh. Chưa có câu trả lời nào → chỉ chạy luật.
         /// </summary>
@@ -991,6 +1031,7 @@ namespace TeamsTool.Services
             {
                 File.WriteAllText(Path.Combine(dir, AiCli.TepYeuCau), yc.HuongDan, Utf8);
                 if (yc.PdfBase64 != null) File.WriteAllBytes(Path.Combine(dir, AiCli.TepPdf), Convert.FromBase64String(yc.PdfBase64));
+                if (yc.AnhBase64 != null) File.WriteAllBytes(Path.Combine(dir, AiCli.TepAnh), Convert.FromBase64String(yc.AnhBase64));
                 var (ma, ra) = await ChayLenh(cli, dir, 900, ct, AiCli.ThamSo(nguon, yc, dir).ToArray());
                 return AiCli.DoiKetQua(ra);
             }

@@ -47,6 +47,8 @@ namespace TeamsTool.Core
         public string DimKhachJson = "[]";
         public HashSet<string> KhongChac = new HashSet<string>(); // ô AI không chắc / AI tự chọn
         public HashSet<string> DaSua = new HashSet<string>();     // ô người dùng đã sửa — chạy lại không ghi đè
+        /// <summary>Đã qua lượt AI đọc phóng to ảnh cắt vùng tấm (đọc lại bản vẽ → tấm mới → phóng to lại).</summary>
+        public bool DaPhongTo;
         /// <summary>Ô → giá trị AI đọc trước khi người sửa (để AI rút bài học).</summary>
         public Dictionary<string, string> GiaTriAi = new Dictionary<string, string>();
 
@@ -174,6 +176,7 @@ namespace TeamsTool.Core
                 if (!string.IsNullOrEmpty(t.VungJson)) x.Set("vung", SafeParse(t.VungJson));
                 x.Set("dim_khach", SafeParse(t.DimKhachJson));
                 x.Set("moi", t.Moi);
+                x.Set("da_phong_to", t.DaPhongTo);
                 x.Set("khong_chac", t.KhongChac.OrderBy(s => s).Cast<object>().ToList());
                 x.Set("da_sua", t.DaSua.OrderBy(s => s).Cast<object>().ToList());
                 var ai = new JsonObject();
@@ -204,6 +207,7 @@ namespace TeamsTool.Core
                 t.Tep = Chu(x.Get("tep"));
                 t.Moi = !(x.Get("moi") is bool b) || b;
                 t.LyDoSua = Chu(x.Get("ly_do_sua"));
+                t.DaPhongTo = x.Get("da_phong_to") is bool pt && pt;
                 t.DaSua.UnionWith(DsChu(x.Get("da_sua")));
                 if (x.Get("gia_tri_ai") is JsonObject ai)
                     foreach (var kv in ai.Items) t.GiaTriAi[kv.Key] = Chu(kv.Value);
@@ -296,7 +300,7 @@ TIẾT DIỆN của mỗi tấm (để trải phẳng — KHÔNG tự tính tr�
 - ghi_chu_td: tiếng Việt, ngắn (hướng bẻ V / N, chỗ chưa chắc). Không đọc được tiết diện → để rỗng, ghi lý do, thêm tiet_dien vào khong_chac.
 - ke_gaki: mỗi dấu khắc vạch (マーキング / ケガキ / 罫書き — dấu vạch, KHÔNG phải lỗ) một cặp [x, y] = toạ độ tâm (mm) trên hình TRẢI PHẲNG, gốc ở góc trái dưới của tấm, x theo hướng td_x; không có → rỗng. Bản vẽ chỉ ghi số dấu mà thiếu vị trí → để rỗng và hỏi trong van_de.
 - tham_so: khi bien_dang là mẫu có ""thông số"" riêng (liệt kê trong Thư viện biên dạng): chữ dạng ""r1=45; r2=38"" — đúng tên của mẫu, số đọc từ bản vẽ (mm). Không ghi trên bản vẽ → bỏ (chương trình dùng mặc định); bắt buộc mà không đọc được → hỏi trong van_de. Mẫu không có thông số riêng → rỗng.
-- vung: [x0, y0, x1, y1] khung bao TRỌN hình vẽ của tấm trên trang PDF (mọi hình chiếu + dim + ghi chú của tấm, không gồm khung tên / ghi chú chung), tỉ lệ 0–1 theo bề rộng / cao trang, gốc trái TRÊN (x0, y0 = góc trái trên; x1, y1 = góc phải dưới). DXF: theo khung bao bản vẽ.
+- vung: [x0, y0, x1, y1] khung bao TRỌN hình vẽ của tấm trên trang PDF (mọi hình chiếu + dim + ghi chú của tấm, không gồm khung tên / ghi chú chung; tấm chỉ định bằng ô ghi chú có mũi tên / đường dẫn → vùng phải ôm cả KHUNG HÌNH mà mũi tên chỉ tới, không chỉ ô ghi chú), tỉ lệ 0–1 theo bề rộng / cao trang, gốc trái TRÊN (x0, y0 = góc trái trên; x1, y1 = góc phải dưới). DXF: theo khung bao bản vẽ.
 - mo_ta: tiếng Việt, mô tả CHI TIẾT hình tấm đủ để người khác vẽ lại không cần xem bản vẽ: hình dạng tổng thể, từng cạnh / cung (R, lõm / lồi, vị trí), lỗ (Ø, số, vị trí), ケガキ, chỗ bẻ (hướng, góc), chi tiết đặc biệt. Chỉ điều có trên bản vẽ, không suy đoán.
 - dim_khach: MỌI kích thước khách ghi trên bản vẽ của tấm mà còn đúng nguyên trên hình TRẢI PHẲNG (tấm phẳng: tất cả; tấm bẻ: kích thước nằm trong mặt phẳng tấm — song song đường bẻ, vị trí lỗ / ケガキ trên cùng một mặt; KHÔNG gồm kích thước ngoài qua chỗ bẻ). loai: ngang (theo x) / doc (theo y) / r (bán kính) / phi (đường kính lỗ) / goc (độ); gia_tri đúng số khách ghi; tu, den = toạ độ hai đầu trên hình trải phẳng (ngang: x, doc: y, gốc góc trái dưới; r: tu, den = tâm x, y; phi / goc: 0). Bản vẽ OHTA phải dim đủ các kích thước này.
 - bien_dang: tên đúng MỘT mẫu trong ""Thư viện biên dạng"" (phần người dùng) khớp hình trải phẳng; làm tay → rỗng; không mẫu nào khớp → ""chua_co"". mo_ta_bien_dang: chỉ khi chua_co — mô tả hình trải phẳng (viền, góc cắt, đường bẻ, lỗ / rãnh đặc biệt) đủ để viết mẫu vẽ mới; còn lại rỗng.
@@ -497,7 +501,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
         }
 
         /// <summary>[[x, y], …] → [{x, y}, …]; phần tử đã là {x, y} giữ nguyên, phần tử hỏng bỏ.</summary>
-        private static List<object> Diem(List<object> ds)
+        internal static List<object> Diem(List<object> ds)
         {
             var kq = new List<object>();
             foreach (object p in ds)
