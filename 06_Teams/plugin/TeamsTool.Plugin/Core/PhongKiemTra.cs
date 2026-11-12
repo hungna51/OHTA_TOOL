@@ -319,8 +319,7 @@ namespace TeamsTool.Core
                 VanDe v = ds[i];
                 sb.Append(i + 1).Append(". ");
                 if (v.Tam.Length > 0) sb.Append('[').Append(v.Tam).Append("] ");
-                sb.Append(v.CauHoiJp.Length > 0 ? v.CauHoiJp : "（訳なし）").Append('\n');
-                sb.Append("   (VI: ").Append(v.NoiDung).Append(")\n");
+                sb.Append(v.NoiDung).Append('\n'); // shortcut: chỉ tiếng Việt (11/12: chưa cần dịch Nhật) — cần thì dịch tay trước khi gửi khách
             }
             return sb.ToString().TrimEnd('\n');
         }
@@ -344,8 +343,8 @@ Tìm THÊM các vấn đề luật chưa bắt, theo QUY CHUẨN ở khối sau 
 - Mâu thuẫn giữa các hình chiếu, giữa hình và ghi chú / bảng, giữa bản vẽ và bảng tấm (vật liệu, độ dày, số lượng).
 - Bẻ hộp 3–4 cạnh (c > 150, c > a hoặc b), bẻ C khi a < c (bẻ W), cạnh chéo / bẻ một phần cần slit (B-6), vát (D-2), sima / mặt đẹp / HL (B-5), cuộn (C-2).
 - Luật công ty đặc biệt nếu đơn thuộc công ty đó; vật liệu / Z không đúng bảng C-1, C-2.
-Mỗi vấn đề: tam (số bản vẽ hoặc tên tấm, rỗng nếu chung), muc (do = chặn triển khai; vang = cần xác nhận; info = chỉ ghi chú), nhom (tu_xu_ly = làm theo QC không cần hỏi; noi_bo = hỏi quản lý; khach = hỏi khách), muc_qc (vd B-6-1), noi_dung (tiếng Việt, ngắn, nêu chỗ + số), cau_hoi_jp (nếu nhom = khach: câu hỏi tiếng Nhật lịch sự kiểu thương mại gửi khách, rỗng nếu không), lien_lac (true nếu là báo slit / phần thừa — bản 連絡します; false nếu là câu hỏi お問い合わせ).
-dich: với MỖI vấn đề luật có nhom = khach trong danh sách đầu vào, trả cau_hoi_jp (tiếng Nhật lịch sự) theo ma.";
+Mỗi vấn đề: tam (số bản vẽ hoặc tên tấm, rỗng nếu chung), muc (do = chặn triển khai; vang = cần xác nhận; info = chỉ ghi chú), nhom (tu_xu_ly = làm theo QC không cần hỏi; noi_bo = hỏi quản lý; khach = hỏi khách), muc_qc (vd B-6-1), lien_lac (true nếu là báo slit / phần thừa — bản 連絡します; false nếu là câu hỏi お問い合わせ).
+noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: chỗ nào + thiếu / sai gì (+ số). Nhóm khach / noi_bo viết thành câu hỏi trực tiếp (vd ""Vị trí lỗ M5 cách mép trái bao nhiêu?""). Không giải thích lý do, không suy đoán, không lặp ý; nhiều ý cùng một chỗ thì gộp. Chỉ nêu vấn đề làm thay đổi cách triển khai.";
 
         /// <summary>Phần chữ gửi kèm bản vẽ: bảng tấm của tệp + vấn đề luật (mã, nhóm, nội dung) + công ty.</summary>
         public static string DauVao(string tenTep, string congTy, IEnumerable<TamAi> tam, IEnumerable<VanDe> luat, IEnumerable<VanDe> daTraLoi = null)
@@ -374,8 +373,8 @@ dich: với MỖI vấn đề luật có nhom = khach trong danh sách đầu v�
         {
             JsonObject s = Kieu("string"), b = Kieu("boolean");
             JsonObject vd = Obj(("tam", s), ("muc", LuaChon("do", "vang", "info")), ("nhom", LuaChon("tu_xu_ly", "noi_bo", "khach")),
-                                ("muc_qc", s), ("noi_dung", s), ("cau_hoi_jp", s), ("lien_lac", b));
-            return Obj(("van_de", Mang(vd)), ("dich", Mang(Obj(("ma", s), ("cau_hoi_jp", s)))));
+                                ("muc_qc", s), ("noi_dung", s), ("lien_lac", b));
+            return Obj(("van_de", Mang(vd)));
         }
 
         /// <summary>Body POST /v1/messages — cùng khung với phòng 2 (system = lời dặn + QC phòng 3 có cache).</summary>
@@ -415,7 +414,6 @@ dich: với MỖI vấn đề luật có nhom = khach trong danh sách đầu v�
         public sealed class PhanHoi
         {
             public List<VanDe> VanDe = new List<VanDe>();
-            public Dictionary<string, string> Dich = new Dictionary<string, string>();
             public long Vao, GhiCache, DocCache, Ra;
             public string Loi;
         }
@@ -442,12 +440,9 @@ dich: với MỖI vấn đề luật có nhom = khach trong danh sách đầu v�
                         Ma = MaAi(tenTep, tam, noiDung), Tam = tam, NoiDung = noiDung, Nguon = "ai",
                         Muc = Mot(x.GetString("muc"), VanDe.Vang, VanDe.Do, VanDe.Vang, VanDe.ThongTin),
                         Nhom = Mot(x.GetString("nhom"), VanDe.NoiBo, VanDe.TuXuLy, VanDe.NoiBo, VanDe.Khach),
-                        MucQc = x.GetString("muc_qc") ?? "", CauHoiJp = x.GetString("cau_hoi_jp") ?? "", LienLac = x.Get("lien_lac") is bool b && b,
+                        MucQc = x.GetString("muc_qc") ?? "", LienLac = x.Get("lien_lac") is bool b && b,
                     });
                 }
-                if (nd.Get("dich") is List<object> dich)
-                    foreach (JsonObject x in dich.OfType<JsonObject>())
-                        if (!string.IsNullOrEmpty(x.GetString("ma"))) kq.Dich[x.GetString("ma")] = x.GetString("cau_hoi_jp") ?? "";
                 return kq;
             }
             kq.Loi = p2.Loi ?? "Phản hồi AI không đúng mẫu";

@@ -56,6 +56,73 @@ namespace TeamsTool.Tests
             "  0\nMTEXT\n  3\n{\\fArial|b0;\\U+66F2}\n  1\n\\PR5\n" +
             "  0\nENDSEC\n  0\nEOF\n";
 
+        private static void TestPhongTrienKhai()
+        {
+            Console.WriteLine("-- Phong 4 trien khai --");
+            Kiem("delta tu chu TraV: 90 / sima / goc nhon / khong co",
+                 PhongTrienKhai.DeltaTuChu("V=32-4(90°)") + "|" + PhongTrienKhai.DeltaTuChu("シマ目外 V32引代 4.1 (90°)") + "|" + PhongTrienKhai.DeltaTuChu("V12x-1.95(60°)") + "|" + (PhongTrienKhai.DeltaTuChu("abc") == null),
+                 "4|4.1|1.95|True");
+
+            // TraV giả: SS t4.5 (QC: V32 δ4)
+            List<UngVienV> TraV(double goc) => goc == 90
+                ? new List<UngVienV> { new UngVienV { V = "V25", Delta = 3.7 }, new UngVienV { V = "V32", Delta = 4 }, new UngVienV { V = "V40", Delta = 4.2 } }
+                : new List<UngVienV>();
+            double? Lmin(string v) => v == "V25" ? 15 : v == "V32" ? 20 : v == "V40" ? 25 : (double?)null;
+            var tam = new TamAi { SoBanVe = "A-1", M = "SS400", T = "4.5", Q = "3", LoJson = "[{\"d\":5,\"taro\":\"M6\",\"sara\":false}]" };
+            TietDien L(double a, double b, string kieu = "be", double goc = 90, double r = 0) =>
+                new TietDien { Doan = { a, b }, Uon = { new Uon { Kieu = kieu, Goc = goc, R = r } } };
+            TietDien Phang(double a) => new TietDien { Doan = { a } };
+
+            var tk = new TamTrienKhai { Kieu = "be", X = L(50, 100), Y = Phang(200) };
+            PhongTrienKhai.Tinh(tk, tam, TraV, 4.2, Lmin);
+            Kiem("be L 50+100 tu chon V25 (Lmin 15 <= 50): X = 150 - 2x3.7", tk.VChon + "|" + tk.XPhang + "|" + tk.YPhang + "|" + tk.KyHieu, "V25|142.6|200|*");
+            var tk2 = new TamTrienKhai { Kieu = "be", X = L(50, 100), Y = Phang(200), VChon = "V32" };
+            PhongTrienKhai.Tinh(tk2, tam, TraV, 4.2, Lmin);
+            Kiem("be L nguoi chon V32 (QC δ4): X = 142", tk2.VChon + "|" + tk2.XPhang + "|" + tk2.ChiTiet[0].Contains("V32 δ4 → −8"), "V32|142|True");
+            var tk3 = new TamTrienKhai { Kieu = "be", X = L(18, 100), Y = Phang(200) };
+            PhongTrienKhai.Tinh(tk3, tam, TraV, 4.2, Lmin);
+            Kiem("be canh 18: bo V40 (Lmin 25) va giu V25 (15)", tk3.VChon, "V25");
+            var tk4 = new TamTrienKhai { Kieu = "be", X = L(50, 100, "an_1_lan", 90, 10), Y = Phang(200) };
+            PhongTrienKhai.Tinh(tk4, tam, TraV, 4.2, Lmin);
+            Kiem("an 1 lan R10 90° T4.5 T thuc 4.2: 150 - 2x14.5 + (10+1.89)xπ/2", tk4.XPhang, 139.7);
+            var tk5 = new TamTrienKhai { Kieu = "be", X = new TietDien { Doan = { 0, 0 }, Uon = { new Uon { Kieu = "cuon", R = 100, Cung = 360 } } }, Y = Phang(500) };
+            PhongTrienKhai.Tinh(tk5, new TamAi { T = "3.2", M = "SS400" }, TraV, 3, Lmin);
+            Kiem("cuon tron R100 T thuc 3: 2π(100+1.5) + ky hieu r", tk5.XPhang + "|" + tk5.KyHieu, "637.7|r");
+            var tk6 = new TamTrienKhai { Kieu = "be", X = L(50, 100, "pitchi"), Y = Phang(200) };
+            PhongTrienKhai.Tinh(tk6, tam, TraV, 4.2, Lmin);
+            Kiem("pitchi -> lam tay, khong tinh", tk6.LamTay + "|" + (tk6.XPhang == null), "True|True");
+            var tk7 = new TamTrienKhai { Kieu = "be", X = new TietDien { Doan = { 50, 100, 30 }, Uon = { new Uon() } }, Y = Phang(200) };
+            PhongTrienKhai.Tinh(tk7, tam, TraV, 4.2, Lmin);
+            Kiem("doan / uon lech -> canh bao, X null", (tk7.XPhang == null) + "|" + tk7.CanhBao.Any(c => c.Contains("số đoạn")), "True|True");
+            var tk8 = new TamTrienKhai { Kieu = "be", X = L(50, 100, "be", 120), Y = Phang(200) };
+            PhongTrienKhai.Tinh(tk8, tam, TraV, 4.2, Lmin);
+            Kiem("goc TV khong co -> canh bao tra tay", (tk8.XPhang == null) + "|" + tk8.CanhBao.Any(c => c.Contains("bảng TV không có góc 120")), "True|True");
+            var phang = new TamTrienKhai { Kieu = "phang", X = Phang(300), Y = Phang(150) };
+            PhongTrienKhai.Tinh(phang, new TamAi { T = "3.2", M = "SS400", Q = "1" }, TraV, 3, Lmin);
+            Kiem("tam phang: X x Y, ky hieu rong, CSV", phang.XPhang + "x" + phang.YPhang + "|" + phang.KyHieu + "|" + PhongTrienKhai.DongCsv("130672", 2, new TamAi { T = "3.2", M = "SS400", Q = "1" }, phang),
+                 "300x150||130672-2,1,SS400,3.2,,300,150");
+            string tt = PhongTrienKhai.TomTat("130672", new List<(TamAi, TamTrienKhai)> { (tam, tk2), (tam, tk6) });
+            Kiem("tom tat gui chuoi don", tt.Contains("1. A-1 — SS400 t4.5 ×3 — 142 × 200 — V32 [*]") + "|" + tt.Contains("2. A-1 — SS400 t4.5 ×3 — LÀM TAY"), "True|True");
+
+            // phản hồi AI + ghép + JSON
+            string text = "{\"tam\":[{\"so_ban_ve\":\"B-2\",\"ten\":\"\",\"kieu\":\"be\",\"x\":{\"doan\":[15,210],\"uon\":[{\"kieu\":\"be\",\"goc\":90,\"r_trong\":0,\"cung\":0}]},\"y\":{\"doan\":[145],\"uon\":[]},\"ghi_chu\":\"bẻ V\"}," +
+                          "{\"so_ban_ve\":\"A-1\",\"ten\":\"x\",\"kieu\":\"phang\",\"x\":{\"doan\":[300],\"uon\":[]},\"y\":{\"doan\":[150],\"uon\":[]},\"ghi_chu\":\"\"}]}";
+            var ph = PhongTrienKhai.DocPhanHoi("{\"stop_reason\":\"end_turn\",\"usage\":{\"input_tokens\":7,\"output_tokens\":3},\"content\":[{\"type\":\"text\",\"text\":" + OhtaTool.Plugin.Core.JsonLite.Serialize(text) + "}]}");
+            var dung = new HashSet<TamTrienKhai>();
+            var g1 = PhongTrienKhai.Ghep(new TamAi { SoBanVe = "A-1" }, ph.Tam, dung);
+            var g2 = PhongTrienKhai.Ghep(new TamAi { SoBanVe = "Z-9", Ten = "khac" }, ph.Tam, dung);
+            Kiem("phan hoi AI: doc 2 tam, ghep theo so BV roi theo thu tu, token",
+                 ph.Tam.Count + "|" + g1.Kieu + "|" + g2.X.Doan[1] + "|" + g2.Y.Doan[0] + "|" + ph.Vao + "|" + (ph.Loi ?? "null"), "2|phang|210|145|7|null");
+            var kq = new KetQuaTrienKhai { TuXacNhan = "t", Tien = 0.07m };
+            g2.Khoa = "k"; g2.VChon = "V12"; kq.Tam.Add(g2);
+            var kq2 = PhongTrienKhai.Doc(PhongTrienKhai.Ghi(kq));
+            Kiem("trien_khai.json ghi roi doc", kq2.TuXacNhan + "|" + kq2.Tien + "|" + kq2.Tam[0].Khoa + "|" + kq2.Tam[0].VChon + "|" + string.Join("+", kq2.Tam[0].X.Doan) + "|" + kq2.Tam[0].X.Uon[0].Goc + "|" + kq2.Tam[0].GhiChu,
+                 "t|0.07|k|V12|15+210|90|bẻ V");
+            Kiem("trien_khai.json hong -> null", PhongTrienKhai.Doc("[]") == null, true);
+            string dv = PhongTrienKhai.DauVao("a.pdf", new[] { tam }, new[] { new VanDe { Tam = "A-1", NoiDung = "R?", TraLoi = "R10" }, new VanDe { NoiDung = "x" } });
+            Kiem("dau vao AI phong 4: bang tam + cau tra loi phong 3", dv.Contains("so_ban_ve=A-1") + "|" + dv.Contains("trả lời: R10") + "|" + dv.Contains("| x |"), "True|True|False");
+        }
+
         private static void TestPhongKiemTra()
         {
             Console.WriteLine("-- Phong 3 kiem tra --");
@@ -123,7 +190,7 @@ namespace TeamsTool.Tests
             };
             Kiem("ban nhap お問い合わせ / 連絡します / noi bo",
                  PhongKiemTra.BanNhap("130672", khach, false) + "#" + PhongKiemTra.BanNhap("130672", khach, true).Split('\n')[1] + "#" + PhongKiemTra.CauHoiNoiBo("130672", khach).Split('\n')[1] + "#" + PhongKiemTra.BanNhap("x", new List<VanDe>(), false),
-                 "【お問い合わせ】130672\n1. [A-1] Rをご指示ください。\n   (VI: thiếu R)#1. [A-1] スリットを入れます。#1. 🟡 [A-1] xác nhận máy#");
+                 "【お問い合わせ】130672\n1. [A-1] thiếu R#1. [A-1] rạch slit#1. 🟡 [A-1] xác nhận máy#");
 
             // JSON + phản hồi AI
             var kt = new KiemTra { TuXacNhan = "2026-11-11 17:47", Tien = 0.05m, VanDe = lan2 };
@@ -136,9 +203,9 @@ namespace TeamsTool.Tests
                           "\"dich\":[{\"ma\":\"luat|a|canh_1\",\"cau_hoi_jp\":\"寸法変更可能でしょうか。\"}]}";
             string phanHoi = "{\"stop_reason\":\"end_turn\",\"usage\":{\"input_tokens\":100,\"output_tokens\":20},\"content\":[{\"type\":\"text\",\"text\":" + OhtaTool.Plugin.Core.JsonLite.Serialize(text) + "}]}";
             var ph = PhongKiemTra.DocPhanHoi(phanHoi, "a.pdf");
-            Kiem("phan hoi AI: van de + muc/nhom la -> mac dinh + bo noi dung rong + dich + token",
-                 ph.VanDe.Count + "|" + ph.VanDe[0].Muc + "/" + ph.VanDe[0].Nhom + "/" + ph.VanDe[0].Nguon + "|" + ph.VanDe[1].Muc + "/" + ph.VanDe[1].Nhom + "|" + ph.Dich["luat|a|canh_1"] + "|" + ph.Vao + "|" + (ph.Loi ?? "null"),
-                 "2|do/khach/ai|vang/noi_bo|寸法変更可能でしょうか。|100|null");
+            Kiem("phan hoi AI: van de + muc/nhom la -> mac dinh + bo noi dung rong + khong lay JP + token",
+                 ph.VanDe.Count + "|" + ph.VanDe[0].Muc + "/" + ph.VanDe[0].Nhom + "/" + ph.VanDe[0].Nguon + "|" + ph.VanDe[1].Muc + "/" + ph.VanDe[1].Nhom + "|" + ph.VanDe[0].CauHoiJp.Length + "|" + ph.Vao + "|" + (ph.Loi ?? "null"),
+                 "2|do/khach/ai|vang/noi_bo|0|100|null");
             Kiem("phan hoi AI: loi key", PhongKiemTra.DocPhanHoi("{\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"x\"}}", "a").Loi.StartsWith("API key"), true);
             Kiem("ma AI on dinh (bo dau cau, hoa thuong)", PhongKiemTra.MaAi("A.pdf", "A-1", "Thiếu R!") == PhongKiemTra.MaAi("a.pdf", "a-1", "thiếu r"), true);
             string body = PhongKiemTra.Body("claude-opus-5-5", "QC3", "UERG", "dau vao", null);
@@ -572,6 +639,7 @@ namespace TeamsTool.Tests
 
             TestPhongAi();
             TestPhongKiemTra();
+            TestPhongTrienKhai();
 
             Console.WriteLine();
             Console.WriteLine("Tong: {0} OK, {1} FAIL", _ok, _fail);

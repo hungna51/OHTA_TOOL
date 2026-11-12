@@ -125,11 +125,11 @@ namespace TeamsTool.Services
         public static void Ghi(string tm, KiemTra kt) => GhiAnToan(FileKiemTra(tm), PhongKiemTra.Ghi(kt));
 
         /// <summary>Ghi file tạm rồi thay — tắt máy giữa chừng không làm hỏng kết quả cũ.</summary>
-        private static void GhiAnToan(string f, string noiDung)
+        private static void GhiAnToan(string f, string noiDung, Encoding enc = null)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(f));
             string tam = f + ".tmp";
-            File.WriteAllText(tam, noiDung, Utf8);
+            File.WriteAllText(tam, noiDung, enc ?? Utf8);
             if (File.Exists(f)) File.Replace(tam, f, null); else File.Move(tam, f);
         }
 
@@ -313,10 +313,8 @@ namespace TeamsTool.Services
         public static async Task<KiemTra> KiemTraDon(TiepNhan tn, ChiTiet ct, string tm, bool dungAi, Action<string> bao, CancellationToken huy)
         {
             KiemTra cu = DocKiemTra(tm);
-            string duLieu = Path.Combine(Goc, "01_Fname", "data");
-            string Doc(string ten) { string f = Path.Combine(duLieu, ten); return File.Exists(f) ? File.ReadAllText(f, Encoding.UTF8) : ""; }
-            List<PhongKiemTra.DongTv> tv = PhongKiemTra.DocTv(Doc("trav_90.csv"));
-            string catalog = Doc("catalog.csv");
+            List<PhongKiemTra.DongTv> tv = PhongKiemTra.DocTv(BangFname("trav_90"));
+            string catalog = BangFname("catalog");
             var tam = ct.Tam.Where(t => t.Moi).ToList();
 
             bao("Phòng 3: chạy luật…");
@@ -356,7 +354,6 @@ namespace TeamsTool.Services
                     kt.TokenRa += ph.Ra;
                     kt.Tien += PhongDocBanVe.Tien(model, ph.Vao, ph.GhiCache, ph.DocCache, ph.Ra);
                     if (ph.Loi != null) { loi.Add(nhom.Key + ": " + ph.Loi); continue; }
-                    foreach (VanDe v in luatTep) if (ph.Dich.TryGetValue(v.Ma, out string jp)) v.CauHoiJp = jp;
                     vanDe.AddRange(ph.VanDe);
                 }
             }
@@ -367,6 +364,112 @@ namespace TeamsTool.Services
             Ghi(tm, kt);
             if (loi.Count > 0) bao("Kiểm xong, có chỗ chưa chạy được:\n" + string.Join("\n", loi));
             return kt;
+        }
+
+        // ---------- Phòng 4 ----------
+
+        private static string ThuMucFname => Path.Combine(Goc, "01_Fname");
+
+        /// <summary>Bảng dữ liệu Fname như tab Fname: bản Google Sheet trong cache máy, không có thì 01_Fname\data.</summary>
+        private static string BangFname(string ten) => string.Join("\n", OhtaTool.Plugin.Core.FnameDataStore.ReadLines(ThuMucFname, ten));
+
+        public static string FileTrienKhai(string tm) => Path.Combine(tm, PhongTiepNhan.ThuMucAi, "trien_khai.json");
+        public static string FileCsv(string tm) => Path.Combine(tm, PhongTiepNhan.ThuMucAi, "trien_khai.csv");
+        public static KetQuaTrienKhai DocTrienKhai(string tm) => File.Exists(FileTrienKhai(tm)) ? PhongTrienKhai.Doc(File.ReadAllText(FileTrienKhai(tm), Encoding.UTF8)) : null;
+        public static void Ghi(string tm, KetQuaTrienKhai kq) => GhiAnToan(FileTrienKhai(tm), PhongTrienKhai.Ghi(kq));
+
+        private static bool _daNapTraV;
+
+        /// <summary>Nạp bảng TraV + catalog như tab Fname (một lần mỗi lần mở app; ↻ Triển khai lại thì nạp lại để lấy số mới).</summary>
+        private static void NapTraV(bool lai = false)
+        {
+            if (_daNapTraV && !lai) return;
+            OhtaTool.Plugin.Core.TraVCalculator.Load(ThuMucFname);
+            OhtaTool.Plugin.Core.TraVCalculator.SetCatalog(OhtaTool.Plugin.Core.FnameCatalogData.LoadFromModuleDirectory(ThuMucFname));
+            _daNapTraV = true;
+        }
+
+        /// <summary>
+        /// Tính trải phẳng mọi tấm (V, δ từ TraV; Lmin từ trav_90; T thực từ tam / trav_90) rồi ghi trien_khai.csv. Trả (tấm, kết quả) theo thứ tự bảng.
+        /// </summary>
+        public static List<(TamAi Tam, TamTrienKhai Tk)> TinhLai(ChiTiet ct, KetQuaTrienKhai kq, string title, string tm)
+        {
+            NapTraV();
+            List<PhongKiemTra.DongTv> tv = PhongKiemTra.DocTv(BangFname("trav_90"));
+            string catalog = BangFname("catalog");
+            var ra = new List<(TamAi, TamTrienKhai)>();
+            foreach (TamAi tam in ct.Tam.Where(t => t.Moi))
+            {
+                TamTrienKhai tk = kq.Tam.FirstOrDefault(x => x.Khoa == tam.Khoa);
+                if (tk == null) continue;
+                List<UngVienV> TraV(double goc) => OhtaTool.Plugin.Core.TraVCalculator.GetBendOptionsForFname(tam.M, tam.T, goc)
+                    .Select(c => new UngVienV { V = c.DieLabel, Chu = c.FormattedText, Delta = PhongTrienKhai.DeltaTuChu(c.FormattedText) ?? 0, CanhBao = c.Warning ?? "", Nguon = c.Source ?? "" })
+                    .Where(u => u.Delta > 0).ToList();
+                string loai = PhongKiemTra.LoaiTv(tam.M, tam.Mat, catalog, tv);
+                double t = PhongKiemTra.So(tam.T) ?? 0;
+                var lm = loai == null ? new List<PhongKiemTra.DongTv>() : PhongKiemTra.Lmin(tv, loai, t);
+                double? Lmin(string v) => lm.FirstOrDefault(r => "V" + PhongTrienKhai.F(r.V) == v)?.Lmin;
+                double tThuc = PhongKiemTra.So(OhtaTool.Plugin.Core.TraVCalculator.GetRealThickness(tam.M, tam.T)) ?? t;
+                PhongTrienKhai.Tinh(tk, tam, TraV, tThuc, Lmin);
+                ra.Add((tam, tk));
+            }
+            var csv = new StringBuilder(PhongTrienKhai.TieuDeCsv + "\r\n");
+            for (int i = 0; i < ra.Count; i++) csv.Append(PhongTrienKhai.DongCsv(title, i + 1, ra[i].Item1, ra[i].Item2)).Append("\r\n");
+            try { GhiAnToan(FileCsv(tm), csv.ToString(), new UTF8Encoding(true)); } // BOM: Excel mở đúng chữ Nhật
+            catch (IOException) { } // CSV đang mở trong Excel: giữ bản cũ, bảng trên màn hình vẫn đúng
+            return ra;
+        }
+
+        /// <summary>AI đọc tiết diện từng tấm (theo tệp bản vẽ) — giữ V người đã chọn ở lần trước.</summary>
+        public static async Task<KetQuaTrienKhai> TrienKhaiDon(ChiTiet ct, KiemTra kt, string tm, Action<string> bao, CancellationToken huy)
+        {
+            NapTraV(lai: true);
+            KetQuaTrienKhai cu = DocTrienKhai(tm);
+            string key = DocKey(4) ?? throw new InvalidOperationException("Chưa có key Claude: ⚙ → tab 🤖 AI → dán key");
+            string model = Model(), quyChuan = QuyChuan(4);
+            var kq = new KetQuaTrienKhai { TuXacNhan = kt.XacNhan, TokenVao = cu?.TokenVao ?? 0, TokenRa = cu?.TokenRa ?? 0, Tien = cu?.Tien ?? 0 };
+            var loi = new List<string>();
+            var theoTep = ct.Tam.Where(t => t.Moi).GroupBy(t => t.Tep).ToList();
+            int i = 0;
+            foreach (var nhom in theoTep)
+            {
+                huy.ThrowIfCancellationRequested();
+                bao("Phòng 4: AI đọc tiết diện " + (++i) + "/" + theoTep.Count + " — " + nhom.Key + " (mỗi tệp khoảng 1 phút)");
+                string f = Path.Combine(ThuMucTep(tm), nhom.Key);
+                string pdf = null, dxf = null;
+                try
+                {
+                    if (f.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (new FileInfo(f).Length > PhongDocBanVe.PdfToiDa) { loi.Add(nhom.Key + ": PDF quá lớn (> 22 MB)"); continue; }
+                        pdf = Convert.ToBase64String(File.ReadAllBytes(f));
+                    }
+                    else dxf = DocDxf.TomTat(nhom.Key, DocDxf.DocFile(f));
+                }
+                catch (Exception ex) { loi.Add(nhom.Key + ": " + ex.Message); continue; }
+                string body = PhongTrienKhai.Body(model, quyChuan, pdf, PhongTrienKhai.DauVao(nhom.Key, nhom, kt.VanDe), dxf);
+                PhongTrienKhai.PhanHoi ph = PhongTrienKhai.DocPhanHoi(await GuiClaude(key, PhongDocBanVe.CoFallback(model), body, huy));
+                kq.TokenVao += ph.Vao + ph.GhiCache + ph.DocCache;
+                kq.TokenRa += ph.Ra;
+                kq.Tien += PhongDocBanVe.Tien(model, ph.Vao, ph.GhiCache, ph.DocCache, ph.Ra);
+                if (ph.Loi != null) { loi.Add(nhom.Key + ": " + ph.Loi); continue; }
+                var daDung = new HashSet<TamTrienKhai>();
+                foreach (TamAi tam in nhom)
+                {
+                    TamTrienKhai tk = PhongTrienKhai.Ghep(tam, ph.Tam, daDung);
+                    if (tk == null) { loi.Add(PhongKiemTra.TenTam(tam) + ": AI không trả tiết diện"); continue; }
+                    tk.Khoa = tam.Khoa;
+                    tk.Ten = PhongKiemTra.TenTam(tam);
+                    tk.VChon = cu?.Tam.FirstOrDefault(x => x.Khoa == tam.Khoa)?.VChon ?? "";
+                    kq.Tam.Add(tk);
+                }
+            }
+            // AI lỗi ở tệp nào thì giữ kết quả cũ của tấm tệp đó
+            if (cu != null) kq.Tam.AddRange(cu.Tam.Where(x => !kq.Tam.Any(y => y.Khoa == x.Khoa) && ct.Tam.Any(t => t.Moi && t.Khoa == x.Khoa)));
+            kq.Luc = DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+            Ghi(tm, kq);
+            if (loi.Count > 0) bao("Triển khai xong, có chỗ chưa chạy được:\n" + string.Join("\n", loi));
+            return kq;
         }
 
         private static readonly HttpClient Http = TaoHttp();

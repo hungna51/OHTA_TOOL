@@ -93,10 +93,7 @@ namespace TeamsTool.Views
             _than.Children.Add(Phong2(tn, ct, chay));
             KiemTra kt = AiDon.DocKiemTra(_tm);
             _than.Children.Add(Phong3(tn, ct, kt, chay));
-            bool sang4 = kt != null && ct != null && kt.XacNhan.Length > 0 && kt.TuXacNhan == ct.XacNhan;
-            _than.Children.Add(The("4 · Triển khai", Chu(sang4
-                ? "Đã nhận " + ct.Tam.Count(t => t.Moi) + " tấm từ phòng 3 (xác nhận lúc " + kt.XacNhan + "). Trải phẳng theo bảng TV + dòng CSV có ở đợt 3."
-                : "Chờ xác nhận ở phòng 3. Đợt 3: trải phẳng theo bảng TV, dòng CSV, gửi lên chuỗi đơn.")));
+            _than.Children.Add(Phong4(ct, kt, chay));
         }
 
         // ---------- Chạy ----------
@@ -120,6 +117,13 @@ namespace TeamsTool.Views
             {
                 Directory.CreateDirectory(_tm);
                 TiepNhan tn = AiDon.DocTiepNhan(_tm);
+                if (tu == 4)
+                {
+                    KetQuaTrienKhai kq = await AiDon.TrienKhaiDon(AiDon.DocChiTiet(_tm), AiDon.DocKiemTra(_tm), _tm, Bao, _huy.Token);
+                    if (!_trangThai.Text.StartsWith("Triển khai xong, có chỗ", StringComparison.Ordinal))
+                        Bao("Xong phòng 4: " + kq.Tam.Count + " tấm. Kiểm X × Y, đổi V nếu cần, rồi 📤 Gửi lên chuỗi đơn để người check kiểm.");
+                    return;
+                }
                 if (tu == 3)
                 {
                     KiemTra kt = await AiDon.KiemTraDon(tn, AiDon.DocChiTiet(_tm), _tm, true, Bao, _huy.Token);
@@ -388,6 +392,91 @@ namespace TeamsTool.Views
             return The("3 · Kiểm tra", p);
         }
 
+        // ---------- Phòng 4 ----------
+
+        private Border Phong4(ChiTiet ct, KiemTra kt, bool chay)
+        {
+            var p = new StackPanel();
+            bool sang4 = kt != null && ct != null && kt.XacNhan.Length > 0 && kt.TuXacNhan == ct.XacNhan;
+            if (!sang4)
+            {
+                p.Children.Add(Chu("Chờ xác nhận ở phòng 3 (✓ Xác nhận → phòng 4)."));
+                return The("4 · Triển khai", p);
+            }
+            KetQuaTrienKhai kq = AiDon.DocTrienKhai(_tm);
+            bool cu = kq != null && kq.TuXacNhan != kt.XacNhan;
+            p.Children.Add(KieuTeams.Nut(kq == null ? "▶ Triển khai" : "↻ Triển khai lại", _mau, (s, e) => Chay(4, false), chinh: kq == null || cu)
+                .Also(b => { b.IsEnabled = !chay; b.HorizontalAlignment = HorizontalAlignment.Left; b.ToolTip = "AI đọc tiết diện từng tấm (~$0.06 / tệp); chương trình trải phẳng theo bảng TV như tab Fname"; }));
+            if (kq == null)
+            {
+                p.Children.Add(Chu("Đã nhận " + ct.Tam.Count(t => t.Moi) + " tấm từ phòng 3. ▶ Triển khai: AI đọc tiết diện (đoạn ngoài, góc, R), chương trình trừ 2δ mỗi chỗ bẻ (V, δ từ bảng TV), ấn 1 lần 0.45·T thực, cuộn 0.5·T thực → X × Y + dòng CSV."));
+                return The("4 · Triển khai", p);
+            }
+            if (cu) p.Children.Add(Chu("Phòng 3 đã xác nhận lại sau lần triển khai (" + kq.Luc + ") — bấm ↻ Triển khai lại.", true));
+
+            List<(TamAi Tam, TamTrienKhai Tk)> ds;
+            try { ds = AiDon.TinhLai(ct, kq, _d.Title, _tm); }
+            catch (Exception ex) { p.Children.Add(Chu("Không tính được: " + ex.Message, true)); return The("4 · Triển khai", p); }
+            p.Children.Add(Chu(string.Format(CultureInfo.InvariantCulture, "{0} tấm · {1} làm tay · {2} tấm có cảnh báo · triển khai lúc {3} · AI ≈ ${4:0.00}",
+                ds.Count, ds.Count(x => x.Tk.LamTay), ds.Count(x => x.Tk.CanhBao.Count > 0), kq.Luc, kq.Tien)));
+
+            foreach (var (tam, tk) in ds)
+            {
+                var the = new StackPanel();
+                var dau = new DockPanel();
+                if (tk.CacV.Count > 1)
+                {
+                    var v = new ComboBox { ItemsSource = tk.CacV, SelectedItem = tk.VChon, MinWidth = 70, IsEnabled = !chay, ToolTip = "Dao V cho các chỗ bẻ của tấm (đổi là tính lại)" };
+                    v.SelectionChanged += (s, e) =>
+                    {
+                        if (!(v.SelectedItem is string chon) || chon == tk.VChon) return;
+                        tk.VChon = chon;
+                        AiDon.Ghi(_tm, kq);
+                        Ve();
+                    };
+                    DockPanel.SetDock(v, Dock.Right);
+                    dau.Children.Add(v);
+                }
+                string kichThuoc = tk.LamTay ? "LÀM TAY" : (tk.XPhang.HasValue ? PhongTrienKhai.F(tk.XPhang.Value) : "?") + " × " + (tk.YPhang.HasValue ? PhongTrienKhai.F(tk.YPhang.Value) : "?");
+                dau.Children.Add(new TextBlock
+                {
+                    Text = tk.Ten + " — " + tam.M + " t" + tam.T + " ×" + tam.Q + " — " + kichThuoc + (tk.KyHieu.Length > 0 ? "  [" + tk.KyHieu + "]" : "") + (tk.CacV.Count == 1 ? "  " + tk.VChon : ""),
+                    FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center,
+                });
+                the.Children.Add(dau);
+                foreach (string c in tk.ChiTiet) the.Children.Add(Chu(c));
+                foreach (string c in tk.CanhBao) the.Children.Add(Chu("⚠ " + c, true));
+                if (tk.GhiChu.Length > 0) the.Children.Add(Chu("AI: " + tk.GhiChu));
+                p.Children.Add(new Border
+                {
+                    Child = the, Padding = new Thickness(6, 4, 6, 4), Margin = new Thickness(0, 4, 0, 0), CornerRadius = new CornerRadius(4),
+                    Background = KieuTeams.Mau(tk.LamTay || tk.CanhBao.Count > 0 ? "#FFF6E0" : "#F2F4F7"),
+                });
+            }
+
+            string tomTat = PhongTrienKhai.TomTat(_d.Title, ds);
+            var nut = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+            nut.Children.Add(KieuTeams.Nut("📄 Mở CSV", _mau, (s, e) => Mo(AiDon.FileCsv(_tm)), chinh: false).Also(b => b.ToolTip = "ai\\trien_khai.csv — bango tạm <mã>-<số>, GRO đánh bango thật trên CAD"));
+            nut.Children.Add(KieuTeams.Nut("📋 Chép tóm tắt", _mau, (s, e) =>
+            {
+                try { Clipboard.SetText(tomTat); _trangThai.Text = "Đã chép bảng tóm tắt triển khai."; }
+                catch (Exception ex) { _trangThai.Text = "Không chép được: " + ex.Message; }
+            }, chinh: false));
+            nut.Children.Add(KieuTeams.Nut("📤 Gửi lên chuỗi đơn", _mau, async (s, e) =>
+            {
+                if (_guiChuoi == null) return;
+                if (MessageBox.Show("Gửi bảng triển khai lên chuỗi chat của đơn " + _d.Title + " (tag người triển khai + người check) để kiểm?\n\n" + tomTat,
+                                    "Gửi lên chuỗi đơn", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+                var b = (Button)s;
+                b.IsEnabled = false;
+                try { _trangThai.Text = await _guiChuoi(tomTat); }
+                catch (Exception ex) { MessageBox.Show("Không gửi được:\n" + ex.Message, "Gửi lên chuỗi đơn", MessageBoxButton.OK, MessageBoxImage.Warning); }
+                finally { b.IsEnabled = true; }
+            }).Also(b => b.IsEnabled = !chay && _guiChuoi != null && ds.Count > 0));
+            p.Children.Add(nut);
+            return The("4 · Triển khai", p);
+        }
+
         /// <summary>Một vấn đề: biểu tượng, tấm, nội dung, câu JP; nút ✓ Đã xử lý / Bỏ qua (lý do) / ↩ Mở lại.</summary>
         private UIElement DongVanDe(KiemTra kt, VanDe v, bool suaDuoc)
         {
@@ -400,7 +489,6 @@ namespace TeamsTool.Views
             });
             dau.Inlines.Add(new System.Windows.Documents.Run((v.Tam.Length > 0 ? "[" + v.Tam + "] " : "") + v.NoiDung + (v.MucQc.Length > 0 ? "  (QC " + v.MucQc + ")" : "") + (v.Nguon == "ai" ? "  · AI" : "")));
             p.Children.Add(dau);
-            if (v.CauHoiJp.Length > 0) p.Children.Add(Chu("JP  " + v.CauHoiJp));
 
             // Ô trả lời: câu trả lời của khách / quản lý hoặc cách xử lý — lưu khi rời ô, kiểm lại gửi kèm AI, phòng 4 dùng
             p.Children.Add(new TextBlock { Text = v.Nhom == VanDe.TuXuLy ? "Cách xử lý / ghi chú:" : "Trả lời (khách / quản lý):", Foreground = KieuTeams.ChuPhu, FontSize = 11, Margin = new Thickness(0, 4, 0, 1) });
