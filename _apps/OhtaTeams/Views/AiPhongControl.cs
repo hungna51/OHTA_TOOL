@@ -359,7 +359,8 @@ namespace TeamsTool.Views
                        + (t.SoBanVe.Length > 0 ? " · BV " + t.SoBanVe : ""),
                 FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center,
             });
-            if (t.KhongChac.Count > 0) dau.Children.Add(new TextBlock { Text = "  " + t.CanhBao, Foreground = KieuTeams.Mau("#B54708"), FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center });
+            // ⚠ chỉ khi câu "AI chưa chắc ô" của tấm còn mở — đã trả lời / xử lý thì thôi báo
+            if (t.KhongChac.Count > 0 && vd.Any(v => v.Ma.EndsWith("|khong_chac", StringComparison.Ordinal) && v.ConMo)) dau.Children.Add(new TextBlock { Text = "  " + t.CanhBao, Foreground = KieuTeams.Mau("#B54708"), FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center });
             int mo = vd.Count(v => v.ConMo && v.Muc != VanDe.ThongTin);
             if (mo > 0)
                 dau.Children.Add(new TextBlock
@@ -617,7 +618,8 @@ namespace TeamsTool.Views
             int soSua = PhongBaiHoc.CacChoSua(ct).Count;
             hang.Children.Add(KieuTeams.Nut("✓ Xác nhận → Triển khai", _mau, (s, e) =>
             {
-                int canhBao = ct.Tam.Count(t => t.Moi && t.KhongChac.Count > 0);
+                var ktMoi = AiDon.DocKiemTra(_tm) ?? kt; // đọc lại: trạng thái vừa đổi trên màn hình
+                int canhBao = ct.Tam.Count(t => t.Moi && ktMoi.VanDe.Any(v => v.Ma == "luat|" + t.Khoa + "|khong_chac" && v.ConMo)); // câu đã trả lời / xử lý thì không hỏi lại
                 if (canhBao > 0 && MessageBox.Show(canhBao + " tấm còn ô ⚠ (AI không chắc) chưa sửa.\nVẫn xác nhận và chuyển sang Triển khai?", "Xác nhận",
                                                    MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
                 ct.XacNhan = DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
