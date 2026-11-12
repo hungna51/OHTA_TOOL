@@ -170,6 +170,10 @@ namespace TeamsTool.Core
                 foreach (var (chu, huong) in new[] { (t.TdX, "X"), (t.TdY, "Y") })
                     if (chu.Trim().Length > 0 && PhongTrienKhai.DocChuTd(chu, out string loiTd) == null)
                         Them("td_sai_" + huong, VanDe.Do, VanDe.TuXuLy, "", "Tiết diện " + huong + " viết sai: " + loiTd + " — ✎ Sửa thông số → Tiết diện " + huong + ".");
+                // Lỗ chưa có vị trí (đọc bằng bản mới mà AI không tính được tâm) → không vẽ được lỗ
+                int loThieu = DsJson(t.LoJson).OfType<JsonObject>().Count(l => !(l.Get("vi_tri") is List<object> vt && vt.Count > 0));
+                if (t.KieuTd.Length > 0 && t.KieuTd != "lam_tay" && loThieu > 0)
+                    Them("lo_thieu_vi_tri", VanDe.Vang, VanDe.TuXuLy, "", loThieu + " nhóm lỗ chưa có vị trí — ✎ Sửa thông số → Lỗ (vi_tri x, y từ góc trái dưới hình trải phẳng).");
                 if (t.BienDang == PhongTrienKhai.ChuaCoMau && t.KieuTd != "lam_tay")
                     Them("chua_co_mau", VanDe.Vang, VanDe.TuXuLy, "", "Thư viện chưa có mẫu vẽ cho hình này — bấm ✨ AI đề xuất mẫu vẽ (hoặc ✎ chọn mẫu).");
                 if (t.KieuTd.Length > 0 && t.KieuTd != "lam_tay" && t.TdX.Trim().Length == 0 && t.TdY.Trim().Length == 0)

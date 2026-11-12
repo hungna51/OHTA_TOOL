@@ -22,6 +22,13 @@
 - Đầu tấm là cung bán nguyệt: 2 dim nửa chiều cao (mép → tâm cung → mép) phía đầu đó, cách viền `LE_DIM`, chữ đưa ra ngoài (dưới / trên) bằng `vi_tri_chu`.
 - Không đặt dim chi tiết phía trên tấm.
 
+## Lỗ — layer `0-KAKOU` (phần chung `ve_lo`, mẫu không tự vẽ)
+- Mỗi nhóm lỗ của bảng tấm: `d`, `so_luong`, `taro`, `sara`, `d_sara`, `loai` (`tron` / `dai`: `rong`, `dai`, `goc`), `vi_tri` = tâm từng lỗ trên hình trải phẳng (gốc trái dưới).
+- Lỗ tròn: CIRCLE Ø `d`. Taro: CIRCLE **Ø mồi theo bảng TMT** (M3 2.6 · M4 3.4 · M5 4.3 · M6 5.1 · M8 6.9 · M10 8.6 · M12 10.5 · M14 12.2 · M16 14.3 · M20 17.7). 皿: CIRCLE Ø lỗ thông, nhãn kèm Ø miệng côn. Lỗ dài: 2 cạnh + 2 cung thật.
+- Mỗi nhóm một leader `1-SUNPOU` nhãn `n-Ø10` / `n-M6` / `n-皿Ø6.6 (Ø12)` / `n-10×20` (như cách khách ghi); nhãn Ø đủ cho dim khách Ø.
+- Tâm lỗ vào chuỗi dim dưới (x) và phải (y); lỗ thẳng hàng chỉ một mốc. Chuỗi dim quá 12 đoạn → tách thêm hàng (`MOC_TOI_DA`).
+- Nhóm lỗ chưa có vị trí → không vẽ, báo để nhập ở ✎ Sửa thông số → Lỗ.
+
 ## Dấu khắc vạch ケガキ — layer `3-KEGAKI`
 - Mỗi dấu: chữ thập 10 mm (2 LINE) tại tâm dấu (`ke_gaki` của bảng tấm, toạ độ trên hình trải phẳng, gốc góc trái dưới).
 - Một leader `1-SUNPOU` từ dấu giữa chéo lên trên-phải (≈ +23, cao hơn mép trên 53), chữ **`n-ケガキ`**. Bản khách ghi `マーキング` / `罫書き` vẫn ghi `ケガキ`.

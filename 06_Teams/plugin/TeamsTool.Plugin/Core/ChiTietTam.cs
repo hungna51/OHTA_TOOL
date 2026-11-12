@@ -99,6 +99,7 @@ namespace TeamsTool.Core
             {
                 case "kieu_td": return t.KieuTd; case "td_x": return t.TdX; case "td_y": return t.TdY; case "ghi_chu_td": return t.GhiChuTd;
                 case "bien_dang": return t.BienDang; case "mo_ta_bien_dang": return t.MoTaBienDang; case "tham_so": return t.ThamSo;
+                case "lo": return t.LoJson; case "ke_gaki": return t.KeGakiJson; // JSON — sửa ở khung ✎ (không gửi AI dạng ô chữ)
                 case "so_ban_ve": return t.SoBanVe; case "ten": return t.Ten; case "M": return t.M; case "Z": return t.Z;
                 case "T": return t.T; case "Q": return t.Q; case "mat": return t.Mat; case "kich_thuoc": return t.KichThuoc;
                 case "dung_sai": return t.DungSai; case "ghi_chu_jp": return t.GhiChuJp; case "ghi_chu_vi": return t.GhiChuVi; case "mo_ta": return t.MoTa;
@@ -113,6 +114,7 @@ namespace TeamsTool.Core
             {
                 case "kieu_td": t.KieuTd = v; break; case "td_x": t.TdX = v; break; case "td_y": t.TdY = v; break; case "ghi_chu_td": t.GhiChuTd = v; break;
                 case "bien_dang": t.BienDang = v; break; case "mo_ta_bien_dang": t.MoTaBienDang = v; break; case "tham_so": t.ThamSo = v; break;
+                case "lo": t.LoJson = v.Length > 0 ? v : "[]"; break; case "ke_gaki": t.KeGakiJson = v.Length > 0 ? v : "[]"; break;
                 case "so_ban_ve": t.SoBanVe = v; break; case "ten": t.Ten = v; break; case "M": t.M = v; break; case "Z": t.Z = v; break;
                 case "T": t.T = v; break; case "Q": t.Q = v; break; case "mat": t.Mat = v; break; case "kich_thuoc": t.KichThuoc = v; break;
                 case "dung_sai": t.DungSai = v; break; case "ghi_chu_jp": t.GhiChuJp = v; break; case "ghi_chu_vi": t.GhiChuVi = v; break; case "mo_ta": t.MoTa = v; break;
@@ -267,7 +269,9 @@ namespace TeamsTool.Core
 - Theo QUY CHUẨN ở khối sau. Vật liệu M và chế độ cắt Z dùng đúng tên trong bảng của quy chuẩn (C-1, C-2). Bản vẽ không ghi vật liệu → chọn theo C-1 và thêm ""M"" vào khong_chac.
 - T: độ dày danh nghĩa (số, mm). Q: số lượng (số). kich_thuoc: kích thước bao ""dài x rộng"" (mm).
 - canh: mỗi chỗ bẻ / nhấn / cuộn: dai_ngoai = các kích thước ngoài hai cạnh kề (mm), goc (độ), r_trong (mm, 0 nếu không ghi), kieu (be / an_1_lan / pitchi / cuon / khac), huong (V hoặc N, rỗng nếu không rõ).
-- lo: mỗi nhóm lỗ: d (Ø mm), so_luong, taro (vd ""M6"" nếu là lỗ ren, rỗng nếu không), sara (true nếu là lỗ 皿), ghi_chu, cach_duong_be = khoảng cách nhỏ nhất (mm) từ MÉP lỗ tới đường bẻ gần nhất, tính từ kích thước ghi trên bản vẽ (-1 nếu tấm không bẻ hoặc không tính được).
+- lo: mỗi nhóm lỗ (cùng cỡ, cùng kiểu): d (Ø mm; lỗ 皿 = Ø lỗ thông), so_luong, taro (vd ""M6"" nếu là lỗ ren, rỗng nếu không), sara (true nếu là lỗ 皿), d_sara (Ø miệng côn của 皿, 0 nếu không), ghi_chu, cach_duong_be = khoảng cách nhỏ nhất (mm) từ MÉP lỗ tới đường bẻ gần nhất, tính từ kích thước ghi trên bản vẽ (-1 nếu tấm không bẻ hoặc không tính được).
+  loai: tron (lỗ tròn) / dai (lỗ dài, oval, slot — rong = bề rộng, dai = chiều dài tổng, goc = góc trục dài so với trục x, độ); lỗ tròn thì rong = dai = goc = 0.
+  vi_tri: TÂM từng lỗ (so_luong phần tử) trên hình TRẢI PHẲNG, gốc góc trái dưới của tấm (như ケガキ), tính từ kích thước ghi trên bản vẽ; không tính được → rỗng và hỏi trong van_de.
 - mat: bề mặt đặc biệt (HL, #400, 縞板/sima, ミガキ…), rỗng nếu thường. dung_sai: các dung sai ghi trên bản vẽ.
 - ghi_chu_jp: ghi chú tiếng Nhật CỦA RIÊNG tấm này, giữ nguyên chữ (lời nhắn / yêu cầu chung cả đơn đưa vào ghi_chu_don, không lặp ở đây); ghi_chu_vi: dịch sang tiếng Việt, ngắn gọn.
 - trang: số trang PDF chứa tấm (1 = trang đầu); DXF để rỗng.
@@ -350,7 +354,10 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             foreach (string o in O) tt.Add((o, s));
             tt.Add(("trang", s));
             tt.Add(("canh", Mang(Obj(("dai_ngoai", Mang(n)), ("goc", n), ("r_trong", n), ("kieu", s), ("huong", s)))));
-            tt.Add(("lo", Mang(Obj(("d", n), ("so_luong", n), ("taro", s), ("sara", Kieu("boolean")), ("ghi_chu", s), ("cach_duong_be", n)))));
+            JsonObject loaiLo = Kieu("string");
+            loaiLo.Set("enum", new List<object> { "tron", "dai" });
+            tt.Add(("lo", Mang(Obj(("d", n), ("so_luong", n), ("taro", s), ("sara", Kieu("boolean")), ("d_sara", n), ("ghi_chu", s), ("cach_duong_be", n),
+                                    ("loai", loaiLo), ("rong", n), ("dai", n), ("goc", n), ("vi_tri", Mang(Obj(("x", n), ("y", n))))))));
             tt.Add(("khong_chac", Mang(s)));
             JsonObject td = PhongTrienKhai.SchemaTd();
             JsonObject kieuTd = Kieu("string");

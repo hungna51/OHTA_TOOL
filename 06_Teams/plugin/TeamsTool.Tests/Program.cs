@@ -169,6 +169,16 @@ namespace TeamsTool.Tests
             string maDu = "from moi_truong import LE_DIM\nMO_TA = \"a\"\nTHAM_SO = [(\"x\", \"dai\", \"tự tính\")]\nVI_DU = {\"x\": 1}\ndef ve(nen, t):\n    pass\n";
             Kiem("kiem mau: thieu THAM_SO / VI_DU bi tu choi", (PhongTrienKhai.KiemMau("mau_a", maDu, null) ?? "null") + "|"
                  + (PhongTrienKhai.KiemMau("mau_a", maDu.Replace("VI_DU = {\"x\": 1}\n", ""), null) ?? "null").StartsWith("Mã thiếu THAM_SO"), "null|True");
+            // Lỗ (12/11): vị trí tâm gửi ve.py; nhóm lỗ thiếu vị trí → luật vàng; sửa lỗ dạng JSON qua Lay / Dat
+            var tamLo = new TamAi { SoBanVe = "LO", M = "SS400", T = "3.2", Q = "1", KieuTd = "phang", TdX = "200", TdY = "100", BienDang = "phang",
+                                    LoJson = "[{\"d\":10,\"so_luong\":2,\"vi_tri\":[{\"x\":50,\"y\":50},{\"x\":150,\"y\":50}]},{\"d\":6,\"so_luong\":1,\"taro\":\"M6\"}]" };
+            var luatLo = PhongKiemTra.Luat(new[] { tamLo }, new List<PhongKiemTra.DongTv>(), "");
+            Kiem("luat: nhom lo thieu vi tri", luatLo.Where(v => v.Ma.EndsWith("|lo_thieu_vi_tri")).Select(v => v.NoiDung.Substring(0, 1)).FirstOrDefault(), "1");
+            PhongDocBanVe.Dat(tamLo, "ke_gaki", "");
+            Kiem("lay / dat lo + ke_gaki (rong -> [])", PhongDocBanVe.Lay(tamLo, "lo").Contains("vi_tri") + "|" + tamLo.KeGakiJson, "True|[]");
+            var tkLo = PhongTrienKhai.TuTam(tamLo); tkLo.XPhang = 200; tkLo.YPhang = 100;
+            string viecLo = System.Text.RegularExpressions.Regex.Replace(PhongTrienKhai.ViecVe("D", new List<(TamAi, TamTrienKhai)> { (tamLo, tkLo) }, "m", "r", new[] { "t" }), @"\s", "");
+            Kiem("viec ve: gui lo kem vi tri", viecLo.Contains("\"lo\":[{\"d\":10,\"so_luong\":2,\"vi_tri\":[{\"x\":50,\"y\":50}"), true);
             var tkK = PhongTrienKhai.TuTam(tamK);
             tkK.XPhang = 80; tkK.YPhang = 200;
             string viec = PhongTrienKhai.ViecVe("test", new List<(TamAi, TamTrienKhai)> { (tamK, tkK) }, "m.dxf", "ra", new[] { "tv" });

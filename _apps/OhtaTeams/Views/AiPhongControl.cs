@@ -482,6 +482,7 @@ namespace TeamsTool.Views
             ("Bản vẽ khách", new[] { ("so_ban_ve", "Số BV"), ("ten", "Tên") }),
             ("Thông số", new[] { ("M", "M (vật liệu)"), ("Z", "Z"), ("T", "T (độ dày)"), ("Q", "Q (số lượng)"), ("mat", "Mặt"), ("kich_thuoc", "Kích thước"), ("dung_sai", "Dung sai") }),
             ("Tiết diện", new[] { ("kieu_td", "Kiểu"), ("td_x", "X"), ("td_y", "Y"), ("ghi_chu_td", "Ghi chú"), ("bien_dang", "Mẫu vẽ"), ("tham_so", "Thông số mẫu") }),
+            ("Lỗ & ケガキ (JSON)", new[] { ("lo", "Lỗ"), ("ke_gaki", "ケガキ") }),
             ("Mô tả & ghi chú", new[] { ("mo_ta", "Mô tả chi tiết"), ("ghi_chu_jp", "Ghi chú JP"), ("ghi_chu_vi", "Ghi chú VI") }),
             ("Lý do sửa", new[] { ("ly_do_sua", "Lý do (không bắt buộc)") }),
         };
@@ -529,11 +530,13 @@ namespace TeamsTool.Views
                     }
                     else
                     {
-                        bool dai = o == "mo_ta" || o.StartsWith("ghi_chu", StringComparison.Ordinal);
+                        bool dai = o == "mo_ta" || o == "lo" || o == "ke_gaki" || o.StartsWith("ghi_chu", StringComparison.Ordinal);
                         var tb = new TextBox { Text = giaTri, IsReadOnly = !sua, Background = nen, Margin = new Thickness(0, 1, 0, 1), Padding = new Thickness(3, 1, 3, 1),
                                                AcceptsReturn = dai, TextWrapping = dai ? TextWrapping.Wrap : TextWrapping.NoWrap, MaxHeight = dai ? 160 : double.PositiveInfinity,
                                                VerticalScrollBarVisibility = dai ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled, FontWeight = FontWeights.Normal,
                                                ToolTip = o.StartsWith("td_", StringComparison.Ordinal) ? PhongTrienKhai.HuongDanTd
+                                                       : o == "lo" ? "Mỗi nhóm: {\"d\":10, \"so_luong\":2, \"taro\":\"\", \"sara\":false, \"loai\":\"tron\", \"vi_tri\":[{\"x\":50,\"y\":20}, …]} — tâm lỗ trên hình trải phẳng, gốc trái dưới; lỗ dài: \"loai\":\"dai\", \"rong\", \"dai\", \"goc\""
+                                                       : o == "ke_gaki" ? "[{\"x\":120,\"y\":27.5}, …] — tâm dấu trên hình trải phẳng, gốc trái dưới"
                                                        : o == "tham_so" ? "Dạng r1=45; r2=38. Mẫu " + t.BienDang + ": " + (_thuVien?.FirstOrDefault(m => m.Ten == t.BienDang)?.ThamSoChu is string tsc && tsc.Length > 0 ? tsc : "không có thông số riêng") + " — bấm 📚 Thư viện mẫu xem ảnh hướng dẫn"
                                                        : null };
                         tb.LostFocus += (s, e) => LuuO(ct, t, o, tb.Text.Trim());
@@ -561,6 +564,12 @@ namespace TeamsTool.Views
             }
             else
             {
+                if (o == "lo" || o == "ke_gaki")
+                {
+                    object j = null;
+                    try { j = OhtaTool.Plugin.Core.JsonLite.Parse(moi.Length > 0 ? moi : "[]"); } catch (Exception) { }
+                    if (!(j is List<object>)) { _trangThai.Text = (o == "lo" ? "Lỗ" : "ケガキ") + ": JSON sai (phải là mảng [ … ]) — chưa lưu."; return; }
+                }
                 string cu = PhongDocBanVe.Lay(t, o);
                 if (moi == cu) return;
                 if (!t.DaSua.Contains(o) && !t.GiaTriAi.ContainsKey(o)) t.GiaTriAi[o] = cu;
@@ -848,7 +857,7 @@ namespace TeamsTool.Views
             {
                 b.IsEnabled = !chay && ds.Any(x => !x.Tk.LamTay && x.Tk.XPhang.HasValue && x.Tk.YPhang.HasValue);
                 b.ToolTip = "Vẽ trải phẳng bằng ezdxf trên môi trường moi-truong-ve.dxf theo mẫu biên dạng: viền 0-KAKOU, đường bẻ DASHED, dim, F-name, Khung_IN → ai\\ban_ve\\<bango>.dxf. "
-                            + "Tệp đã sửa trên CAD không bị ghi đè. Chưa có lỗ — bổ sung trên CAD.";
+                            + "Tệp đã sửa trên CAD không bị ghi đè. Lỗ vẽ theo vị trí tâm đọc được (nhóm lỗ thiếu vị trí → báo).";
             }));
             nut.Children.Add(KieuTeams.Nut("📄 Mở CSV", _mau, (s, e) => Mo(AiDon.FileCsv(_tm)), chinh: false).Also(b => b.ToolTip = "ai\\trien_khai.csv — bango tạm <mã>-<số>, GRO đánh bango thật trên CAD"));
             nut.Children.Add(KieuTeams.Nut("📋 Chép tóm tắt", _mau, (s, e) =>

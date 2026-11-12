@@ -158,12 +158,72 @@ def dim_da_ve(nen):
     return kq
 
 
-def du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y):
+TARO_MOI = {"M3": 2.6, "M4": 3.4, "M5": 4.3, "M6": 5.1, "M8": 6.9, "M10": 8.6, "M12": 10.5, "M14": 12.2, "M16": 14.3, "M20": 17.7}  # Ø mồi như lệnh TMT
+
+
+def ve_lo(nen, t, y1, nhan_dau):
+    """Lỗ (12/11, phần chung mọi mẫu): mỗi nhóm lỗ của bảng tấm {d, so_luong, taro, sara, d_sara, loai tron / dai, rong, dai, goc,
+    vi_tri: [{x, y}]} — tâm trên hình trải phẳng, gốc trái dưới. Lỗ tròn: CIRCLE 0-KAKOU (taro: Ø mồi theo bảng TMT); lỗ dài:
+    2 cạnh + 2 cung thật. Mỗi nhóm một leader nhãn "n-Ø10" / "n-M6" / "n-皿Ø6.6 (Ø12)" / "n-10×20".
+    Trả (tâm x, tâm y cho chuỗi dim, [Ø đã ghi nhãn], [báo thiếu])."""
+    import math
+    xs, ys, phi, thieu = [], [], [], []
+    k = nhan_dau
+    for g in t.get("lo", []) or []:
+        if not isinstance(g, dict):
+            continue
+        d = float(g.get("d") or 0)
+        taro = str(g.get("taro") or "").strip().upper()
+        co = "M" + taro.lstrip("M").split("X")[0].split("×")[0].split("-")[0].strip() if taro else ""
+        dai = str(g.get("loai") or "") == "dai" and float(g.get("dai") or 0) > float(g.get("rong") or 0) > 0
+        pts = [(float(p["x"]), float(p["y"])) for p in (g.get("vi_tri") or []) if isinstance(p, dict) and p.get("x") is not None and p.get("y") is not None]
+        if dai:
+            nhan = "%g×%g" % (float(g["rong"]), float(g["dai"]))
+        elif taro:
+            nhan = co
+        elif g.get("sara"):
+            nhan = "皿Ø%g" % d + (" (Ø%g)" % float(g["d_sara"]) if g.get("d_sara") else "")
+        else:
+            nhan = "Ø%g" % d
+        if not pts:
+            thieu.append("lỗ %s ×%g: chưa có vị trí — nhập ở ✎ Sửa thông số → Lỗ" % (nhan, float(g.get("so_luong") or 1)))
+            continue
+        for px, py in pts:
+            if dai:
+                w, l, goc = float(g["rong"]), float(g["dai"]), math.radians(float(g.get("goc") or 0))
+                r, nua = w / 2.0, (l - w) / 2.0
+                ux, uy = math.cos(goc), math.sin(goc)   # trục dài
+                vx, vy = -uy, ux
+                a1, a2 = (px - ux * nua, py - uy * nua), (px + ux * nua, py + uy * nua)
+                nen.duong((a1[0] + vx * r, a1[1] + vy * r), (a2[0] + vx * r, a2[1] + vy * r))
+                nen.duong((a1[0] - vx * r, a1[1] - vy * r), (a2[0] - vx * r, a2[1] - vy * r))
+                gd = math.degrees(goc)
+                nen.cung(a2, r, gd - 90, gd + 90)
+                nen.cung(a1, r, gd + 90, gd + 270)
+            else:
+                dv = TARO_MOI.get(co, d) if taro else d
+                if dv <= 0:
+                    thieu.append("lỗ %s: chưa có Ø" % nhan)
+                    break
+                nen.lo_tron(px, py, dv)
+            xs.append(px)
+            ys.append(py)
+        if taro and co not in TARO_MOI:
+            thieu.append("taro %s: ngoài bảng Ø mồi TMT — vẽ theo Ø %g, kiểm lại" % (co, d))
+        if not taro and not dai and d > 0:
+            phi.append(d)
+        gx, gy = pts[0]
+        nen.leader([(gx, gy), (gx + 23, y1 + 53 + k * 26), (gx + 24, y1 + 53 + k * 26)], "%d-%s" % (len(pts), nhan))
+        k += 1
+    return xs, ys, phi, thieu
+
+
+def du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y, lo_phi=()):
     """Quy tắc 12/11: bản vẽ phải có ĐỦ kích thước khách (dim_khach). So với dim đã vẽ (kể cả dim tổng sắp vẽ);
     thiếu dim ngang / dọc → thêm một hàng dim (dưới / phải, sau chuỗi dim); thiếu R có tâm → dim R; còn lại báo thiếu.
     Trả (số hàng ngang, số hàng dọc đã dùng, [mô tả dim thiếu])."""
     import moi_truong as mt
-    co = dim_da_ve(nen) + [("ngang", x1 - x0), ("doc", y1 - y0)]
+    co = dim_da_ve(nen) + [("ngang", x1 - x0), ("doc", y1 - y0)] + [("phi", d) for d in lo_phi]  # Ø lỗ: nhãn nhóm lỗ là đủ
     thieu = []
     for d in t.get("dim_khach", []):
         loai, so = d.get("loai", ""), float(d.get("gia_tri", 0) or 0)
@@ -205,15 +265,21 @@ def them_chung(nen, t, x0, y0, x1, y1, chi_dim=False):
     if kg:
         gx, gy = kg[len(kg) // 2]
         nen.leader([(gx, gy), (gx + 23, y1 + 53), (gx + 24, y1 + 53)], "%d-ケガキ" % len(kg))
-    mx = chuoi(list(t.get("be_x", [])) + [k[0] for k in kg] + nen.moc_x, x0, x1)
-    my = chuoi(list(t.get("be_y", [])) + nen.moc_y, y0, y1)
-    if len(mx) > 2:
-        for a, b in zip(mx, mx[1:]):
-            nen.dim_ngang(a, b, y0, y0 - mt.LE_DIM)
-    if len(my) > 2:
-        for a, b in zip(my, my[1:]):
-            nen.dim_doc(a, b, x1, x1 + mt.LE_DIM)
-    hx, hy, thieu = du_dim_khach(nen, t, x0, y0, x1, y1, 1 if len(mx) > 2 else 0, 1 if len(my) > 2 else 0)
+    lo_x, lo_y, lo_phi, thieu_lo = ve_lo(nen, t, y1, 1 if kg else 0)
+    mx = chuoi(list(t.get("be_x", [])) + [k[0] for k in kg] + nen.moc_x + lo_x, x0, x1)
+    my = chuoi(list(t.get("be_y", [])) + nen.moc_y + lo_y, y0, y1)
+    hang_x = hang_y = 0
+    # chuỗi dim chi tiết; quá MOC_TOI_DA đoạn thì tách thêm hàng
+    for i in range(0, len(mx) - 1 if len(mx) > 2 else 0, mt.MOC_TOI_DA):
+        for a, b in zip(mx[i:i + mt.MOC_TOI_DA + 1], mx[i + 1:i + mt.MOC_TOI_DA + 1]):
+            nen.dim_ngang(a, b, y0, y0 - mt.LE_DIM - hang_x * mt.BUOC_DIM)
+        hang_x += 1
+    for i in range(0, len(my) - 1 if len(my) > 2 else 0, mt.MOC_TOI_DA):
+        for a, b in zip(my[i:i + mt.MOC_TOI_DA + 1], my[i + 1:i + mt.MOC_TOI_DA + 1]):
+            nen.dim_doc(a, b, x1, x1 + mt.LE_DIM + hang_y * mt.BUOC_DIM)
+        hang_y += 1
+    hx, hy, thieu = du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y, lo_phi)
+    thieu = thieu_lo + thieu
     y_tong = y0 - mt.LE_DIM - hx * mt.BUOC_DIM  # dim tổng luôn ngoài cùng
     nen.dim_ngang(x0, x1, y0, y_tong, lop=mt.LOP_XY)
     nen.dim_doc(y0, y1, x1, x1 + mt.LE_DIM + hy * mt.BUOC_DIM, lop=mt.LOP_XY)

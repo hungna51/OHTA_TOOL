@@ -23,6 +23,7 @@ CAO_FNAME = 24.0          # như mẫu F-name trong bản vẽ xưởng
 CAO_GHI_CHU = 14.0
 LE_DIM = 80.0             # viền → chuỗi dim chi tiết (dưới / phải) — đo trên bản chuẩn xưởng
 BUOC_DIM = 44.0           # khoảng giữa các hàng dim (chuỗi → hàng dim khách thêm → dim tổng)
+MOC_TOI_DA = 12           # chuỗi dim quá 12 đoạn thì tách thêm hàng
 KHOANG_FNAME = 40.0       # khoảng giữa các dòng F-name
 LECH_FNAME = 100.0        # F-name: cách mép trái tấm
 DUOI_FNAME = 98.0         # F-name: dòng đầu dưới đường dim tổng X
@@ -86,6 +87,10 @@ class NenVe:
 
     def chu(self, x, y, noi_dung, cao=CAO_GHI_CHU, lop=LOP_DIM):
         return self.msp.add_text(noi_dung, height=cao, dxfattribs={"layer": lop, "style": self.kieu_chu, "insert": (x, y)})
+
+    def lo_tron(self, x, y, d):
+        """Lỗ tròn cắt: CIRCLE trên 0-KAKOU (lệnh TMT / GRO nhận Ø)."""
+        return self.msp.add_circle((x, y), d / 2.0, dxfattribs={"layer": LOP_CAT})
 
     def ke_gaki(self, x, y):
         """Dấu ケガキ: chữ thập 10 mm trên 3-KEGAKI."""
