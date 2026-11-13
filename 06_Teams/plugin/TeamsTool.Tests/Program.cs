@@ -377,6 +377,8 @@ namespace TeamsTool.Tests
             string tl = OhtaTool.Plugin.Core.JsonLite.Serialize("{\"ten\":\"chu_u\",\"mo_ta\":\"Chu U\",\"ma\":" + OhtaTool.Plugin.Core.JsonLite.Serialize(maTot) + "}");
             var mm = PhongTrienKhai.DocMauMoi("{\"stop_reason\":\"end_turn\",\"usage\":{\"input_tokens\":9,\"output_tokens\":4},\"content\":[{\"type\":\"text\",\"text\":" + tl + "}]}", daCo);
             Kiem("doc mau moi tu phan hoi AI", mm.Ten + "|" + mm.MoTa + "|" + (mm.Loi ?? "null") + "|" + mm.Ma.Contains("def ve(nen, t)") + "|" + mm.Vao, "chu_u|Chu U|null|True|9");
+            Kiem("nhom mau: NHOM trong ma / thieu / sai dang", PhongTrienKhai.NhomMau("MO_TA = 'a'\nNHOM = \"tam_be\"\n") +"|" + PhongTrienKhai.NhomMau(maTot) + "|" + PhongTrienKhai.NhomMau("NHOM = '../x'"),
+                 "tam_be|khac|khac");
             string bodyMau = PhongTrienKhai.BodyMauMoi("claude-opus-5-5", null, null, "dau vao");
             Kiem("body mau moi: schema ten/mo_ta/ma, khong khoi quy chuan", bodyMau.Contains("\"ma\"") + "|" + bodyMau.Contains("cache_control"), "True|False");
             var phang = new TamTrienKhai { Kieu = "phang", X = Phang(300), Y = Phang(150) };

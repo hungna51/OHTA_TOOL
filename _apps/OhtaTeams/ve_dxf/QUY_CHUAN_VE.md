@@ -1,6 +1,6 @@
 # QUY CHUẨN VẼ BẢN TRẢI PHẲNG (theo bản chuẩn xưởng, chốt 12/11/2026)
 
-Áp dụng cho mọi bản vẽ phòng 3 (Triển khai & Vẽ) vẽ trên `moi-truong-ve.dxf`. Phần chung do `ve.py` (`them_chung`) tự làm; mẫu biên dạng (`thu_vien/*.py`) chỉ vẽ hình và dim riêng của hình. Tệp này gửi kèm khi AI viết mẫu vẽ mới.
+Áp dụng cho mọi bản vẽ phòng 3 (Triển khai & Vẽ) vẽ trên `moi-truong-ve.dxf`. Phần chung do `ve.py` (`them_chung`) tự làm; mẫu biên dạng (`thu_vien/<nhóm>/*.py`) chỉ vẽ hình và dim riêng của hình. Tệp này gửi kèm khi AI viết mẫu vẽ mới.
 
 ## Mẫu biên dạng phải đủ thông số
 - Mỗi mẫu khai `THAM_SO = [("x", "ý nghĩa", "tự tính"), ("y", …), ("r1", "Bán kính cung lồi", "y/2"), …]`: ĐỦ mọi thông số hình cần, tên chữ cái ngắn (x, y, x1, y1, r1, r2, a1…). x, y do chương trình tính (trải phẳng); thông số riêng có mặc định (chữ mô tả) hoặc `None` = bắt buộc.

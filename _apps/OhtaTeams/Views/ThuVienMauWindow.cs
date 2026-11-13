@@ -58,7 +58,7 @@ namespace TeamsTool.Views
             try { _mauVe = await AiDon.DanhSachMau(_tm); }
             catch (Exception ex) { _bao.Text = "Không đọc được thư viện: " + ex.Message; return; }
             _ds.Items.Clear();
-            foreach (AiDon.MauVe m in _mauVe) _ds.Items.Add(m.Ten + (m.LaMauThu ? "  (mẫu thử của đơn)" : "") + (m.Loi != null ? "  ⚠" : ""));
+            foreach (AiDon.MauVe m in _mauVe) _ds.Items.Add((m.Nhom.Length > 0 ? m.Nhom + " / " : "") + m.Ten + (m.LaMauThu ? "  (mẫu thử của đơn)" : "") + (m.Loi != null ? "  ⚠" : ""));
             if (_mauVe.Count == 0) { _bao.Text = "Không có mẫu nào — máy chưa có Python / ezdxf (bấm 📐 Vẽ DXF ở phòng 3 để cài)."; return; }
             _bao.Text = _mauVe.Count + " mẫu. Bấm một mẫu để xem ảnh hướng dẫn và thông số cần nhập.";
             int i = _mauVe.FindIndex(m => m.Ten == chon);

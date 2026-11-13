@@ -315,6 +315,7 @@ namespace TeamsTool.Core
         public const string LoiDanMauMoi =
 @"Bạn viết MẪU BIÊN DẠNG mới cho thư viện vẽ trải phẳng của OHTA (Python 3, ezdxf). Một mẫu = một tệp Python:
 - MO_TA = ""..."": một câu tiếng Việt mô tả loại biên dạng (để AI phòng Triển khai chọn mẫu sau này) — mô tả LOẠI hình, không ghi số của tấm này.
+- NHOM = ""..."": nhóm thư mục trong thư viện — tam_don (tấm phẳng không bẻ), tam_be (có đường bẻ), tam_cuon (cuộn / lốc tròn); không hợp nhóm nào thì đặt tên nhóm mới ngắn (chữ thường không dấu, gạch dưới).
 - THAM_SO = [(""tên"", ""ý nghĩa"", mặc định), ...]: ĐỦ mọi thông số hình cần, đặt tên chữ cái ngắn (x, y, x1, y1, r1, r2, a1…). x, y luôn có, mặc định ""tự tính"" (chương trình tính trải phẳng). Thông số riêng: mặc định là chữ mô tả (vd ""y/2"") hoặc None nếu bắt buộc. Mẫu đọc thông số riêng từ t[""tham_so""] (dict tên → số), thiếu thì dùng mặc định.
 - VI_DU = {""x"": …, ""y"": …, ""tham_so"": {…}} (+ be_x / be_y / doan_x / doan_y nếu hình cần): số ví dụ để vẽ ảnh hướng dẫn — MỌI số phải khác nhau (ảnh ghi tên thông số vào dim có số đó).
 - Hình không hợp lệ với thông số (vd R nhỏ hơn nửa bề rộng) → raise ValueError(""…"") giải thích.
@@ -393,6 +394,13 @@ moi_truong.LE_DIM = 80.0       # khoảng viền → đường dim chi tiết";
         /// Kiểm mã mẫu trước khi chạy (mã AI viết chạy trên máy): tên hợp lệ, không trùng, có MO_TA + def ve(nen, t),
         /// chỉ import math / moi_truong, không dùng hàm / module truy cập tệp, mạng, tiến trình. null = được.
         /// </summary>
+        /// <summary>Nhóm thư mục của mẫu (dòng NHOM = "tam_be" trong mã) — thiếu / sai dạng → "khac".</summary>
+        public static string NhomMau(string ma)
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(ma ?? "", @"^NHOM\s*=\s*[""']([a-z0-9_]{2,30})[""']", System.Text.RegularExpressions.RegexOptions.Multiline);
+            return m.Success ? m.Groups[1].Value : "khac";
+        }
+
         public static string KiemMau(string ten, string ma, IEnumerable<string> tenDaCo)
         {
             if (!TenHopLe.IsMatch(ten ?? "")) return "Tên mẫu không hợp lệ: '" + ten + "' (chữ thường không dấu, số, gạch dưới, 3–30 ký tự).";

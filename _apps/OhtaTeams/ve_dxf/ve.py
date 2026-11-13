@@ -1,7 +1,7 @@
 """Vẽ bản trải phẳng phòng 4 (OhtaTeams) bằng ezdxf trên môi trường moi-truong-ve.dxf.
 
     python ve.py --kiem                 → {"python", "ezdxf", "matplotlib"}  (ezdxf thiếu → "ezdxf": null)
-    python ve.py --thu-vien DIR [DIR…]  → [{"ten", "mo_ta", "tep", "tham_so": [[tên, ý nghĩa, mặc định]], "vi_du", "anh"}]
+    python ve.py --thu-vien DIR [DIR…]  → [{"ten", "nhom", "mo_ta", "tep", "tham_so": [[tên, ý nghĩa, mặc định]], "vi_du", "anh"}]
                                           mẫu biên dạng (thư mục sau đè thư mục trước); anh = <ten>.png hướng dẫn nếu có
     python ve.py --huong-dan MOI_TRUONG DIR → [{"ten", "anh", "loi"}]  vẽ ảnh hướng dẫn <ten>.png cho mọi mẫu trong DIR
     python ve.py --so-do VIEC.json      → [{"bango", "anh", "so_dinh", "loi"}]  ảnh sơ đồ đỉnh (viền + khoét, số đỉnh) mỗi tấm
@@ -11,7 +11,7 @@
 VIEC.json (OhtaTeams ghi): {"moi_truong": dxf, "thu_muc_ra": dir, "thu_vien": [dir…],
   "tam": [{"bango", "bien_dang", "x", "y", "tham_so": {tên: số}, "be_x", "be_y", "doan_x", "doan_y", "ke_gaki": [[x, y]…], "dim_khach": [{"loai", "gia_tri", "tu", "den"}], "fname": [dòng], "ghi_chu": [dòng],
   "goc": [{"dinh", "kieu" C/R, "gia_tri"}], "khoet": [{"kieu", "rong", "cao", "goc_xoay", "r", "dinh", "vi_tri"}], "t_day": số}]}  (xem goc_khoet.py)
-Mẫu biên dạng (thu_vien/<ten>.py): MO_TA + ve(nen, t) vẽ viền / đường bẻ / dim riêng của hình; ケガキ, chuỗi dim dưới / phải,
+Mẫu biên dạng (thu_vien/<nhóm>/<ten>.py — nhóm: tam_don, tam_be, tam_cuon…): MO_TA + ve(nen, t) vẽ viền / đường bẻ / dim riêng của hình; ケガキ, chuỗi dim dưới / phải,
 dim tổng (1-XY), F-name, Khung_IN thêm ở đây (them_chung) theo bản chuẩn xưởng.
 Tệp đã sửa tay trên CAD (mã băm khác lần ghi trước, nhớ trong .ve_dxf.json) không bị ghi đè: ghi "<bango> (2).dxf".
 """
@@ -53,14 +53,25 @@ def kiem():
 
 
 def cac_mau(thu_muc):
-    """ten → tệp .py; thư mục sau đè thư mục trước (mẫu vẽ thử của đơn đè mẫu chung cùng tên)."""
+    """ten → tệp .py, tìm cả thư mục nhóm con (thu_vien/tam_be/be.py…); thư mục sau đè thư mục trước
+    (mẫu vẽ thử của đơn đè mẫu chung cùng tên). Tên mẫu là duy nhất trong thư viện — trùng giữa 2 nhóm thì nhóm xếp trước thắng."""
     mau = {}
     for d in thu_muc:
         if d and os.path.isdir(d):
-            for f in sorted(os.listdir(d)):
-                if f.endswith(".py") and not f.startswith("_"):
-                    mau[f[:-3]] = os.path.join(d, f)
+            rieng = {}
+            for goc, con, tep in os.walk(d):
+                con[:] = sorted(x for x in con if not x.startswith(("_", ".")))
+                for f in sorted(tep):
+                    if f.endswith(".py") and not f.startswith("_"):
+                        rieng.setdefault(f[:-3], os.path.join(goc, f))
+            mau.update(rieng)
     return mau
+
+
+def nhom_mau(tep, thu_muc):
+    """Nhóm = tên thư mục con chứa mẫu (tam_don / tam_be / tam_cuon…); mẫu nằm ngay thư mục gốc → ""."""
+    cha = os.path.normcase(os.path.abspath(os.path.dirname(tep)))
+    return "" if cha in {os.path.normcase(os.path.abspath(d)) for d in thu_muc if d} else os.path.basename(cha)
 
 
 def nap(tep):
@@ -137,7 +148,7 @@ def anh_huong_dan(moi_truong, thu_muc):
                             e.text = ten_ts
                         else:
                             e.dxf.text = ten_ts
-            anh = os.path.join(thu_muc, ten + ".png")
+            anh = os.path.splitext(tep)[0] + ".png"  # cạnh mẫu, trong thư mục nhóm
             dm.qsave(nen.msp, anh, bg="#FFFFFF", size_inches=(6, 4), dpi=110)
             kq.append({"ten": ten, "anh": anh, "loi": None})
         except Exception as ex:
@@ -484,14 +495,15 @@ def main(argv):
         in_json(cat_anh(argv[2]))
     elif len(argv) > 1 and argv[1] == "--thu-vien":
         ds = []
-        for ten, tep in sorted(cac_mau(argv[2:]).items()):
+        for ten, tep in sorted(cac_mau(argv[2:]).items(), key=lambda x: (nhom_mau(x[1], argv[2:]), x[0])):
             anh = os.path.splitext(tep)[0] + ".png"
+            nhom = nhom_mau(tep, argv[2:])
             try:
                 mod = nap(tep)
-                ds.append({"ten": ten, "mo_ta": getattr(mod, "MO_TA", ""), "tep": tep, "tham_so": [list(x) for x in tham_so_mau(mod)],
+                ds.append({"ten": ten, "nhom": nhom, "mo_ta": getattr(mod, "MO_TA", ""), "tep": tep, "tham_so": [list(x) for x in tham_so_mau(mod)],
                            "vi_du": getattr(mod, "VI_DU", None) or {}, "anh": anh if os.path.exists(anh) else None})
             except Exception as ex:
-                ds.append({"ten": ten, "mo_ta": "", "tep": tep, "loi": str(ex), "tham_so": [], "vi_du": {}, "anh": None})
+                ds.append({"ten": ten, "nhom": nhom, "mo_ta": "", "tep": tep, "loi": str(ex), "tham_so": [], "vi_du": {}, "anh": None})
         in_json(ds)
     elif len(argv) > 3 and argv[1] == "--huong-dan":
         in_json(anh_huong_dan(argv[2], argv[3]))

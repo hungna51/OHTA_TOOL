@@ -348,7 +348,7 @@ namespace TeamsTool.Services
                 BaiHoc = cu.BaiHoc, DaRutBaiHoc = cu.DaRutBaiHoc,
             };
             // Một lượt đọc trả cả thông số + tiết diện + nghi vấn; mẫu biên dạng để AI chọn (máy chưa có Python / ezdxf → rỗng)
-            string them = PhongDocBanVe.DauVao(tn.CongTy, (await DanhSachMau(tm)).Select(m => (m.Ten, m.MoTa + (m.ThamSoChu.Length > 0 ? " | thông số: " + m.ThamSoChu : ""))));
+            string them = PhongDocBanVe.DauVao(tn.CongTy, (await DanhSachMau(tm)).Select(m => (m.Ten, m.MoTaAi + (m.ThamSoChu.Length > 0 ? " | thông số: " + m.ThamSoChu : ""))));
             var nghiVan = new List<VanDe>();
 
             var canDoc = tn.Tep.Where(t => t.Loai == PhongTiepNhan.BanVe && (t.Ten.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) || t.Ten.EndsWith(".dxf", StringComparison.OrdinalIgnoreCase)))
@@ -547,7 +547,7 @@ namespace TeamsTool.Services
             if (traLoi.Count == 0) throw new InvalidOperationException("Chưa có câu trả lời mới nào (câu còn mở có ô Trả lời) để cập nhật.");
             string key = KeyPhong(3), model = Model();
             var danhSo = PhongHoSo.DanhSo(ct, title);
-            var thuVien = (await DanhSachMau(tm)).Select(m => m.Ten + ": " + m.MoTa + (m.ThamSoChu.Length > 0 ? " | thông số: " + m.ThamSoChu : ""));
+            var thuVien = (await DanhSachMau(tm)).Select(m => m.Ten + ": " + m.MoTaAi + (m.ThamSoChu.Length > 0 ? " | thông số: " + m.ThamSoChu : ""));
             bao("Phòng 2: AI cập nhật thông số theo " + traLoi.Count + " câu trả lời (chỉ gửi chữ)…");
             string body = PhongCapNhat.Body(model, QuyChuan(3), PhongCapNhat.DauVao(danhSo, thuVien, traLoi));
             PhongCapNhat.KetQua kq = PhongCapNhat.ApDung(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, huy), danhSo);
@@ -745,6 +745,10 @@ namespace TeamsTool.Services
         public sealed class MauVe
         {
             public string Ten = "", MoTa = "", Tep = "", Anh, Loi;
+            /// <summary>Thư mục nhóm trong thư viện (tam_don / tam_be / tam_cuon…); "" = mẫu thử của đơn.</summary>
+            public string Nhom = "";
+            /// <summary>Mô tả gửi AI chọn mẫu: kèm nhóm để AI lọc theo loại trước.</summary>
+            public string MoTaAi => (Nhom.Length > 0 ? "[" + Nhom + "] " : "") + MoTa;
             public List<(string Ten, string YNghia, string MacDinh)> ThamSo = new List<(string, string, string)>();
             public JsonObject ViDu = new JsonObject();
             /// <summary>Mẫu thử của đơn (chưa vào thư viện chung).</summary>
@@ -769,7 +773,7 @@ namespace TeamsTool.Services
             {
                 var m = new MauVe
                 {
-                    Ten = o.GetString("ten") ?? "", MoTa = o.GetString("mo_ta") ?? "", Tep = o.GetString("tep") ?? "", Anh = o.GetString("anh"), Loi = o.GetString("loi"),
+                    Ten = o.GetString("ten") ?? "", Nhom = o.GetString("nhom") ?? "", MoTa = o.GetString("mo_ta") ?? "", Tep = o.GetString("tep") ?? "", Anh = o.GetString("anh"), Loi = o.GetString("loi"),
                     ViDu = o.Get("vi_du") as JsonObject ?? new JsonObject(),
                 };
                 m.LaMauThu = tm != null && m.Tep.StartsWith(ThuVienThu(tm), StringComparison.OrdinalIgnoreCase);
@@ -909,8 +913,8 @@ namespace TeamsTool.Services
             string key = KeyPhong(4);
             string model = Model();
             var daCo = (await DanhSachMau(tm)).Select(m => m.Ten).ToList();
-            string viDuF = Path.Combine(ThuVienChung, "dai_lom_loi.py"); // ví dụ có cung thật + dim tâm cung theo bản chuẩn
-            string viDu = File.ReadAllText(File.Exists(viDuF) ? viDuF : Path.Combine(ThuVienChung, "be.py"), Encoding.UTF8);
+            string viDuF = TepMauChung("dai_lom_loi") ?? TepMauChung("be"); // ví dụ có cung thật + dim tâm cung theo bản chuẩn
+            string viDu = viDuF == null ? "" : File.ReadAllText(viDuF, Encoding.UTF8);
             string f = Path.Combine(ThuMucTep(tm), tam.Tep), pdf = null;
             if (File.Exists(f) && f.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) && new FileInfo(f).Length <= PhongDocBanVe.PdfToiDa)
                 pdf = Convert.ToBase64String(File.ReadAllBytes(f));
@@ -938,15 +942,22 @@ namespace TeamsTool.Services
             return m;
         }
 
-        /// <summary>Chỉ máy Admin: chép mẫu thử của đơn vào thư viện chung (không đè mẫu đã có).</summary>
+        /// <summary>Tệp mẫu trong thư viện chung (tìm cả thư mục nhóm), không có → null.</summary>
+        public static string TepMauChung(string ten) =>
+            Directory.Exists(ThuVienChung) ? Directory.GetFiles(ThuVienChung, ten + ".py", SearchOption.AllDirectories).FirstOrDefault() : null;
+
+        /// <summary>Chỉ máy Admin: chép mẫu thử của đơn vào thư viện chung, thư mục nhóm theo dòng NHOM của mẫu (không đè mẫu đã có ở bất kỳ nhóm nào).</summary>
         public static string ThemVaoThuVien(string tm, string ten)
         {
             if (!LaMayAdmin()) throw new InvalidOperationException("Chỉ máy Admin được thêm mẫu vào thư viện chung.");
-            string nguon = Path.Combine(ThuVienThu(tm), ten + ".py"), dich = Path.Combine(ThuVienChung, ten + ".py");
+            string nguon = Path.Combine(ThuVienThu(tm), ten + ".py");
             if (!File.Exists(nguon)) throw new InvalidOperationException("Không thấy mẫu thử " + nguon);
-            if (File.Exists(dich)) throw new InvalidOperationException("Thư viện đã có mẫu '" + ten + "'.");
-            string loi = PhongTrienKhai.KiemMau(ten, File.ReadAllText(nguon, Encoding.UTF8), new string[0]);
+            if (TepMauChung(ten) is string co) throw new InvalidOperationException("Thư viện đã có mẫu '" + ten + "' (" + co + ").");
+            string ma = File.ReadAllText(nguon, Encoding.UTF8);
+            string loi = PhongTrienKhai.KiemMau(ten, ma, new string[0]);
             if (loi != null) throw new InvalidOperationException(loi);
+            string dich = Path.Combine(ThuVienChung, PhongTrienKhai.NhomMau(ma), ten + ".py");
+            Directory.CreateDirectory(Path.GetDirectoryName(dich));
             File.Copy(nguon, dich);
             string anh = Path.ChangeExtension(nguon, ".png"); // ảnh hướng dẫn đi kèm mẫu
             if (File.Exists(anh) && !File.Exists(Path.ChangeExtension(dich, ".png"))) File.Copy(anh, Path.ChangeExtension(dich, ".png"));
@@ -993,7 +1004,7 @@ namespace TeamsTool.Services
             var loi = new List<string>();
             var theoTep = ct.Tam.Where(t => t.Moi && !PhongTrienKhai.CoTietDien(t)).GroupBy(t => t.Tep).ToList();
             // mẫu biên dạng để AI chọn (máy chưa có Python / ezdxf → rỗng: AI để trống, vẽ thì tự suy)
-            var thuVien = (await DanhSachMau(tm)).Select(m => (m.Ten, m.MoTa)).ToList();
+            var thuVien = (await DanhSachMau(tm)).Select(m => (m.Ten, m.MoTaAi)).ToList();
             int i = 0;
             foreach (var nhom in theoTep)
             {
