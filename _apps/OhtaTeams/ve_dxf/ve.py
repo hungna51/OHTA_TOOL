@@ -5,6 +5,7 @@
                                           mẫu biên dạng (thư mục sau đè thư mục trước); anh = <ten>.png hướng dẫn nếu có
     python ve.py --huong-dan MOI_TRUONG DIR → [{"ten", "anh", "loi"}]  vẽ ảnh hướng dẫn <ten>.png cho mọi mẫu trong DIR
     python ve.py --so-do VIEC.json      → [{"bango", "anh", "so_dinh", "loi"}]  ảnh sơ đồ đỉnh (viền + khoét, số đỉnh) mỗi tấm
+    python ve.py --anh-pdf ANH PDF      → {"loi"}  ảnh (png / jpg…) → PDF một trang (🧪 Thử nhanh: đọc ảnh như bản vẽ PDF)
     python ve.py --cat-anh ANH.json     → [{"ra", "loi"}]  cắt ảnh tấm từ bản vẽ khách (PDF: PyMuPDF; DXF: ezdxf)
     python ve.py VIEC.json              → {"ket_qua": [{"bango", "tep", "anh", "loi", "thieu_dim", "canh_bao"}]}
 
@@ -529,6 +530,12 @@ def main(argv):
             except Exception as ex:
                 ds.append({"ten": ten, "nhom": nhom, "mo_ta": "", "tep": tep, "loi": str(ex), "tham_so": [], "vi_du": {}, "anh": None})
         in_json(ds)
+    elif len(argv) > 3 and argv[1] == "--anh-pdf":
+        import fitz
+        with fitz.open(argv[2]) as anh:
+            with fitz.open("pdf", anh.convert_to_pdf()) as pdf:
+                pdf.save(argv[3])
+        in_json({"loi": None})
     elif len(argv) > 3 and argv[1] == "--huong-dan":
         in_json(anh_huong_dan(argv[2], argv[3]))
     elif len(argv) > 1:

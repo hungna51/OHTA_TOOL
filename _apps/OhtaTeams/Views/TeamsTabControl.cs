@@ -83,6 +83,13 @@ namespace TeamsTool.Views
             DockPanel.SetDock(gear, Dock.Right);
             DockPanel.SetDock(_tenToiHeader, Dock.Right);
             header.Children.Add(gear);
+            // 🧪 Thử nhanh: ảnh bản vẽ → AI đọc → DXF, không cần đơn (thử / thêm / sửa mẫu vẽ)
+            var thuNhanh = KieuTeams.Nut("🧪 Thử nhanh", _mau, (s, e) => new ThuNhanhWindow(_mau) { Owner = Window.GetWindow(this) }.Show(), chinh: false);
+            thuNhanh.Margin = new Thickness(0, 0, 6, 0);
+            thuNhanh.VerticalAlignment = VerticalAlignment.Center;
+            thuNhanh.ToolTip = "Dán / kéo ảnh bản vẽ → AI đọc → vẽ DXF ngay; sửa thông số / mã mẫu rồi vẽ lại; AI viết mẫu mới";
+            DockPanel.SetDock(thuNhanh, Dock.Right);
+            header.Children.Add(thuNhanh);
             header.Children.Add(_tenToiHeader);
             header.Children.Add(tieuDeKhoi);
 

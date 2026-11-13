@@ -946,6 +946,53 @@ namespace TeamsTool.Services
         public static string TepMauChung(string ten) =>
             Directory.Exists(ThuVienChung) ? Directory.GetFiles(ThuVienChung, ten + ".py", SearchOption.AllDirectories).FirstOrDefault() : null;
 
+        // ---------- 🧪 Thử nhanh (13/11): ảnh / PDF / DXF → AI đọc → vẽ DXF, không cần đơn Teams (thử / thêm / sửa mẫu nhanh) ----------
+
+        public const string TenThuNhanh = "TN";
+        public static string ThuMucThuNhanh => Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "thu_nhanh");
+
+        /// <summary>Thư mục thử mới (dựng như thư mục đơn) chứa tệp: ảnh đổi sang PDF một trang để đọc như bản vẽ PDF. Trả thư mục.</summary>
+        public static async Task<string> TaoThuNhanh(string tep, CancellationToken huy)
+        {
+            string ext = Path.GetExtension(tep).ToLowerInvariant();
+            string tm = Path.Combine(ThuMucThuNhanh, DateTime.Now.ToString("yyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture));
+            Directory.CreateDirectory(ThuMucTep(tm));
+            string ten = ext == ".dxf" ? "ban_ve.dxf" : "ban_ve.pdf", dich = Path.Combine(ThuMucTep(tm), ten);
+            if (ext == ".pdf" || ext == ".dxf") File.Copy(tep, dich);
+            else
+            {
+                TinhTrangPython tt = await KiemPython();
+                if (tt.Python == null || !tt.Pymupdf) throw new InvalidOperationException("Đổi ảnh sang PDF cần Python + PyMuPDF (pip install pymupdf). " + tt.Loi);
+                var (ma, ra) = await ChayLenh(tt.Python, ThuMucVeDxf, huy, Path.Combine(ThuMucVeDxf, "ve.py"), "--anh-pdf", tep, dich);
+                if (ma != 0 || !File.Exists(dich)) throw new InvalidOperationException("Không đổi được ảnh sang PDF: " + DongCuoi(ra));
+            }
+            var tn = new TiepNhan();
+            tn.Tep.Add(new TepDon { Ten = ten, MaBam = PhongTiepNhan.MaBam(dich) });
+            Ghi(tm, tn);
+            return tm;
+        }
+
+        /// <summary>Đọc như phòng 1 (lượt đọc + cắt ảnh tấm + đọc phóng to) và ghi hồ sơ tấm (để AI viết mẫu dùng).</summary>
+        public static async Task<ChiTiet> DocThuNhanh(string tm, Action<string> bao, CancellationToken huy)
+        {
+            ChiTiet ct = await DocBanVe(DocTiepNhan(tm), tm, true, bao, huy);
+            if (await CatAnh(ct, tm, TenThuNhanh, huy) is string loiAnh) bao(loiAnh);
+            if (await DocPhongTo(ct, tm, TenThuNhanh, bao, huy) is string pt) bao(pt);
+            try { GhiHoSo(ct, KiemLuat(ct, tm, TenThuNhanh), tm, TenThuNhanh); } catch (Exception ex) { bao("Chưa ghi hồ sơ tấm: " + ex.Message); }
+            return ct;
+        }
+
+        /// <summary>Vẽ lại mọi tấm từ chi_tiet.json hiện tại (người có thể vừa sửa tay) — không gọi AI.</summary>
+        public static async Task<(ChiTiet Ct, KetQuaTrienKhai Kq, List<(TamAi Tam, TamTrienKhai Tk)> Ds, List<KetQuaVe> Ve)> VeThuNhanh(string tm, Action<string> bao, CancellationToken huy)
+        {
+            ChiTiet ct = DocChiTiet(tm) ?? throw new InvalidOperationException("Chưa đọc bản vẽ.");
+            KetQuaTrienKhai kq = TaoTrienKhai(ct, tm);
+            var ds = TinhLai(ct, kq, TenThuNhanh, tm);
+            var ve = await VeBanVe(ds, TenThuNhanh, tm, bao, huy);
+            if (await VeSoDo(ct, tm, TenThuNhanh, huy) is string sd) bao(sd);
+            return (ct, kq, ds, ve);
+        }
+
         /// <summary>Chỉ máy Admin: chép mẫu thử của đơn vào thư viện chung, thư mục nhóm theo dòng NHOM của mẫu (không đè mẫu đã có ở bất kỳ nhóm nào).</summary>
         public static string ThemVaoThuVien(string tm, string ten)
         {
