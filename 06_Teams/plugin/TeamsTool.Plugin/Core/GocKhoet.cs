@@ -167,7 +167,7 @@ namespace TeamsTool.Core
         /// </summary>
         public static bool DoiGocCu(TamAi t)
         {
-            if (t.BienDang != "phang") return false; // chỉ mẫu phang từng có c / r góc — r1, r2 của mẫu khác là thông số riêng (vd bán kính cung)
+            if (t.BienDang != "phang" && t.BienDang != "4canh") return false; // chỉ mẫu phang (nay 4canh) từng có c / r góc — r1, r2 của mẫu khác là thông số riêng (vd bán kính cung)
             var ts = PhongTrienKhai.ThamSo(t.ThamSo);
             var cu = ts.Where(kv => Regex.IsMatch(kv.Key, "^[cr][1-4]$") && kv.Value > 0).ToList();
             if (cu.Count == 0) return false;

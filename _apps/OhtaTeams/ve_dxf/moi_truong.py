@@ -21,8 +21,11 @@ KIEU_CHU = "Text"         # MS PGothic: chữ Nhật + Việt
 KIEU_DIM = "ISO-26"
 CAO_FNAME = 24.0          # như mẫu F-name trong bản vẽ xưởng
 CAO_GHI_CHU = 14.0
-LE_DIM = 80.0             # viền → chuỗi dim chi tiết (dưới / phải) — đo trên bản chuẩn xưởng
+LE_DIM = 80.0             # viền → chuỗi dim chi tiết (dưới / phải) — đo trên bản chuẩn xưởng (tấm lớn)
 BUOC_DIM = 44.0           # khoảng giữa các hàng dim (chuỗi → hàng dim khách thêm → dim tổng)
+LE_DIM_NHO = 32.0         # tấm nhỏ (bản chuẩn 130996-3, 80×80): chuỗi cách viền ~32, dim tổng ~64
+BUOC_DIM_NHO = 32.0
+DACH_FNAME = 28.0         # F-name đặt bên phải: cách dim ngoài cùng (bản chuẩn 130996-3)
 MOC_TOI_DA = 12           # chuỗi dim quá 12 đoạn thì tách thêm hàng
 KHOANG_FNAME = 40.0       # khoảng giữa các dòng F-name
 LECH_FNAME = 100.0        # F-name: cách mép trái tấm
@@ -104,19 +107,29 @@ class NenVe:
         return self.msp.add_mtext(noi_dung, dxfattribs={"layer": LOP_DIM, "style": self.kieu_chu, "char_height": CAO_GHI_CHU,
                                                         "insert": (x + 4, y + 4), "attachment_point": 7})  # 7 = dưới-trái
 
-    def dim_ngang(self, x0, x1, y, y_dim, lop=LOP_DIM, chu="<>"):
-        """Dim ngang đo x0 → x1 tại cao độ y, đường dim ở y_dim. chu: chữ thay số đo ("<>" = số đo, vd "100P×5=500")."""
-        d = self.msp.add_linear_dim(base=(x0, y_dim), p1=(x0, y), p2=(x1, y), angle=0, text=chu,
+    def dim_ngang(self, x0, x1, y, y_dim, lop=LOP_DIM, chu="<>", y_a=None, y_b=None):
+        """Dim ngang đo x0 → x1 tại cao độ y, đường dim ở y_dim. chu: chữ thay số đo ("<>" = số đo, vd "100P×5=500").
+        y_a / y_b: đường gióng mỗi đầu kéo từ điểm thật (vd tâm lỗ) thay vì mép tấm."""
+        d = self.msp.add_linear_dim(base=(x0, y_dim), p1=(x0, y if y_a is None else y_a), p2=(x1, y if y_b is None else y_b), angle=0, text=chu,
                                     dimstyle=self.kieu_dim, dxfattribs={"layer": lop})
         d.render()
         return d
 
-    def dim_doc(self, y0, y1, x, x_dim, lop=LOP_DIM, vi_tri_chu=None, chu="<>"):
-        """Dim dọc đo y0 → y1 tại hoành độ x, đường dim ở x_dim. vi_tri_chu=(x, y): đặt chữ ra ngoài khi đoạn ngắn (vd 2 dim nửa chiều cao)."""
-        d = self.msp.add_linear_dim(base=(x_dim, y0), p1=(x, y0), p2=(x, y1), angle=90, location=vi_tri_chu, text=chu,
+    def dim_doc(self, y0, y1, x, x_dim, lop=LOP_DIM, vi_tri_chu=None, chu="<>", x_a=None, x_b=None):
+        """Dim dọc đo y0 → y1 tại hoành độ x, đường dim ở x_dim. vi_tri_chu=(x, y): đặt chữ ra ngoài khi đoạn ngắn (vd 2 dim nửa chiều cao).
+        x_a / x_b: đường gióng mỗi đầu kéo từ điểm thật (vd tâm lỗ)."""
+        d = self.msp.add_linear_dim(base=(x_dim, y0), p1=(x if x_a is None else x_a, y0), p2=(x if x_b is None else x_b, y1), angle=90, location=vi_tri_chu, text=chu,
                                     dimstyle=self.kieu_dim, dxfattribs={"layer": lop})
         d.render()
         return d
+
+    def dim_phi(self, x, y, d, goc=60.0, le=LE_DIM):
+        """Dim đường kính Ø một lỗ tròn, chữ ra ngoài phía trên-phải theo góc goc (bản chuẩn 130996-3)."""
+        r, a = d / 2.0, math.radians(goc)
+        d2 = self.msp.add_diameter_dim(center=(x, y), radius=r, angle=goc, location=(x + (r + 2 * le) * math.cos(a), y + (r + 2 * le) * math.sin(a)),  # chữ ra hẳn ngoài viền
+                                       dimstyle=self.kieu_dim, override={"dimtmove": 0}, dxfattribs={"layer": LOP_DIM})  # đường dim kéo tới chữ
+        d2.render()
+        return d2
 
     def fname(self, x, y_dau, dong):
         """F-name: mỗi dòng một TEXT trên 2-F-NAME (N=, M=, T=, Q=, V=, Z=); y_dau = chân dòng đầu, các dòng cách KHOANG_FNAME."""
@@ -129,6 +142,16 @@ class NenVe:
 
     def luu(self, tep):
         self.doc.saveas(tep)
+
+
+def khoang_dim(w, h):
+    """(viền → chuỗi dim, giữa các hàng dim) theo cỡ tấm: tấm lớn 80 / 44 (bản chuẩn 12/11), tấm nhỏ 32 / 32 (bản chuẩn 130996-3),
+    ở giữa nội suy theo cạnh lớn. shortcut: nội suy tuyến tính 80 → 200 mm là đoán, có bản chuẩn tấm cỡ vừa thì chỉnh."""
+    k = min(1.0, max(0.0, (max(w, h) - 80.0) / 120.0))
+    return LE_DIM_NHO + k * (LE_DIM - LE_DIM_NHO), BUOC_DIM_NHO + k * (BUOC_DIM - BUOC_DIM_NHO)
+
+
+assert khoang_dim(80, 80) == (32.0, 32.0) and khoang_dim(600, 140) == (80.0, 44.0)
 
 
 def khung_a(x0, y0, x1, y1):

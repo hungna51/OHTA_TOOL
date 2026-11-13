@@ -255,6 +255,10 @@ namespace TeamsTool.Tests
             Kiem("ke gaki: chu <-> json", PhongGocKhoet.KeGakiChu(kgJ) + "|" + (PhongGocKhoet.KeGakiJson("120;5", out loiG) == null), "120,27.5; 180,27.5|True");
             var tCu = new TamAi { BienDang = "phang", ThamSo = "r9=3; c1=10; c2=10", Goc = "" };
             Kiem("goc: doi c1..c4 cu sang o Goc", PhongGocKhoet.DoiGocCu(tCu) + "|" + tCu.Goc + "|" + tCu.ThamSo, "True|trai_duoi C10; phai_duoi C10|r9=3");
+            var ctPhang = new ChiTiet();
+            ctPhang.Tam.Add(new TamAi { SoBanVe = "P", BienDang = "phang", ThamSo = "c1=10" });
+            var tPhang = PhongDocBanVe.Doc(PhongDocBanVe.Ghi(ctPhang)).Tam[0];
+            Kiem("don cu: mau phang doi ten 4canh + doi goc cu", tPhang.BienDang + "|" + tPhang.Goc, "4canh|trai_duoi C10");
             var tGk = new TamAi { SoBanVe = "GK", M = "SS400", T = "3", Q = "1", KieuTd = "phang", TdX = "100", TdY = "50", BienDang = "phang", Goc = "1 C10; 1 R5", Khoet = "□40x60" };
             var luatGk = PhongKiemTra.Luat(new[] { tGk }, new List<PhongKiemTra.DongTv>(), "");
             Kiem("luat: goc / khoet viet sai", luatGk.Count(v => v.Ma.EndsWith("|goc_sai")) + "|" + luatGk.Count(v => v.Ma.EndsWith("|khoet_sai")), "1|1");
