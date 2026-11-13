@@ -16,8 +16,8 @@ using TeamsTool.Services;
 namespace TeamsTool.Views
 {
     /// <summary>
-    /// 🧪 Thử nhanh (13/11): dán / kéo thả ảnh, PDF hoặc DXF bản vẽ → AI đọc (như phòng 1, cả đọc phóng to) → vẽ DXF ngay theo thư viện mẫu.
-    /// Không cần đơn Teams — thư mục thử %TEMP%\OHTA_TOOL\thu_nhanh\&lt;giờ&gt; dựng như thư mục đơn. Sửa thông số (chi_tiet.json) hoặc mã mẫu
+    /// 🧪 Thử nhanh (13/11): dán / kéo thả ảnh, PDF hoặc DXF của MỘT hình → AI đọc kỹ + chọn mẫu (bước 2, không đọc cả trang) → vẽ hình + dim
+    /// ngay theo thư viện mẫu (không F-name, Khung_IN). Không cần đơn Teams — thư mục thử %TEMP%\OHTA_TOOL\thu_nhanh\&lt;giờ&gt; dựng như thư mục đơn. Sửa thông số (chi_tiet.json) hoặc mã mẫu
     /// rồi 🔁 Vẽ lại (không tốn AI); chưa có mẫu → ✨ AI viết mẫu; máy Admin ➕ Thêm vào thư viện.
     /// </summary>
     internal sealed class ThuNhanhWindow : Window
@@ -60,7 +60,7 @@ namespace TeamsTool.Views
             var dau = new StackPanel { Margin = new Thickness(10, 10, 10, 0) };
             dau.Children.Add(new TextBlock
             {
-                Text = "Dán ảnh chụp bản vẽ (Ctrl+V), kéo thả hoặc chọn tệp ảnh / PDF / DXF → AI đọc như phòng 1 rồi vẽ DXF ngay theo thư viện mẫu. "
+                Text = "Dán ảnh chụp MỘT hình (Ctrl+V), kéo thả hoặc chọn tệp ảnh / PDF / DXF → AI đọc kỹ hình + chọn mẫu rồi vẽ hình + dim ngay theo thư viện mẫu. "
                      + "Chưa ưng: sửa thông số (✎) hoặc mã mẫu (📄) rồi 🔁 Vẽ lại — không tốn AI. Chưa có mẫu: ✨ AI viết mẫu.",
                 TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6),
             });
@@ -106,12 +106,24 @@ namespace TeamsTool.Views
             Chay(async (bao, huy) =>
             {
                 bao("Đang chuẩn bị " + Path.GetFileName(f) + "…");
-                _tm = await AiDon.TaoThuNhanh(f, huy);
+                _tm = await AiDon.TaoThuNhanh(VePng(f), huy);
                 _ds.Children.Clear();
-                ChiTiet ct = await AiDon.DocThuNhanh(_tm, bao, huy);
-                bao("AI đọc được " + ct.Tam.Count + " tấm — đang vẽ…");
+                await AiDon.DocThuNhanh(_tm, bao, huy);
+                bao("AI đã đọc hình — đang vẽ…");
                 await VeLai(bao, huy);
             });
+        }
+
+        /// <summary>Ảnh khác PNG (jpg, bmp…) → PNG tạm (AI nhận ảnh PNG); PNG / PDF / DXF giữ nguyên.</summary>
+        private static string VePng(string f)
+        {
+            string ext = Path.GetExtension(f).ToLowerInvariant();
+            if (ext == ".png" || ext == ".pdf" || ext == ".dxf") return f;
+            string ra = Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "thu_nhanh_anh.png");
+            Directory.CreateDirectory(Path.GetDirectoryName(ra));
+            BitmapFrame anh = BitmapDecoder.Create(new Uri(f), BitmapCreateOptions.None, BitmapCacheOption.OnLoad).Frames[0];
+            using (var fs = File.Create(ra)) { var en = new PngBitmapEncoder(); en.Frames.Add(anh); en.Save(fs); }
+            return ra;
         }
 
         private async Task VeLai(Action<string> bao, CancellationToken huy)

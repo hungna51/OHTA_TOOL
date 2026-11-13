@@ -42,6 +42,7 @@ namespace TeamsTool.Views
         private readonly TextBlock _trangThai = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 6) };
         private CancellationTokenSource _huy;
         private string _khoaMauMoi = ""; // tấm bấm ✨ AI đề xuất mẫu vẽ (Chay(6))
+        private string _khoaBuoc2; // tấm bấm 🔍 Đọc kỹ lại (Chay(11)); null = mọi tấm còn chờ bước 2
         private bool _baiHocPdf;           // rút bài học kèm bản vẽ (Chay(7))
         private StackPanel _khungVanDe = new StackPanel(); // danh sách vấn đề phòng 2 — vẽ lại riêng sau mỗi ô sửa
         private string _tm;
@@ -106,7 +107,8 @@ namespace TeamsTool.Views
 
         /// <summary>
         /// tu = 1: tải tệp → đọc → kiểm luật; 2: đọc → kiểm luật; 3: kiểm lại câu trả lời (AI, chữ); 4: đọc bù tiết diện (đơn cũ);
-        /// 5: vẽ DXF (ezdxf); 6: AI đề xuất mẫu vẽ cho _khoaMauMoi; 7: AI rút bài học từ chỗ người sửa. docLaiHet: đọc lại cả tệp không đổi.
+        /// 5: vẽ DXF (ezdxf); 6: AI đề xuất mẫu vẽ cho _khoaMauMoi; 7: AI rút bài học từ chỗ người sửa;
+        /// 11: bước 2 đọc kỹ ảnh cắt + chọn mẫu (_khoaBuoc2 hoặc mọi tấm chờ). docLaiHet: đọc lại cả tệp không đổi.
         /// </summary>
         private async void Chay(int tu, bool docLaiHet)
         {
@@ -181,6 +183,16 @@ namespace TeamsTool.Views
                     case 3:
                         await AiDon.KiemLaiAi(tn, AiDon.DocChiTiet(_tm), _tm, _d.Title, Bao, _huy.Token);
                         return;
+                    case 11:
+                    {
+                        ChiTiet ct11 = AiDon.DocChiTiet(_tm);
+                        string anh11 = await AiDon.CatAnh(ct11, _tm, _d.Title, _huy.Token); // ảnh còn thiếu (máy vừa cài PyMuPDF)
+                        string kq11 = await AiDon.DocPhongTo(ct11, _tm, _d.Title, Bao, _huy.Token, _khoaBuoc2) ?? "Không có tấm nào có ảnh cắt để đọc kỹ — ↻ đọc lại bản vẽ.";
+                        KiemTra kt11 = AiDon.KiemLuat(ct11, _tm, _d.Title);
+                        string sd11 = await AiDon.VeSoDo(AiDon.DocChiTiet(_tm), _tm, _d.Title, _huy.Token); // số đỉnh để chỉ vát / bo
+                        Bao(kq11 + " " + kt11.VanDe.Count + " vấn đề (" + kt11.DoConMo + " đỏ)." + (anh11 != null ? "\n" + anh11 : "") + (sd11 != null ? "\n" + sd11 : ""));
+                        return;
+                    }
                     case 9:
                     {
                         PhongCapNhat.KetQua kq9 = await AiDon.CapNhatTheoTraLoi(AiDon.DocChiTiet(_tm), _tm, _d.Title, Bao, _huy.Token);
@@ -199,15 +211,11 @@ namespace TeamsTool.Views
                     ChiTiet ct = await AiDon.DocBanVe(tn, _tm, docLaiHet, Bao, _huy.Token);
                     string loiDoc = _trangThai.Text.StartsWith("Có tệp chưa đọc", StringComparison.Ordinal) ? _trangThai.Text : null;
                     string anh = await AiDon.CatAnh(ct, _tm, _d.Title, _huy.Token); // ảnh tấm cho phòng 2 + hồ sơ
-                    string phongTo = null;
-                    try { phongTo = await AiDon.DocPhongTo(ct, _tm, _d.Title, Bao, _huy.Token); } // đọc kỹ lại từng tấm trên ảnh cắt
-                    catch (Exception ex) when (!(ex is OperationCanceledException)) { phongTo = "Chưa đọc phóng to được: " + ex.Message; }
                     KiemTra kt = AiDon.KiemLuat(ct, _tm, _d.Title);
-                    string soDo = await AiDon.VeSoDo(AiDon.DocChiTiet(_tm), _tm, _d.Title, _huy.Token); // số đỉnh để chỉ vát / bo
-                    if (soDo != null) anh = (anh != null ? anh + "\n" : "") + soDo;
+                    // 13/11: bước 1 chỉ đọc + cắt ảnh; đọc kỹ + chọn mẫu + sơ đồ đỉnh là bước 2 (nút 🔍 ở phòng 2 — xem ảnh cắt đúng tấm rồi mới bấm)
                     Bao((loiDoc != null ? loiDoc + "\n" : "")
-                        + "Xong phòng 1: " + ct.Tam.Count + " tấm, " + kt.VanDe.Count + " vấn đề (" + kt.DoConMo + " đỏ). Sang phòng 2: trả lời câu hỏi từng tấm, ✎ sửa thông số nếu sai, rồi ✓ Xác nhận → Triển khai."
-                        + (phongTo != null ? "\n" + phongTo : "") + (anh != null ? "\n" + anh : ""));
+                        + "Xong bước 1: " + ct.Tam.Count + " tấm, " + kt.VanDe.Count + " vấn đề (" + kt.DoConMo + " đỏ). Sang phòng 2: xem ảnh cắt từng tấm đúng chưa, rồi bấm 🔍 Đọc kỹ & chọn mẫu."
+                        + (anh != null ? "\n" + anh : ""));
                 }
             }
             catch (OperationCanceledException) { Bao("Đã huỷ. Phần đã xong vẫn được lưu."); }
@@ -347,6 +355,18 @@ namespace TeamsTool.Views
             bool sua = !chay && ct.XacNhan.Length == 0, nuaRepeat = tn?.LoaiDon == PhongTiepNhan.NuaRepeat;
             NapThuVien(); // mô tả mẫu vẽ + ô chọn mẫu (nạp nền một lần, xong thì vẽ lại)
             if (nuaRepeat) p.Children.Add(Chu("Đơn nửa repeat: bỏ tích \"Mới\" ở tấm repeat — chỉ kiểm và triển khai tấm mới (tấm mới mới được đánh số)."));
+            int choBuoc2 = ct.Tam.Count(PhongPhongTo.CanBuoc2);
+            if (choBuoc2 > 0)
+            {
+                var hangB2 = new WrapPanel { Margin = new Thickness(0, 2, 0, 4) };
+                hangB2.Children.Add(Chu("Bước 2: còn " + choBuoc2 + " tấm chưa đọc kỹ & chọn mẫu — xem ảnh cắt bên dưới đúng tấm chưa rồi bấm."));
+                hangB2.Children.Add(KieuTeams.Nut("🔍 Đọc kỹ & chọn mẫu (" + choBuoc2 + " tấm)", _mau, (s, e) => { _khoaBuoc2 = null; Chay(11, false); }).Also(b =>
+                {
+                    b.IsEnabled = sua;
+                    b.ToolTip = "Mỗi tấm gửi ảnh cắt cho AI đọc kỹ lại số, lỗ, ケガキ, góc, khoét, dim khách và chọn mẫu vẽ + thông số mẫu; rồi vẽ sơ đồ đỉnh. Ảnh cắt sai tấm → ↻ đọc lại bản vẽ trước.";
+                }));
+                p.Children.Add(hangB2);
+            }
             var danhSo = PhongHoSo.DanhSo(ct, _d.Title).ToDictionary(x => x.Tam, x => x.Ten);
             var vanDe = kt?.VanDe ?? new List<VanDe>();
             foreach (var nhom in ct.Tam.GroupBy(t => t.Tep))
@@ -460,7 +480,7 @@ namespace TeamsTool.Views
             hang.Children.Add(new TextBlock
             {
                 Text = bd == PhongTrienKhai.ChuaCoMau ? "Mẫu vẽ: chưa có trong thư viện" + (t.MoTaBienDang.Length > 0 ? " — " + t.MoTaBienDang : "")
-                     : bd.Length == 0 ? "Mẫu vẽ: chưa chọn" + (_thuVien != null && _thuVien.Count == 0 ? " (máy chưa có Python / ezdxf để đọc thư viện)" : " — đọc lại bản vẽ hoặc ✎ chọn mẫu")
+                     : bd.Length == 0 ? "Mẫu vẽ: chưa chọn" + (_thuVien != null && _thuVien.Count == 0 ? " (máy chưa có Python / ezdxf để đọc thư viện)" : " — 🔍 Đọc kỹ & chọn mẫu hoặc ✎ chọn mẫu")
                      : "Mẫu vẽ: " + bd + (thu ? " (mẫu thử của đơn — Admin duyệt ở phòng 3)" : moTa.Length > 0 ? " — " + moTa : ""),
                 Foreground = chuaCo ? KieuTeams.Mau("#B42318") : KieuTeams.ChuPhu, TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.Normal,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0),
@@ -469,6 +489,9 @@ namespace TeamsTool.Views
             hang.Children.Add(NutNho("📚 Thư viện mẫu", true, () => { MoThuVien(chuaCo ? null : bd); return false; }, null)
                 .Also(b => b.ToolTip = "Xem ảnh hướng dẫn + thông số cần nhập của mẫu, vẽ thử với số tuỳ ý"));
             if (t.ThamSo.Trim().Length > 0) hang.Children.Add(Chu("Thông số: " + t.ThamSo));
+            if (deXuat)
+                hang.Children.Add(NutNho("🔍 Đọc kỹ lại", !DangChay.Contains(_d.Id), () => { _khoaBuoc2 = khoa; Chay(11, false); return false; }, null)
+                    .Also(b => b.ToolTip = "Bước 2 riêng tấm này: AI đọc kỹ lại ảnh cắt + chọn lại mẫu vẽ (ô bạn đã sửa giữ nguyên)"));
             if (chuaCo && deXuat)
                 hang.Children.Add(NutNho("✨ AI đề xuất mẫu vẽ", !DangChay.Contains(_d.Id), () => { _khoaMauMoi = khoa; Chay(6, false); return false; }, null)
                     .Also(b => b.ToolTip = "AI viết mẫu Python cho hình này từ hồ sơ tấm + bản vẽ; vẽ thử ở phòng 3, máy Admin duyệt vào thư viện"));
@@ -721,8 +744,10 @@ namespace TeamsTool.Views
                 Chay(8, false); // rút bài học (nếu có ô sửa) rồi vẽ DXF luôn — không đợi bấm 📐 Vẽ DXF
             }).Also(b =>
             {
-                b.IsEnabled = !chay && ct.Tam.Count > 0 && kt.DoConMo == 0;
-                b.ToolTip = kt.DoConMo > 0 ? "Còn " + kt.DoConMo + " mục đỏ chưa xử lý (✓ Đã xử lý hoặc Bỏ qua kèm lý do)" : "Chốt bảng tấm + câu trả lời, chuyển sang phòng 3 trải phẳng";
+                int cho = ct.Tam.Count(PhongPhongTo.CanBuoc2);
+                b.IsEnabled = !chay && ct.Tam.Count > 0 && kt.DoConMo == 0 && cho == 0;
+                b.ToolTip = cho > 0 ? "Còn " + cho + " tấm chưa đọc kỹ & chọn mẫu (bước 2) — bấm 🔍 Đọc kỹ & chọn mẫu ở đầu phòng 2"
+                          : kt.DoConMo > 0 ? "Còn " + kt.DoConMo + " mục đỏ chưa xử lý (✓ Đã xử lý hoặc Bỏ qua kèm lý do)" : "Chốt bảng tấm + câu trả lời, chuyển sang phòng 3 trải phẳng";
             }));
             if (soSua > 0)
             {

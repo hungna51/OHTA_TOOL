@@ -5,11 +5,10 @@
                                           mẫu biên dạng (thư mục sau đè thư mục trước); anh = <ten>.png hướng dẫn nếu có
     python ve.py --huong-dan MOI_TRUONG DIR → [{"ten", "anh", "loi"}]  vẽ ảnh hướng dẫn <ten>.png cho mọi mẫu trong DIR
     python ve.py --so-do VIEC.json      → [{"bango", "anh", "so_dinh", "loi"}]  ảnh sơ đồ đỉnh (viền + khoét, số đỉnh) mỗi tấm
-    python ve.py --anh-pdf ANH PDF      → {"loi"}  ảnh (png / jpg…) → PDF một trang (🧪 Thử nhanh: đọc ảnh như bản vẽ PDF)
     python ve.py --cat-anh ANH.json     → [{"ra", "loi"}]  cắt ảnh tấm từ bản vẽ khách (PDF: PyMuPDF; DXF: ezdxf)
     python ve.py VIEC.json              → {"ket_qua": [{"bango", "tep", "anh", "loi", "thieu_dim", "canh_bao"}]}
 
-VIEC.json (OhtaTeams ghi): {"moi_truong": dxf, "thu_muc_ra": dir, "thu_vien": [dir…],
+VIEC.json (OhtaTeams ghi): {"moi_truong": dxf, "thu_muc_ra": dir, "thu_vien": [dir…], "chi_hinh": bỏ F-name + Khung_IN (tuỳ chọn),
   "tam": [{"bango", "bien_dang", "x", "y", "tham_so": {tên: số}, "be_x", "be_y", "doan_x", "doan_y", "ke_gaki": [[x, y]…], "dim_khach": [{"loai", "gia_tri", "tu", "den"}], "fname": [dòng], "ghi_chu": [dòng],
   "goc": [{"dinh", "kieu" C/R, "gia_tri"}], "khoet": [{"kieu", "rong", "cao", "goc_xoay", "r", "dinh", "vi_tri"}], "t_day": số}]}  (xem goc_khoet.py)
 Mẫu biên dạng (thu_vien/<nhóm>/<ten>.py — nhóm: tam_don, tam_be, tam_cuon…): MO_TA + ve(nen, t) vẽ viền / đường bẻ / dim riêng của hình; ケガキ, chuỗi dim dưới / phải,
@@ -390,7 +389,7 @@ def ve_tam(viec, t, mau, so_tay, co_anh):
     x0, y0, x1, y1 = mt.khung_bao(nen)
     if x1 <= x0 or y1 <= y0:
         raise ValueError("mẫu '%s' không vẽ viền cắt nào" % ten)
-    thieu = them_chung(nen, t, x0, y0, x1, y1, nhan_goc=nhan_goc)
+    thieu = them_chung(nen, t, x0, y0, x1, y1, chi_dim=bool(viec.get("chi_hinh")), nhan_goc=nhan_goc)  # chi_hinh: 🧪 Thử nhanh, không F-name / Khung_IN
     tep = ten_ra(viec["thu_muc_ra"], t["bango"], so_tay)
     nen.luu(tep)
     so_tay[os.path.basename(tep)] = ma_bam(tep)
@@ -530,12 +529,6 @@ def main(argv):
             except Exception as ex:
                 ds.append({"ten": ten, "nhom": nhom, "mo_ta": "", "tep": tep, "loi": str(ex), "tham_so": [], "vi_du": {}, "anh": None})
         in_json(ds)
-    elif len(argv) > 3 and argv[1] == "--anh-pdf":
-        import fitz
-        with fitz.open(argv[2]) as anh:
-            with fitz.open("pdf", anh.convert_to_pdf()) as pdf:
-                pdf.save(argv[3])
-        in_json({"loi": None})
     elif len(argv) > 3 and argv[1] == "--huong-dan":
         in_json(anh_huong_dan(argv[2], argv[3]))
     elif len(argv) > 1:

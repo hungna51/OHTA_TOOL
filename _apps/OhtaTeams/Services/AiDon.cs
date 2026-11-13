@@ -348,7 +348,7 @@ namespace TeamsTool.Services
                 BaiHoc = cu.BaiHoc, DaRutBaiHoc = cu.DaRutBaiHoc,
             };
             // Một lượt đọc trả cả thông số + tiết diện + nghi vấn; mẫu biên dạng để AI chọn (máy chưa có Python / ezdxf → rỗng)
-            string them = PhongDocBanVe.DauVao(tn.CongTy, (await DanhSachMau(tm)).Select(m => (m.Ten, m.MoTaAi + (m.ThamSoChu.Length > 0 ? " | thông số: " + m.ThamSoChu : ""))));
+            string them = PhongDocBanVe.DauVao(tn.CongTy); // 13/11: chưa chọn mẫu — bước 2 (DocPhongTo) đọc kỹ ảnh cắt rồi chọn
             var nghiVan = new List<VanDe>();
 
             var canDoc = tn.Tep.Where(t => t.Loai == PhongTiepNhan.BanVe && (t.Ten.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) || t.Ten.EndsWith(".dxf", StringComparison.OrdinalIgnoreCase)))
@@ -497,29 +497,29 @@ namespace TeamsTool.Services
         }
 
         /// <summary>
-        /// Lượt AI đọc PHÓNG TO (12/11): mỗi tấm mới đọc (chưa DaPhongTo, có vùng + ảnh cắt từ PDF) gửi ảnh cắt 250 dpi + dữ liệu đã đọc
-        /// cho AI đọc kỹ lại số, lỗ, ケガキ, dim khách; bỏ nghi vấn đã rõ, thêm nghi vấn mới. Trả câu báo (null = không có gì để làm).
+        /// BƯỚC 2 — Đọc kỹ &amp; chọn mẫu (13/11; trước là lượt đọc phóng to 12/11 chạy liền bước 1): mỗi tấm còn CanBuoc2 (hoặc đúng tấm chiKhoa —
+        /// đọc lại riêng) có ảnh cắt (PDF / DXF) gửi ảnh + dữ liệu bước 1 + thư viện mẫu cho AI đọc kỹ lại số, lỗ, ケガキ, dim khách và CHỌN MẪU + tham_so;
+        /// bỏ nghi vấn đã rõ, thêm nghi vấn mới. Trả câu báo (null = không có gì để làm).
         /// </summary>
-        public static async Task<string> DocPhongTo(ChiTiet ct, string tm, string title, Action<string> bao, CancellationToken huy)
+        public static async Task<string> DocPhongTo(ChiTiet ct, string tm, string title, Action<string> bao, CancellationToken huy, string chiKhoa = null)
         {
             string dir = ThuMucHoSo(tm);
             var ds = PhongHoSo.DanhSo(ct, title)
-                .Where(x => !x.Tam.DaPhongTo && !string.IsNullOrEmpty(x.Tam.VungJson) && x.Tam.Tep.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) && File.Exists(Path.Combine(dir, x.Ten + ".png")))
+                .Where(x => (chiKhoa == null ? PhongPhongTo.CanBuoc2(x.Tam) : x.Tam.Khoa == chiKhoa) && File.Exists(Path.Combine(dir, x.Ten + ".png")))
                 .ToList();
             if (ds.Count == 0) return null;
             string key = KeyPhong(2), model = Model(), quyChuan = QuyChuan(2);
-            var thuVien = await DanhSachMau(tm);
+            var thuVien = (await DanhSachMau(tm)).Select(m => (m.Ten, m.MoTaAi + (m.ThamSoChu.Length > 0 ? " | thông số: " + m.ThamSoChu : ""))).ToList();
             var loi = new List<string>();
             int sua = 0, i = 0;
             foreach (var (t, ten) in ds)
             {
                 huy.ThrowIfCancellationRequested();
-                bao("Phòng 1: AI đọc phóng to " + (++i) + "/" + ds.Count + " — " + ten + " (ảnh cắt vùng tấm)…");
+                bao("Bước 2: AI đọc kỹ & chọn mẫu " + (++i) + "/" + ds.Count + " — " + ten + " (ảnh cắt vùng tấm)…");
                 // nghi vấn của tấm + nghi vấn chung của tệp (AI có thể đã trả lời được khi nhìn rõ)
                 string dauTep = "ai|" + t.Tep.ToLowerInvariant() + "|";
                 var nv = ct.NghiVan.Where(v => PhongHoSo.CuaTam(v, t, ct) || (v.Tam.Trim().Length == 0 && v.Ma.StartsWith(dauTep, StringComparison.Ordinal))).ToList();
-                string moTaMau = thuVien.FirstOrDefault(m => m.Ten == t.BienDang)?.ThamSoChu ?? "";
-                string body = PhongPhongTo.Body(model, quyChuan, Convert.ToBase64String(File.ReadAllBytes(Path.Combine(dir, ten + ".png"))), PhongPhongTo.DauVao(t, moTaMau, nv));
+                string body = PhongPhongTo.Body(model, quyChuan, Convert.ToBase64String(File.ReadAllBytes(Path.Combine(dir, ten + ".png"))), PhongPhongTo.DauVao(t, thuVien, nv));
                 PhongPhongTo.PhanHoi ph = PhongPhongTo.DocPhanHoi(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, huy));
                 ct.TokenVao += ph.Vao + ph.GhiCache + ph.DocCache;
                 ct.TokenRa += ph.Ra;
@@ -533,7 +533,7 @@ namespace TeamsTool.Services
                 t.DaPhongTo = true;
             }
             Ghi(tm, ct);
-            return "AI đọc phóng to " + (ds.Count - loi.Count) + " tấm, sửa " + sua + " ô." + (loi.Count > 0 ? "\nChưa đọc phóng to được: " + string.Join("; ", loi) : "");
+            return "Bước 2: AI đọc kỹ & chọn mẫu " + (ds.Count - loi.Count) + " tấm, sửa " + sua + " ô." + (loi.Count > 0 ? "\nChưa đọc được: " + string.Join("; ", loi) : "");
         }
 
         /// <summary>
@@ -881,7 +881,8 @@ namespace TeamsTool.Services
         /// Vẽ trải phẳng mọi tấm vẽ được bằng ve_dxf\ve.py trên môi trường moi-truong-ve.dxf → ai\ban_ve\&lt;bango&gt;.dxf (+ .png).
         /// Tệp đã sửa tay trên CAD không bị ghi đè (ve.py ghi &lt;bango&gt; (2).dxf).
         /// </summary>
-        public static async Task<List<KetQuaVe>> VeBanVe(IList<(TamAi Tam, TamTrienKhai Tk)> ds, string title, string tm, Action<string> bao, CancellationToken huy)
+        /// <param name="chiHinh">Chỉ hình + dim, bỏ F-name và Khung_IN (🧪 Thử nhanh).</param>
+        public static async Task<List<KetQuaVe>> VeBanVe(IList<(TamAi Tam, TamTrienKhai Tk)> ds, string title, string tm, Action<string> bao, CancellationToken huy, bool chiHinh = false)
         {
             TinhTrangPython tt = await KiemPython();
             if (!tt.SanSang) throw new InvalidOperationException(tt.Loi);
@@ -889,7 +890,9 @@ namespace TeamsTool.Services
             string dir = ThuMucBanVe(tm);
             Directory.CreateDirectory(dir);
             string viec = Path.Combine(dir, "viec.json");
-            File.WriteAllText(viec, PhongTrienKhai.ViecVe(title, ds, MoiTruongVe, dir, new[] { ThuVienChung, ThuVienThu(tm) }), Utf8);
+            string jViec = PhongTrienKhai.ViecVe(title, ds, MoiTruongVe, dir, new[] { ThuVienChung, ThuVienThu(tm) });
+            if (chiHinh && JsonLite.Parse(jViec) is JsonObject oViec) { oViec.Set("chi_hinh", true); jViec = JsonLite.Serialize(oViec); }
+            File.WriteAllText(viec, jViec, Utf8);
             bao("Phòng 4: ezdxf đang vẽ " + ds.Count(x => !x.Tk.LamTay) + " tấm…");
             var (ma, ra) = await ChayLenh(tt.Python, ThuMucVeDxf, huy, Path.Combine(ThuMucVeDxf, "ve.py"), viec);
             JsonObject o = null;
@@ -946,49 +949,47 @@ namespace TeamsTool.Services
         public static string TepMauChung(string ten) =>
             Directory.Exists(ThuVienChung) ? Directory.GetFiles(ThuVienChung, ten + ".py", SearchOption.AllDirectories).FirstOrDefault() : null;
 
-        // ---------- 🧪 Thử nhanh (13/11): ảnh / PDF / DXF → AI đọc → vẽ DXF, không cần đơn Teams (thử / thêm / sửa mẫu nhanh) ----------
+        // ---------- 🧪 Thử nhanh (13/11): ảnh / PDF / DXF của MỘT hình → bước 2 (đọc kỹ + chọn mẫu) → chỉ hình + dim, không cần đơn Teams ----------
 
         public const string TenThuNhanh = "TN";
         public static string ThuMucThuNhanh => Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "thu_nhanh");
 
-        /// <summary>Thư mục thử mới (dựng như thư mục đơn) chứa tệp: ảnh đổi sang PDF một trang để đọc như bản vẽ PDF. Trả thư mục.</summary>
+        /// <summary>
+        /// Thư mục thử mới (dựng như thư mục đơn): cả tệp coi là MỘT tấm, không đọc cả trang (bước 1). PNG dùng thẳng làm ảnh cắt;
+        /// PDF / DXF cắt ảnh cả trang 1. Trả thư mục.
+        /// </summary>
         public static async Task<string> TaoThuNhanh(string tep, CancellationToken huy)
         {
             string ext = Path.GetExtension(tep).ToLowerInvariant();
+            if (ext != ".png" && ext != ".pdf" && ext != ".dxf") throw new InvalidOperationException("Thử nhanh nhận PNG / PDF / DXF (ảnh khác đổi sang PNG trước).");
             string tm = Path.Combine(ThuMucThuNhanh, DateTime.Now.ToString("yyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture));
             Directory.CreateDirectory(ThuMucTep(tm));
-            string ten = ext == ".dxf" ? "ban_ve.dxf" : "ban_ve.pdf", dich = Path.Combine(ThuMucTep(tm), ten);
-            if (ext == ".pdf" || ext == ".dxf") File.Copy(tep, dich);
-            else
-            {
-                TinhTrangPython tt = await KiemPython();
-                if (tt.Python == null || !tt.Pymupdf) throw new InvalidOperationException("Đổi ảnh sang PDF cần Python + PyMuPDF (pip install pymupdf). " + tt.Loi);
-                var (ma, ra) = await ChayLenh(tt.Python, ThuMucVeDxf, huy, Path.Combine(ThuMucVeDxf, "ve.py"), "--anh-pdf", tep, dich);
-                if (ma != 0 || !File.Exists(dich)) throw new InvalidOperationException("Không đổi được ảnh sang PDF: " + DongCuoi(ra));
-            }
-            var tn = new TiepNhan();
-            tn.Tep.Add(new TepDon { Ten = ten, MaBam = PhongTiepNhan.MaBam(dich) });
-            Ghi(tm, tn);
+            string ten = "ban_ve" + ext;
+            File.Copy(tep, Path.Combine(ThuMucTep(tm), ten));
+            var ct = new ChiTiet();
+            ct.Tam.Add(new TamAi { Tep = ten, Trang = "1" });
+            Ghi(tm, ct);
+            Directory.CreateDirectory(ThuMucHoSo(tm));
+            if (ext == ".png") File.Copy(tep, Path.Combine(ThuMucHoSo(tm), PhongTrienKhai.Bango(TenThuNhanh, 1) + ".png"));
+            else if (await CatAnh(ct, tm, TenThuNhanh, huy) is string loi) throw new InvalidOperationException(loi);
             return tm;
         }
 
-        /// <summary>Đọc như phòng 1 (lượt đọc + cắt ảnh tấm + đọc phóng to) và ghi hồ sơ tấm (để AI viết mẫu dùng).</summary>
+        /// <summary>Bước 2 trên ảnh: AI đọc kỹ hình + chọn mẫu.</summary>
         public static async Task<ChiTiet> DocThuNhanh(string tm, Action<string> bao, CancellationToken huy)
         {
-            ChiTiet ct = await DocBanVe(DocTiepNhan(tm), tm, true, bao, huy);
-            if (await CatAnh(ct, tm, TenThuNhanh, huy) is string loiAnh) bao(loiAnh);
+            ChiTiet ct = DocChiTiet(tm);
             if (await DocPhongTo(ct, tm, TenThuNhanh, bao, huy) is string pt) bao(pt);
-            try { GhiHoSo(ct, KiemLuat(ct, tm, TenThuNhanh), tm, TenThuNhanh); } catch (Exception ex) { bao("Chưa ghi hồ sơ tấm: " + ex.Message); }
             return ct;
         }
 
-        /// <summary>Vẽ lại mọi tấm từ chi_tiet.json hiện tại (người có thể vừa sửa tay) — không gọi AI.</summary>
+        /// <summary>Vẽ lại từ chi_tiet.json hiện tại (người có thể vừa sửa tay) — không gọi AI; chỉ hình + dim (không F-name, Khung_IN).</summary>
         public static async Task<(ChiTiet Ct, KetQuaTrienKhai Kq, List<(TamAi Tam, TamTrienKhai Tk)> Ds, List<KetQuaVe> Ve)> VeThuNhanh(string tm, Action<string> bao, CancellationToken huy)
         {
             ChiTiet ct = DocChiTiet(tm) ?? throw new InvalidOperationException("Chưa đọc bản vẽ.");
             KetQuaTrienKhai kq = TaoTrienKhai(ct, tm);
             var ds = TinhLai(ct, kq, TenThuNhanh, tm);
-            var ve = await VeBanVe(ds, TenThuNhanh, tm, bao, huy);
+            var ve = await VeBanVe(ds, TenThuNhanh, tm, bao, huy, chiHinh: true);
             if (await VeSoDo(ct, tm, TenThuNhanh, huy) is string sd) bao(sd);
             return (ct, kq, ds, ve);
         }

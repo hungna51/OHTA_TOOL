@@ -7,6 +7,7 @@ using OhtaTool.Plugin.Core;
 namespace TeamsTool.Core
 {
     /// <summary>
+    /// BƯỚC 2 "Đọc kỹ &amp; chọn mẫu" (13/11 — tách khỏi bước 1: bước 1 chỉ đọc cả trang + cắt ảnh, chưa chọn mẫu).
     /// Lượt "đọc phóng to" (12/11): API đọc PDF bằng ảnh thu nhỏ trang — bản vẽ dày đặc (fax A3) thì chi tiết một tấm chỉ còn
     /// vài trăm điểm ảnh, AI đọc sót lỗ / nhầm số (vd 140 → 1400). Sau lượt đọc cả trang, gửi ẢNH CẮT vùng tấm (250 dpi, nới rộng)
     /// + dữ liệu đã đọc để AI đọc kỹ và sửa lại số, lỗ, ケガキ, dim khách; đối chiếu ghi chú với dim; bỏ nghi vấn đã rõ.
@@ -18,7 +19,8 @@ namespace TeamsTool.Core
         public const string LoiDan =
 @"Bạn là kỹ sư triển khai kim loại tấm của OHTA. Đầu vào: ẢNH PHÓNG TO vùng MỘT tấm cắt từ bản vẽ khách (có thể lẫn phần hình khác ở mép — chỉ xét tấm được mô tả) và dữ liệu lượt đọc cả trang (đọc trên ảnh nhỏ nên CÓ THỂ SAI: nhầm số, sót lỗ, sót kích thước).
 Đọc KỸ ảnh và trả lại bản ĐÚNG của các ô dưới đây (giữ đúng giá trị đầu vào nếu ảnh không cho thấy khác):
-- M, T, Q, kich_thuoc (""rộng x dài""), td_x, td_y (tiết diện dạng chữ: số = đoạn mm xen chỗ uốn b<góc> / a<góc>r<R> / c<cung>r<R> / p<góc>), tham_so (""r1=45; r2=38"" nếu mẫu có thông số riêng), mo_ta (mô tả chi tiết hình đủ để vẽ lại).
+- M, T, Q, kich_thuoc (""rộng x dài""), kieu_td (phang / be / lam_tay), td_x, td_y (tiết diện dạng chữ: số = đoạn mm xen chỗ uốn b<góc> / a<góc>r<R> / c<cung>r<R> / p<góc>), mo_ta (mô tả chi tiết hình đủ để vẽ lại).
+- CHỌN MẪU VẼ: bien_dang = tên đúng MỘT mẫu trong ""Thư viện biên dạng"" (cuối phần người dùng, [nhóm] tam_don / tam_be / tam_cuon…) khớp hình TRẢI PHẲNG; làm tay (lam_tay) → rỗng; không mẫu nào khớp → ""chua_co"" và mo_ta_bien_dang = mô tả hình trải phẳng (viền, góc cắt, đường bẻ, lỗ / rãnh đặc biệt) đủ để viết mẫu vẽ mới (còn lại rỗng). tham_so: thông số riêng của mẫu đã chọn dạng ""r1=45; r2=38"" — đúng tên thông số của mẫu, số đọc từ ảnh; mẫu không có thông số riêng → rỗng; bắt buộc mà không đọc được → hỏi trong van_de. bien_dang người dùng đã sửa → giữ nguyên.
 - lo: mỗi nhóm lỗ {d, so_luong, taro, kieu ("""" tròn / ""sara D"" / ""dai RxL G""), ghi_chu, cach_duong_be, vi_tri [[x, y], …] = TÂM từng lỗ trên hình TRẢI PHẲNG, gốc góc trái dưới của tấm, tính từ kích thước ghi trên bản vẽ (vd ""100P×5=500"" = 6 lỗ cách đều 100)}.
 - goc: vát / bo góc viền ngoài ""<đỉnh> C10; <đỉnh> R5"" (đỉnh = trai_duoi / phai_duoi / phai_tren / trai_tren hoặc x,y). XEM TỪNG GÓC trên hình vẽ: khách thường chỉ ghi nhãn (C10) ở MỘT góc — góc khác vẽ vát / bo giống hệt cũng ghi vào goc cùng cỡ. khoet: khoét trong (không phải lỗ) ""□rộngxcao R<r> G<góc> @ x,y; x,y"" hoặc ""[x,y x,y …] @ x,y"", cách nhau |.
 - ke_gaki: [[x, y], …] tâm từng dấu khắc vạch. dim_khach: MỌI kích thước khách ghi cho tấm {loai ngang / doc / r / phi / goc, gia_tri, tu, den}.
@@ -30,26 +32,33 @@ Không bịa: không đọc được thì giữ đầu vào và đưa vào khong
         public static JsonObject Schema()
         {
             JsonObject s = Kieu("string"), n = Kieu("number"), cap = Mang(Mang(n));
-            return Obj(("M", s), ("T", s), ("Q", s), ("kich_thuoc", s), ("td_x", s), ("td_y", s), ("tham_so", s), ("goc", s), ("khoet", s), ("mo_ta", s),
+            return Obj(("M", s), ("T", s), ("Q", s), ("kich_thuoc", s), ("kieu_td", s), ("td_x", s), ("td_y", s), ("bien_dang", s), ("mo_ta_bien_dang", s), ("tham_so", s), ("goc", s), ("khoet", s), ("mo_ta", s),
                        ("lo", Mang(Obj(("d", n), ("so_luong", n), ("taro", s), ("kieu", s), ("ghi_chu", s), ("cach_duong_be", n), ("vi_tri", cap)))),
                        ("ke_gaki", cap), ("dim_khach", Mang(Obj(("loai", s), ("gia_tri", n), ("tu", n), ("den", n)))),
                        ("khong_chac", Mang(s)), ("van_de", Mang(PhongKiemTra.SchemaVanDe())), ("bo_nghi_van", Mang(n)));
         }
 
-        /// <summary>Phần chữ: tấm (tên để AI ghi vào van_de.tam), dữ liệu lượt đọc cả trang, nghi vấn đã có (đánh số).</summary>
-        public static string DauVao(TamAi t, string bienDangMoTa, IList<VanDe> nghiVan)
+        /// <summary>Tấm còn phải qua bước 2: chưa đọc kỹ và mẫu chưa có / người tự chọn (đơn đọc kiểu cũ đã có mẫu AI chọn → coi như xong).</summary>
+        public static bool CanBuoc2(TamAi t) => t.Moi && !t.DaPhongTo && (t.BienDang.Length == 0 || t.DaSua.Contains("bien_dang"));
+
+        /// <summary>Phần chữ: tấm (tên để AI ghi vào van_de.tam), dữ liệu lượt đọc cả trang, nghi vấn đã có (đánh số), thư viện mẫu để chọn.</summary>
+        public static string DauVao(TamAi t, IEnumerable<(string Ten, string MoTa)> thuVien, IList<VanDe> nghiVan)
         {
             var sb = new StringBuilder();
             sb.Append("Tấm: ").Append(PhongKiemTra.TenTam(t)).Append(" (tệp ").Append(t.Tep).Append(", trang ").Append(t.Trang).Append(")\n");
             sb.Append("Dữ liệu lượt đọc cả trang:\n");
             foreach (var (o, v) in new[] { ("M", t.M), ("T", t.T), ("Q", t.Q), ("kich_thuoc", t.KichThuoc), ("mat", t.Mat), ("kieu_td", t.KieuTd), ("td_x", t.TdX), ("td_y", t.TdY),
-                                           ("bien_dang", t.BienDang + (bienDangMoTa.Length > 0 ? " — " + bienDangMoTa : "")), ("tham_so", t.ThamSo), ("goc", t.Goc), ("khoet", t.Khoet), ("mo_ta", t.MoTa),
+                                           ("bien_dang", t.BienDang), ("tham_so", t.ThamSo), ("goc", t.Goc), ("khoet", t.Khoet), ("mo_ta", t.MoTa),
                                            ("ghi_chu_jp", t.GhiChuJp), ("lo", t.LoJson), ("ke_gaki", t.KeGakiJson), ("dim_khach", t.DimKhachJson) })
                 sb.Append("- ").Append(o).Append(": ").Append(string.IsNullOrWhiteSpace(v) ? "(trống)" : v.Replace("\r", "").Replace("\n", " ")).Append('\n');
             if (t.DaSua.Count > 0) sb.Append("(Người dùng đã sửa — coi là đúng: ").Append(string.Join(", ", t.DaSua.OrderBy(x => x))).Append(")\n");
             sb.Append("\nNghi vấn đã có:\n");
             if (nghiVan.Count == 0) sb.Append("(không có)\n");
             for (int i = 0; i < nghiVan.Count; i++) sb.Append(i + 1).Append(". ").Append(nghiVan[i].NoiDung).Append('\n');
+            sb.Append("\nThư viện biên dạng (bien_dang = tên):\n");
+            var tv = (thuVien ?? Enumerable.Empty<(string, string)>()).ToList();
+            if (tv.Count == 0) sb.Append("(trống — máy chưa có Python / ezdxf: để bien_dang rỗng)\n");
+            foreach (var (ten, moTa) in tv) sb.Append("- ").Append(ten).Append(": ").Append(moTa).Append('\n');
             return sb.ToString();
         }
 
@@ -108,7 +117,7 @@ Không bịa: không đọc được thì giữ đầu vào và đưa vào khong
         public static List<string> ApDung(TamAi t, JsonObject nd)
         {
             var doi = new List<string>();
-            foreach (string o in new[] { "M", "T", "Q", "kich_thuoc", "td_x", "td_y", "tham_so", "goc", "khoet", "mo_ta" })
+            foreach (string o in new[] { "M", "T", "Q", "kich_thuoc", "kieu_td", "td_x", "td_y", "bien_dang", "mo_ta_bien_dang", "tham_so", "goc", "khoet", "mo_ta" })
             {
                 string v = Chu(nd.Get(o)).Trim();
                 if (v.Length == 0 || t.DaSua.Contains(o) || v == PhongDocBanVe.Lay(t, o)) continue;

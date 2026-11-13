@@ -297,7 +297,7 @@ namespace TeamsTool.Core
 - khong_chac: tên các ô bạn đọc không chắc hoặc tự chọn (so_ban_ve, ten, M, Z, T, Q, mat, kich_thuoc, dung_sai, canh, lo, tiet_dien). Không bịa: không đọc được thì để rỗng và đưa vào khong_chac.
 - Trang không phải bản vẽ chi tiết (đơn đặt hàng, email, bảng kê) → không tạo tấm cho trang đó, TRỪ dòng hàng là TẤM CẮT HÌNH ĐƠN GIẢN không kèm bản vẽ (vd レーザー品(角), 切板, シャーリング品, 角板, 丸板, hoặc kích thước dạng ""T × rộng × dài"" / ""2.50 X 84.7 X 804.0"") → TẠO một tấm cho mỗi dòng:
   M = mác vật liệu (SUS304, SS400…), T = số đầu (độ dày), kich_thuoc = ""rộng x dài"", Q = số lượng của dòng, mat = bề mặt / film (2B, HL, #400, 両面ファイバーガード…),
-  kieu_td = phang, td_x = dài, td_y = rộng (丸 = tròn: td_x = td_y = Ø, ghi rõ hình tròn ở mo_ta), bien_dang = 4canh (tròn: chọn mẫu tròn nếu thư viện có, không thì chua_co),
+  kieu_td = phang, td_x = dài, td_y = rộng (丸 = tròn: td_x = td_y = Ø, ghi rõ hình tròn ở mo_ta),
   ghi_chu_jp = ghi chú của dòng (vd 両面めん取り, 目方向の矢印を記載), ghi_chu_vi = dịch + ""tấm theo dòng đơn hàng, không có bản vẽ"", mo_ta = hình + kích thước + yêu cầu gia công của dòng.
   Ghi chú chung của đơn (hạn giao, 請書要, ステンシル不可…) vẫn vào ghi_chu_don.
 
@@ -310,11 +310,10 @@ TIẾT DIỆN của mỗi tấm (để trải phẳng — KHÔNG tự tính tr�
 - ke_gaki: mỗi dấu khắc vạch (マーキング / ケガキ / 罫書き — dấu vạch, KHÔNG phải lỗ) một cặp [x, y] = toạ độ tâm (mm) trên hình TRẢI PHẲNG, gốc ở góc trái dưới của tấm, x theo hướng td_x; không có → rỗng. Bản vẽ chỉ ghi số dấu mà thiếu vị trí → để rỗng và hỏi trong van_de.
 - goc: vát C / bo R ở GÓC VIỀN NGOÀI, chữ dạng ""<đỉnh> C<số>; <đỉnh> R<số>"" — đỉnh là tên góc khung bao trai_duoi / phai_duoi / phai_tren / trai_tren hoặc toạ độ ""x,y"" trên hình TRẢI PHẲNG (gốc trái dưới); vd ""trai_duoi C10; phai_duoi C10"". XEM TỪNG GÓC trên hình vẽ: khách thường chỉ ghi nhãn (C10) ở MỘT góc — góc khác vẽ vát / bo giống hệt cũng ghi vào goc cùng cỡ. Không có → rỗng. (Không ghi vát mép chiều dày 面取り ở đây — đó là ghi chú gia công.)
 - khoet: khoét trong KHÔNG phải lỗ tròn / lỗ dài (ô vuông, chữ nhật, hình đa giác), chữ dạng ""□rộngxcao R<bo góc> G<góc xoay> @ x,y; x,y"" (tâm từng vị trí) hoặc đa giác ""[x,y x,y x,y …] @ x,y"" (đỉnh so với điểm đặt), các khoét cách nhau bằng |; toạ độ trên hình trải phẳng, gốc trái dưới. Không có → rỗng.
-- tham_so: khi bien_dang là mẫu có ""thông số"" riêng (liệt kê trong Thư viện biên dạng): chữ dạng ""r1=45; r2=38"" — đúng tên của mẫu, số đọc từ bản vẽ (mm). Không ghi trên bản vẽ → bỏ (chương trình dùng mặc định); bắt buộc mà không đọc được → hỏi trong van_de. Mẫu không có thông số riêng → rỗng.
 - vung: [x0, y0, x1, y1] khung bao TRỌN hình vẽ của tấm trên trang PDF (mọi hình chiếu + dim + ghi chú của tấm, không gồm khung tên / ghi chú chung; tấm chỉ định bằng ô ghi chú có mũi tên / đường dẫn → vùng phải ôm cả KHUNG HÌNH mà mũi tên chỉ tới, không chỉ ô ghi chú), tỉ lệ 0–1 theo bề rộng / cao trang, gốc trái TRÊN (x0, y0 = góc trái trên; x1, y1 = góc phải dưới). DXF: theo khung bao bản vẽ.
 - mo_ta: tiếng Việt, mô tả CHI TIẾT hình tấm đủ để người khác vẽ lại không cần xem bản vẽ: hình dạng tổng thể, từng cạnh / cung (R, lõm / lồi, vị trí), lỗ (Ø, số, vị trí), ケガキ, chỗ bẻ (hướng, góc), chi tiết đặc biệt. Chỉ điều có trên bản vẽ, không suy đoán.
 - dim_khach: MỌI kích thước khách ghi trên bản vẽ của tấm mà còn đúng nguyên trên hình TRẢI PHẲNG (tấm phẳng: tất cả; tấm bẻ: kích thước nằm trong mặt phẳng tấm — song song đường bẻ, vị trí lỗ / ケガキ trên cùng một mặt; KHÔNG gồm kích thước ngoài qua chỗ bẻ). loai: ngang (theo x) / doc (theo y) / r (bán kính) / phi (đường kính lỗ) / goc (độ); gia_tri đúng số khách ghi; tu, den = toạ độ hai đầu trên hình trải phẳng (ngang: x, doc: y, gốc góc trái dưới; r: tu, den = tâm x, y; phi / goc: 0). Bản vẽ OHTA phải dim đủ các kích thước này. Không ghi cạnh vát C (đã ở goc).
-- bien_dang: tên đúng MỘT mẫu trong ""Thư viện biên dạng"" (phần người dùng) khớp hình trải phẳng; làm tay → rỗng; không mẫu nào khớp → ""chua_co"". mo_ta_bien_dang: chỉ khi chua_co — mô tả hình trải phẳng (viền, góc cắt, đường bẻ, lỗ / rãnh đặc biệt) đủ để viết mẫu vẽ mới; còn lại rỗng.
+- KHÔNG chọn mẫu vẽ ở lượt này (bước 2 đọc kỹ ảnh cắt từng tấm rồi mới chọn) — chỉ cần vung đúng để cắt ảnh.
 
 GHI CHÚ CHUNG (ghi_chu_don, cho cả tệp): lời nhắn / yêu cầu chung của khách không thuộc riêng tấm nào (vd ""t=12mm切り板～2枚"", ""下図の手配をお願いします"", yêu cầu đóng gói, hạn) — giữ chữ gốc, mỗi ý một dòng kèm dịch tiếng Việt ngắn trong ngoặc; không có → rỗng.
 
@@ -327,15 +326,8 @@ NGHI VẤN (van_de, cho cả tệp): vấn đề có thật trên bản vẽ c�
 Mỗi vấn đề: tam (số bản vẽ hoặc tên tấm, rỗng nếu chung), muc (do = chặn triển khai; vang = cần xác nhận; info = chỉ ghi chú), nhom (tu_xu_ly = làm theo QC không cần hỏi; noi_bo = hỏi quản lý; khach = hỏi khách), muc_qc (vd B-6-1), lien_lac (true nếu là báo slit / phần thừa — bản 連絡します; false nếu là câu hỏi お問い合わせ).
 noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: chỗ nào + thiếu / sai gì (+ số). Nhóm khach / noi_bo viết thành câu hỏi trực tiếp (vd ""Vị trí lỗ M5 cách mép trái bao nhiêu?""). Không giải thích lý do, không lặp ý. Không có vấn đề → van_de rỗng.";
 
-        /// <summary>Phần chữ thêm sau tên tệp: công ty đặc biệt + thư viện biên dạng ve_dxf (để AI chọn bien_dang).</summary>
-        public static string DauVao(string congTy, IEnumerable<(string Ten, string MoTa)> thuVien)
-        {
-            var sb = new System.Text.StringBuilder("Công ty đặc biệt: " + (string.IsNullOrWhiteSpace(congTy) ? "(không)" : congTy) + "\n\nThư viện biên dạng (bien_dang = tên):\n");
-            var tv = (thuVien ?? Enumerable.Empty<(string, string)>()).ToList();
-            if (tv.Count == 0) sb.Append("(trống — để bien_dang rỗng)\n");
-            foreach (var (ten, moTa) in tv) sb.Append("- ").Append(ten).Append(": ").Append(moTa).Append('\n');
-            return sb.ToString().TrimEnd('\n');
-        }
+        /// <summary>Phần chữ thêm sau tên tệp: công ty đặc biệt (mẫu vẽ chọn ở bước 2 — PhongPhongTo).</summary>
+        public static string DauVao(string congTy) => "Công ty đặc biệt: " + (string.IsNullOrWhiteSpace(congTy) ? "(không)" : congTy);
 
         private static JsonObject Khoi(string text, JsonObject cache)
         {
@@ -383,7 +375,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             // chỗ bẻ (canh) không hỏi riêng — luật suy từ td_x / td_y; lỗ dài / 皿 gom vào ô chữ "kieu" (tách lại khi đọc)
             tt.Add(("lo", Mang(Obj(("d", n), ("so_luong", n), ("taro", s), ("kieu", s), ("ghi_chu", s), ("cach_duong_be", n), ("vi_tri", cap)))));
             tt.Add(("khong_chac", Mang(s)));
-            foreach (string o in OTd) tt.Add((o, s)); // kieu_td, td_x, td_y, ghi_chu_td, bien_dang, mo_ta_bien_dang, tham_so
+            foreach (string o in OTd.Except(new[] { "bien_dang", "mo_ta_bien_dang", "tham_so" })) tt.Add((o, s)); // mẫu vẽ + thông số mẫu: bước 2
             tt.Add(("ke_gaki", cap));
             tt.Add(("vung", Mang(n)));
             tt.Add(("dim_khach", Mang(Obj(("loai", s), ("gia_tri", n), ("tu", n), ("den", n)))));

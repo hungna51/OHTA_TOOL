@@ -265,6 +265,14 @@ namespace TeamsTool.Tests
             string schema = System.Text.RegularExpressions.Regex.Replace(OhtaTool.Plugin.Core.JsonLite.Serialize(PhongDocBanVe.Schema()), @"\s", "");
             Console.WriteLine("  (do dai schema doc ban ve: " + schema.Length + ")");
             Kiem("schema gon: khong enum, khong tiet dien long", schema.Contains("\"enum\"") + "|" + schema.Contains("\"uon\"") + "|" + (schema.Length < 6000), "False|False|True");
+            // 13/11: bước 1 chưa chọn mẫu; bước 2 (đọc kỹ) chọn mẫu từ thư viện gửi kèm
+            string schema2 = OhtaTool.Plugin.Core.JsonLite.Serialize(PhongPhongTo.Schema());
+            var tB2 = new TamAi { SoBanVe = "B2" };
+            var tB2Sua = new TamAi { SoBanVe = "B2S", BienDang = "be" }; tB2Sua.DaSua.Add("bien_dang");
+            Kiem("buoc 1 khong chon mau, buoc 2 chon mau + cho buoc 2",
+                 schema.Contains("\"bien_dang\"") + "|" + schema2.Contains("\"bien_dang\"") + "|" + PhongPhongTo.DauVao(tB2, new[] { ("4canh", "[tam_don] tấm chữ nhật") }, new List<VanDe>()).Contains("- 4canh: [tam_don]")
+                 + "|" + PhongPhongTo.CanBuoc2(tB2) + "|" + PhongPhongTo.CanBuoc2(tGk) + "|" + PhongPhongTo.CanBuoc2(tB2Sua) + "|" + PhongPhongTo.CanBuoc2(new TamAi { DaPhongTo = true }),
+                 "False|True|True|True|False|True|False");
             var tkK = PhongTrienKhai.TuTam(tamK);
             tkK.XPhang = 80; tkK.YPhang = 200;
             string viec = PhongTrienKhai.ViecVe("test", new List<(TamAi, TamTrienKhai)> { (tamK, tkK) }, "m.dxf", "ra", new[] { "tv" });
