@@ -15389,11 +15389,8 @@
         ;; Luu cac khoi (bango + ma khac + F-name) da dat vi tri de tao Khung_IN sau cung
         (setq cum-khois-map (cons (cons (gro--it-stt element) khois) cum-khois-map))
         ;; Ghi nhan loai cum phuc vu xep cum sang phai (buoc 6e)
-        (setq all-codes-cum (append (gro--it-codes element)
-                                    (if dongphu (apply 'append (mapcar 'gro--it-codes dongphu)) nil)
-                            )
-              fld-all-cum   (gro--fields all-codes-cum)
-              v-cum         (if fld-all-cum (nth 2 fld-all-cum) "")
+        ;; muc 230: dung V= dau vong (muc 229: ghi chu + text tach roi da gop + dong so luong)
+        (setq v-cum         (if V= V= "")
               nhom-cum      (gro--nhom-xep v-cum has-gyaku)
         )
         (if nhom-cum
