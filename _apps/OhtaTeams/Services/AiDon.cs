@@ -979,7 +979,11 @@ namespace TeamsTool.Services
         public static async Task<ChiTiet> DocThuNhanh(string tm, Action<string> bao, CancellationToken huy)
         {
             ChiTiet ct = DocChiTiet(tm);
-            if (await DocPhongTo(ct, tm, TenThuNhanh, bao, huy) is string pt) bao(pt);
+            string pt = await DocPhongTo(ct, tm, TenThuNhanh, bao, huy);
+            // AI lỗi (hết hạn mức, chưa đăng nhập…) thì dừng và báo rõ — đừng vẽ tiếp ra bản trống
+            if (!ct.Tam.Any(t => t.DaPhongTo))
+                throw new InvalidOperationException("AI chưa đọc được hình — " + (pt ?? "không có ảnh để đọc") + "\nNguồn AI đang dùng: " + NguonAi + " — đổi ở ⚙ → 🤖 AI nếu nguồn này hết hạn mức.");
+            if (pt != null) bao(pt);
             return ct;
         }
 

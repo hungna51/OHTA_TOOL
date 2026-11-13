@@ -130,7 +130,10 @@ namespace TeamsTool.Views
         {
             var (ct, kq, ds, ve) = await AiDon.VeThuNhanh(_tm, bao, huy);
             HienKetQua(ct, kq, ds, ve);
-            bao(ds.Count == 0 ? "Không có tấm nào để vẽ — xem ✎ Sửa thông số." : "Đã vẽ " + ve.Count(v => v.Loi == null) + "/" + ds.Count + " tấm. Bấm ảnh để mở to, 📐 Mở DXF để mở CAD.");
+            int duoc = ve.Count(v => v.Loi == null && v.Tep != null);
+            bao(ds.Count == 0 ? "Không có tấm nào để vẽ — xem ✎ Sửa thông số."
+                : duoc == 0 ? "Chưa vẽ được hình — xem dòng đỏ dưới ảnh."
+                : "Đã vẽ " + duoc + "/" + ds.Count + " tấm. Bấm ảnh để mở to, 📐 Mở DXF để mở CAD.");
         }
 
         private async void Chay(Func<Action<string>, CancellationToken, Task> viec)
@@ -171,6 +174,8 @@ namespace TeamsTool.Views
                 ThemAnh(anh, Path.Combine(hs, ten + "-dinh.png"), "Sơ đồ đỉnh (cho ô goc vát / bo)");
                 the.Children.Add(anh);
                 if (kv?.Loi != null) the.Children.Add(Chu("✖ " + kv.Loi, "#B42318"));
+                if (kv == null) the.Children.Add(Chu(tk.LamTay ? "✖ Chưa vẽ: hình làm tay (lam_tay) — không có mẫu vẽ."
+                    : "✖ Chưa vẽ: chưa có kích thước trải phẳng (kich_thuoc / td_x, td_y trống) — ✎ Sửa thông số rồi 🔁 Vẽ lại.", "#B42318"));
                 foreach (string s in kv?.ThieuDim ?? new List<string>()) the.Children.Add(Chu("Thiếu dim khách: " + s, "#B54708"));
                 foreach (string s in kv?.CanhBao ?? new List<string>()) the.Children.Add(Chu("⚠ " + s, "#B54708"));
 
