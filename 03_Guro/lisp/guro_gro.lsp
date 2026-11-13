@@ -7649,7 +7649,7 @@
           )
         )
   )
-  (setq items   (cons it (if cand-items cand-items nil))
+  (setq items   (append (cons it cand-items) (gro--gc-cua (gro--it-stt it))) ; muc 229: + ghi chu tach roi da gop
         is-bent nil
   )
   (foreach item items 
@@ -15017,9 +15017,13 @@
               fld       (gro--fields (gro--it-codes element))
               T=        (nth 0 fld)
               M=        (nth 1 fld)
-              V=        (nth 2 fld)
               vT        (atof T=)
               dongphu   (gro--sl-cua (gro--it-stt element) bang)
+              ;; muc 229: be / vat viet o text RIENG ("KAISAKI-kako" tren dong "t=9mm*1") -> xet ca
+              ;; text ghi chu tach roi da gop (muc 128) + dong so luong; T= / M= van tu ghi chu.
+              V=        (nth 2 (gro--fields (apply 'append (cons (gro--it-codes element)
+                                                 (mapcar '(lambda (x) (cons 32 (gro--it-codes x)))
+                                                         (append (gro--gc-cua (gro--it-stt element)) dongphu))))))
               slkq      (gro--so-luong codes dongphu)
               th        (nth 0 slkq)
               slist     (nth 1 slkq)
