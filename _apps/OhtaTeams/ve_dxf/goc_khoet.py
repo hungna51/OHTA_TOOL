@@ -365,7 +365,7 @@ def kiem_khoet(ngoai, khoet, lo, t_day):
 
 def ap_dung(nen, t, lo=()):
     """Vẽ khoét + vát / bo theo t["goc"], t["khoet"] sau khi mẫu vẽ viền. Sai đỉnh / quá khả năng → ValueError.
-    → ([(nhãn "2-C10", điểm)], [R đã ghi nhãn], [cảnh báo K3])."""
+    → ([(nhãn "2-C10", điểm)], [(kiểu C / R, giá trị) đã ghi nhãn], [cảnh báo K3])."""
     goc, ds_khoet = t.get("goc") or [], t.get("khoet") or []
     if not goc and not ds_khoet:
         return [], [], []
@@ -402,7 +402,7 @@ def ap_dung(nen, t, lo=()):
         if y or "r" in vong:
             _ve_vong(nen, vong["seg"])
     canh_bao = kiem_khoet(ngoai["seg"], khoet, list(lo), float(t.get("t_day") or 0)) if khoet else []
-    return _nhom_nhan(nen, ngoai["seg"], nhan_goc), sorted({v for k, v, _ in nhan_goc if k == "R"}), canh_bao
+    return _nhom_nhan(nen, ngoai["seg"], nhan_goc), sorted({(k, v) for k, v, _ in nhan_goc}), canh_bao
 
 
 def _nhom_nhan(nen, ngoai, nhan):

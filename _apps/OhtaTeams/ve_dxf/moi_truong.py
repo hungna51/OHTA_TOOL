@@ -104,16 +104,16 @@ class NenVe:
         return self.msp.add_mtext(noi_dung, dxfattribs={"layer": LOP_DIM, "style": self.kieu_chu, "char_height": CAO_GHI_CHU,
                                                         "insert": (x + 4, y + 4), "attachment_point": 7})  # 7 = dưới-trái
 
-    def dim_ngang(self, x0, x1, y, y_dim, lop=LOP_DIM):
-        """Dim ngang đo x0 → x1 tại cao độ y, đường dim ở y_dim."""
-        d = self.msp.add_linear_dim(base=(x0, y_dim), p1=(x0, y), p2=(x1, y), angle=0,
+    def dim_ngang(self, x0, x1, y, y_dim, lop=LOP_DIM, chu="<>"):
+        """Dim ngang đo x0 → x1 tại cao độ y, đường dim ở y_dim. chu: chữ thay số đo ("<>" = số đo, vd "100P×5=500")."""
+        d = self.msp.add_linear_dim(base=(x0, y_dim), p1=(x0, y), p2=(x1, y), angle=0, text=chu,
                                     dimstyle=self.kieu_dim, dxfattribs={"layer": lop})
         d.render()
         return d
 
-    def dim_doc(self, y0, y1, x, x_dim, lop=LOP_DIM, vi_tri_chu=None):
+    def dim_doc(self, y0, y1, x, x_dim, lop=LOP_DIM, vi_tri_chu=None, chu="<>"):
         """Dim dọc đo y0 → y1 tại hoành độ x, đường dim ở x_dim. vi_tri_chu=(x, y): đặt chữ ra ngoài khi đoạn ngắn (vd 2 dim nửa chiều cao)."""
-        d = self.msp.add_linear_dim(base=(x_dim, y0), p1=(x, y0), p2=(x, y1), angle=90, location=vi_tri_chu,
+        d = self.msp.add_linear_dim(base=(x_dim, y0), p1=(x, y0), p2=(x, y1), angle=90, location=vi_tri_chu, text=chu,
                                     dimstyle=self.kieu_dim, dxfattribs={"layer": lop})
         d.render()
         return d

@@ -154,6 +154,28 @@ def chuoi(moc, a, b):
     return kq
 
 
+def doan_gop(moc):
+    """Mốc chuỗi dim → [(a, b, chữ)]: từ 3 đoạn bằng nhau liền nhau gộp một dim "100P×5=500" như bản vẽ khách."""
+    doan = list(zip(moc, moc[1:]))
+    kq, i = [], 0
+    while i < len(doan):
+        b = doan[i][1] - doan[i][0]
+        j = i
+        while j + 1 < len(doan) and abs(doan[j + 1][1] - doan[j + 1][0] - b) <= 0.01:
+            j += 1
+        if j - i >= 2:
+            kq.append((doan[i][0], doan[j][1], "%gP×%d=%g" % (b, j - i + 1, round(b * (j - i + 1), 2))))
+            i = j + 1
+        else:
+            kq.append((doan[i][0], doan[i][1], "<>"))
+            i += 1
+    return kq
+
+
+assert [c for _, _, c in doan_gop([0, 50, 150, 250, 350, 450, 550, 600])] == ["<>", "100P×5=500", "<>"]
+assert [c for _, _, c in doan_gop([0, 100, 140])] == ["<>", "<>"]
+
+
 def dim_da_ve(nen):
     """(loai, số đo) các dim đã vẽ: ngang / doc / r / phi / goc."""
     kq = []
@@ -234,12 +256,13 @@ def ve_lo(nen, t, y1, nhan_dau):
     return xs, ys, phi, thieu
 
 
-def du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y, lo_phi=(), r_nhan=()):
+def du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y, lo_phi=(), co_them=()):
     """Quy tắc 12/11: bản vẽ phải có ĐỦ kích thước khách (dim_khach). So với dim đã vẽ (kể cả dim tổng sắp vẽ);
     thiếu dim ngang / dọc → thêm một hàng dim (dưới / phải, sau chuỗi dim); thiếu R có tâm → dim R; còn lại báo thiếu.
+    co_them = [(loai, số)] đã thể hiện bằng nhãn (C / R góc, rộng × dài lỗ dài, bước P của chuỗi gộp) — coi là đủ.
     Trả (số hàng ngang, số hàng dọc đã dùng, [mô tả dim thiếu])."""
     import moi_truong as mt
-    co = dim_da_ve(nen) + [("ngang", x1 - x0), ("doc", y1 - y0)] + [("phi", d) for d in lo_phi] + [("r", r) for r in r_nhan]  # Ø lỗ / R góc: nhãn nhóm là đủ
+    co = dim_da_ve(nen) + [("ngang", x1 - x0), ("doc", y1 - y0)] + [("phi", d) for d in lo_phi] + list(co_them)  # Ø lỗ / nhãn: là đủ
     thieu = []
     for d in t.get("dim_khach", []):
         loai, so = d.get("loai", ""), float(d.get("gia_tri", 0) or 0)
@@ -271,7 +294,7 @@ def du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y, lo_phi=(), r_nhan=()):
     return hang_x, hang_y, thieu
 
 
-def them_chung(nen, t, x0, y0, x1, y1, chi_dim=False, r_nhan=()):
+def them_chung(nen, t, x0, y0, x1, y1, chi_dim=False, nhan_goc=()):
     """Phần chung mọi tấm theo bản chuẩn xưởng (12/11): ケガキ + leader, chuỗi dim chi tiết dưới / phải (1-SUNPOU),
     dim tổng X dưới cùng + Y bên phải (1-XY), F-name dưới tấm, Khung_IN tỉ lệ khổ A ngang. chi_dim: bỏ F-name + khung (ảnh hướng dẫn)."""
     import moi_truong as mt
@@ -285,16 +308,24 @@ def them_chung(nen, t, x0, y0, x1, y1, chi_dim=False, r_nhan=()):
     mx = chuoi(list(t.get("be_x", [])) + [k[0] for k in kg] + nen.moc_x + lo_x, x0, x1)
     my = chuoi(list(t.get("be_y", [])) + nen.moc_y + lo_y, y0, y1)
     hang_x = hang_y = 0
-    # chuỗi dim chi tiết; quá MOC_TOI_DA đoạn thì tách thêm hàng
-    for i in range(0, len(mx) - 1 if len(mx) > 2 else 0, mt.MOC_TOI_DA):
-        for a, b in zip(mx[i:i + mt.MOC_TOI_DA + 1], mx[i + 1:i + mt.MOC_TOI_DA + 1]):
-            nen.dim_ngang(a, b, y0, y0 - mt.LE_DIM - hang_x * mt.BUOC_DIM)
+    # chuỗi dim chi tiết (bước đều gộp "100P×5=500"); quá MOC_TOI_DA đoạn thì tách thêm hàng
+    dx, dy = doan_gop(mx) if len(mx) > 2 else [], doan_gop(my) if len(my) > 2 else []
+    for i in range(0, len(dx), mt.MOC_TOI_DA):
+        for a, b, chu in dx[i:i + mt.MOC_TOI_DA]:
+            nen.dim_ngang(a, b, y0, y0 - mt.LE_DIM - hang_x * mt.BUOC_DIM, chu=chu)
         hang_x += 1
-    for i in range(0, len(my) - 1 if len(my) > 2 else 0, mt.MOC_TOI_DA):
-        for a, b in zip(my[i:i + mt.MOC_TOI_DA + 1], my[i + 1:i + mt.MOC_TOI_DA + 1]):
-            nen.dim_doc(a, b, x1, x1 + mt.LE_DIM + hang_y * mt.BUOC_DIM)
+    for i in range(0, len(dy), mt.MOC_TOI_DA):
+        for a, b, chu in dy[i:i + mt.MOC_TOI_DA]:
+            nen.dim_doc(a, b, x1, x1 + mt.LE_DIM + hang_y * mt.BUOC_DIM, chu=chu)
         hang_y += 1
-    hx, hy, thieu = du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y, lo_phi, r_nhan)
+    # đã có trên nhãn: C góc (2 cạnh), R góc, rộng × dài lỗ dài, bước P
+    co_them = [(l, v) for k, v in nhan_goc for l in (("r",) if k == "R" else ("ngang", "doc"))]
+    for g in t.get("lo", []) or []:
+        if isinstance(g, dict) and str(g.get("loai") or "") == "dai":
+            co_them += [(l, float(g.get(k) or 0)) for k in ("rong", "dai") for l in ("ngang", "doc")]
+    co_them += [("ngang", (b - a) / int(chu.split("×")[1].split("=")[0])) for a, b, chu in dx if chu != "<>"]
+    co_them += [("doc", (b - a) / int(chu.split("×")[1].split("=")[0])) for a, b, chu in dy if chu != "<>"]
+    hx, hy, thieu = du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y, lo_phi, co_them)
     thieu = thieu_lo + thieu
     y_tong = y0 - mt.LE_DIM - hx * mt.BUOC_DIM  # dim tổng luôn ngoài cùng
     nen.dim_ngang(x0, x1, y0, y_tong, lop=mt.LOP_XY)
@@ -319,11 +350,11 @@ def ve_tam(viec, t, mau, so_tay, co_anh):
         raise ValueError("thiếu thông số mẫu '%s': %s — nhập ở ✎ Sửa thông số → Thông số mẫu" % (ten, ", ".join(thieu_ts)))
     mod.ve(nen, t)
     import goc_khoet
-    _, r_nhan, canh_bao = goc_khoet.ap_dung(nen, t, lo_tron(t))   # vát / bo theo đỉnh + khoét trong (chung mọi mẫu)
+    _, nhan_goc, canh_bao = goc_khoet.ap_dung(nen, t, lo_tron(t))   # vát / bo theo đỉnh + khoét trong (chung mọi mẫu)
     x0, y0, x1, y1 = mt.khung_bao(nen)
     if x1 <= x0 or y1 <= y0:
         raise ValueError("mẫu '%s' không vẽ viền cắt nào" % ten)
-    thieu = them_chung(nen, t, x0, y0, x1, y1, r_nhan=r_nhan)
+    thieu = them_chung(nen, t, x0, y0, x1, y1, nhan_goc=nhan_goc)
     tep = ten_ra(viec["thu_muc_ra"], t["bango"], so_tay)
     nen.luu(tep)
     so_tay[os.path.basename(tep)] = ma_bam(tep)
@@ -339,7 +370,7 @@ def ve_tam(viec, t, mau, so_tay, co_anh):
 
 
 LE_ANH = 0.03       # nới tối thiểu 3% trang mỗi bên
-LE_ANH_VUNG = 1.0   # và 100% kích thước vùng mỗi bên (ảnh gấp 3 vùng) — vùng AI chọn hay lệch (vd ôm ô ghi chú, sót khung hình mũi tên chỉ tới)
+LE_ANH_VUNG = 0.3   # và 30% kích thước vùng mỗi bên — 100% (13/11) làm tấm nhỏ xíu, AI phóng to sót góc vát không nhãn (test2)
 DPI_ANH = 250       # đủ nét cho lượt AI đọc phóng to
 
 
