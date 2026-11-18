@@ -400,7 +400,14 @@ def ve_lo(nen, t, y1, nhan_dau, le=None, y_nhan_duoi=None):
             continue
         yn = y1 + 53 + k * 26 if y_nhan_duoi is None else y_nhan_duoi - 53 - k * 26
         gx, gy = min(pts, key=lambda p: (abs(p[1] - yn), p[0]))  # đường dẫn từ lỗ gần chỗ đặt nhãn nhất — ngắn, không cắt ngang tấm
-        nen.leader([(gx, gy), (gx + 23, yn), (gx + 24, yn)], "%d-%s" % (len(pts), nhan))
+        # mũi tên chạm MÉP lỗ (lỗ khoá: mép Ø lớn) theo hướng ra điểm gãy — không chỉ vào giữa lỗ (bản sửa 18/11)
+        if khoa:
+            (cx_, cy_), ban_kinh = hai_tam_khoa(gx, gy, float(g["lech"]), huong_khoa(g), g.get("tam") != "lon")[0], d / 2.0
+        else:
+            cx_, cy_, ban_kinh = gx, gy, (float(g["rong"]) / 2.0 if dai else (TARO_MOI.get(co, d) if taro else d) / 2.0)
+        ex, ey = gx + 23 - cx_, yn - cy_
+        dd = math.hypot(ex, ey) or 1.0
+        nen.leader([(cx_ + ex / dd * ban_kinh, cy_ + ey / dd * ban_kinh), (gx + 23, yn), (gx + 24, yn)], "%d-%s" % (len(pts), nhan))
         k += 1
     return xs, ys, phi, thieu
 

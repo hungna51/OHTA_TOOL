@@ -111,11 +111,21 @@ class NenVe:
         self.msp.add_line((x - CO_KEGAKI, y), (x + CO_KEGAKI, y), dxfattribs={"layer": LOP_KEGAKI})
 
     def leader(self, diem, noi_dung):
-        """Leader 1-SUNPOU từ diem[0] (mũi tên) tới diem[-1], chữ MTEXT ở cuối (như bản chuẩn xưởng)."""
-        self.msp.add_leader(diem, dimstyle=self.kieu_dim, dxfattribs={"layer": LOP_DIM})
-        x, y = diem[-1][0], diem[-1][1]
-        return self.msp.add_mtext(noi_dung, dxfattribs={"layer": LOP_DIM, "style": self.kieu_chu, "char_height": CAO_GHI_CHU,
-                                                        "insert": (x + 4, y + 4), "attachment_point": 7})  # 7 = dưới-trái
+        """Leader 1-SUNPOU: mũi tên diem[0] (mép lỗ / điểm chỉ) → gãy tại diem[1] → đoạn ngang dài bằng chữ làm GẠCH CHÂN (bản sửa 18/11);
+        chữ MTEXT nằm trên gạch chân, hướng theo diem[-1] (trái / phải của điểm gãy). Chữ gắn vào leader (annotation) — kéo chữ trong CAD leader theo."""
+        (x, y), huong = diem[1], (-1 if len(diem) > 2 and diem[-1][0] < diem[1][0] else 1)
+        st = self.doc.styles.get(self.kieu_chu) if self.kieu_chu in self.doc.styles else None
+        rong = do_rong_chu(noi_dung, CAO_GHI_CHU, (st.dxf.font if st is not None and st.dxf.get("font") else "MS PGothic.ttf")) + 4
+        mt = self.msp.add_mtext(noi_dung, dxfattribs={"layer": LOP_DIM, "style": self.kieu_chu, "char_height": CAO_GHI_CHU,
+                                                     "insert": (x + huong * 2, y + 3), "attachment_point": 7 if huong > 0 else 9})  # 7 dưới-trái / 9 dưới-phải
+        ld = self.msp.add_leader([diem[0], (x, y), (x + huong * rong, y)], dimstyle=self.kieu_dim, dxfattribs={"layer": LOP_DIM})
+        ld.dxf.annotation_type = 0          # 0 = MTEXT
+        ld.dxf.annotation_handle = mt.dxf.handle
+        ld.dxf.has_hookline = 0             # gạch chân đã là đoạn cuối của leader
+        ld.dxf.text_height = CAO_GHI_CHU
+        ld.dxf.text_width = rong
+        mt.append_reactor_handle(ld.dxf.handle)
+        return mt
 
     def dim_ngang(self, x0, x1, y, y_dim, lop=LOP_DIM, chu="<>", y_a=None, y_b=None, vi_tri_chu=None):
         """Dim ngang đo x0 → x1 tại cao độ y, đường dim ở y_dim. chu: chữ thay số đo ("<>" = số đo, vd "100P×5=500").
@@ -162,6 +172,19 @@ def khoang_dim(w, h):
 
 
 assert khoang_dim(80, 80) == (32.0, 32.0) and khoang_dim(600, 140) == (80.0, 44.0)
+
+
+def do_rong_chu(s, cao, font="MS PGothic.ttf"):
+    """Bề rộng chữ (mm) cho gạch chân leader: đo bằng font thật của kiểu chữ (ezdxf.fonts); máy thiếu font → ước lượng
+    (chữ Nhật / Hán ~ 1 cao, Latinh / số ~ 0.9 cao — gần MS PGothic, thà dài hơn chữ còn hơn hụt)."""
+    try:
+        from ezdxf.fonts import fonts
+        return float(fonts.make_font(font, cao).text_width(s))
+    except Exception:  # font / ezdxf.fonts không có: ước lượng
+        return sum(cao * (1.0 if ord(c) >= 0x2E80 else 0.9) for c in s)
+
+
+assert do_rong_chu("Ø12", 14) > 20
 
 
 def khung_a(x0, y0, x1, y1):
