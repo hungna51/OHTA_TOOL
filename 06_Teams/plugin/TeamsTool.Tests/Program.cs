@@ -194,6 +194,10 @@ namespace TeamsTool.Tests
             var loS = new OhtaTool.Plugin.Core.JsonObject(); loS.Set("kieu", "sara 12");
             TachKieuLoThu(loS);
             Kiem("lo: tach kieu (lo dai / sara)", loK.GetString("loai") + "|" + ((OhtaTool.Plugin.Core.JsonNumber)loK.Get("dai")).Raw + "|" + ((OhtaTool.Plugin.Core.JsonNumber)loK.Get("goc")).Raw + "|" + (loS.Get("sara") is bool sb && sb) + "|" + ((OhtaTool.Plugin.Core.JsonNumber)loS.Get("d_sara")).Raw, "dai|30|45|True|12");
+            var loKh = new OhtaTool.Plugin.Core.JsonObject(); loKh.Set("kieu", "khoa 12 7 6");
+            TachKieuLoThu(loKh);
+            Kiem("lo: tach kieu khoa (変形孔)", loKh.GetString("loai") + "|" + ((OhtaTool.Plugin.Core.JsonNumber)loKh.Get("d")).Raw + "|" + ((OhtaTool.Plugin.Core.JsonNumber)loKh.Get("d_nho")).Raw
+                 + "|" + ((OhtaTool.Plugin.Core.JsonNumber)loKh.Get("lech")).Raw + "|" + (loKh.Get("goc") == null), "khoa|12|7|6|True");
             var canhTd = PhongKiemTra.CanhTuTd(new TamAi { KieuTd = "be", TdX = "50 b90 100 a90r10 40", TdY = "200" });
             Kiem("luat: cho be suy tu tiet dien", canhTd.Count + "|" + ((OhtaTool.Plugin.Core.JsonObject)canhTd[1]).GetString("kieu") + "|" + System.Text.RegularExpressions.Regex.Replace(OhtaTool.Plugin.Core.JsonLite.Serialize(canhTd[0]), @"\s", "").Contains("\"dai_ngoai\":[50,100]")
                  + "|" + new TamAi { KieuTd = "be", TdX = "50 b90 100 a90r10 40" }.TomTatCanh, "2|an_1_lan|True|2 chỗ bẻ");

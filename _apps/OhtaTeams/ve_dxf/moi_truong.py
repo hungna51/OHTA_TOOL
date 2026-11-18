@@ -79,6 +79,10 @@ class NenVe:
     def chu_nhat(self, x0, y0, x1, y1):
         return self.vien([(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
 
+    def duong_tam(self, a, b):
+        """Đường tâm (nét CENTER) trên 1-SUNPOU — chỉ để đọc, không cắt / không khắc."""
+        return self.msp.add_line(a, b, dxfattribs={"layer": LOP_DIM, "linetype": "CENTER" if "CENTER" in self.doc.linetypes else "Continuous"})
+
     def duong_be(self, a, b):
         """Đường bẻ: LINE trên 0-KAKOU, nét DASHED."""
         return self.msp.add_line(a, b, dxfattribs={"layer": LOP_CAT, "linetype": self.net_be})
