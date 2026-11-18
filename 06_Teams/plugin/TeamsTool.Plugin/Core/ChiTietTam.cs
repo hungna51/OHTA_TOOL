@@ -288,7 +288,7 @@ namespace TeamsTool.Core
 - Theo QUY CHUẨN ở khối sau. Vật liệu M và chế độ cắt Z dùng đúng tên trong bảng của quy chuẩn (C-1, C-2). Bản vẽ không ghi vật liệu → chọn theo C-1 và thêm ""M"" vào khong_chac.
 - T: độ dày danh nghĩa (số, mm). Q: số lượng (số). kich_thuoc: kích thước bao ""dài x rộng"" (mm).
 - lo: mỗi nhóm lỗ (cùng cỡ, cùng kiểu): d (Ø mm; lỗ 皿 = Ø lỗ thông), so_luong, taro (vd ""M6"" nếu là lỗ ren, rỗng nếu không), ghi_chu, cach_duong_be = khoảng cách nhỏ nhất (mm) từ MÉP lỗ tới đường bẻ gần nhất, tính từ kích thước ghi trên bản vẽ (-1 nếu tấm không bẻ hoặc không tính được).
-  kieu: rỗng = lỗ tròn thường; ""sara D"" = lỗ 皿 với D = Ø miệng côn (vd ""sara 12""); ""dai RxL G"" = lỗ dài / oval / slot rộng R, dài tổng L, trục dài nghiêng G độ so với trục x (vd ""dai 10x30 0""); ""khoa D d k G"" = lỗ khoá / 変形孔 (hình ở chi tiết phóng A, B…): Ø lớn D ở tâm (vi_tri) + Ø nhỏ d, k = khoảng cách HAI TÂM (khách thường ghi ""mép ngoài Ø nhỏ → tâm Ø lớn"" = k + d/2, vd 10 với Ø7 → k = 6.5), G = hướng từ tâm Ø lớn tới tâm Ø nhỏ trên hình chi tiết (0 phải, 90 lên, 180 trái, 270 xuống) — MỌI lỗ cùng hướng như hình chi tiết; vd ""khoa 12 7 6.5 180"".
+  kieu: rỗng = lỗ tròn thường; ""sara D"" = lỗ 皿 với D = Ø miệng côn (vd ""sara 12""); ""dai RxL G"" = lỗ dài / oval / slot rộng R, dài tổng L, trục dài nghiêng G độ so với trục x (vd ""dai 10x30 0""); ""khoa D d k G nho"" = lỗ khoá / 変形孔 (hình ở chi tiết phóng A, B…): Ø lớn D + Ø nhỏ d, k = khoảng cách HAI TÂM; vi_tri = TÂM MÀ KHÁCH DIM TỚI (chuỗi dim trên hình chính), chữ cuối nho / lon = tâm đó là của Ø nhỏ hay Ø lớn; G = hướng từ tâm đó sang tâm kia (0 phải, 90 lên, 180 trái, 270 xuống) — MỌI lỗ cùng hướng như hình chi tiết. Vd chi tiết A ghi mép tấm → tâm Ø7 = 10, tâm Ø7 → tâm Ø12 = 6, Ø12 bên phải → ""khoa 12 7 6 0 nho"", vi_tri x = 10.
   vi_tri: TÂM từng lỗ dạng [[x, y], …] (so_luong cặp) trên hình TRẢI PHẲNG, gốc góc trái dưới của tấm (như ケガキ), tính từ kích thước ghi trên bản vẽ; không tính được → rỗng và hỏi trong van_de.
 - Chỗ bẻ / nhấn / cuộn (góc, R, đoạn hai bên) đọc vào td_x / td_y ở phần TIẾT DIỆN — không liệt kê riêng.
 - mat: bề mặt đặc biệt (HL, #400, 縞板/sima, ミガキ…), rỗng nếu thường. dung_sai: các dung sai ghi trên bản vẽ.
@@ -496,13 +496,14 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
                 l.Set("sara", true);
                 if (so.Count > 0) l.Set("d_sara", new JsonNumber(so[0]));
             }
-            else if (k.StartsWith("khoa", StringComparison.Ordinal) && so.Count >= 3) // 18/11: lỗ khoá / 変形孔 "khoa D d k [G]"
+            else if (k.StartsWith("khoa", StringComparison.Ordinal) && so.Count >= 3) // 18/11: lỗ khoá / 変形孔 "khoa D d k [G] [nho|lon]"
             {
                 l.Set("loai", "khoa");
                 l.Set("d", new JsonNumber(so[0]));
                 l.Set("d_nho", new JsonNumber(so[1]));
                 l.Set("lech", new JsonNumber(so[2]));
-                if (so.Count > 3) l.Set("goc", new JsonNumber(so[3])); // không có → hướng tự quay ra mép gần nhất
+                if (so.Count > 3) l.Set("goc", new JsonNumber(so[3])); // hướng từ tâm vi_tri sang tâm kia; thiếu → Ø nhỏ bên trái
+                l.Set("tam", k.Contains("lon") ? "lon" : "nho");        // vi_tri là tâm khách dim tới: Ø nhỏ (mặc định) hay Ø lớn
             }
             else if (k.StartsWith("dai", StringComparison.Ordinal) && so.Count >= 2)
             {

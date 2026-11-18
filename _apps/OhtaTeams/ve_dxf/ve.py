@@ -210,57 +210,99 @@ def dim_da_ve(nen):
 TARO_MOI = {"M3": 2.6, "M4": 3.4, "M5": 4.3, "M6": 5.1, "M8": 6.9, "M10": 8.6, "M12": 10.5, "M14": 12.2, "M16": 14.3, "M20": 17.7}  # Ø mồi như lệnh TMT
 
 
-def ve_lo_khoa(nen, px, py, D, dn, k, goc):
-    """Lỗ khoá / 変形孔 (18/11): Ø lớn D tâm (px, py) + Ø nhỏ dn lệch k mm theo hướng goc (độ) — viền cắt = hợp 2 đường tròn
-    (cung thật 0-KAKOU). Hai vòng không giao nhau → vẽ 2 lỗ tròn riêng."""
+def hai_tam_khoa(px, py, k, goc, tam_nho):
+    """Lỗ khoá: điểm (px, py) là tâm khách dim tới (tam_nho: tâm Ø nhỏ, không thì tâm Ø lớn); tâm kia cách k theo hướng goc (độ).
+    Trả (tâm lớn, tâm nhỏ)."""
     import math
-    R, r = D / 2.0, dn / 2.0
-    sx, sy = px + k * math.cos(math.radians(goc)), py + k * math.sin(math.radians(goc))
+    q = (px + k * math.cos(math.radians(goc)), py + k * math.sin(math.radians(goc)))
+    return (q, (px, py)) if tam_nho else ((px, py), q)
+
+
+def cung_khoa(them_cung, lon, nho, R, r):
+    """Viền hợp 2 vòng tròn (Ø lớn tâm lon bán kính R, Ø nhỏ tâm nho bán kính r) bằng 2 cung; them_cung(tâm, r, đầu, cuối).
+    Hai vòng không giao nhau → False (người gọi vẽ 2 vòng riêng)."""
+    import math
+    k = math.hypot(nho[0] - lon[0], nho[1] - lon[1])
     if not (abs(R - r) < k < R + r):
-        nen.lo_tron(px, py, D)
-        nen.lo_tron(sx, sy, dn)
-        return
+        return False
+    h = math.degrees(math.atan2(nho[1] - lon[1], nho[0] - lon[0]))       # hướng tâm lớn → tâm nhỏ
     a = math.degrees(math.acos((R * R + k * k - r * r) / (2 * R * k)))   # nửa góc giao nhìn từ tâm lớn
     b = math.degrees(math.acos((r * r + k * k - R * R) / (2 * r * k)))   # nhìn từ tâm nhỏ
-    nen.cung((px, py), R, (goc + a) % 360, (goc - a) % 360)          # phần vòng lớn không nằm trong vòng nhỏ (góc 0–360 cho CAD)
-    nen.cung((sx, sy), r, (goc + 180 + b) % 360, (goc + 180 - b) % 360)  # phần vòng nhỏ lồi ra ngoài
+    them_cung(lon, R, (h + a) % 360, (h - a) % 360)              # phần vòng lớn ngoài vòng nhỏ (góc 0–360 cho CAD)
+    them_cung(nho, r, (h + 180 + b) % 360, (h + 180 - b) % 360)  # phần vòng nhỏ lồi ra ngoài
+    return True
 
 
-def ve_chi_tiet_khoa(nen, ten, D, dn, k, goc, tam, ref):
-    """Hình chi tiết lỗ khoá (như hình A của khách, 18/11): lỗ phóng to TL lần tại `tam` (ngoài tấm, layer 1-SUNPOU nét liền — không cắt),
-    dim Ø lớn / Ø nhỏ + 2 dim thật "mép ngoài Ø nhỏ → tâm Ø lớn" và "tâm → mép Ø lớn" (khách ghi 10 | 6), chữ "A (5:1)";
-    trên tấm khoanh lỗ tham chiếu `ref` + chữ ten."""
+def ve_lo_khoa(nen, px, py, D, dn, k, goc, tam_nho):
+    """Lỗ khoá / 変形孔 (18/11): Ø lớn D + Ø nhỏ dn, hai tâm cách k; (px, py) = tâm khách dim tới — viền cắt = hợp 2 vòng (cung thật 0-KAKOU)."""
+    lon, nho = hai_tam_khoa(px, py, k, goc, tam_nho)
+    if not cung_khoa(nen.cung, lon, nho, D / 2.0, dn / 2.0):
+        nen.lo_tron(lon[0], lon[1], D)
+        nen.lo_tron(nho[0], nho[1], dn)
+
+
+def ve_chi_tiet_khoa(nen, ten, D, dn, k, goc, tam_nho, tam, ref, khung):
+    """Hình chi tiết lỗ khoá như hình A của khách (18/11): phóng TL lần tại `tam` (ngoài tấm, 1-SUNPOU nét liền — không cắt): viền lỗ,
+    đường tâm, nét mép tấm gần nhất + dim "mép tấm → tâm khách dim tới" và "tâm → tâm kia" (khách: 10 | 6), nhãn Ø lớn / Ø nhỏ, chữ "A (5:1)".
+    Trên tấm: khoanh lỗ tham chiếu `ref` + chữ ten. khung = (x0, y0, x1, y1) của tấm."""
     import math
     import moi_truong as mt
     TL = max(1, int(round(60.0 / D)))
     R, r = D / 2.0, dn / 2.0
-    cx, cy = tam
-    nhan = {"layer": mt.LOP_DIM, "linetype": "Continuous"}
-    sx, sy = cx + k * TL * math.cos(math.radians(goc)), cy + k * TL * math.sin(math.radians(goc))
-    if abs(R - r) < k < R + r:
-        a = math.degrees(math.acos((R * R + k * k - r * r) / (2 * R * k)))
-        b = math.degrees(math.acos((r * r + k * k - R * R) / (2 * r * k)))
-        nen.msp.add_arc((cx, cy), R * TL, (goc + a) % 360, (goc - a) % 360, dxfattribs=nhan)
-        nen.msp.add_arc((sx, sy), r * TL, (goc + 180 + b) % 360, (goc + 180 - b) % 360, dxfattribs=nhan)
-    else:
-        nen.msp.add_circle((cx, cy), R * TL, dxfattribs=nhan)
-        nen.msp.add_circle((sx, sy), r * TL, dxfattribs=nhan)
-    nen.chu(cx - R * TL, cy + R * TL + 55, "%s (%d:1)" % (ten, TL))  # tên hình trên cùng, nhãn Ø bên dưới không đè
-    nen.leader([(cx + R * TL * 0.7, cy + R * TL * 0.7), (cx + R * TL + 20, cy + R * TL + 15), (cx + R * TL + 21, cy + R * TL + 15)], "Ø%g" % D)
-    nen.leader([(sx - r * TL * 0.7, sy + r * TL * 0.7), (sx - r * TL - 25, cy + R * TL + 15), (sx - r * TL - 45, cy + R * TL + 15)], "Ø%g" % dn)
-    g = round(goc) % 360
-    if g in (0, 180):  # dim ngang dưới hình: mép ngoài Ø nhỏ → tâm Ø lớn | tâm → mép Ø lớn phía kia
-        s = -1 if g == 180 else 1
-        ngoai, kia, yd = cx + s * (k + r) * TL, cx - s * R * TL, cy - R * TL - 25
-        for a_, b_, so in ((ngoai, cx, k + r), (cx, kia, R)):
-            nen.dim_ngang(min(a_, b_), max(a_, b_), cy, yd, chu="%g" % so)
+    lien = {"layer": mt.LOP_DIM, "linetype": "Continuous"}
+    lon0, nho0 = hai_tam_khoa(ref[0], ref[1], k, goc, tam_nho)
+    goc_x, goc_y = ref  # gốc phóng: tâm khách dim tới của lỗ tham chiếu ↔ điểm `tam`
+
+    def P(p):  # toạ độ thật trên tấm → toạ độ trên hình chi tiết
+        return (tam[0] + (p[0] - goc_x) * TL, tam[1] + (p[1] - goc_y) * TL)
+    lon, nho = P(lon0), P(nho0)
+    if not cung_khoa(lambda c, rr, a0, a1: nen.msp.add_arc(c, rr, a0, a1, dxfattribs=lien), lon, nho, R * TL, r * TL):
+        nen.msp.add_circle(lon, R * TL, dxfattribs=lien)
+        nen.msp.add_circle(nho, r * TL, dxfattribs=lien)
+    # đường tâm (nét CENTER theo layer 1-SUNPOU): qua 2 tâm + vuông góc tại mỗi tâm
+    h = math.atan2(nho[1] - lon[1], nho[0] - lon[0])
+    ux, uy = math.cos(h), math.sin(h)
+    vx, vy = -uy, ux
+    nen.duong_tam((lon[0] - ux * (R * TL + 8), lon[1] - uy * (R * TL + 8)), (nho[0] + ux * (r * TL + 8), nho[1] + uy * (r * TL + 8)))
+    for c, rr in ((lon, R * TL), (nho, r * TL)):
+        nen.duong_tam((c[0] - vx * (rr + 8), c[1] - vy * (rr + 8)), (c[0] + vx * (rr + 8), c[1] + vy * (rr + 8)))
+    top = max(lon[1] + R * TL, nho[1] + r * TL)
+    nen.chu(tam[0] - 20, top + 45, "%s (%d:1)" % (ten, TL))
+    nen.leader([(lon[0] + R * TL * 0.7, lon[1] + R * TL * 0.7), (lon[0] + R * TL + 20, top + 15), (lon[0] + R * TL + 21, top + 15)], "Ø%g" % D)
+    nen.leader([(nho[0] - r * TL * 0.7, nho[1] + r * TL * 0.7), (nho[0] - r * TL - 25, top + 15), (nho[0] - r * TL - 45, top + 15)], "Ø%g" % dn)
+    # dim như khách: mép tấm → tâm khách dim tới → tâm kia (chữ = số thật)
+    x0, y0, x1, y1 = khung
+    g = round(math.degrees(h)) % 360
+    if g in (0, 180):
+        mep = x0 if abs(ref[0] - x0) <= abs(x1 - ref[0]) else x1
+        mepP = P((mep, ref[1]))[0]
+        yd = min(lon[1] - R * TL, nho[1] - r * TL) - 25
+        nen.msp.add_line((mepP, tam[1] - R * TL - 15), (mepP, tam[1] + R * TL + 15), dxfattribs=lien)  # nét mép tấm
+        moc = sorted([(mepP, None), (tam[0], None), (P(lon0 if tam_nho else nho0)[0], None)])
+        for (a_, _), (b_, _) in zip(moc, moc[1:]):
+            if b_ - a_ > 0.01:
+                nen.dim_ngang(a_, b_, tam[1], yd, chu="%g" % round((b_ - a_) / TL, 2))
     elif g in (90, 270):
-        s = -1 if g == 270 else 1
-        ngoai, kia, xd = cy + s * (k + r) * TL, cy - s * R * TL, cx + R * TL + 25
-        for a_, b_, so in ((ngoai, cy, k + r), (cy, kia, R)):
-            nen.dim_doc(min(a_, b_), max(a_, b_), cx, xd, chu="%g" % so)
-    nen.msp.add_circle(ref, D * 1.6, dxfattribs=nhan)  # khoanh lỗ tham chiếu trên tấm
+        mep = y0 if abs(ref[1] - y0) <= abs(y1 - ref[1]) else y1
+        mepP = P((ref[0], mep))[1]
+        xd = max(lon[0] + R * TL, nho[0] + r * TL) + 25
+        nen.msp.add_line((tam[0] - R * TL - 15, mepP), (tam[0] + R * TL + 15, mepP), dxfattribs=lien)
+        moc = sorted([mepP, tam[1], P(lon0 if tam_nho else nho0)[1]])
+        for a_, b_ in zip(moc, moc[1:]):
+            if b_ - a_ > 0.01:
+                nen.dim_doc(a_, b_, tam[0], xd, chu="%g" % round((b_ - a_) / TL, 2))
+    nen.msp.add_circle(ref, D * 1.6, dxfattribs=lien)  # khoanh lỗ tham chiếu trên tấm
     nen.chu(ref[0] - D * 1.6 - 18, ref[1] + 4, ten)
+
+
+assert hai_tam_khoa(10, 230, 6, 0, True) == ((16.0, 230.0), (10, 230))  # khách 18/11: dim tới tâm Ø7, Ø12 lệch 6 sang phải
+
+
+def huong_khoa(g):
+    """Hướng từ tâm khách dim tới sang tâm kia (độ); thiếu → Ø nhỏ bên trái Ø lớn (0 khi điểm là tâm nhỏ, 180 khi là tâm lớn)."""
+    if g.get("goc") not in (None, ""):
+        return float(g["goc"])
+    return 180.0 if g.get("tam") == "lon" else 0.0
 
 
 def ve_lo(nen, t, y1, nhan_dau, le=None, y_nhan_duoi=None):
@@ -311,7 +353,7 @@ def ve_lo(nen, t, y1, nhan_dau, le=None, y_nhan_duoi=None):
                 nen.cung(a2, r, gd - 90, gd + 90)
                 nen.cung(a1, r, gd + 90, gd + 270)
             elif khoa:
-                ve_lo_khoa(nen, px, py, d, float(g["d_nho"]), float(g["lech"]), float(g["goc"]) if g.get("goc") not in (None, "") else 180.0)
+                ve_lo_khoa(nen, px, py, d, float(g["d_nho"]), float(g["lech"]), huong_khoa(g), g.get("tam") != "lon")
             else:
                 dv = TARO_MOI.get(co, d) if taro else d
                 if dv <= 0:
@@ -327,9 +369,8 @@ def ve_lo(nen, t, y1, nhan_dau, le=None, y_nhan_duoi=None):
         if khoa:
             phi.append(float(g["d_nho"]))
             ref = min(pts, key=lambda p: (p[0], abs(p[1] - (by0 + by1) / 2.0)))  # như khách: lỗ sát mép trái, gần giữa
-            ve_chi_tiet_khoa(nen, "ABCDEFGH"[so_chi_tiet % 8], d, float(g["d_nho"]), float(g["lech"]),
-                             float(g["goc"]) if g.get("goc") not in (None, "") else 180.0,
-                             (bx0 - 140.0, (by0 + by1) / 2.0 - so_chi_tiet * 160.0), ref)
+            ve_chi_tiet_khoa(nen, "ABCDEFGH"[so_chi_tiet % 8], d, float(g["d_nho"]), float(g["lech"]), huong_khoa(g), g.get("tam") != "lon",
+                             (bx0 - 140.0, (by0 + by1) / 2.0 - so_chi_tiet * 160.0), ref, (bx0, by0, bx1, by1))
             so_chi_tiet += 1
         gx, gy = pts[0]
         if len(pts) == 1 and not taro and not dai and not khoa and not g.get("sara") and d > 0:
