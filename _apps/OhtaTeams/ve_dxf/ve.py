@@ -689,7 +689,7 @@ def lo_tron(t):
 
 
 def so_do_viec(tep_viec):
-    """VIEC.json như khi vẽ; mỗi tấm → ảnh sơ đồ đỉnh t["anh_dinh"] (mặc định <thu_muc_ra>/<bango>-dinh.png)."""
+    """VIEC.json như khi vẽ; mỗi tấm → ảnh sơ đồ đỉnh t["anh_dinh"] (mặc định <thu_muc_ra>/<bango>/<bango>-dinh.png — thư mục hồ sơ của tấm, 18/11)."""
     import goc_khoet
     import moi_truong as mt
     with open(tep_viec, encoding="utf-8") as f:
@@ -697,7 +697,7 @@ def so_do_viec(tep_viec):
     mau = cac_mau(viec.get("thu_vien", []))
     kq = []
     for t in viec["tam"]:
-        ra = t.get("anh_dinh") or os.path.join(viec["thu_muc_ra"], t.get("bango", "tam") + "-dinh.png")
+        ra = t.get("anh_dinh") or os.path.join(viec["thu_muc_ra"], t.get("bango", "tam"), t.get("bango", "tam") + "-dinh.png")
         try:
             if t.get("bien_dang", "") not in mau:
                 raise ValueError("chưa có mẫu biên dạng '%s'" % t.get("bien_dang", ""))

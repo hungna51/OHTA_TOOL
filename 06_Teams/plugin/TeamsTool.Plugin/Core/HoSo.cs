@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using OhtaTool.Plugin.Core;
@@ -14,6 +15,39 @@ namespace TeamsTool.Core
     public static class PhongHoSo
     {
         public const string ThuMuc = "ho_so", TepDon = "_don.md";
+
+        /// <summary>
+        /// Cấu trúc thư mục đơn 18/11 (người dùng chỉnh): bản nháp &lt;đơn&gt;-番号.PDF và bảng &lt;đơn&gt;.csv ở THƯ MỤC ĐƠN (ngoài ai\);
+        /// hồ sơ mỗi tấm một thư mục ai\ho_so\&lt;đơn&gt;-n\ (md, ảnh cắt, sơ đồ đỉnh, anh.json); _don.md vẫn ở ai\ho_so\.
+        /// Đơn làm trước đó: chuyển tệp từ chỗ cũ sang chỗ mới (không ghi đè tệp đã có ở chỗ mới). Trả số tệp đã chuyển.
+        /// </summary>
+        public static int ChuyenCauTrucCu(string tm, string title)
+        {
+            if (string.IsNullOrEmpty(tm) || !Directory.Exists(tm)) return 0;
+            int so = 0;
+            void Chuyen(string tu, string den)
+            {
+                if (!File.Exists(tu) || File.Exists(den)) return;
+                try { Directory.CreateDirectory(Path.GetDirectoryName(den)); File.Move(tu, den); so++; }
+                catch (IOException) { } catch (UnauthorizedAccessException) { } // tệp đang mở: lần sau chuyển
+            }
+            string ai = Path.Combine(tm, PhongTiepNhan.ThuMucAi), ten = PhongTiepNhan.TenAnToan(title);
+            Chuyen(Path.Combine(ai, PhongTiepNhan.TenBango(title)), Path.Combine(tm, PhongTiepNhan.TenBango(title)));
+            Chuyen(Path.Combine(ai, "trien_khai.csv"), Path.Combine(tm, ten + ".csv"));
+            string hs = Path.Combine(ai, ThuMuc);
+            if (Directory.Exists(hs))
+                foreach (string f in Directory.GetFiles(hs))
+                {
+                    string tenTep = Path.GetFileName(f);
+                    if (tenTep == TepDon) continue;
+                    if (tenTep == "anh.json") { try { File.Delete(f); } catch (IOException) { } continue; } // việc cắt ảnh cũ (tạm)
+                    string goc = Path.GetFileNameWithoutExtension(tenTep);
+                    if (goc.EndsWith("-dinh", StringComparison.Ordinal)) goc = goc.Substring(0, goc.Length - 5);
+                    if (!goc.StartsWith(ten + "-", StringComparison.OrdinalIgnoreCase)) continue; // không phải tệp tấm
+                    Chuyen(f, Path.Combine(hs, goc, tenTep));
+                }
+            return so;
+        }
 
         /// <summary>Tên tấm &lt;đơn&gt;-n: đánh liên tục các tấm Mới theo thứ tự bảng (bản vẽ rồi tấm) — trùng bango phòng 3, tên DXF, CSV.</summary>
         public static List<(TamAi Tam, string Ten)> DanhSo(ChiTiet ct, string title) =>

@@ -115,6 +115,7 @@ namespace TeamsTool.Views
                 _than.Children.Add(Chu("Đặt Thư mục đơn ở ⚙ trước (kết quả AI lưu trong thư mục của đơn).", true));
                 return;
             }
+            if (!DangChay.Contains(_d.Id)) PhongHoSo.ChuyenCauTrucCu(_tm, _d.Title); // đơn làm trước 18/11: 番号.PDF, csv ra thư mục đơn; hồ sơ mỗi tấm một thư mục
             bool chay = DangChay.Contains(_d.Id);
             var hang = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
             hang.Children.Add(KieuTeams.Nut("▶ Bắt đầu", _mau, (s, e) => Chay(1, false)).Also(b => b.IsEnabled = !chay));
@@ -354,7 +355,7 @@ namespace TeamsTool.Views
             p.Children.Add(luoi);
 
             var nut = new WrapPanel();
-            string bango = Path.Combine(_tm, PhongTiepNhan.ThuMucAi, PhongTiepNhan.TenBango(_d.Title));
+            string bango = AiDon.FileBango(_tm, _d.Title);
             if (tn.BanNhapBango.Length > 0)
                 nut.Children.Add(KieuTeams.Nut("📄 Bản nháp " + tn.BanNhapBango, _mau, (s, e) => Mo(bango), chinh: false)
                     .Also(b => b.ToolTip = "Đơn hàng trước, bản vẽ sau. Xoay trang, tô màu, ghi chú vẫn làm tay (QC I.1.A)."));
@@ -479,10 +480,10 @@ namespace TeamsTool.Views
                 });
 
             var than = new StackPanel { Margin = new Thickness(4, 4, 0, 6) };
-            string hs = AiDon.ThuMucHoSo(_tm), png = Path.Combine(hs, ten + ".png"), md = Path.Combine(hs, ten + ".md");
+            string png = AiDon.TepHoSo(_tm, ten, ".png"), md = AiDon.TepHoSo(_tm, ten, ".md");
             var hangAnh = new WrapPanel();
             if (ten.Length > 0) ThemAnh(hangAnh, png, "Ảnh cắt từ bản vẽ khách — bấm để mở");
-            if (ten.Length > 0) ThemAnh(hangAnh, Path.Combine(hs, ten + "-dinh.png"), "Sơ đồ đỉnh: số đỉnh viền ngoài (1 = trái dưới, theo chiều kim đồng hồ) và đỉnh khoét k1.1… — dùng cho ô Góc vát / bo");
+            if (ten.Length > 0) ThemAnh(hangAnh, AiDon.TepHoSo(_tm, ten, "-dinh.png"), "Sơ đồ đỉnh: số đỉnh viền ngoài (1 = trái dưới, theo chiều kim đồng hồ) và đỉnh khoét k1.1… — dùng cho ô Góc vát / bo");
             if (hangAnh.Children.Count > 0) than.Children.Add(hangAnh);
             if (t.GhiChuVi.Trim().Length > 0 || t.GhiChuJp.Trim().Length > 0)
                 than.Children.Add(new TextBlock
@@ -981,7 +982,7 @@ namespace TeamsTool.Views
                 b.ToolTip = "Vẽ trải phẳng bằng ezdxf trên môi trường moi-truong-ve.dxf theo mẫu biên dạng: viền 0-KAKOU, đường bẻ DASHED, dim, F-name, Khung_IN → ai\\ban_ve\\<bango>.dxf. "
                             + "Tệp đã sửa trên CAD không bị ghi đè. Lỗ vẽ theo vị trí tâm đọc được (nhóm lỗ thiếu vị trí → báo).";
             }));
-            nut.Children.Add(KieuTeams.Nut("📄 Mở CSV", _mau, (s, e) => Mo(AiDon.FileCsv(_tm)), chinh: false).Also(b => b.ToolTip = "ai\\trien_khai.csv — bango tạm <mã>-<số>, GRO đánh bango thật trên CAD"));
+            nut.Children.Add(KieuTeams.Nut("📄 Mở CSV", _mau, (s, e) => Mo(AiDon.FileCsv(_tm, _d.Title)), chinh: false).Also(b => b.ToolTip = "ai\\trien_khai.csv — bango tạm <mã>-<số>, GRO đánh bango thật trên CAD"));
             nut.Children.Add(KieuTeams.Nut("📋 Chép tóm tắt", _mau, (s, e) =>
             {
                 try { Clipboard.SetText(tomTat); _trangThai.Text = "Đã chép bảng tóm tắt triển khai."; }

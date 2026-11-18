@@ -38,6 +38,7 @@ Phòng AI là khung bên phải màn danh sách đơn (kéo vạch giữa để 
 
 Model: chọn ở ⚙ → 🤖 AI (Opus / Sonnet / Haiku 5.5, hoặc theo tab AI trên CAD: Ling / không chọn → `claude-opus-5-5`), effort `high`, quy chuẩn được cache. Tiền đọc hiện ở phòng 1.
 
+Cấu trúc thư mục đơn (18/11): `<thư mục đơn>\<đơn>-番号.PDF`, `<đơn>.csv`; `ai\goc\` tệp tải về; `ai\ho_so\_don.md` + `ai\ho_so\<đơn>-n\` (md, png, -dinh.png, anh.json) mỗi tấm; `ai\ban_ve\` DXF — `AiDon.FileBango` / `FileCsv(tm, title)` / `TepHoSo`, đơn cũ chuyển bằng `PhongHoSo.ChuyenCauTrucCu`.
 Kết quả: `<thư mục đơn>\ai\tiep_nhan.json`, `chi_tiet.json` (bẻ / lỗ chi tiết nằm ở đây), `kiem_tra.json` (vấn đề + trạng thái + câu trả lời), `trien_khai.json` (tiết diện + V chọn) + `trien_khai.csv`. Thư mục đơn = thư mục có sẵn (≤ 3 cấp dưới Thư mục đơn, tên chứa Title — như tab CAD khớp bản vẽ) hoặc tạo `<Thư mục đơn>\<Title>`.
 
 Giới hạn: DWG / STEP chỉ xếp loại, không đọc; DXF không đọc BLOCK / INSERT; DXF nhị phân báo lỗi; PDF > 22 MB phải tách; ảnh chưa gộp vào 番号.PDF; bẻ / lỗ chưa sửa được trên bảng (sửa ở đợt 3).

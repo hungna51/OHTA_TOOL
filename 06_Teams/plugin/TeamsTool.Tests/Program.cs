@@ -560,6 +560,20 @@ namespace TeamsTool.Tests
             var tepB = new List<TepDon> { new TepDon { Ten = "b.pdf", Loai = "ban_ve" }, new TepDon { Ten = "a.pdf", Loai = "ban_ve" }, new TepDon { Ten = "z.pdf", Loai = "don_hang" }, new TepDon { Ten = "c.dxf", Loai = "ban_ve" }, new TepDon { Ten = "k.pdf", Loai = "khac" } };
             Kiem("thu tu bango: don hang truoc, chi pdf", string.Join(",", PhongTiepNhan.ThuTuBango(tepB).Select(t => t.Ten)), "z.pdf,a.pdf,b.pdf");
             Kiem("ten bango", PhongTiepNhan.TenBango("081106/15"), "08110615-番号.PDF");
+            // 18/11: cấu trúc thư mục đơn mới — 番号.PDF + <đơn>.csv ra thư mục đơn, hồ sơ mỗi tấm một thư mục; đơn cũ tự chuyển
+            string tmCu = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ohta_test_hoso_" + Guid.NewGuid().ToString("N"));
+            string hsCu = System.IO.Path.Combine(tmCu, "ai", "ho_so");
+            System.IO.Directory.CreateDirectory(hsCu);
+            foreach (string f in new[] { "ai\\130996-番号.PDF", "ai\\trien_khai.csv", "ai\\ho_so\\_don.md", "ai\\ho_so\\anh.json", "ai\\ho_so\\130996-1.md", "ai\\ho_so\\130996-1.png",
+                                         "ai\\ho_so\\130996-1-dinh.png", "ai\\ho_so\\130996-12.png", "ai\\ho_so\\khac.txt" })
+                System.IO.File.WriteAllText(System.IO.Path.Combine(tmCu, f), f);
+            int soChuyen = PhongHoSo.ChuyenCauTrucCu(tmCu, "130996");
+            bool Co(string f) => System.IO.File.Exists(System.IO.Path.Combine(tmCu, f));
+            Kiem("cau truc don moi: chuyen tep don cu", soChuyen + "|" + Co("130996-番号.PDF") + "|" + Co("130996.csv") + "|" + Co("ai\\ho_so\\_don.md") + "|" + Co("ai\\ho_so\\anh.json")
+                 + "|" + Co("ai\\ho_so\\130996-1\\130996-1.md") + "|" + Co("ai\\ho_so\\130996-1\\130996-1-dinh.png") + "|" + Co("ai\\ho_so\\130996-12\\130996-12.png") + "|" + Co("ai\\ho_so\\khac.txt")
+                 + "|" + PhongHoSo.ChuyenCauTrucCu(tmCu, "130996"),
+                 "6|True|True|True|False|True|True|True|True|0");
+            try { System.IO.Directory.Delete(tmCu, true); } catch (System.IO.IOException) { }
 
             string goc = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ohta_test_tm_" + Guid.NewGuid().ToString("N"));
             System.IO.Directory.CreateDirectory(System.IO.Path.Combine(goc, "2026", "11", "Don 081106-15 Kozai"));

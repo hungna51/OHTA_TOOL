@@ -58,7 +58,7 @@ namespace TeamsTool.Views
             Them("🤖 Đọc lại (AI)", () => Chay(async (bao, huy) => { await AiDon.DocLaiThuNhanh(_tm, bao, huy); await VeLai(bao, huy); NapDs(); }),
                  "AI đọc lại hình của lần thử này (tốn một lượt AI) rồi vẽ lại — ô bạn đã sửa trong chi_tiet.json giữ nguyên");
             Them("✎ Sửa thông số", () => MoNotepad(AiDon.FileChiTiet(_tm)), "Mở chi_tiet.json bằng Notepad: sửa bien_dang, kích thước, lo, ke_gaki, goc, khoet, dim_khach… rồi lưu và bấm 🔁 Vẽ lại");
-            Them("📁 Thư mục", () => Mo(_tm), "Mở thư mục thử (ai\\ban_ve: DXF, ai\\ho_so: ảnh cắt)");
+            Them("📁 Thư mục", () => Mo(_tm), "Mở thư mục thử (ai\\ban_ve: DXF, ai\\ho_so\\TN-1: ảnh cắt, sơ đồ đỉnh)");
             Them("🗑 Xoá lần thử", XoaLanThu, "Xoá hẳn lần thử đang mở (ảnh, dữ liệu, DXF, mẫu thử chưa thêm vào thư viện)");
             nut.Children.Add(KieuTeams.Nut("📚 Thư viện mẫu", _mau, (s, e) => new ThuVienMauWindow(_tm, _mau) { Owner = this }.ShowDialog(), chinh: false));
             nut.Children.Add(KieuTeams.Nut("Huỷ", _mau, (s, e) => _huy?.Cancel(), chinh: false));
@@ -157,7 +157,8 @@ namespace TeamsTool.Views
                     string gio = DateTime.TryParseExact(ten, "yyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out luc)
                         ? luc.ToString("dd/MM HH:mm", System.Globalization.CultureInfo.InvariantCulture) : ten;
                     var hang = new StackPanel { Orientation = Orientation.Horizontal };
-                    string anh = Path.Combine(AiDon.ThuMucHoSo(tm), PhongTrienKhai.Bango(AiDon.TenThuNhanh, 1) + ".png");
+                    string anh = AiDon.TepHoSo(tm, PhongTrienKhai.Bango(AiDon.TenThuNhanh, 1), ".png");
+                    if (!File.Exists(anh)) anh = Path.Combine(AiDon.ThuMucHoSo(tm), PhongTrienKhai.Bango(AiDon.TenThuNhanh, 1) + ".png"); // lần thử trước 18/11
                     if (File.Exists(anh))
                         try
                         {
@@ -238,7 +239,6 @@ namespace TeamsTool.Views
         private void HienKetQua(ChiTiet ct, KetQuaTrienKhai kq, List<(TamAi Tam, TamTrienKhai Tk)> ds, List<AiDon.KetQuaVe> ve)
         {
             _ds.Children.Clear();
-            string hs = AiDon.ThuMucHoSo(_tm);
             for (int i = 0; i < ds.Count; i++)
             {
                 var (tam, tk) = ds[i];
@@ -252,9 +252,9 @@ namespace TeamsTool.Views
                 });
                 if (tam.MoTa.Length > 0) the.Children.Add(new TextBlock { Text = tam.MoTa, TextWrapping = TextWrapping.Wrap, Foreground = KieuTeams.ChuPhu, Margin = new Thickness(0, 2, 0, 4) });
                 var anh = new WrapPanel();
-                ThemAnh(anh, Path.Combine(hs, ten + ".png"), "Ảnh cắt từ bản vẽ gửi vào");
+                ThemAnh(anh, AiDon.TepHoSo(_tm, ten, ".png"), "Ảnh cắt từ bản vẽ gửi vào");
                 ThemAnh(anh, kv?.Anh, "Bản vẽ DXF phần mềm vẽ");
-                ThemAnh(anh, Path.Combine(hs, ten + "-dinh.png"), "Sơ đồ đỉnh (cho ô goc vát / bo)");
+                ThemAnh(anh, AiDon.TepHoSo(_tm, ten, "-dinh.png"), "Sơ đồ đỉnh (cho ô goc vát / bo)");
                 the.Children.Add(anh);
                 if (kv?.Loi != null) the.Children.Add(Chu("✖ " + kv.Loi, "#B42318"));
                 if (kv == null) the.Children.Add(Chu(tk.LamTay ? "✖ Chưa vẽ: hình làm tay (lam_tay) — không có mẫu vẽ."

@@ -287,7 +287,7 @@ namespace TeamsTool.Services
             var ds = PhongTiepNhan.ThuTuBango(tn.Tep).Select(t => Path.Combine(ThuMucTep(tm), t.Ten)).Where(File.Exists).ToList();
             tn.BanNhapBango = "";
             if (ds.Count == 0) return;
-            string ra = Path.Combine(tm, PhongTiepNhan.ThuMucAi, PhongTiepNhan.TenBango(title));
+            string ra = FileBango(tm, title);
             try
             {
                 GopPdf(ds, ra);
@@ -431,6 +431,12 @@ namespace TeamsTool.Services
 
         public static string ThuMucHoSo(string tm) => Path.Combine(tm, PhongTiepNhan.ThuMucAi, PhongHoSo.ThuMuc);
 
+        /// <summary>Tệp hồ sơ của tấm ten (18/11: mỗi tấm một thư mục) — ai\ho_so\&lt;ten&gt;\&lt;ten&gt;&lt;duoi&gt; (".md", ".png", "-dinh.png").</summary>
+        public static string TepHoSo(string tm, string ten, string duoi) => Path.Combine(ThuMucHoSo(tm), ten, ten + duoi);
+
+        /// <summary>Bản nháp &lt;đơn&gt;-番号.PDF — ở thư mục đơn (18/11, trước nằm trong ai\).</summary>
+        public static string FileBango(string tm, string title) => Path.Combine(tm, PhongTiepNhan.TenBango(title));
+
         /// <summary>
         /// Ghi hồ sơ md mỗi tấm mới + _don.md từ chi_tiet.json / kiem_tra.json (ds = kết quả trải phẳng khi đã xác nhận).
         /// Gọi sau mỗi lần kiểm luật / trả lời / triển khai — chỉ ghi tệp có nội dung đổi.
@@ -443,9 +449,10 @@ namespace TeamsTool.Services
             var danhSo = PhongHoSo.DanhSo(ct, title);
             foreach (var (t, ten) in danhSo)
             {
-                string anh = File.Exists(Path.Combine(dir, ten + ".png")) ? ten + ".png" : null;
+                Directory.CreateDirectory(Path.Combine(dir, ten));
+                string anh = File.Exists(TepHoSo(tm, ten, ".png")) ? ten + ".png" : null; // md cùng thư mục với ảnh
                 TamTrienKhai tk = ds?.FirstOrDefault(x => ReferenceEquals(x.Tam, t)).Tk;
-                GhiNeuDoi(Path.Combine(dir, ten + ".md"), PhongHoSo.Md(ten, t, vanDe.Where(v => PhongHoSo.CuaTam(v, t, ct)), tk, anh));
+                GhiNeuDoi(TepHoSo(tm, ten, ".md"), PhongHoSo.Md(ten, t, vanDe.Where(v => PhongHoSo.CuaTam(v, t, ct)), tk, anh));
             }
             var chung = vanDe.Where(v => !danhSo.Any(x => PhongHoSo.CuaTam(v, x.Tam, ct)));
             GhiNeuDoi(Path.Combine(dir, PhongHoSo.TepDon), PhongHoSo.MdDon(title, DocTiepNhan(tm)?.CongTy, ct, chung));
@@ -480,15 +487,19 @@ namespace TeamsTool.Services
                 o.Set("nguon", f);
                 o.Set("trang", new JsonNumber(((int)(PhongKiemTra.So(t.Trang) ?? 1)).ToString(System.Globalization.CultureInfo.InvariantCulture)));
                 if (!string.IsNullOrEmpty(t.VungJson)) o.Set("vung", JsonLite.Parse(t.VungJson));
-                o.Set("ra", Path.Combine(dir, ten + ".png"));
+                o.Set("ra", TepHoSo(tm, ten, ".png"));
+                Directory.CreateDirectory(Path.Combine(dir, ten));
+                try { File.WriteAllText(Path.Combine(dir, ten, "anh.json"), JsonLite.Serialize(o), Utf8); } catch (IOException) { } // vùng cắt của tấm (để xem lại)
                 viec.Add(o);
             }
             string bao = !tt.Pymupdf && ct.Tam.Any(t => t.Tep.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
                 ? "Chưa cắt ảnh tấm từ PDF: máy chưa có PyMuPDF — bấm 📐 Vẽ DXF ở phòng 3 để cài (hoặc pip install pymupdf)." : null;
             if (viec.Count == 0) return bao;
-            string tep = Path.Combine(dir, "anh.json");
+            string tep = Path.Combine(Path.GetTempPath(), "ohta_cat_anh_" + Guid.NewGuid().ToString("N") + ".json"); // việc cắt cả đơn: tạm
             File.WriteAllText(tep, JsonLite.Serialize(viec), Utf8);
-            var (ma, ra) = await ChayLenh(tt.Python, ThuMucVeDxf, huy, Path.Combine(ThuMucVeDxf, "ve.py"), "--cat-anh", tep);
+            (int ma, string ra) = (0, "");
+            try { (ma, ra) = await ChayLenh(tt.Python, ThuMucVeDxf, huy, Path.Combine(ThuMucVeDxf, "ve.py"), "--cat-anh", tep); }
+            finally { try { File.Delete(tep); } catch (IOException) { } }
             List<object> kq = null;
             try { kq = JsonLite.Parse(ra.Trim().Split('\n').Last()) as List<object>; } catch (Exception) { }
             if (ma != 0 || kq == null) return "Chưa cắt được ảnh tấm: " + DongCuoi(ra);
@@ -505,7 +516,7 @@ namespace TeamsTool.Services
         {
             string dir = ThuMucHoSo(tm);
             var ds = PhongHoSo.DanhSo(ct, title)
-                .Where(x => (chiKhoa == null ? PhongPhongTo.CanBuoc2(x.Tam) : x.Tam.Khoa == chiKhoa) && File.Exists(Path.Combine(dir, x.Ten + ".png")))
+                .Where(x => (chiKhoa == null ? PhongPhongTo.CanBuoc2(x.Tam) : x.Tam.Khoa == chiKhoa) && File.Exists(TepHoSo(tm, x.Ten, ".png")))
                 .ToList();
             if (ds.Count == 0) return null;
             string key = KeyPhong(2), model = Model(), quyChuan = QuyChuan(2);
@@ -519,7 +530,7 @@ namespace TeamsTool.Services
                 // nghi vấn của tấm + nghi vấn chung của tệp (AI có thể đã trả lời được khi nhìn rõ)
                 string dauTep = "ai|" + t.Tep.ToLowerInvariant() + "|";
                 var nv = ct.NghiVan.Where(v => PhongHoSo.CuaTam(v, t, ct) || (v.Tam.Trim().Length == 0 && v.Ma.StartsWith(dauTep, StringComparison.Ordinal))).ToList();
-                string body = PhongPhongTo.Body(model, quyChuan, Convert.ToBase64String(File.ReadAllBytes(Path.Combine(dir, ten + ".png"))), PhongPhongTo.DauVao(t, thuVien, nv));
+                string body = PhongPhongTo.Body(model, quyChuan, Convert.ToBase64String(File.ReadAllBytes(TepHoSo(tm, ten, ".png"))), PhongPhongTo.DauVao(t, thuVien, nv));
                 PhongPhongTo.PhanHoi ph = PhongPhongTo.DocPhanHoi(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, huy));
                 ct.TokenVao += ph.Vao + ph.GhiCache + ph.DocCache;
                 ct.TokenRa += ph.Ra;
@@ -596,7 +607,8 @@ namespace TeamsTool.Services
         private static string BangFname(string ten) => string.Join("\n", OhtaTool.Plugin.Core.FnameDataStore.ReadLines(ThuMucFname, ten));
 
         public static string FileTrienKhai(string tm) => Path.Combine(tm, PhongTiepNhan.ThuMucAi, "trien_khai.json");
-        public static string FileCsv(string tm) => Path.Combine(tm, PhongTiepNhan.ThuMucAi, "trien_khai.csv");
+        /// <summary>Bảng triển khai &lt;đơn&gt;.csv — ở thư mục đơn (18/11, trước là ai\trien_khai.csv).</summary>
+        public static string FileCsv(string tm, string title) => Path.Combine(tm, PhongTiepNhan.TenAnToan(title) + ".csv");
         public static KetQuaTrienKhai DocTrienKhai(string tm) => File.Exists(FileTrienKhai(tm)) ? PhongTrienKhai.Doc(File.ReadAllText(FileTrienKhai(tm), Encoding.UTF8)) : null;
         public static void Ghi(string tm, KetQuaTrienKhai kq) => GhiAnToan(FileTrienKhai(tm), PhongTrienKhai.Ghi(kq));
 
@@ -669,7 +681,7 @@ namespace TeamsTool.Services
             }
             var csv = new StringBuilder(PhongTrienKhai.TieuDeCsv + "\r\n");
             for (int i = 0; i < ra.Count; i++) csv.Append(PhongTrienKhai.DongCsv(title, i + 1, ra[i].Item1, ra[i].Item2)).Append("\r\n");
-            try { GhiAnToan(FileCsv(tm), csv.ToString(), new UTF8Encoding(true)); } // BOM: Excel mở đúng chữ Nhật
+            try { GhiAnToan(FileCsv(tm, title), csv.ToString(), new UTF8Encoding(true)); } // BOM: Excel mở đúng chữ Nhật
             catch (IOException) { } // CSV đang mở trong Excel: giữ bản cũ, bảng trên màn hình vẫn đúng
             return ra;
         }
@@ -871,7 +883,7 @@ namespace TeamsTool.Services
                 try { l = JsonLite.Parse(ra.Trim().Split('\n').Last()) as List<object>; } catch (Exception) { }
                 if (ma != 0 || l == null) return "Sơ đồ đỉnh lỗi: " + DongCuoi(ra);
                 foreach (JsonObject x in l.OfType<JsonObject>().Where(x => x.GetString("loi") != null)) // tấm chưa có mẫu / khoét sai: bỏ ảnh cũ
-                    try { File.Delete(Path.Combine(dir, x.GetString("bango") + "-dinh.png")); } catch (IOException) { }
+                    try { File.Delete(TepHoSo(tm, x.GetString("bango"), "-dinh.png")); } catch (IOException) { }
                 return null;
             }
             finally { try { File.Delete(viec); } catch (IOException) { } }
@@ -925,7 +937,7 @@ namespace TeamsTool.Services
             string qcVe = Path.Combine(ThuMucVeDxf, "QUY_CHUAN_VE.md"); // quy ước vẽ theo bản chuẩn xưởng
             // Hồ sơ tấm đã xác nhận (thông số, mô tả, câu trả lời, trải phẳng) + ghi chú chung đơn
             string tenTam = PhongHoSo.DanhSo(ct, title).FirstOrDefault(x => ReferenceEquals(x.Tam, tam)).Ten ?? "";
-            string hoSo = string.Join("\n\n", new[] { tenTam + ".md", PhongHoSo.TepDon }.Select(x => Path.Combine(ThuMucHoSo(tm), x)).Where(File.Exists).Select(x => File.ReadAllText(x, Encoding.UTF8)));
+            string hoSo = string.Join("\n\n", new[] { TepHoSo(tm, tenTam, ".md"), Path.Combine(ThuMucHoSo(tm), PhongHoSo.TepDon) }.Where(File.Exists).Select(x => File.ReadAllText(x, Encoding.UTF8)));
             string dauVao = PhongTrienKhai.DauVaoMauMoi(tam, tk, daCo, viDu) + (hoSo.Length > 0 ? "\n\nHỒ SƠ TẤM ĐÃ XÁC NHẬN (dữ liệu đúng — vẽ theo đây):\n" + hoSo : "");
             string body = PhongTrienKhai.BodyMauMoi(model, File.Exists(qcVe) ? File.ReadAllText(qcVe, Encoding.UTF8) : null, pdf, dauVao);
             PhongTrienKhai.MauMoi m = PhongTrienKhai.DocMauMoi(await GuiAi(key, PhongDocBanVe.CoFallback(model), body, huy), daCo);
@@ -987,8 +999,9 @@ namespace TeamsTool.Services
             var ct = new ChiTiet();
             ct.Tam.Add(new TamAi { Tep = ten, Trang = "1" });
             Ghi(tm, ct);
-            Directory.CreateDirectory(ThuMucHoSo(tm));
-            if (ext == ".png") File.Copy(tep, Path.Combine(ThuMucHoSo(tm), PhongTrienKhai.Bango(TenThuNhanh, 1) + ".png"));
+            string anhTam = TepHoSo(tm, PhongTrienKhai.Bango(TenThuNhanh, 1), ".png");
+            Directory.CreateDirectory(Path.GetDirectoryName(anhTam));
+            if (ext == ".png") File.Copy(tep, anhTam);
             else if (await CatAnh(ct, tm, TenThuNhanh, huy) is string loi) throw new InvalidOperationException(loi);
             return tm;
         }
@@ -1008,6 +1021,7 @@ namespace TeamsTool.Services
         /// <summary>Vẽ lại từ chi_tiet.json hiện tại (người có thể vừa sửa tay) — không gọi AI; chỉ hình + dim (không F-name, Khung_IN).</summary>
         public static async Task<(ChiTiet Ct, KetQuaTrienKhai Kq, List<(TamAi Tam, TamTrienKhai Tk)> Ds, List<KetQuaVe> Ve)> VeThuNhanh(string tm, Action<string> bao, CancellationToken huy)
         {
+            PhongHoSo.ChuyenCauTrucCu(tm, TenThuNhanh); // lần thử trước 18/11: ảnh ho_so\TN-1.png → ho_so\TN-1\
             ChiTiet ct = DocChiTiet(tm) ?? throw new InvalidOperationException("Chưa đọc bản vẽ.");
             KetQuaTrienKhai kq = TaoTrienKhai(ct, tm);
             var ds = TinhLai(ct, kq, TenThuNhanh, tm);
