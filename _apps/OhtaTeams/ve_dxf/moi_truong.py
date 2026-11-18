@@ -79,6 +79,12 @@ class NenVe:
     def chu_nhat(self, x0, y0, x1, y1):
         return self.vien([(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
 
+    def dau_tam(self, x, y, nua_x, nua_y=None):
+        """Dấu tâm lỗ: chữ thập trên 1-SUNPOU (nét theo layer), mỗi nhánh dài nua_x / nua_y từ tâm (bản sửa 18/11: r + 1.6)."""
+        nua_y = nua_x if nua_y is None else nua_y
+        self.msp.add_line((x - nua_x, y), (x + nua_x, y), dxfattribs={"layer": LOP_DIM})
+        self.msp.add_line((x, y - nua_y), (x, y + nua_y), dxfattribs={"layer": LOP_DIM})
+
     def duong_tam(self, a, b):
         """Đường tâm (nét CENTER) trên 1-SUNPOU — chỉ để đọc, không cắt / không khắc."""
         return self.msp.add_line(a, b, dxfattribs={"layer": LOP_DIM, "linetype": "CENTER" if "CENTER" in self.doc.linetypes else "Continuous"})
@@ -111,10 +117,10 @@ class NenVe:
         return self.msp.add_mtext(noi_dung, dxfattribs={"layer": LOP_DIM, "style": self.kieu_chu, "char_height": CAO_GHI_CHU,
                                                         "insert": (x + 4, y + 4), "attachment_point": 7})  # 7 = dưới-trái
 
-    def dim_ngang(self, x0, x1, y, y_dim, lop=LOP_DIM, chu="<>", y_a=None, y_b=None):
+    def dim_ngang(self, x0, x1, y, y_dim, lop=LOP_DIM, chu="<>", y_a=None, y_b=None, vi_tri_chu=None):
         """Dim ngang đo x0 → x1 tại cao độ y, đường dim ở y_dim. chu: chữ thay số đo ("<>" = số đo, vd "100P×5=500").
-        y_a / y_b: đường gióng mỗi đầu kéo từ điểm thật (vd tâm lỗ) thay vì mép tấm."""
-        d = self.msp.add_linear_dim(base=(x0, y_dim), p1=(x0, y if y_a is None else y_a), p2=(x1, y if y_b is None else y_b), angle=0, text=chu,
+        y_a / y_b: đường gióng mỗi đầu kéo từ điểm thật (vd tâm lỗ) thay vì mép tấm. vi_tri_chu=(x, y): chữ ra ngoài (dim ngắn ở đầu chuỗi)."""
+        d = self.msp.add_linear_dim(base=(x0, y_dim), p1=(x0, y if y_a is None else y_a), p2=(x1, y if y_b is None else y_b), angle=0, text=chu, location=vi_tri_chu,
                                     dimstyle=self.kieu_dim, dxfattribs={"layer": lop})
         d.render()
         return d
@@ -127,11 +133,11 @@ class NenVe:
         d.render()
         return d
 
-    def dim_phi(self, x, y, d, goc=60.0, le=LE_DIM):
-        """Dim đường kính Ø một lỗ tròn, chữ ra ngoài phía trên-phải theo góc goc (bản chuẩn 130996-3)."""
+    def dim_phi(self, x, y, d, goc=60.0, le=LE_DIM, chu="<>", chu_ngang=False):
+        """Dim đường kính Ø một lỗ tròn, chữ ra ngoài theo góc goc (bản chuẩn 130996-3); chu "4-<>" = nhóm 4 lỗ (bản sửa 18/11)."""
         r, a = d / 2.0, math.radians(goc)
-        d2 = self.msp.add_diameter_dim(center=(x, y), radius=r, angle=goc, location=(x + (r + 2 * le) * math.cos(a), y + (r + 2 * le) * math.sin(a)),  # chữ ra hẳn ngoài viền
-                                       dimstyle=self.kieu_dim, override={"dimtmove": 0}, dxfattribs={"layer": LOP_DIM})  # đường dim kéo tới chữ
+        d2 = self.msp.add_diameter_dim(center=(x, y), radius=r, angle=goc, text=chu, location=(x + (r + 2 * le) * math.cos(a), y + (r + 2 * le) * math.sin(a)),  # chữ ra hẳn ngoài viền
+                                       dimstyle=self.kieu_dim, override=dict({"dimtmove": 0}, **({"dimtoh": 1} if chu_ngang else {})), dxfattribs={"layer": LOP_DIM})  # đường dim kéo tới chữ; chu_ngang: chữ nằm ngang
         d2.render()
         return d2
 

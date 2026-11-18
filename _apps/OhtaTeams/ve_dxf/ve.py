@@ -235,10 +235,18 @@ def cung_khoa(them_cung, lon, nho, R, r):
 
 def ve_lo_khoa(nen, px, py, D, dn, k, goc, tam_nho):
     """Lỗ khoá / 変形孔 (18/11): Ø lớn D + Ø nhỏ dn, hai tâm cách k; (px, py) = tâm khách dim tới — viền cắt = hợp 2 vòng (cung thật 0-KAKOU)."""
+    import math
     lon, nho = hai_tam_khoa(px, py, k, goc, tam_nho)
     if not cung_khoa(nen.cung, lon, nho, D / 2.0, dn / 2.0):
         nen.lo_tron(lon[0], lon[1], D)
         nen.lo_tron(nho[0], nho[1], dn)
+    # dấu tâm như bản sửa 18/11: đoạn qua 2 tâm (ra ngoài mỗi vòng 1.6) + đoạn vuông góc tại mỗi tâm
+    R, r = D / 2.0, dn / 2.0
+    h = math.atan2(nho[1] - lon[1], nho[0] - lon[0])
+    ux, uy, vx, vy = math.cos(h), math.sin(h), -math.sin(h), math.cos(h)
+    nen.msp.add_line((lon[0] - ux * (R + 1.6), lon[1] - uy * (R + 1.6)), (nho[0] + ux * (r + 1.6), nho[1] + uy * (r + 1.6)), dxfattribs={"layer": "1-SUNPOU"})
+    for c, rr in ((lon, R), (nho, r)):
+        nen.msp.add_line((c[0] - vx * (rr + 1.6), c[1] - vy * (rr + 1.6)), (c[0] + vx * (rr + 1.6), c[1] + vy * (rr + 1.6)), dxfattribs={"layer": "1-SUNPOU"})
 
 
 def ve_chi_tiet_khoa(nen, ten, D, dn, k, goc, tam_nho, tam, ref, khung):
@@ -352,6 +360,7 @@ def ve_lo(nen, t, y1, nhan_dau, le=None, y_nhan_duoi=None):
                 gd = math.degrees(goc)
                 nen.cung(a2, r, gd - 90, gd + 90)
                 nen.cung(a1, r, gd + 90, gd + 270)
+                nen.dau_tam(px, py, (l / 2.0 + 1.6) if abs(math.sin(goc)) < 0.5 else (w / 2.0 + 1.6), (w / 2.0 + 1.6) if abs(math.sin(goc)) < 0.5 else (l / 2.0 + 1.6))
             elif khoa:
                 ve_lo_khoa(nen, px, py, d, float(g["d_nho"]), float(g["lech"]), huong_khoa(g), g.get("tam") != "lon")
             else:
@@ -360,6 +369,7 @@ def ve_lo(nen, t, y1, nhan_dau, le=None, y_nhan_duoi=None):
                     thieu.append("lỗ %s: chưa có Ø" % nhan)
                     break
                 nen.lo_tron(px, py, dv)
+                nen.dau_tam(px, py, dv / 2.0 + 1.6)
             xs.append(px)
             ys.append(py)
         if taro and co not in TARO_MOI:
@@ -372,11 +382,24 @@ def ve_lo(nen, t, y1, nhan_dau, le=None, y_nhan_duoi=None):
             ve_chi_tiet_khoa(nen, "ABCDEFGH"[so_chi_tiet % 8], d, float(g["d_nho"]), float(g["lech"]), huong_khoa(g), g.get("tam") != "lon",
                              (bx0 - 140.0, (by0 + by1) / 2.0 - so_chi_tiet * 160.0), ref, (bx0, by0, bx1, by1))
             so_chi_tiet += 1
-        gx, gy = pts[0]
-        if len(pts) == 1 and not taro and not dai and not khoa and not g.get("sara") and d > 0:
-            nen.dim_phi(gx, gy, d, le=le or 80.0)
+        if g.get("noi_tam"):  # khách vẽ đường tâm nối các lỗ → nối hàng / cột NGOÀI CÙNG của nhóm (lỗ khoá: qua tâm Ø lớn)
+            tam_noi = [hai_tam_khoa(px, py, float(g["lech"]), huong_khoa(g), g.get("tam") != "lon")[0] for px, py in pts] if khoa else pts
+            for cot in (0, 1):
+                for v in (min(p[cot] for p in tam_noi), max(p[cot] for p in tam_noi)):
+                    hang = sorted(p[1 - cot] for p in tam_noi if abs(p[cot] - v) <= 0.5)
+                    if len(hang) >= 2:
+                        a_, b_ = ((hang[0], v), (hang[-1], v)) if cot else ((v, hang[0]), (v, hang[-1]))
+                        nen.duong_tam(a_, b_)
+        thuong = not taro and not dai and not khoa and not g.get("sara") and d > 0
+        if len(pts) == 1 and thuong:
+            nen.dim_phi(pts[0][0], pts[0][1], d, le=le or 80.0)
+            continue
+        if thuong:  # nhóm lỗ tròn thường: dim Ø "n-Øx" chỉ vào lỗ gần góc trên-trái (bản sửa 18/11)
+            gx, gy = min(pts, key=lambda p: (p[0] - p[1], p[0]))
+            nen.dim_phi(gx, gy, d, goc=-45.0, le=(le or 80.0) / 2.0, chu="%d-<>" % len(pts), chu_ngang=True)  # xuống phải, chữ ngang (bản sửa 18/11)
             continue
         yn = y1 + 53 + k * 26 if y_nhan_duoi is None else y_nhan_duoi - 53 - k * 26
+        gx, gy = min(pts, key=lambda p: (abs(p[1] - yn), p[0]))  # đường dẫn từ lỗ gần chỗ đặt nhãn nhất — ngắn, không cắt ngang tấm
         nen.leader([(gx, gy), (gx + 23, yn), (gx + 24, yn)], "%d-%s" % (len(pts), nhan))
         k += 1
     return xs, ys, phi, thieu
@@ -449,6 +472,20 @@ assert chuoi_khach({"dim_khach": [{"loai": "ngang", "tu": 0, "den": 635}, {"loai
                    "ngang", 0, 635) == [([0, 10, 160], None), ([0, 190, 310], 20)]
 
 
+NGAN_DIM = 25.0  # mm: dim ngắn hơn ở ĐẦU / CUỐI chuỗi thì chữ ra ngoài 2 bên (bản sửa 18/11: 10 sang trái, 15 sang phải)
+
+
+def chu_ngoai(i, n, a, b, duong, doc):
+    """Chỗ đặt chữ dim thứ i / n của chuỗi: đoạn đầu / cuối ngắn hơn NGAN_DIM → ra ngoài (trước a / sau b); còn lại None (giữa đường dim)."""
+    if b - a >= NGAN_DIM or n < 2 or 0 < i < n - 1:
+        return None
+    v = a - NGAN_DIM if i == 0 else b + NGAN_DIM
+    return (duong, v) if doc else (v, duong)
+
+
+assert chu_ngoai(0, 6, 0, 10, 530, 0) == (-25.0, 530) and chu_ngoai(5, 6, 620, 635, 530, 0) == (660.0, 530) and chu_ngoai(2, 6, 160, 170, 530, 0) is None
+
+
 def them_chung(nen, t, x0, y0, x1, y1, chi_dim=False, nhan_goc=()):
     """Phần chung mọi tấm theo bản chuẩn xưởng (12/11): ケガキ + leader, chuỗi dim chi tiết dưới / phải (1-SUNPOU),
     dim tổng X dưới cùng + Y bên phải (1-XY), F-name dưới hoặc phải tấm (bên nào Khung_IN nhỏ hơn), Khung_IN tỉ lệ khổ A ngang.
@@ -487,21 +524,25 @@ def them_chung(nen, t, x0, y0, x1, y1, chi_dim=False, nhan_goc=()):
         for c, tai in ck_x:  # có tai: đặt đúng chỗ khách (kể cả trong hình); không: hàng trên tấm
             yd = tai if tai is not None else y1 + le + hang_x * buoc
             yb = min(max(yd, y0), y1)
-            for a, b, chu in doan_gop(c):
-                nen.dim_ngang(a, b, yb, yd, chu=chu, y_a=gion(a, 0, yd), y_b=gion(b, 0, yd))
+            dg = doan_gop(c)
+            for i, (a, b, chu) in enumerate(dg):
+                nen.dim_ngang(a, b, yb, yd, chu=chu, y_a=gion(a, 0, yd), y_b=gion(b, 0, yd), vi_tri_chu=chu_ngoai(i, len(dg), a, b, yd, 0))
             hang_x += tai is None
             tren_max = max(tren_max, yd)
         for c, tai in ck_y:
             xd = tai if tai is not None else x1 + le + hang_y * buoc
             xb = min(max(xd, x0), x1)
-            for a, b, chu in doan_gop(c):
-                nen.dim_doc(a, b, xb, xd, chu=chu, x_a=gion(a, 1, xd), x_b=gion(b, 1, xd))
+            dg = doan_gop(c)
+            for i, (a, b, chu) in enumerate(dg):
+                nen.dim_doc(a, b, xb, xd, chu=chu, x_a=gion(a, 1, xd), x_b=gion(b, 1, xd), vi_tri_chu=chu_ngoai(i, len(dg), a, b, xd, 1))
             hang_y += tai is None
             phai_max = max(phai_max, xd)
-        # đường tâm qua tâm tấm (chi tiết không dim ra mép thì đối xứng qua đây) — 1-SUNPOU, nét CENTER
+        # đường tâm qua tâm tấm — chỉ hướng có dim khách đo từ tâm (bản sửa 18/11: 190 | 190 từ y = 230 → chỉ đường tâm ngang)
         cx, cy, ra = (x0 + x1) / 2.0, (y0 + y1) / 2.0, 10.0
-        nen.duong_tam((cx, y0 - ra), (cx, y1 + ra))
-        nen.duong_tam((x0 - ra, cy), (x1 + ra, cy))
+        if any(abs(m - cx) <= 0.5 for c, _ in ck_x for m in c[1:-1]):
+            nen.duong_tam((cx, y0 - ra), (cx, y1 + ra))
+        if any(abs(m - cy) <= 0.5 for c, _ in ck_y for m in c[1:-1]):
+            nen.duong_tam((x0 - ra, cy), (x1 + ra, cy))
     else:
         mx = chuoi(list(t.get("be_x", [])) + [k[0] for k in kg] + nen.moc_x + lo_x, x0, x1)
         my = chuoi(list(t.get("be_y", [])) + nen.moc_y + lo_y, y0, y1)

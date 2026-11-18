@@ -289,7 +289,7 @@ namespace TeamsTool.Core
 - T: độ dày danh nghĩa (số, mm). Q: số lượng (số). kich_thuoc: kích thước bao ""dài x rộng"" (mm).
 - lo: mỗi nhóm lỗ (cùng cỡ, cùng kiểu): d (Ø mm; lỗ 皿 = Ø lỗ thông), so_luong, taro (vd ""M6"" nếu là lỗ ren, rỗng nếu không), ghi_chu, cach_duong_be = khoảng cách nhỏ nhất (mm) từ MÉP lỗ tới đường bẻ gần nhất, tính từ kích thước ghi trên bản vẽ (-1 nếu tấm không bẻ hoặc không tính được).
   kieu: rỗng = lỗ tròn thường; ""sara D"" = lỗ 皿 với D = Ø miệng côn (vd ""sara 12""); ""dai RxL G"" = lỗ dài / oval / slot rộng R, dài tổng L, trục dài nghiêng G độ so với trục x (vd ""dai 10x30 0""); ""khoa D d k G nho"" = lỗ khoá / 変形孔 (hình ở chi tiết phóng A, B…): Ø lớn D + Ø nhỏ d, k = khoảng cách HAI TÂM; vi_tri = TÂM MÀ KHÁCH DIM TỚI (chuỗi dim trên hình chính), chữ cuối nho / lon = tâm đó là của Ø nhỏ hay Ø lớn; G = hướng từ tâm đó sang tâm kia (0 phải, 90 lên, 180 trái, 270 xuống) — MỌI lỗ cùng hướng như hình chi tiết. Vd chi tiết A ghi mép tấm → tâm Ø7 = 10, tâm Ø7 → tâm Ø12 = 6, Ø12 bên phải → ""khoa 12 7 6 0 nho"", vi_tri x = 10.
-  vi_tri: TÂM từng lỗ dạng [[x, y], …] (so_luong cặp) trên hình TRẢI PHẲNG, gốc góc trái dưới của tấm (như ケガキ), tính từ kích thước ghi trên bản vẽ; không tính được → rỗng và hỏi trong van_de.
+  vi_tri: TÂM từng lỗ dạng [[x, y], …] (so_luong cặp) trên hình TRẢI PHẲNG, gốc góc trái dưới của tấm (như ケガキ), tính từ kích thước ghi trên bản vẽ; không tính được → rỗng và hỏi trong van_de. noi_tam: true nếu bản vẽ khách VẼ đường tâm (nét chấm gạch) nối các lỗ của nhóm (vd khung chữ nhật qua tâm các lỗ chu vi), không vẽ → false.
 - Chỗ bẻ / nhấn / cuộn (góc, R, đoạn hai bên) đọc vào td_x / td_y ở phần TIẾT DIỆN — không liệt kê riêng.
 - mat: bề mặt đặc biệt (HL, #400, 縞板/sima, ミガキ…), rỗng nếu thường. dung_sai: các dung sai ghi trên bản vẽ.
 - ghi_chu_jp: ghi chú tiếng Nhật CỦA RIÊNG tấm này, giữ nguyên chữ (lời nhắn / yêu cầu chung cả đơn đưa vào ghi_chu_don, không lặp ở đây); ghi_chu_vi: dịch sang tiếng Việt, ngắn gọn.
@@ -373,7 +373,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             // không dùng enum — giá trị lạ chương trình tự kiểm khi đọc (luật, Mot()).
             JsonObject cap = Mang(Mang(n));
             // chỗ bẻ (canh) không hỏi riêng — luật suy từ td_x / td_y; lỗ dài / 皿 gom vào ô chữ "kieu" (tách lại khi đọc)
-            tt.Add(("lo", Mang(Obj(("d", n), ("so_luong", n), ("taro", s), ("kieu", s), ("ghi_chu", s), ("cach_duong_be", n), ("vi_tri", cap)))));
+            tt.Add(("lo", Mang(Obj(("d", n), ("so_luong", n), ("taro", s), ("kieu", s), ("ghi_chu", s), ("cach_duong_be", n), ("vi_tri", cap), ("noi_tam", Kieu("boolean"))))));
             tt.Add(("khong_chac", Mang(s)));
             foreach (string o in OTd.Except(new[] { "bien_dang", "mo_ta_bien_dang", "tham_so" })) tt.Add((o, s)); // mẫu vẽ + thông số mẫu: bước 2
             tt.Add(("ke_gaki", cap));
