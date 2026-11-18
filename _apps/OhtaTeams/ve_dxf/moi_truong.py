@@ -31,6 +31,8 @@ KHOANG_FNAME = 40.0       # khoảng giữa các dòng F-name
 LECH_FNAME = 100.0        # F-name: cách mép trái tấm
 DUOI_FNAME = 98.0         # F-name: dòng đầu dưới đường dim tổng X
 LE_KHUNG = 30.0           # lề tối thiểu của Khung_IN (rồi nới đủ tỉ lệ khổ A ngang)
+CO_TI_LE = 400.0          # tấm có cạnh lớn ≥ này: dim / chữ ghi chú cỡ gốc; nhỏ hơn thì thu theo (bản 100×50 18/11: dim quá to)
+TI_LE_NHO_NHAT = 0.35
 TI_LE_KHUNG = 2 ** 0.5
 CO_KEGAKI = 5.0           # nửa cạnh chữ thập ケガキ (10 mm)
 
@@ -50,6 +52,25 @@ class NenVe:
         self.kieu_chu = KIEU_CHU if KIEU_CHU in self.doc.styles else "Standard"
         self.kieu_dim = KIEU_DIM if KIEU_DIM in self.doc.dimstyles else "Standard"
         self.net_be = NET_BE if NET_BE in self.doc.linetypes else "Continuous"
+        # tỉ lệ dim theo cỡ tấm (18/11): nhân DIMSCALE của kiểu dim + cỡ chữ ghi chú + khoảng cách dim / nhãn; F-name giữ cỡ
+        self.ti_le = 1.0
+        st = self.doc.dimstyles.get(self.kieu_dim) if self.kieu_dim in self.doc.dimstyles else None
+        self.dimscale0 = float(st.dxf.get("dimscale", 1.0) or 1.0) if st is not None else 1.0
+
+    def dat_ti_le(self, w, h):
+        """Đặt tỉ lệ dim theo cạnh lớn của tấm (gọi trước khi mẫu vẽ)."""
+        self.ti_le = ti_le_dim(w, h)
+        return self.ti_le
+
+    def ov(self, them=None):
+        """Override kiểu dim theo tỉ lệ (DIMSCALE gốc × ti_le) + override riêng."""
+        o = {"dimscale": self.dimscale0 * self.ti_le}
+        o.update(them or {})
+        return o
+
+    @property
+    def cao_chu(self):
+        return CAO_GHI_CHU * self.ti_le
 
     # ---------- hình ----------
 
@@ -69,9 +90,9 @@ class NenVe:
             # chữ R ra ngoài phía trên-phải (45°) như bản chuẩn — không đè dim tổng Y bên phải; cung không qua 45° thì giữa cung
             quet = (goc_cuoi - goc_dau) % 360
             goc = 45.0 if (45.0 - goc_dau) % 360 <= quet else goc_dau + quet / 2.0
-            ra = r + LE_DIM
+            ra = r + LE_DIM * self.ti_le
             vi_tri = (tam[0] + ra * math.cos(math.radians(goc)), tam[1] + ra * math.sin(math.radians(goc)))
-            d = self.msp.add_radius_dim(center=tam, radius=r, angle=goc, location=vi_tri, dimstyle=self.kieu_dim, dxfattribs={"layer": LOP_DIM})
+            d = self.msp.add_radius_dim(center=tam, radius=r, angle=goc, location=vi_tri, dimstyle=self.kieu_dim, override=self.ov(), dxfattribs={"layer": LOP_DIM})
             d.render()
             self.moc_x.append(tam[0])
         return a
@@ -98,7 +119,8 @@ class NenVe:
 
     # ---------- chữ / dim ----------
 
-    def chu(self, x, y, noi_dung, cao=CAO_GHI_CHU, lop=LOP_DIM):
+    def chu(self, x, y, noi_dung, cao=None, lop=LOP_DIM):
+        cao = self.cao_chu if cao is None else cao
         return self.msp.add_text(noi_dung, height=cao, dxfattribs={"layer": lop, "style": self.kieu_chu, "insert": (x, y)})
 
     def lo_tron(self, x, y, d):
@@ -115,14 +137,14 @@ class NenVe:
         chữ MTEXT nằm trên gạch chân, hướng theo diem[-1] (trái / phải của điểm gãy). Chữ gắn vào leader (annotation) — kéo chữ trong CAD leader theo."""
         (x, y), huong = diem[1], (-1 if len(diem) > 2 and diem[-1][0] < diem[1][0] else 1)
         st = self.doc.styles.get(self.kieu_chu) if self.kieu_chu in self.doc.styles else None
-        rong = do_rong_chu(noi_dung, CAO_GHI_CHU, (st.dxf.font if st is not None and st.dxf.get("font") else "MS PGothic.ttf")) + 4
-        mt = self.msp.add_mtext(noi_dung, dxfattribs={"layer": LOP_DIM, "style": self.kieu_chu, "char_height": CAO_GHI_CHU,
+        rong = do_rong_chu(noi_dung, self.cao_chu, (st.dxf.font if st is not None and st.dxf.get("font") else "MS PGothic.ttf")) + 4 * self.ti_le
+        mt = self.msp.add_mtext(noi_dung, dxfattribs={"layer": LOP_DIM, "style": self.kieu_chu, "char_height": self.cao_chu,
                                                      "insert": (x + huong * 2, y + 3), "attachment_point": 7 if huong > 0 else 9})  # 7 dưới-trái / 9 dưới-phải
-        ld = self.msp.add_leader([diem[0], (x, y), (x + huong * rong, y)], dimstyle=self.kieu_dim, dxfattribs={"layer": LOP_DIM})
+        ld = self.msp.add_leader([diem[0], (x, y), (x + huong * rong, y)], dimstyle=self.kieu_dim, override=self.ov(), dxfattribs={"layer": LOP_DIM})
         ld.dxf.annotation_type = 0          # 0 = MTEXT
         ld.dxf.annotation_handle = mt.dxf.handle
         ld.dxf.has_hookline = 0             # gạch chân đã là đoạn cuối của leader
-        ld.dxf.text_height = CAO_GHI_CHU
+        ld.dxf.text_height = self.cao_chu
         ld.dxf.text_width = rong
         mt.append_reactor_handle(ld.dxf.handle)
         return mt
@@ -131,7 +153,7 @@ class NenVe:
         """Dim ngang đo x0 → x1 tại cao độ y, đường dim ở y_dim. chu: chữ thay số đo ("<>" = số đo, vd "100P×5=500").
         y_a / y_b: đường gióng mỗi đầu kéo từ điểm thật (vd tâm lỗ) thay vì mép tấm. vi_tri_chu=(x, y): chữ ra ngoài (dim ngắn ở đầu chuỗi)."""
         d = self.msp.add_linear_dim(base=(x0, y_dim), p1=(x0, y if y_a is None else y_a), p2=(x1, y if y_b is None else y_b), angle=0, text=chu, location=vi_tri_chu,
-                                    dimstyle=self.kieu_dim, dxfattribs={"layer": lop})
+                                    dimstyle=self.kieu_dim, override=self.ov(), dxfattribs={"layer": lop})
         d.render()
         return d
 
@@ -139,7 +161,7 @@ class NenVe:
         """Dim dọc đo y0 → y1 tại hoành độ x, đường dim ở x_dim. vi_tri_chu=(x, y): đặt chữ ra ngoài khi đoạn ngắn (vd 2 dim nửa chiều cao).
         x_a / x_b: đường gióng mỗi đầu kéo từ điểm thật (vd tâm lỗ)."""
         d = self.msp.add_linear_dim(base=(x_dim, y0), p1=(x if x_a is None else x_a, y0), p2=(x if x_b is None else x_b, y1), angle=90, location=vi_tri_chu, text=chu,
-                                    dimstyle=self.kieu_dim, dxfattribs={"layer": lop})
+                                    dimstyle=self.kieu_dim, override=self.ov(), dxfattribs={"layer": lop})
         d.render()
         return d
 
@@ -147,7 +169,7 @@ class NenVe:
         """Dim đường kính Ø một lỗ tròn, chữ ra ngoài theo góc goc (bản chuẩn 130996-3); chu "4-<>" = nhóm 4 lỗ (bản sửa 18/11)."""
         r, a = d / 2.0, math.radians(goc)
         d2 = self.msp.add_diameter_dim(center=(x, y), radius=r, angle=goc, text=chu, location=(x + (r + 2 * le) * math.cos(a), y + (r + 2 * le) * math.sin(a)),  # chữ ra hẳn ngoài viền
-                                       dimstyle=self.kieu_dim, override=dict({"dimtmove": 0}, **({"dimtoh": 1} if chu_ngang else {})), dxfattribs={"layer": LOP_DIM})  # đường dim kéo tới chữ; chu_ngang: chữ nằm ngang
+                                       dimstyle=self.kieu_dim, override=self.ov(dict({"dimtmove": 0}, **({"dimtoh": 1} if chu_ngang else {}))), dxfattribs={"layer": LOP_DIM})  # đường dim kéo tới chữ; chu_ngang: chữ nằm ngang
         d2.render()
         return d2
 
@@ -172,6 +194,14 @@ def khoang_dim(w, h):
 
 
 assert khoang_dim(80, 80) == (32.0, 32.0) and khoang_dim(600, 140) == (80.0, 44.0)
+
+
+def ti_le_dim(w, h):
+    """Tỉ lệ dim theo cạnh lớn tấm: ≥ CO_TI_LE → 1; nhỏ hơn thu theo, không dưới TI_LE_NHO_NHAT."""
+    return max(TI_LE_NHO_NHAT, min(1.0, max(w, h) / CO_TI_LE)) if max(w, h) > 0 else 1.0
+
+
+assert ti_le_dim(635, 460) == 1.0 and ti_le_dim(100, 50) == 0.35 and ti_le_dim(200, 80) == 0.5
 
 
 def do_rong_chu(s, cao, font="MS PGothic.ttf"):
