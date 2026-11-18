@@ -273,6 +273,13 @@ namespace TeamsTool.Tests
                  schema.Contains("\"bien_dang\"") + "|" + schema2.Contains("\"bien_dang\"") + "|" + PhongPhongTo.DauVao(tB2, new[] { ("4canh", "[tam_don] tấm chữ nhật") }, new List<VanDe>()).Contains("- 4canh: [tam_don]")
                  + "|" + PhongPhongTo.CanBuoc2(tB2) + "|" + PhongPhongTo.CanBuoc2(tGk) + "|" + PhongPhongTo.CanBuoc2(tB2Sua) + "|" + PhongPhongTo.CanBuoc2(new TamAi { DaPhongTo = true }),
                  "False|True|True|True|False|True|False");
+            // 18/11: tấm phẳng AI để trống td_x / td_y → lấy dim ngang / dọc lớn nhất, không có thì kich_thuoc
+            var tTd = new TamAi { KieuTd = "phang", KichThuoc = "635 x 460", DimKhachJson = "[{\"loai\":\"ngang\",\"gia_tri\":150},{\"loai\":\"ngang\",\"gia_tri\":635},{\"loai\":\"doc\",\"gia_tri\":460}]" };
+            var tKt = new TamAi { KichThuoc = "300 x 120" };
+            Kiem("td phang trong: tu dim khach / kich thuoc, co td thi giu",
+                 PhongTrienKhai.TdPhang(tTd).X + "x" + PhongTrienKhai.TdPhang(tTd).Y + "|" + PhongTrienKhai.TdPhang(tKt).X + "x" + PhongTrienKhai.TdPhang(tKt).Y
+                 + "|" + PhongTrienKhai.TdPhang(new TamAi { TdX = "50 b90 100", TdY = "200", KichThuoc = "1 x 2" }).X + "|" + PhongTrienKhai.TuTam(tTd).X.Doan.Count,
+                 "635x460|300x120|50 b90 100|1");
             var tkK = PhongTrienKhai.TuTam(tamK);
             tkK.XPhang = 80; tkK.YPhang = 200;
             string viec = PhongTrienKhai.ViecVe("test", new List<(TamAi, TamTrienKhai)> { (tamK, tkK) }, "m.dxf", "ra", new[] { "tv" });

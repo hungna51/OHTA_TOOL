@@ -553,8 +553,24 @@ Với MỖI tấm trong bảng, đọc TIẾT DIỆN để trải phẳng (khôn
         {
             Khoa = t.Khoa, Ten = PhongKiemTra.TenTam(t), Kieu = t.KieuTd.Length > 0 ? t.KieuTd : "phang", GhiChu = t.GhiChuTd,
             BienDang = t.BienDang, MoTaBienDang = t.MoTaBienDang,
-            X = DocChuTd(t.TdX, out _) ?? new TietDien(), Y = DocChuTd(t.TdY, out _) ?? new TietDien(),
+            X = DocChuTd(TdPhang(t).X, out _) ?? new TietDien(), Y = DocChuTd(TdPhang(t).Y, out _) ?? new TietDien(),
         };
+
+        /// <summary>
+        /// Tấm phẳng mà AI để trống cả td_x lẫn td_y (gặp ở lượt đọc kỹ / 🧪 Thử nhanh 18/11: đọc kich_thuoc "635 x 460" nhưng không chép sang tiết diện):
+        /// lấy dim ngang / dọc lớn nhất của khách (đúng hướng toạ độ lỗ), không có thì kich_thuoc "a x b" (a = X). Có td thì giữ nguyên.
+        /// </summary>
+        public static (string X, string Y) TdPhang(TamAi t)
+        {
+            if (t.TdX.Trim().Length > 0 || t.TdY.Trim().Length > 0 || (t.KieuTd.Length > 0 && t.KieuTd != "phang")) return (t.TdX, t.TdY);
+            var dk = DsJson(t.DimKhachJson).OfType<JsonObject>().ToList();
+            double Lon(string loai) => dk.Where(o => o.GetString("loai") == loai).Select(o => SoJ(o, "gia_tri") ?? 0).DefaultIfEmpty(0).Max();
+            double x = Lon("ngang"), y = Lon("doc");
+            string[] kt = (t.KichThuoc ?? "").Split(new[] { 'x', 'X', '×', '*' }, StringSplitOptions.RemoveEmptyEntries);
+            if (x <= 0 && kt.Length == 2) x = PhongKiemTra.So(kt[0].Trim()) ?? 0;
+            if (y <= 0 && kt.Length == 2) y = PhongKiemTra.So(kt[1].Trim()) ?? 0;
+            return (x > 0 ? F(x) : "", y > 0 ? F(y) : "");
+        }
 
         /// <summary>Đơn đọc bằng bản cũ: chép tiết diện phòng Triển khai cũ đã đọc vào bảng tấm.</summary>
         public static void ChepVaoTam(TamTrienKhai tk, TamAi t)
