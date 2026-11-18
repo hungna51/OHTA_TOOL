@@ -200,4 +200,91 @@ namespace TeamsTool.Core
 
         private static string DongCuoi(string s) => (s ?? "").Trim().Split('\n').LastOrDefault()?.Trim() ?? "";
     }
+
+    /// <summary>
+    /// Luồng suy nghĩ (18/11): body thường → body streaming (stream + thinking adaptive display summarized), và ghép SSE /v1/messages
+    /// thành phản hồi dạng không-stream {content:[{type:text}], usage, stop_reason} cho các bộ đọc kết quả dùng như cũ.
+    /// Chữ suy nghĩ (thinking_delta) và chữ trả lời (text_delta) báo dần qua suyNghi.
+    /// </summary>
+    public sealed class GhepLuong
+    {
+        private readonly Action<string> _suyNghi;
+        private readonly StringBuilder _chu = new StringBuilder();
+        private readonly JsonObject _usage = new JsonObject();
+        private string _dung;
+
+        public GhepLuong(Action<string> suyNghi) { _suyNghi = suyNghi ?? (s => { }); }
+
+        /// <summary>Lỗi API giữa luồng (sự kiện error) — JSON lỗi như API; null = chưa có.</summary>
+        public string Loi { get; private set; }
+
+        public static string Body(string body)
+        {
+            if (!(JsonLite.Parse(body) is JsonObject o)) return body;
+            o.Set("stream", true);
+            // model đời cũ (Claude 3.x, 4.0–4.5) không nhận thinking adaptive → chỉ stream chữ trả lời
+            if (System.Text.RegularExpressions.Regex.IsMatch(o.GetString("model") ?? "", @"^claude-(3|[a-z]+-3|[a-z]+-4(-[0-5])?(-\d{8})?$)")) return JsonLite.Serialize(o);
+            var th = new JsonObject();
+            th.Set("type", "adaptive");
+            th.Set("display", "summarized"); // mặc định là ẩn (omitted) trên các model hiện nay
+            o.Set("thinking", th);
+            return JsonLite.Serialize(o);
+        }
+
+        /// <summary>Một dòng SSE (chỉ dòng "data: {…}" có nghĩa).</summary>
+        public void Them(string dong)
+        {
+            if (dong == null || !dong.StartsWith("data:", StringComparison.Ordinal)) return;
+            JsonObject ev;
+            try { ev = JsonLite.Parse(dong.Substring(5).Trim()) as JsonObject; } catch (Exception) { return; }
+            if (ev == null) return;
+            switch (ev.GetString("type"))
+            {
+                case "message_start":
+                    ChepUsage((ev.Get("message") as JsonObject)?.Get("usage") as JsonObject);
+                    break;
+                case "content_block_start":
+                    string loai = (ev.Get("content_block") as JsonObject)?.GetString("type");
+                    if (loai == "thinking") _suyNghi("\n💭 ");
+                    else if (loai == "text") _suyNghi("\n✍ ");
+                    break;
+                case "content_block_delta":
+                    if (ev.Get("delta") is JsonObject d)
+                    {
+                        if (d.GetString("type") == "thinking_delta") _suyNghi(d.GetString("thinking") ?? "");
+                        else if (d.GetString("type") == "text_delta") { string t = d.GetString("text") ?? ""; _chu.Append(t); _suyNghi(t); }
+                    }
+                    break;
+                case "message_delta":
+                    _dung = (ev.Get("delta") as JsonObject)?.GetString("stop_reason") ?? _dung;
+                    ChepUsage(ev.Get("usage") as JsonObject);
+                    break;
+                case "error":
+                    Loi = JsonLite.Serialize(ev);
+                    break;
+            }
+        }
+
+        private void ChepUsage(JsonObject u)
+        {
+            if (u == null) return;
+            foreach (string k in new[] { "input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens" })
+                if (u.Get(k) != null) _usage.Set(k, u.Get(k));
+        }
+
+        public string KetQua()
+        {
+            if (Loi != null) return Loi;
+            var khoi = new JsonObject();
+            khoi.Set("type", "text");
+            khoi.Set("text", _chu.ToString());
+            var kq = new JsonObject();
+            kq.Set("type", "message");
+            kq.Set("role", "assistant");
+            kq.Set("content", new List<object> { khoi });
+            kq.Set("stop_reason", _dung ?? "end_turn");
+            kq.Set("usage", _usage);
+            return JsonLite.Serialize(kq);
+        }
+    }
 }

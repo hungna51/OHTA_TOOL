@@ -73,7 +73,38 @@ namespace TeamsTool.Views
             Ve();
         }
 
-        private void Bao(string s) => Dispatcher.Invoke(() => _trangThai.Text = s);
+        private int _phong = 1; // phòng của việc đang chạy (nhật ký 🤖 Phòng AI)
+
+        private void Bao(string s)
+        {
+            Dispatcher.Invoke(() => _trangThai.Text = s);
+            HangAi.Ghi(_phong, _d.Title, s);
+        }
+
+        /// <summary>Đưa đơn vào hàng phòng 1 (tải tệp → đọc) từ ngoài khung — ➕ Đưa vào phòng AI ở danh sách đơn.</summary>
+        public void DuaVaoPhong1() => Chay(1, false);
+
+        /// <summary>Việc tu → phòng: 1–2 đọc (phòng 1); 3, 4, 6, 7, 9, 11 AI kiểm / đọc kỹ / mẫu / bài học (phòng 2); 5, 8, 10 vẽ trên máy (phòng 3).</summary>
+        private static int PhongCua(int tu) => tu <= 2 ? 1 : tu == 5 || tu == 8 || tu == 10 ? 3 : 2;
+
+        private static string TenViec(int tu)
+        {
+            switch (tu)
+            {
+                case 1: return "tải tệp + đọc bản vẽ";
+                case 2: return "đọc bản vẽ";
+                case 3: return "kiểm lại câu trả lời";
+                case 4: return "đọc bù tiết diện";
+                case 5: return "vẽ DXF";
+                case 6: return "AI viết mẫu vẽ";
+                case 7: return "rút bài học";
+                case 8: return "rút bài học + vẽ DXF";
+                case 9: return "cập nhật theo câu trả lời";
+                case 10: return "vẽ sơ đồ đỉnh";
+                case 11: return "đọc kỹ & chọn mẫu";
+                default: return "việc " + tu;
+            }
+        }
 
         private void Ve()
         {
@@ -87,7 +118,8 @@ namespace TeamsTool.Views
             bool chay = DangChay.Contains(_d.Id);
             var hang = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
             hang.Children.Add(KieuTeams.Nut("▶ Bắt đầu", _mau, (s, e) => Chay(1, false)).Also(b => b.IsEnabled = !chay));
-            if (chay) hang.Children.Add(KieuTeams.Nut("Huỷ", _mau, (s, e) => _huy?.Cancel(), chinh: false));
+            if (chay) hang.Children.Add(KieuTeams.Nut("Huỷ", _mau, (s, e) => HangAi.Huy(_d.Id), chinh: false)
+                .Also(b => b.ToolTip = "Đang chờ trong hàng → bỏ khỏi hàng; đang chạy → dừng ở bước kế tiếp"));
             hang.Children.Add(KieuTeams.Nut("📁 Thư mục đơn", _mau, (s, e) => { Directory.CreateDirectory(_tm); Mo(_tm); }, chinh: false));
             _than.Children.Add(hang);
             _than.Children.Add(_trangThai);
@@ -110,7 +142,7 @@ namespace TeamsTool.Views
         /// 5: vẽ DXF (ezdxf); 6: AI đề xuất mẫu vẽ cho _khoaMauMoi; 7: AI rút bài học từ chỗ người sửa;
         /// 11: bước 2 đọc kỹ ảnh cắt + chọn mẫu (_khoaBuoc2 hoặc mọi tấm chờ). docLaiHet: đọc lại cả tệp không đổi.
         /// </summary>
-        private async void Chay(int tu, bool docLaiHet)
+        private void Chay(int tu, bool docLaiHet)
         {
             if (DangChay.Contains(_d.Id)) return;
             if (tu != 5 && tu != 8 && tu != 10 && !AiDon.DaDongY) // 5, 8, 10 = vẽ trên máy (8 chỉ gửi AI khi có ô sửa — đã đồng ý từ lúc đọc)
@@ -121,8 +153,22 @@ namespace TeamsTool.Views
             }
             if (docLaiHet && MessageBox.Show("Đọc lại mọi bản vẽ (kể cả tệp không đổi)? Mất thêm tiền AI. Ô bạn đã sửa vẫn giữ.",
                                              "Đọc lại", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            // 18/11: không chạy ngay — vào hàng của phòng (mỗi phòng 1 việc một lúc, 3 phòng song song; xem 🤖 Phòng AI)
             DangChay.Add(_d.Id);
-            _huy = new CancellationTokenSource();
+            int phong = PhongCua(tu);
+            HangAi.Viec viec = HangAi.Them(phong, _d.Id, _d.Title, TenViec(tu), v => ThucHien(tu, docLaiHet, v),
+                                           () => { DangChay.Remove(_d.Id); Ve(); _trangThai.Text = "Đã huỷ khi đang chờ trong hàng."; });
+            Ve();
+            int thu = HangAi.Hang(phong).ToList().IndexOf(viec);
+            _trangThai.Text = thu > 0 ? "⏳ Chờ phòng " + HangAi.TenPhong[phong - 1] + " — thứ " + (thu + 1) + " trong hàng (" + TenViec(tu) + ")." : "▶ " + TenViec(tu) + "…";
+        }
+
+        /// <summary>Thân việc khi tới lượt trong hàng (trước 18/11 là thân Chay). viec.Huy = nút Huỷ.</summary>
+        private async Task ThucHien(int tu, bool docLaiHet, HangAi.Viec viec)
+        {
+            _huy = viec.Huy;
+            _phong = viec.Phong;
+            AiDon.NoiSuyNghi.Value = AiDon.HienSuyNghi ? (Action<string>)(s => HangAi.ThemSuyNghi(viec, s)) : null; // luồng suy nghĩ của việc này
             Ve();
             try
             {

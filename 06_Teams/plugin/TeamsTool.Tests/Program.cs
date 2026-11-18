@@ -214,6 +214,30 @@ namespace TeamsTool.Tests
                  "kich_thuoc,td_x,lo|9|140 x 600|True|kich_thuoc,lo|2");
             Kiem("phong to: body co anh png", PhongPhongTo.Body("claude-opus-5-5", "q", "QUJD", "dv").Contains("\"media_type\":\"image/png\"")
                  || System.Text.RegularExpressions.Regex.Replace(PhongPhongTo.Body("claude-opus-5-5", "q", "QUJD", "dv"), @"\s", "").Contains("\"media_type\":\"image/png\""), true);
+            // 18/11: luồng suy nghĩ — body streaming + ghép SSE thành phản hồi thường (đọc được bằng bộ đọc cũ)
+            var nghi = new System.Text.StringBuilder();
+            var gl = new GhepLuong(x => nghi.Append(x));
+            foreach (string dl in new[] {
+                "event: message_start", "data: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":9,\"cache_read_input_tokens\":2,\"output_tokens\":1}}}",
+                "data: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"thinking\",\"thinking\":\"\"}}",
+                "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"xem lo\"}}",
+                "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"signature_delta\",\"signature\":\"abc\"}}",
+                "data: {\"type\":\"content_block_start\",\"index\":1,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}",
+                "data: {\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"{\\\"M\\\":\"}}",
+                "data: {\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"\\\"SS400\\\"}\"}}",
+                "data: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"},\"usage\":{\"output_tokens\":7}}", "data: {\"type\":\"message_stop\"}" })
+                gl.Them(dl);
+            var phLuong = PhongDocBanVe.DocPhanHoi(gl.KetQua(), "a.pdf");
+            string bodyLuong = OhtaTool.Plugin.Core.JsonLite.Serialize(OhtaTool.Plugin.Core.JsonLite.Parse(GhepLuong.Body("{\"model\":\"m\",\"max_tokens\":5}")));
+            Kiem("luong suy nghi: ghep SSE -> phan hoi thuong + chu suy nghi + body stream",
+                 phLuong.Vao + "|" + phLuong.DocCache + "|" + phLuong.Ra + "|" + gl.KetQua().Contains("SS400") + "|" + nghi.ToString().Contains("💭 xem lo") + "|" + nghi.ToString().Contains("✍ {")
+                 + "|" + System.Text.RegularExpressions.Regex.Replace(bodyLuong, @"\s", "").Contains("\"stream\":true") + "|" + bodyLuong.Contains("summarized"),
+                 "9|2|7|True|True|True|True|True");
+            Kiem("luong suy nghi: model cu khong them thinking", GhepLuong.Body("{\"model\":\"claude-haiku-4-5\"}").Contains("thinking") + "|" + GhepLuong.Body("{\"model\":\"claude-sonnet-4-20250514\"}").Contains("thinking")
+                 + "|" + GhepLuong.Body("{\"model\":\"claude-haiku-5-5\"}").Contains("thinking") + "|" + GhepLuong.Body("{\"model\":\"claude-opus-4-8\"}").Contains("thinking"), "False|False|True|True");
+            var glLoi = new GhepLuong(null);
+            glLoi.Them("data: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"}}");
+            Kiem("luong suy nghi: su kien error -> JSON loi", (glLoi.Loi != null) + "|" + glLoi.KetQua().Contains("overloaded_error"), "True|True");
             Kiem("cli: tach anh tu body", AiCli.TachBody(PhongPhongTo.Body("claude-opus-5-5", "q", "QUJD", "dv")).AnhBase64 + "|" + AiCli.LoiNhan(false, true).Contains(AiCli.TepAnh), "QUJD|True");
             // Ling (12/11): body Claude → chat/completions kèm schema trong lời dặn; có PDF / ảnh → không gửi Ling; phản hồi → dạng Claude
             string bodyChu = PhongKiemTra.Body("claude-opus-5-5", "QC3", null, "dau vao", null, PhongKiemTra.LoiDanChu);

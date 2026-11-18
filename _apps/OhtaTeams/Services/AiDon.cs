@@ -1036,9 +1036,10 @@ namespace TeamsTool.Services
 
         /// <summary>Chạy lệnh, đợi tối đa 3 phút, trả (mã thoát, stdout + stderr). Huỷ → giết tiến trình.</summary>
         private static Task<(int Ma, string Ra)> ChayLenh(string exe, string thuMuc, CancellationToken huy, params string[] thamSo) =>
-            ChayLenh(exe, thuMuc, 180, huy, thamSo);
+            ChayLenh(exe, thuMuc, 180, huy, null, thamSo);
 
-        private static async Task<(int Ma, string Ra)> ChayLenh(string exe, string thuMuc, int giayToiDa, CancellationToken huy, params string[] thamSo)
+        /// <param name="moiDong">Nhận từng dòng in ra khi đang chạy (luồng suy nghĩ của CLI AI) — null = chỉ lấy hết lúc xong.</param>
+        private static async Task<(int Ma, string Ra)> ChayLenh(string exe, string thuMuc, int giayToiDa, CancellationToken huy, Action<string> moiDong, params string[] thamSo)
         {
             var psi = new System.Diagnostics.ProcessStartInfo(exe, string.Join(" ", thamSo.Select(AiCli.ThoatThamSo)))
             {
@@ -1049,13 +1050,27 @@ namespace TeamsTool.Services
             psi.EnvironmentVariables["OPENBLAS_NUM_THREADS"] = "1"; // numpy (matplotlib) nhiều luồng có lúc hết bộ nhớ khi vẽ ảnh xem trước
             using (var p = System.Diagnostics.Process.Start(psi))
             {
-                Task<string> ra = p.StandardOutput.ReadToEndAsync(), loi = p.StandardError.ReadToEndAsync();
+                Task<string> ra = DocHet(p.StandardOutput, moiDong), loi = DocHet(p.StandardError, moiDong);
                 var xong = Task.Run(() => p.WaitForExit(giayToiDa * 1000));
                 using (huy.Register(() => { try { p.Kill(); } catch (InvalidOperationException) { } }))
                     if (!await xong) { try { p.Kill(); } catch (InvalidOperationException) { } return (-1, "quá " + giayToiDa / 60 + " phút"); }
                 huy.ThrowIfCancellationRequested();
                 return (p.ExitCode, (await ra) + (await loi));
             }
+        }
+
+        /// <summary>Đọc hết luồng; có moiDong thì đọc từng dòng và báo dần.</summary>
+        private static async Task<string> DocHet(StreamReader r, Action<string> moiDong)
+        {
+            if (moiDong == null) return await r.ReadToEndAsync();
+            var sb = new StringBuilder();
+            string dong;
+            while ((dong = await r.ReadLineAsync()) != null)
+            {
+                sb.Append(dong).Append('\n');
+                moiDong(dong + "\n");
+            }
+            return sb.ToString();
         }
 
         private static string DongCuoi(string s) => (s ?? "").Trim().Split('\n').LastOrDefault()?.Trim() ?? "";
@@ -1205,6 +1220,19 @@ namespace TeamsTool.Services
         }
 
         /// <summary>Gửi body /v1/messages theo nguồn đang chọn; trả phản hồi dạng API (CLI được đổi về cùng dạng).</summary>
+        /// <summary>
+        /// Luồng suy nghĩ (18/11): việc ở hàng phòng AI đặt nơi nhận chữ cho luồng async của nó; GuiClaude gọi API kiểu streaming
+        /// (thinking display summarized) và GuiCli đọc từng dòng CLI in ra, gửi dần tới đây. null = không hiện (gọi như cũ).
+        /// </summary>
+        public static readonly AsyncLocal<Action<string>> NoiSuyNghi = new AsyncLocal<Action<string>>();
+
+        /// <summary>⚙ → 🤖 AI: hiện luồng suy nghĩ của AI (tốn thêm token suy nghĩ hiển thị) — mặc định tắt.</summary>
+        public static bool HienSuyNghi
+        {
+            get => CaiDatTeams.Doc("ai_suy_nghi", "0") == "1";
+            set => CaiDatTeams.Ghi("ai_suy_nghi", value ? "1" : "0");
+        }
+
         private static Task<string> GuiAi(string key, bool fallback, string body, CancellationToken ct)
         {
             if (NguonAi == AiCli.Ling)
@@ -1234,13 +1262,26 @@ namespace TeamsTool.Services
                 File.WriteAllText(Path.Combine(dir, AiCli.TepYeuCau), yc.HuongDan, Utf8);
                 if (yc.PdfBase64 != null) File.WriteAllBytes(Path.Combine(dir, AiCli.TepPdf), Convert.FromBase64String(yc.PdfBase64));
                 if (yc.AnhBase64 != null) File.WriteAllBytes(Path.Combine(dir, AiCli.TepAnh), Convert.FromBase64String(yc.AnhBase64));
-                var (ma, ra) = await ChayLenh(cli, dir, 900, ct, AiCli.ThamSo(nguon, yc, dir).ToArray());
+                var (ma, ra) = await ChayLenh(cli, dir, 900, ct, NoiSuyNghi.Value, AiCli.ThamSo(nguon, yc, dir).ToArray());
                 return AiCli.DoiKetQua(ra);
             }
             finally
             {
                 try { Directory.Delete(dir, true); } catch (IOException) { } catch (UnauthorizedAccessException) { } // CLI còn giữ tệp: để %TEMP% tự dọn
             }
+        }
+
+        /// <summary>Đọc SSE của /v1/messages (stream) qua GhepLuong (Core/AiCli.cs) — chữ suy nghĩ báo dần, trả phản hồi dạng không-stream.</summary>
+        private static async Task<string> DocLuong(TextReader luong, Action<string> suyNghi, CancellationToken ct)
+        {
+            var g = new GhepLuong(suyNghi);
+            string dong;
+            while ((dong = await luong.ReadLineAsync()) != null && g.Loi == null)
+            {
+                ct.ThrowIfCancellationRequested();
+                g.Them(dong);
+            }
+            return g.KetQua();
         }
 
         /// <summary>POST /v1/messages như ClaudeHttp của tab AI: 429 / 5xx thử lại 2 lần; trả body kể cả JSON lỗi.</summary>
@@ -1253,9 +1294,13 @@ namespace TeamsTool.Services
                     if (!req.Headers.TryAddWithoutValidation("x-api-key", key)) throw new InvalidOperationException("API key có ký tự không hợp lệ (⚙ → 🤖 AI → dán lại key)");
                     req.Headers.TryAddWithoutValidation("anthropic-version", PhongDocBanVe.PhienBanApi);
                     if (fallback) req.Headers.TryAddWithoutValidation("anthropic-beta", PhongDocBanVe.BetaFallback);
-                    req.Content = new StringContent(body, Utf8, "application/json");
-                    using (HttpResponseMessage res = await Http.SendAsync(req, ct))
+                    Action<string> suyNghi = NoiSuyNghi.Value;
+                    req.Content = new StringContent(suyNghi == null ? body : GhepLuong.Body(body), Utf8, "application/json");
+                    using (HttpResponseMessage res = await Http.SendAsync(req, suyNghi == null ? HttpCompletionOption.ResponseContentRead : HttpCompletionOption.ResponseHeadersRead, ct))
                     {
+                        if (suyNghi != null && res.IsSuccessStatusCode)
+                            using (var luong = new StreamReader(await res.Content.ReadAsStreamAsync(), Utf8))
+                                return await DocLuong(luong, suyNghi, ct);
                         string text = await res.Content.ReadAsStringAsync();
                         int ma = (int)res.StatusCode;
                         if (!(ma == 429 || ma >= 500) || lan >= 2)

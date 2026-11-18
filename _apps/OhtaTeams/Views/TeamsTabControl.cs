@@ -90,6 +90,13 @@ namespace TeamsTool.Views
             thuNhanh.ToolTip = "Dán / kéo ảnh bản vẽ → AI đọc → vẽ DXF ngay; sửa thông số / mã mẫu rồi vẽ lại; AI viết mẫu mới";
             DockPanel.SetDock(thuNhanh, Dock.Right);
             header.Children.Add(thuNhanh);
+            // 🤖 Phòng AI: màn hình tổng các đơn ở 3 phòng + nhật ký + luồng suy nghĩ AI (18/11)
+            var tongAi = KieuTeams.Nut("🤖 Phòng AI", _mau, (s, e) => MoTongPhongAi(), chinh: false);
+            tongAi.Margin = new Thickness(0, 0, 6, 0);
+            tongAi.VerticalAlignment = VerticalAlignment.Center;
+            tongAi.ToolTip = "Các đơn đang ở phòng 1 / 2 / 3, hàng chờ, AI đang làm gì (nhật ký + suy nghĩ) — làm nhiều đơn cùng lúc";
+            DockPanel.SetDock(tongAi, Dock.Right);
+            header.Children.Add(tongAi);
             header.Children.Add(_tenToiHeader);
             header.Children.Add(tieuDeKhoi);
 
@@ -181,6 +188,37 @@ namespace TeamsTool.Views
             foreach (string id in _khungDangChay.Keys.Where(x => x != d.Id && !AiPhongControl.DangChayDon(x)).ToList()) _khungDangChay.Remove(id);
             _khungAi.Child = k;
             CapNhatAi();
+        }
+
+        private PhongAiWindow _tongPhongAi;
+
+        /// <summary>Mở (hoặc đưa lên trước) màn hình tổng 🤖 Phòng AI.</summary>
+        private void MoTongPhongAi()
+        {
+            if (_tongPhongAi != null) { _tongPhongAi.Activate(); return; }
+            _tongPhongAi = new PhongAiWindow(_mau, () => _don, MoPhongAi) { Owner = Window.GetWindow(this) };
+            _tongPhongAi.Closed += (s, e) => _tongPhongAi = null;
+            _tongPhongAi.Show();
+        }
+
+        /// <summary>
+        /// ➕ Đưa đơn vào hàng phòng 1 (tải tệp → đọc) mà không cần mở khung từng đơn — phòng 1 đọc lần lượt, đọc xong đơn sang phòng 2 chờ người
+        /// và phòng 1 lấy đơn kế. Khung AI của đơn giữ trong _khungDangChay tới khi việc xong.
+        /// </summary>
+        private void DuaVaoPhongAi(IEnumerable<DonTeams> ds)
+        {
+            int so = 0;
+            foreach (DonTeams d in ds)
+            {
+                if (AiPhongControl.DangChayDon(d.Id)) continue; // đã có việc trong hàng / đang chạy
+                if (!_khungDangChay.TryGetValue(d.Id, out AiPhongControl k))
+                    k = _khungDangChay[d.Id] = new AiPhongControl(d, _tab[7], _tab[6], _mau, () => { _aiDon = null; _khungAi.Child = null; CapNhatAi(); },
+                                                                  chu => GuiLenChuoiDon(d.Id, chu));
+                k.DuaVaoPhong1();
+                if (AiPhongControl.DangChayDon(d.Id)) so++;
+            }
+            BaoTrangThai(so > 0 ? "Đã đưa " + so + " đơn vào hàng phòng 1 — xem 🤖 Phòng AI." : "Không đơn nào được đưa vào (đã có việc trong hàng, hoặc chưa đồng ý gửi bản vẽ cho AI).");
+            if (so > 0) MoTongPhongAi();
         }
 
         /// <summary>
@@ -630,6 +668,8 @@ namespace TeamsTool.Views
                 hang.Children.Add(o);
             }
             hang.Children.Add(KieuTeams.Nut("Áp dụng", _mau, (s, e) => ApDungNhanh(cot)));
+            hang.Children.Add(KieuTeams.Nut("➕ Đưa vào phòng AI", _mau, (s, e) => DuaVaoPhongAi(_don.Where(x => _chon.Contains(x.Id)).ToList()), chinh: false)
+                .Also(b => b.ToolTip = "Đưa các đơn đã tích vào hàng phòng 1 (tải tệp → AI đọc lần lượt từng đơn)"));
             hang.Children.Add(KieuTeams.Nut("Bỏ chọn", _mau, (s, e) =>
             {
                 _dongBoChon = true;
@@ -1356,6 +1396,10 @@ namespace TeamsTool.Views
             var m = new ContextMenu();
             var ai = new MenuItem { Header = "🤖 Mở trong phòng AI", FontWeight = FontWeights.SemiBold };
             ai.Click += (s, e) => MoPhongAi(d);
+            bool trongChon = _chon.Contains(d.Id) && _chon.Count > 1;
+            var dua = new MenuItem { Header = trongChon ? "➕ Đưa " + _chon.Count + " đơn đã chọn vào phòng AI" : "➕ Đưa vào phòng AI (đọc khi tới lượt)" };
+            dua.Click += (s, e) => DuaVaoPhongAi(trongChon ? _don.Where(x => _chon.Contains(x.Id)).ToList() : new List<DonTeams> { d });
+            m.Items.Add(dua);
             var ct = new MenuItem { Header = "Mở chi tiết đơn" };
             ct.Click += (s, e) => HienChiTiet(d);
             m.Items.Add(ai);
