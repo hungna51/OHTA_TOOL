@@ -17,7 +17,8 @@ namespace TeamsTool.Views
 {
     /// <summary>
     /// 🧪 Thử nhanh (13/11): dán / kéo thả ảnh, PDF hoặc DXF của MỘT hình → AI đọc kỹ + chọn mẫu (bước 2, không đọc cả trang) → vẽ hình + dim
-    /// ngay theo thư viện mẫu (không F-name, Khung_IN). Không cần đơn Teams — thư mục thử %TEMP%\OHTA_TOOL\thu_nhanh\&lt;giờ&gt; dựng như thư mục đơn. Sửa thông số (chi_tiet.json) hoặc mã mẫu
+    /// ngay theo thư viện mẫu (không F-name, Khung_IN). Không cần đơn Teams — thư mục thử %LOCALAPPDATA%\OHTA_TOOL\thu_nhanh\&lt;giờ&gt; dựng như thư mục đơn.
+    /// Cột trái: danh sách các lần đã thử (bấm để xem / vẽ lại, 🤖 Đọc lại bằng AI, 🗑 Xoá). Sửa thông số (chi_tiet.json) hoặc mã mẫu
     /// rồi 🔁 Vẽ lại (không tốn AI); chưa có mẫu → ✨ AI viết mẫu; máy Admin ➕ Thêm vào thư viện.
     /// </summary>
     internal sealed class ThuNhanhWindow : Window
@@ -27,6 +28,8 @@ namespace TeamsTool.Views
         private readonly StackPanel _ds = new StackPanel();
         private readonly TextBlock _bao = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = KieuTeams.ChuPhu, Margin = new Thickness(0, 6, 0, 6) };
         private readonly List<Button> _nutCanThu = new List<Button>();
+        private readonly ListBox _lanThu = new ListBox { Margin = new Thickness(10, 10, 0, 10), MinWidth = 220 };
+        private bool _dangNapDs; // đang dựng lại danh sách — chọn mục lúc này không mở lần thử
         private string _tm;
         private CancellationTokenSource _huy;
 
@@ -52,8 +55,11 @@ namespace TeamsTool.Views
                 return b;
             }
             Them("🔁 Vẽ lại", () => Chay(VeLai), "Vẽ lại từ thông số hiện tại (sau khi sửa chi_tiet.json hoặc mã mẫu) — không gọi AI");
+            Them("🤖 Đọc lại (AI)", () => Chay(async (bao, huy) => { await AiDon.DocLaiThuNhanh(_tm, bao, huy); await VeLai(bao, huy); NapDs(); }),
+                 "AI đọc lại hình của lần thử này (tốn một lượt AI) rồi vẽ lại — ô bạn đã sửa trong chi_tiet.json giữ nguyên");
             Them("✎ Sửa thông số", () => MoNotepad(AiDon.FileChiTiet(_tm)), "Mở chi_tiet.json bằng Notepad: sửa bien_dang, kích thước, lo, ke_gaki, goc, khoet, dim_khach… rồi lưu và bấm 🔁 Vẽ lại");
             Them("📁 Thư mục", () => Mo(_tm), "Mở thư mục thử (ai\\ban_ve: DXF, ai\\ho_so: ảnh cắt)");
+            Them("🗑 Xoá lần thử", XoaLanThu, "Xoá hẳn lần thử đang mở (ảnh, dữ liệu, DXF, mẫu thử chưa thêm vào thư viện)");
             nut.Children.Add(KieuTeams.Nut("📚 Thư viện mẫu", _mau, (s, e) => new ThuVienMauWindow(_tm, _mau) { Owner = this }.ShowDialog(), chinh: false));
             nut.Children.Add(KieuTeams.Nut("Huỷ", _mau, (s, e) => _huy?.Cancel(), chinh: false));
 
@@ -70,7 +76,26 @@ namespace TeamsTool.Views
             DockPanel.SetDock(dau, Dock.Top);
             khung.Children.Add(dau);
             khung.Children.Add(new ScrollViewer { Content = _ds, Margin = new Thickness(10, 0, 10, 10), VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
-            Content = khung;
+            var trai = new DockPanel();
+            var tieuDe = new TextBlock { Text = "Các lần đã thử", FontWeight = FontWeights.SemiBold, Margin = new Thickness(10, 10, 0, 0) };
+            DockPanel.SetDock(tieuDe, Dock.Top);
+            trai.Children.Add(tieuDe);
+            trai.Children.Add(_lanThu);
+            var luoi = new Grid();
+            luoi.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(240) });
+            luoi.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            luoi.Children.Add(trai);
+            Grid.SetColumn(khung, 1);
+            luoi.Children.Add(khung);
+            Content = luoi;
+            _lanThu.SelectionChanged += (s, e) =>
+            {
+                if (_dangNapDs || !(_lanThu.SelectedItem is ListBoxItem it) || !(it.Tag is string tm) || tm == _tm || _huy != null) return;
+                _tm = tm;
+                _ds.Children.Clear();
+                Chay(VeLai); // vẽ lại trên máy để xem — không gọi AI
+            };
+            Loaded += (s, e) => NapDs();
 
             KeyDown += (s, e) => { if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control) { Dan(); e.Handled = true; } };
             Drop += (s, e) => { if (e.Data.GetData(DataFormats.FileDrop) is string[] f && f.Length > 0) Nhan(f[0]); };
@@ -108,10 +133,68 @@ namespace TeamsTool.Views
                 bao("Đang chuẩn bị " + Path.GetFileName(f) + "…");
                 _tm = await AiDon.TaoThuNhanh(VePng(f), huy);
                 _ds.Children.Clear();
+                NapDs();
                 await AiDon.DocThuNhanh(_tm, bao, huy);
                 bao("AI đã đọc hình — đang vẽ…");
                 await VeLai(bao, huy);
+                NapDs();
             });
+        }
+
+        /// <summary>Dựng lại danh sách lần thử (ảnh nhỏ + giờ + mẫu + kích thước), chọn lần đang mở.</summary>
+        private void NapDs()
+        {
+            _dangNapDs = true;
+            try
+            {
+                _lanThu.Items.Clear();
+                foreach (string tm in AiDon.CacLanThu())
+                {
+                    TamAi t = null;
+                    try { t = AiDon.DocChiTiet(tm)?.Tam.FirstOrDefault(); } catch (Exception) { } // tệp hỏng: vẫn liệt kê để xoá được
+                    string ten = Path.GetFileName(tm);
+                    DateTime luc;
+                    string gio = DateTime.TryParseExact(ten, "yyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out luc)
+                        ? luc.ToString("dd/MM HH:mm", System.Globalization.CultureInfo.InvariantCulture) : ten;
+                    var hang = new StackPanel { Orientation = Orientation.Horizontal };
+                    string anh = Path.Combine(AiDon.ThuMucHoSo(tm), PhongTrienKhai.Bango(AiDon.TenThuNhanh, 1) + ".png");
+                    if (File.Exists(anh))
+                        try
+                        {
+                            var bmp = new BitmapImage();
+                            bmp.BeginInit(); bmp.CacheOption = BitmapCacheOption.OnLoad; bmp.DecodePixelHeight = 60; bmp.UriSource = new Uri(anh); bmp.EndInit();
+                            hang.Children.Add(new Image { Source = bmp, Height = 44, Width = 60, Stretch = Stretch.Uniform, Margin = new Thickness(0, 2, 6, 2) });
+                        }
+                        catch (Exception) { } // ảnh hỏng: chỉ hiện chữ
+                    var chu = new StackPanel();
+                    chu.Children.Add(new TextBlock { Text = gio, FontWeight = FontWeights.SemiBold });
+                    chu.Children.Add(new TextBlock
+                    {
+                        Text = t == null ? "(chưa đọc)" : !t.DaPhongTo ? "AI chưa đọc được" : (t.BienDang.Length > 0 ? t.BienDang : "chưa có mẫu") + (t.KichThuoc.Length > 0 ? " · " + t.KichThuoc : ""),
+                        Foreground = KieuTeams.ChuPhu, FontSize = 11,
+                    });
+                    hang.Children.Add(chu);
+                    var it = new ListBoxItem { Content = hang, Tag = tm, ToolTip = tm };
+                    _lanThu.Items.Add(it);
+                    if (string.Equals(tm, _tm, StringComparison.OrdinalIgnoreCase)) _lanThu.SelectedItem = it;
+                }
+                if (_lanThu.Items.Count == 0) _lanThu.Items.Add(new ListBoxItem { Content = "(chưa có lần thử nào)", IsEnabled = false });
+            }
+            finally { _dangNapDs = false; }
+        }
+
+        private void XoaLanThu()
+        {
+            if (_tm == null || _huy != null) return;
+            if (MessageBox.Show(this, "Xoá hẳn lần thử " + Path.GetFileName(_tm) + "? (ảnh, dữ liệu, DXF, mẫu thử chưa thêm vào thư viện)", "Thử nhanh",
+                                MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            try { Directory.Delete(_tm, true); }
+            catch (Exception ex) { _bao.Text = "Chưa xoá được (DXF đang mở trong CAD?): " + ex.Message; return; }
+            _tm = null;
+            _ds.Children.Clear();
+            foreach (Button b in _nutCanThu) b.IsEnabled = false;
+            _bao.Text = "Đã xoá lần thử.";
+            NapDs();
         }
 
         /// <summary>Ảnh khác PNG (jpg, bmp…) → PNG tạm (AI nhận ảnh PNG); PNG / PDF / DXF giữ nguyên.</summary>

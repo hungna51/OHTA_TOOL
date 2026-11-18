@@ -952,7 +952,25 @@ namespace TeamsTool.Services
         // ---------- 🧪 Thử nhanh (13/11): ảnh / PDF / DXF của MỘT hình → bước 2 (đọc kỹ + chọn mẫu) → chỉ hình + dim, không cần đơn Teams ----------
 
         public const string TenThuNhanh = "TN";
-        public static string ThuMucThuNhanh => Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "thu_nhanh");
+        /// <summary>Nơi lưu các lần thử (18/11: ra khỏi %TEMP% — dọn ổ đĩa không mất danh sách đã thử).</summary>
+        public static string ThuMucThuNhanh => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OHTA_TOOL", "thu_nhanh");
+        private static string ThuMucThuNhanhCu => Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "thu_nhanh"); // trước 18/11
+
+        /// <summary>Các lần thử (thư mục có chi_tiet.json), mới nhất trước — gồm cả lần thử cũ còn trong %TEMP%.</summary>
+        public static List<string> CacLanThu() =>
+            new[] { ThuMucThuNhanh, ThuMucThuNhanhCu }.Where(Directory.Exists).SelectMany(Directory.GetDirectories)
+                .Where(d => File.Exists(FileChiTiet(d))).OrderByDescending(Path.GetFileName, StringComparer.Ordinal).ToList();
+
+        /// <summary>AI đọc lại hình của lần thử (bước 2 cho đúng tấm đó, kể cả đã đọc) — ô người đã sửa giữ nguyên.</summary>
+        public static async Task<ChiTiet> DocLaiThuNhanh(string tm, Action<string> bao, CancellationToken huy)
+        {
+            ChiTiet ct = DocChiTiet(tm) ?? throw new InvalidOperationException("Lần thử không còn dữ liệu.");
+            string truoc = PhongDocBanVe.Ghi(ct);
+            string pt = await DocPhongTo(ct, tm, TenThuNhanh, bao, huy, ct.Tam.FirstOrDefault()?.Khoa ?? "");
+            if (pt == null || pt.Contains("Chưa đọc được")) throw new InvalidOperationException("AI chưa đọc lại được — " + (pt ?? "không có ảnh") + "\nNguồn AI: " + NguonAi);
+            bao(pt + (PhongDocBanVe.Ghi(ct) == truoc ? " (không ô nào đổi)" : ""));
+            return ct;
+        }
 
         /// <summary>
         /// Thư mục thử mới (dựng như thư mục đơn): cả tệp coi là MỘT tấm, không đọc cả trang (bước 1). PNG dùng thẳng làm ảnh cắt;
