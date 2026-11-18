@@ -30,6 +30,11 @@ namespace OhtaTool.Plugin.Core
         public string LastProfile;
         /// <summary>Trùng tên file PDF thì tự lưu "&lt;tên&gt; (n).pdf", không hỏi ghi đè. Mặc định tắt (hỏi).</summary>
         public bool SkipOverwritePrompt;
+        /// <summary>Tự động thêm ô 材料寸法チェック lên trang PDF khi in chế độ Theo khung. Mặc định bật.</summary>
+        public bool AddCheckBox = true;
+        /// <summary>Kích thước chuẩn ô (mm CAD) trước khi nhân tỷ lệ fit của từng khung Khung_IN.</summary>
+        public double CheckBoxWidthCad = PrintCheckBoxLayout.DefaultBoxWidthCad;
+        public double CheckBoxHeightCad = PrintCheckBoxLayout.DefaultBoxHeightCad;
 
         public static PrintSettingsData CreateDefault(bool isZwcad) => new PrintSettingsData
         {
@@ -44,7 +49,10 @@ namespace OhtaTool.Plugin.Core
             },
             FrameLayers = new List<string> { "Khung_IN" },
             Profiles = new List<PrintProfile>(),
-            LastProfile = null
+            LastProfile = null,
+            AddCheckBox = true,
+            CheckBoxWidthCad = PrintCheckBoxLayout.DefaultBoxWidthCad,
+            CheckBoxHeightCad = PrintCheckBoxLayout.DefaultBoxHeightCad
         };
     }
 

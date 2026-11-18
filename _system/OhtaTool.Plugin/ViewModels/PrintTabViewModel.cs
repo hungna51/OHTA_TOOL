@@ -234,6 +234,9 @@ namespace OhtaTool.Plugin.ViewModels
                 Mode = mode,
                 Layer = _selectedLayer,
                 SkipOverwritePrompt = _settings.SkipOverwritePrompt,
+                AddCheckBox = _settings.AddCheckBox,
+                CheckBoxWidthCad = _settings.CheckBoxWidthCad,
+                CheckBoxHeightCad = _settings.CheckBoxHeightCad,
                 Params = new PrintParams
                 {
                     Device = _selectedDevice,

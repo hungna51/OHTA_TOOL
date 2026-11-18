@@ -32,6 +32,10 @@ namespace OhtaTool.Plugin
         public PrintParams Params;
         /// <summary>Cài đặt ⚙: trùng tên thì tự lưu "(n)", không hỏi ghi đè.</summary>
         public bool SkipOverwritePrompt;
+        /// <summary>Cài đặt ⚙: tự thêm ô 材料寸法チェック khi in Theo khung.</summary>
+        public bool AddCheckBox;
+        public double CheckBoxWidthCad;
+        public double CheckBoxHeightCad;
     }
 
     public static class PrintRunner
@@ -103,6 +107,7 @@ namespace OhtaTool.Plugin
                 }
 
                 object oldBgPlot = null;
+                object oldPlQuiet = null;
                 string tempDir = null;
                 try
                 {
@@ -112,6 +117,12 @@ namespace OhtaTool.Plugin
                         CadApp.SetSystemVariable("BACKGROUNDPLOT", (short)0);
                     }
                     catch (System.Exception) { oldBgPlot = null; }
+                    try
+                    {
+                        oldPlQuiet = CadApp.GetSystemVariable("PLQUIET");
+                        CadApp.SetSystemVariable("PLQUIET", (short)1);
+                    }
+                    catch (System.Exception) { oldPlQuiet = null; }
 
                     PrintRunner.IsBusy = true;
                     Run(doc, req, out tempDir);
@@ -127,6 +138,8 @@ namespace OhtaTool.Plugin
                     PrintRunner.CancelRequested = false;
                     if (oldBgPlot != null)
                         try { CadApp.SetSystemVariable("BACKGROUNDPLOT", oldBgPlot); } catch (System.Exception) { }
+                    if (oldPlQuiet != null)
+                        try { CadApp.SetSystemVariable("PLQUIET", oldPlQuiet); } catch (System.Exception) { }
                     if (tempDir != null)
                         try { Directory.Delete(tempDir, true); } catch (System.Exception) { }
                 }
@@ -204,6 +217,21 @@ namespace OhtaTool.Plugin
                 return;
             }
 
+            if (req.AddCheckBox && (req.Mode == "frames" || req.Mode == "pick"))
+            {
+                for (int i = 0; i < pages.Count; i++)
+                {
+                    if (areas[i].FrameWidthCad > 0 && areas[i].FrameHeightCad > 0)
+                    {
+                        string stamped = Path.Combine(tempDir, (i + 1).ToString("D3") + "_box.pdf");
+                        PdfMerger.StampCheckBox(pages[i], stamped,
+                            areas[i].FrameWidthCad, areas[i].FrameHeightCad,
+                            req.CheckBoxWidthCad, req.CheckBoxHeightCad);
+                        pages[i] = stamped;
+                    }
+                }
+            }
+
             if (merge)
             {
                 if (pages.Count == 1)
@@ -243,7 +271,9 @@ namespace OhtaTool.Plugin
                         {
                             LowerLeft = new Point2d(f.Xmin, f.Ymin),
                             UpperRight = new Point2d(f.Xmax, f.Ymax),
-                            Portrait = PrintCore.IsPortrait(f.Width, f.Height)
+                            Portrait = PrintCore.IsPortrait(f.Width, f.Height),
+                            FrameWidthCad = f.Width,
+                            FrameHeightCad = f.Height
                         });
                     return areas;
 

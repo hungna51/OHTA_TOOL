@@ -26,17 +26,17 @@ In bản vẽ ra PDF, thay lisp `innhanh(OI)-CaNhan.lsp`. Toàn bộ viết bằ
 1. Bản vẽ chưa lưu → báo, không in.
 2. Khung = LWPOLYLINE kín 4 đỉnh trên layer khung, trong Model. Sắp theo Y điểm cao nhất giảm dần, lệch ≤ 1 mm thì trái → phải (`PrintCore.SortFrames`). Khung cao ≥ rộng → trang dọc.
 3. Tên: `<DWGPREFIX><tên bản vẽ bỏ -S/-A>.pdf`; không gộp → `<tên>-1.pdf`, `<tên>-2.pdf`… Có file trùng → hỏi **Ghi đè / Lưu thành (1) / Huỷ in**; ghi đè mà file đang mở → lưu `(n)` và báo. Bật ô ⚙ "Không hỏi khi trùng tên" thì tự lưu `(n)`, không hỏi (`PrintCore.PlanTargets`).
-4. Tắt plottable layer `CANH_BAO_*`, `GRO_XEP_NHOM`. In mỗi trang ra một PDF tạm trong `%TEMP%\OHTA_PRINT\<guid>\` (`CadPrintService.PlotPagesToPdfFiles`: thông số + driver máy in dựng một lần), kiểm tra file bắt đầu bằng `%PDF`, rồi gộp bằng PdfSharp. **Không** in nhiều trang trong một document PlotEngine: AutoCAD xuất ra DWF nhiều trang dù máy in là PDF (lỗi thật 04/11/2026). Dòng báo cuối có thời gian in.
+4. Tắt plottable layer `CANH_BAO_*`, `GRO_XEP_NHOM`. In mỗi trang ra một PDF tạm trong `%TEMP%\OHTA_PRINT\<guid>\` (`CadPrintService.PlotPagesToPdfFiles`: thông số + driver máy in dựng một lần), kiểm tra file bắt đầu bằng `%PDF`, rồi (nếu bật trong ⚙ ở chế độ Theo khung) chèn ô `材料寸法チェック` bằng `PdfMerger.StampCheckBox` (`PrintCheckBoxLayout.Compute` chỉnh tỷ lệ ô theo kích thước từng khung `Khung_IN` trên CAD, kẹp 30×6 mm tới 45% trang, thu nhỏ đồng dạng trang PDF gốc xuống dưới để không đè hình gốc), rồi gộp bằng PdfSharp. **Không** in nhiều trang trong một document PlotEngine: AutoCAD xuất ra DWF nhiều trang dù máy in là PDF (lỗi thật 04/11/2026). Dòng báo cuối có thời gian in.
 5. **Tiến độ**: sau mỗi trang, `PrintRunner.ReportProgress` cập nhật thanh tiến độ trên palette (`Đang in trang i/N`, rồi `Đang gộp PDF…`) và đẩy một khung dispatcher để palette vẽ lại / nhận nút **Huỷ** (luồng chính đang bận in nên WPF không tự vẽ; trong lúc CAD in một trang palette đứng im). Dòng lệnh ghi `[OI] Trang i/N`. Đang in thì các ô bị khoá và palette không tự đọc lại bản vẽ. Huỷ: dừng sau trang đang in, không tạo PDF, báo `Đã huỷ in (đã in i/N trang).`
 6. Mở file (hoặc thư mục khi không gộp).
 
 ## Cài đặt
 
-Registry `HKCU\Software\OFT_Lisp\IN`: `defaults`, `frame_layers`, `profiles` (JSON), `last_profile`, `skip_overwrite_prompt` (`1` = không hỏi ghi đè).
+Registry `HKCU\Software\OFT_Lisp\IN`: `defaults`, `frame_layers`, `profiles` (JSON), `last_profile`, `skip_overwrite_prompt` (`1` = không hỏi ghi đè), `add_check_box` (`1`/`0`, mặc định bật), `check_box_width_cad` (mặc định `150`), `check_box_height_cad` (mặc định `50`).
 
 ## Mã nguồn
 
-- `_system/OhtaTool.Plugin/Core/PrintCore.cs`, `PrintSettings.cs` — logic thuần, test trong `OhtaTool.Tests` (`Program.Print.cs`).
+- `_system/OhtaTool.Plugin/Core/PrintCore.cs`, `PrintSettings.cs`, `PrintCheckBoxLayout.cs` — logic thuần, test trong `OhtaTool.Tests` (`Program.Print.cs`).
 - `Services/CadPrintService.cs`, `PrintSettingsStore.cs`, `PdfMerger.cs` — CAD, registry, gộp PDF.
 - `PrintCommands.cs` — lệnh `OIIN`; `OhtaPaletteCommands.cs` — lệnh `OI`.
 - `ViewModels/PrintTabViewModel.cs`, `Views/PrintTabControl.xaml`, `Views/PrintSettingsWindow.cs`, `Views/PrintDialogs.cs`.

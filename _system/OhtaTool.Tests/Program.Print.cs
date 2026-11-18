@@ -146,12 +146,53 @@ namespace OhtaTool.Tests
             var ac = PrintSettingsData.CreateDefault(false);
             Check("Defaults_PerPlatform", zw.Defaults.Device == "DWG to PDF.pc5" && ac.Defaults.Device == "DWG To PDF.pc3" &&
                 ac.Defaults.Media == "ISO_full_bleed_A3_(420.00_x_297.00_MM)" && ac.Defaults.StyleSheet == "monochrome.ctb" &&
-                ac.FrameLayers.Single() == "Khung_IN" && ac.LastProfile == null && ac.Profiles.Count == 0);
+                ac.FrameLayers.Single() == "Khung_IN" && ac.LastProfile == null && ac.Profiles.Count == 0 &&
+                ac.AddCheckBox && ac.CheckBoxWidthCad == 150.0 && ac.CheckBoxHeightCad == 50.0);
         }
 
         private static void TestPdfMerge()
         {
-            Console.WriteLine("--- Tab PRINT: gop PDF (PdfSharp) ---");
+            Console.WriteLine("--- Tab PRINT: gop PDF & dong dau o kiem tra (PdfSharp) ---");
+            double a3W = 420.0 * PrintCheckBoxLayout.MmToPt;
+            double a3H = 297.0 * PrintCheckBoxLayout.MmToPt;
+
+            // 1. Khung 1:2 (2100x1485 CAD -> o mac dinh 150x50 thanh 30x10 mm) o goc tren-trai, khong de hinh goc
+            var l1 = PrintCheckBoxLayout.Compute(a3W, a3H, 2100, 1485, 150, 50);
+            Check("CheckBoxLayout_Scale1to5",
+                Math.Abs(l1.BoxWidthPt - 30.0 * PrintCheckBoxLayout.MmToPt) < 0.01 &&
+                Math.Abs(l1.BoxHeightPt - 10.0 * PrintCheckBoxLayout.MmToPt) < 0.01 &&
+                Math.Abs(l1.BoxLeftPt - 5.0 * PrintCheckBoxLayout.MmToPt) < 0.01 &&
+                l1.ContentTopPt > l1.BoxTopPt + l1.BoxHeightPt &&
+                l1.ContentTopPt + l1.ContentHeightPt <= a3H + 1e-6 &&
+                l1.ContentLeftPt >= -1e-6 &&
+                l1.ContentLeftPt + l1.ContentWidthPt <= a3W + 1e-6,
+                $"w={l1.BoxWidthPt / PrintCheckBoxLayout.MmToPt:0.00}mm, left={l1.BoxLeftPt / PrintCheckBoxLayout.MmToPt:0.00}mm, contentTop={l1.ContentTopPt:0.0}");
+
+            // 2. Khung nho hon (1050x742.5 CAD -> scale 0.4 -> o to gap doi: 60x20 mm)
+            var l2 = PrintCheckBoxLayout.Compute(a3W, a3H, 1050, 742.5, 150, 50);
+            Check("CheckBoxLayout_SmallerFrame_LargerBox",
+                Math.Abs(l2.BoxWidthPt - 60.0 * PrintCheckBoxLayout.MmToPt) < 0.01 &&
+                Math.Abs(l2.BoxHeightPt - 20.0 * PrintCheckBoxLayout.MmToPt) < 0.01);
+
+            // 3. Khung cuc lon -> kep toi thieu 30x10 mm (giu ty le 150:50)
+            var lMin = PrintCheckBoxLayout.Compute(a3W, a3H, 30000, 20000, 150, 50);
+            Check("CheckBoxLayout_MinClamp",
+                Math.Abs(lMin.BoxWidthPt - 30.0 * PrintCheckBoxLayout.MmToPt) < 0.01 &&
+                Math.Abs(lMin.BoxHeightPt - 10.0 * PrintCheckBoxLayout.MmToPt) < 0.01);
+
+            // 4. Khung cuc nho -> kep toi da <= 45% rong va <= 18% cao trang
+            var lMax = PrintCheckBoxLayout.Compute(a3W, a3H, 200, 140, 150, 50);
+            Check("CheckBoxLayout_MaxClamp",
+                lMax.BoxWidthPt <= a3W * 0.45 + 1e-6 &&
+                lMax.BoxHeightPt <= a3H * 0.18 + 1e-6 &&
+                lMax.ContentTopPt > lMax.BoxTopPt + lMax.BoxHeightPt);
+
+            // 5. Trang doc (Portrait)
+            var lPort = PrintCheckBoxLayout.Compute(a3H, a3W, 1050, 1485, 150, 50);
+            Check("CheckBoxLayout_Portrait_NoOverlap",
+                lPort.ContentTopPt > lPort.BoxTopPt + lPort.BoxHeightPt &&
+                lPort.BoxLeftPt > 0 && lPort.BoxLeftPt + lPort.BoxWidthPt < a3H);
+
             string dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ohta_print_test_" + Guid.NewGuid().ToString("N"));
             System.IO.Directory.CreateDirectory(dir);
             try
@@ -159,20 +200,77 @@ namespace OhtaTool.Tests
                 var inputs = new List<string>();
                 for (int i = 1; i <= 2; i++)
                 {
-                    string p = System.IO.Path.Combine(dir, i + ".pdf");
+                    string raw = System.IO.Path.Combine(dir, i + "_raw.pdf");
+                    string stamped = System.IO.Path.Combine(dir, i + ".pdf");
                     using (var doc = new PdfSharp.Pdf.PdfDocument())
                     {
-                        doc.AddPage();
-                        doc.Save(p);
+                        var pg = doc.AddPage();
+                        pg.Width = PdfSharp.Drawing.XUnit.FromMillimeter(i == 1 ? 420 : 297);
+                        pg.Height = PdfSharp.Drawing.XUnit.FromMillimeter(i == 1 ? 297 : 420);
+                        using (var gfx = PdfSharp.Drawing.XGraphics.FromPdfPage(pg))
+                        {
+                            gfx.DrawRectangle(PdfSharp.Drawing.XPens.Black, 10, 10, pg.Width.Point - 20, pg.Height.Point - 20);
+                        }
+                        doc.Save(raw);
                     }
-                    inputs.Add(p);
+                    OhtaTool.Plugin.Services.PdfSharpMerge.StampCheckBox(
+                        raw, stamped, i == 1 ? 4200 : 2970, i == 1 ? 2970 : 4200, 700, 140);
+                    inputs.Add(stamped);
                 }
                 string output = System.IO.Path.Combine(dir, "gop.pdf");
                 OhtaTool.Plugin.Services.PdfSharpMerge.Merge(inputs, output);
                 int pages;
+                double p0W, p1W;
                 using (var merged = PdfSharp.Pdf.IO.PdfReader.Open(output, PdfSharp.Pdf.IO.PdfDocumentOpenMode.Import))
+                {
                     pages = merged.PageCount;
-                Check("PdfMerge_TwoPages", pages == 2, "pages=" + pages);
+                    p0W = merged.Pages[0].Width.Millimeter;
+                    p1W = merged.Pages[1].Width.Millimeter;
+                }
+                Check("PdfMerge_StampedTwoPages", pages == 2 && Math.Abs(p0W - 420) < 0.5 && Math.Abs(p1W - 297) < 0.5,
+                    $"pages={pages}, p0W={p0W:0.0}, p1W={p1W:0.0}");
+                string jpFont = OhtaTool.Plugin.Services.PdfSharpMerge.ResolveJapaneseFontFamily();
+                Check("PdfMerge_JapaneseFontResolved", !string.IsNullOrEmpty(jpFont) && jpFont != "Arial",
+                    "font=" + (jpFont ?? "null"));
+
+                // Trang co /Rotate = 90 (297x420 xoay 90 -> hien thi ngang 420x297) va /Rotate = 270
+                string rot90Raw = System.IO.Path.Combine(dir, "rot90_raw.pdf");
+                string rot90Out = System.IO.Path.Combine(dir, "rot90_out.pdf");
+                using (var doc = new PdfSharp.Pdf.PdfDocument())
+                {
+                    var pg = doc.AddPage();
+                    pg.Width = PdfSharp.Drawing.XUnit.FromMillimeter(297);
+                    pg.Height = PdfSharp.Drawing.XUnit.FromMillimeter(420);
+                    pg.Rotate = 90;
+                    doc.Save(rot90Raw);
+                }
+                OhtaTool.Plugin.Services.PdfSharpMerge.StampCheckBox(rot90Raw, rot90Out, 4200, 2970, 700, 140);
+                using (var outDoc = PdfSharp.Pdf.IO.PdfReader.Open(rot90Out, PdfSharp.Pdf.IO.PdfDocumentOpenMode.Import))
+                {
+                    var p = outDoc.Pages[0];
+                    Check("PdfStamp_Rotate90_VisualLandscape",
+                        Math.Abs(p.Width.Millimeter - 420) < 0.5 && Math.Abs(p.Height.Millimeter - 297) < 0.5 && p.Rotate == 0,
+                        $"w={p.Width.Millimeter:0.0}, h={p.Height.Millimeter:0.0}, rot={p.Rotate}");
+                }
+
+                string rot270Raw = System.IO.Path.Combine(dir, "rot270_raw.pdf");
+                string rot270Out = System.IO.Path.Combine(dir, "rot270_out.pdf");
+                using (var doc = new PdfSharp.Pdf.PdfDocument())
+                {
+                    var pg = doc.AddPage();
+                    pg.Width = PdfSharp.Drawing.XUnit.FromMillimeter(420);
+                    pg.Height = PdfSharp.Drawing.XUnit.FromMillimeter(297);
+                    pg.Rotate = 270;
+                    doc.Save(rot270Raw);
+                }
+                OhtaTool.Plugin.Services.PdfSharpMerge.StampCheckBox(rot270Raw, rot270Out, 2970, 4200, 700, 140);
+                using (var outDoc = PdfSharp.Pdf.IO.PdfReader.Open(rot270Out, PdfSharp.Pdf.IO.PdfDocumentOpenMode.Import))
+                {
+                    var p = outDoc.Pages[0];
+                    Check("PdfStamp_Rotate270_VisualPortrait",
+                        Math.Abs(p.Width.Millimeter - 297) < 0.5 && Math.Abs(p.Height.Millimeter - 420) < 0.5 && p.Rotate == 0,
+                        $"w={p.Width.Millimeter:0.0}, h={p.Height.Millimeter:0.0}, rot={p.Rotate}");
+                }
             }
             finally
             {

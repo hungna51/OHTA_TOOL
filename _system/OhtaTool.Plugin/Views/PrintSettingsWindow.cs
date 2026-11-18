@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -124,6 +125,34 @@ namespace OhtaTool.Plugin.Views
             };
             root.Children.Add(skipPrompt);
 
+            root.Children.Add(Header("Ô 材料寸法チェック (chế độ Theo khung)"));
+            var addCheckBox = new CheckBox
+            {
+                Content = "Tự động thêm ô lên góc trên-trái mỗi trang PDF (thu nhỏ hình gốc xuống dưới)",
+                IsChecked = data.AddCheckBox,
+                Margin = new Thickness(0, 4, 0, 6)
+            };
+            root.Children.Add(addCheckBox);
+
+            var sizeRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 2) };
+            TextBox cbWidth = DialogKit.Input(data.CheckBoxWidthCad.ToString("0.##", CultureInfo.InvariantCulture));
+            cbWidth.Width = 80;
+            TextBox cbHeight = DialogKit.Input(data.CheckBoxHeightCad.ToString("0.##", CultureInfo.InvariantCulture));
+            cbHeight.Width = 80;
+            sizeRow.Children.Add(new TextBlock { Text = "Rộng chuẩn (mm CAD): ", VerticalAlignment = VerticalAlignment.Center, Foreground = DialogKit.TextBrush });
+            sizeRow.Children.Add(cbWidth);
+            sizeRow.Children.Add(new TextBlock { Text = "   Cao chuẩn (mm CAD): ", VerticalAlignment = VerticalAlignment.Center, Foreground = DialogKit.TextBrush });
+            sizeRow.Children.Add(cbHeight);
+            root.Children.Add(sizeRow);
+            root.Children.Add(new TextBlock
+            {
+                Text = "Cỡ ô trên giấy tự nhân theo tỷ lệ fit của từng khung Khung_IN (kẹp 30×6 mm đến 45% trang).",
+                Foreground = DialogKit.MutedBrush,
+                FontSize = 11,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 2, 0, 0)
+            });
+
             root.Children.Add(Header("Layer khung ưu tiên (mỗi dòng một tên)"));
             TextBox layers = DialogKit.Input(string.Join(Environment.NewLine, data.FrameLayers));
             layers.AcceptsReturn = true;
@@ -166,9 +195,27 @@ namespace OhtaTool.Plugin.Views
             }));
             root.Children.Add(profileButtons);
 
+            var cbErr = DialogKit.ErrorText();
+            root.Children.Add(cbErr);
+
             bool ok = false;
             root.Children.Add(DialogKit.ButtonRow(
-                DialogKit.Btn("Lưu", (s, e) => { ok = true; w.Close(); }, primary: true, accent: accent),
+                DialogKit.Btn("Lưu", (s, e) =>
+                {
+                    if (addCheckBox.IsChecked == true)
+                    {
+                        var errs = new List<string>();
+                        if (!double.TryParse((cbWidth.Text ?? "").Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double wVal) || wVal <= 0)
+                            errs.Add("Chiều rộng chuẩn ô phải là số > 0.");
+                        if (!double.TryParse((cbHeight.Text ?? "").Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double hVal) || hVal <= 0)
+                            errs.Add("Chiều cao chuẩn ô phải là số > 0.");
+                        DialogKit.ShowErrors(cbErr, errs);
+                        if (errs.Count > 0)
+                            return;
+                    }
+                    ok = true;
+                    w.Close();
+                }, primary: true, accent: accent),
                 DialogKit.Btn("Huỷ", (s, e) => w.Close())));
 
             w.Content = new ScrollViewer { Content = root, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
@@ -176,6 +223,8 @@ namespace OhtaTool.Plugin.Views
             if (!ok)
                 return false;
 
+            double.TryParse((cbWidth.Text ?? "").Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double parsedW);
+            double.TryParse((cbHeight.Text ?? "").Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double parsedH);
             var frameLayers = layers.Text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(l => l.Trim()).Where(l => l.Length > 0).ToList();
             saved = new PrintSettingsData
@@ -184,6 +233,9 @@ namespace OhtaTool.Plugin.Views
                 FrameLayers = frameLayers.Count > 0 ? frameLayers : new List<string> { "Khung_IN" },
                 Profiles = profiles,
                 SkipOverwritePrompt = skipPrompt.IsChecked == true,
+                AddCheckBox = addCheckBox.IsChecked == true,
+                CheckBoxWidthCad = parsedW > 0 ? parsedW : data.CheckBoxWidthCad,
+                CheckBoxHeightCad = parsedH > 0 ? parsedH : data.CheckBoxHeightCad,
                 LastProfile = profiles.Any(p => string.Equals(p.Name, data.LastProfile, StringComparison.OrdinalIgnoreCase)) ? data.LastProfile : null
             };
             return true;

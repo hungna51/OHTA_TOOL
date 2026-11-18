@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using Microsoft.Win32;
 using OhtaTool.Plugin.Core;
 
@@ -46,6 +47,12 @@ namespace OhtaTool.Plugin.Services
                     if (key.GetValue("profiles") is string profJson)
                         data.Profiles = PrintSettingsCodec.ProfilesFromJson(profJson);
                     data.SkipOverwritePrompt = (key.GetValue("skip_overwrite_prompt") as string) == "1";
+                    // Mặc định BẬT khi chưa từng lưu khoá này
+                    data.AddCheckBox = (key.GetValue("add_check_box") as string) != "0";
+                    if (double.TryParse(key.GetValue("check_box_width_cad") as string, NumberStyles.Float, CultureInfo.InvariantCulture, out double cbW) && cbW > 0)
+                        data.CheckBoxWidthCad = cbW;
+                    if (double.TryParse(key.GetValue("check_box_height_cad") as string, NumberStyles.Float, CultureInfo.InvariantCulture, out double cbH) && cbH > 0)
+                        data.CheckBoxHeightCad = cbH;
                     string last = key.GetValue("last_profile") as string;
                     data.LastProfile = string.IsNullOrWhiteSpace(last) ? null : last;
                 }
@@ -70,6 +77,9 @@ namespace OhtaTool.Plugin.Services
                     key.SetValue("profiles", PrintSettingsCodec.ProfilesToJson(data.Profiles));
                     key.SetValue("last_profile", data.LastProfile ?? string.Empty);
                     key.SetValue("skip_overwrite_prompt", data.SkipOverwritePrompt ? "1" : "0");
+                    key.SetValue("add_check_box", data.AddCheckBox ? "1" : "0");
+                    key.SetValue("check_box_width_cad", data.CheckBoxWidthCad.ToString(CultureInfo.InvariantCulture));
+                    key.SetValue("check_box_height_cad", data.CheckBoxHeightCad.ToString(CultureInfo.InvariantCulture));
                 }
             }
             catch (Exception ex)

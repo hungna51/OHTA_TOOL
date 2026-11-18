@@ -25,6 +25,8 @@ namespace OhtaTool.Plugin.Services
         public Point2d LowerLeft, UpperRight;
         public bool Portrait;
         public bool Extents;
+        public double FrameWidthCad;
+        public double FrameHeightCad;
     }
 
     /// <summary>Máy in / khổ giấy / bảng ctb đang có trên máy (PlotSettingsValidator).</summary>
@@ -242,8 +244,10 @@ namespace OhtaTool.Plugin.Services
             Database db = doc.Database;
             Matrix3d wcsToDcs = WcsToDcs(doc);
             var settings = new List<PlotSettings>();
+            string oldCwd = null;
             try
             {
+                var infos = new List<PlotInfo>();
                 using (Transaction tr = db.TransactionManager.StartTransaction())
                 {
                     var ms = (BlockTableRecord)tr.GetObject(SymbolUtilityServices.GetBlockModelSpaceId(db), OpenMode.ForRead);
@@ -266,14 +270,13 @@ namespace OhtaTool.Plugin.Services
                         else
                             CadCompat.WriteMessage($"\n[OI] Bản vẽ dùng kiểu in {(db.PlotStyleMode ? ".ctb" : ".stb")}, không áp được {p.StyleSheet} → giữ bảng của bản vẽ.\n");
                     }
-                    // PlotPlotStyles = áp bảng kiểu in khi in (ShowPlotStyles chỉ là hiển thị trên màn hình)
+                    // PlotPlotStyles = áp bảng kiểu in khi in; không bật ShowPlotStyles để tránh dư chi phí hiển thị
                     template.PlotPlotStyles = true;
-                    template.ShowPlotStyles = true;
+                    template.ShowPlotStyles = false;
                     template.PrintLineweights = p.Lineweights ?? true;
                     // PlotPaperSize là kích thước khổ chưa xoay: khổ ngang mà cần dọc (hoặc ngược lại) thì xoay 90°
                     bool paperIsLandscape = template.PlotPaperSize.X > template.PlotPaperSize.Y;
 
-                    var infos = new List<PlotInfo>();
                     var piv = new PlotInfoValidator { MediaMatchingPolicy = MatchingPolicy.MatchEnabled };
                     foreach (PlotPage page in pages)
                     {
@@ -297,31 +300,45 @@ namespace OhtaTool.Plugin.Services
                         piv.Validate(pi);
                         infos.Add(pi);
                     }
-
-                    for (int i = 0; i < infos.Count; i++)
-                    {
-                        using (PlotEngine pe = PlotFactory.CreatePublishEngine())
-                        {
-                            pe.BeginPlot(null, null);
-                            pe.BeginDocument(infos[i], doc.Name, null, 1, true, pdfPaths[i]);
-                            var ppi = new PlotPageInfo();
-                            pe.BeginPage(ppi, infos[i], true, null);
-                            pe.BeginGenerateGraphics(null);
-                            pe.EndGenerateGraphics(null);
-                            pe.EndPage(null);
-                            pe.EndDocument(null);
-                            pe.EndPlot(null);
-                        }
-                        EnsurePdf(pdfPaths[i], i + 1);
-                        // Báo tiến độ (số trang đã xong); false = người dùng bấm Huỷ
-                        if (afterPage != null && !afterPage(i + 1))
-                            throw new OperationCanceledException();
-                    }
                     tr.Commit();
+                }
+
+                // Nếu AutoCAD bật Plot Stamp Log với đường dẫn tương đối ("plot.log"), CWD ở Program Files sẽ lỗi không ghi được -> chuyển tạm sang thư mục tạm.
+                try
+                {
+                    string tempOutDir = System.IO.Path.GetDirectoryName(pdfPaths[0]);
+                    if (!string.IsNullOrEmpty(tempOutDir) && System.IO.Directory.Exists(tempOutDir))
+                    {
+                        oldCwd = System.IO.Directory.GetCurrentDirectory();
+                        System.IO.Directory.SetCurrentDirectory(tempOutDir);
+                    }
+                }
+                catch (Exception) { oldCwd = null; }
+
+                for (int i = 0; i < infos.Count; i++)
+                {
+                    using (PlotEngine pe = PlotFactory.CreatePublishEngine())
+                    {
+                        pe.BeginPlot(null, null);
+                        pe.BeginDocument(infos[i], doc.Name, null, 1, true, pdfPaths[i]);
+                        var ppi = new PlotPageInfo();
+                        pe.BeginPage(ppi, infos[i], true, null);
+                        pe.BeginGenerateGraphics(null);
+                        pe.EndGenerateGraphics(null);
+                        pe.EndPage(null);
+                        pe.EndDocument(null);
+                        pe.EndPlot(null);
+                    }
+                    EnsurePdf(pdfPaths[i], i + 1);
+                    // Báo tiến độ (số trang đã xong); false = người dùng bấm Huỷ
+                    if (afterPage != null && !afterPage(i + 1))
+                        throw new OperationCanceledException();
                 }
             }
             finally
             {
+                if (oldCwd != null)
+                    try { System.IO.Directory.SetCurrentDirectory(oldCwd); } catch (Exception) { }
                 foreach (PlotSettings ps in settings)
                     ps.Dispose();
             }

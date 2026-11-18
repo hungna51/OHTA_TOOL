@@ -33,6 +33,12 @@ Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_oh
 - ⚙ → 🤖 AI → **Nguồn AI**: chạy AI bằng **Claude Code** hoặc **Antigravity** đã cài và đăng nhập trên máy thay cho key API (tính trong gói của người dùng, chậm hơn).
 - Phòng **Triển khai**: AI đọc tiết diện, chương trình trải phẳng theo bảng TV (V, δ như tab Fname; ấn 1 lần, cuộn), ra **X × Y** và **trien_khai.csv**, đổi V từng tấm, gửi bảng tóm tắt lên chuỗi đơn để người check kiểm. Nút **📐 Vẽ DXF** vẽ bản trải phẳng (ezdxf, trên môi trường vẽ của xưởng: layer, kiểu chữ, dim, F-name thật) cho từng tấm theo thư viện mẫu biên dạng; gặp hình chưa có mẫu thì AI đề xuất mẫu mới, máy Admin duyệt thêm vào thư viện. Máy cần Python + ezdxf (app hỏi cài).
 
+## v1.4.3
+
+- Tab **Print (`OI` v2.1)**: tự động thêm ô **`材料寸法チェック`** vào góc trên-trái mỗi trang PDF khi in chế độ **Theo khung**, tự tính kích thước theo tỷ lệ từng khung `Khung_IN` (mặc định `150 × 50 mm CAD`, chỉnh/bật-tắt trong **⚙ Cài đặt in**), và thu nhỏ nhẹ hình in gốc xuống dưới để không bị đè.
+- Sửa lỗi mất/cắt hình khi trang PDF tạm từ CAD xoay 90°/270°.
+- Sửa lỗi `Cannot append to plot stamp log file.` và tối ưu tốc độ khi in nhiều khung trên AutoCAD 2027.
+
 ## v1.4.2
 
 - Tab **Guro v1.6.3** — **GRO chạy nhanh hơn nhiều**: bản vẽ lớn từ ~67 giây còn ~27 giây (ghép hình chiếu, cung bo góc, đọc text số, khớp dim, chuyển layer nay chạy bằng C#).
