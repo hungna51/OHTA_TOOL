@@ -37,6 +37,7 @@ namespace CsvTool.Tests
             TestPhanTichKhung();
             TestCsvXuat();
             TestCaiDat();
+            TestVang();
 
             Console.WriteLine();
             Console.WriteLine("Tong: {0} OK, {1} FAIL", _ok, _fail);
