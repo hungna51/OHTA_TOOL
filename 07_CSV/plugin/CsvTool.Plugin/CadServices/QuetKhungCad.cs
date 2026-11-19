@@ -144,6 +144,25 @@ namespace CsvTool.CadServices
             return (ketQua, dimzin);
         }
 
+        /// <summary>Hộp khung theo handle + mọi entity trong không gian hiện tại nằm trọn trong hộp (dùng khi ghi ngược).</summary>
+        internal static List<Entity> TrongKhung(Transaction tr, Database db, long handleKhung)
+        {
+            ObjectId idKhung = db.GetObjectId(false, new Handle(handleKhung), 0);
+            if (idKhung.IsNull || idKhung.IsErased) throw new InvalidOperationException("Khung in không còn trong bản vẽ — bấm Làm mới.");
+            var dinh = DinhKhung((Entity)tr.GetObject(idKhung, OpenMode.ForRead), out _);
+            double x0 = dinh.Min(p => p.X), x1 = dinh.Max(p => p.X), y0 = dinh.Min(p => p.Y), y1 = dinh.Max(p => p.Y);
+            var kq = new List<Entity>();
+            foreach (ObjectId id in (BlockTableRecord)tr.GetObject(db.CurrentSpaceId, OpenMode.ForRead))
+            {
+                if (id == idKhung || !(tr.GetObject(id, OpenMode.ForRead) is Entity e) || !(e is MText || e is DBText)) continue;
+                Extents3d h;
+                try { h = e.GeometricExtents; } catch { continue; }
+                if (h.MinPoint.X < x0 - Eps || h.MaxPoint.X > x1 + Eps || h.MinPoint.Y < y0 - Eps || h.MaxPoint.Y > y1 + Eps) continue;
+                kq.Add(e);
+            }
+            return kq;
+        }
+
         /// <summary>Mã DXF 70 lisp lọc: dim thẳng 32, dim phi 3, còn lại mã loại khác (bị bỏ qua).</summary>
         private static int MaDxf70(Dimension d) =>
             d is RotatedDimension ? 32 : d is DiametricDimension ? 3 : d is AlignedDimension ? 33 : 0;
