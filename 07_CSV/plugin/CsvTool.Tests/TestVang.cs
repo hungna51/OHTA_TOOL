@@ -30,7 +30,12 @@ namespace CsvTool.Tests
                     var r = PhanTichKhung.Chay(k, CaiDatCsv.LopDimMacDinh, dimzin);
                     if (r.Tam != null) tam.Add(r.Tam); else loi.Add(r.Loi.Split('\n')[0]);
                 }
-                string[] mau = Encoding.UTF8.GetString(File.ReadAllBytes(csv)).TrimStart('﻿').Split(new[] { "\r\n" }, StringSplitOptions.None);
+                string[] mau = Encoding.UTF8.GetString(DxfThuGon.DocChiaSe(csv)).TrimStart('﻿').Split(new[] { "\r\n" }, StringSplitOptions.None);
+                if (mau[0] != CsvXuat.TieuDe35)
+                {
+                    Console.WriteLine("  BO QUA Vang_" + don + " (file " + don + ".csv khong con la CSV lisp 35 cot - da bi ghi de?)");
+                    continue;
+                }
                 string khop = null, khacDau = null;
                 foreach (KieuSapXep kieu in new[] { KieuSapXep.TraiSangPhai, KieuSapXep.TrenXuongDuoi, KieuSapXep.ChuCai })
                 {

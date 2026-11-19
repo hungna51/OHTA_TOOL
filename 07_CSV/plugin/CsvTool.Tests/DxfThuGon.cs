@@ -22,9 +22,16 @@ namespace CsvTool.Tests
             public double So(int ma) => double.Parse(Lay(ma) ?? "0", CultureInfo.InvariantCulture);
         }
 
+        /// <summary>Đọc file mẫu trên OneDrive kể cả khi Excel / CAD đang mở nó (chỉ đọc, cho chia sẻ).</summary>
+        internal static byte[] DocChiaSe(string file)
+        {
+            using (var s = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            using (var m = new MemoryStream()) { s.CopyTo(m); return m.ToArray(); }
+        }
+
         public static (List<KhungTho> Khung, int Dimzin) Doc(string file, string lopKhung, string lopDim)
         {
-            string[] dong = Encoding.UTF8.GetString(File.ReadAllBytes(file)).Split('\n');
+            string[] dong = Encoding.UTF8.GetString(DocChiaSe(file)).Split('\n');
             var cap = new List<(int, string)>();
             for (int i = 0; i + 1 < dong.Length; i += 2)
                 if (int.TryParse(dong[i].Trim(), out int ma)) cap.Add((ma, dong[i + 1].TrimEnd('\r')));
