@@ -33,6 +33,7 @@ namespace CsvTool.Tests
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 
             TestKhung();
+            TestThongTinTam();
 
             Console.WriteLine();
             Console.WriteLine("Tong: {0} OK, {1} FAIL", _ok, _fail);
