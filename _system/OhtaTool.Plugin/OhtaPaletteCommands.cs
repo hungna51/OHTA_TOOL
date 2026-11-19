@@ -116,6 +116,16 @@ namespace OhtaTool.Plugin
             });
         }
 
+        /// <summary>CSV: mở bảng OHTA và chuyển sang tab CSV (thay lệnh CSV của lisp xuat_csv cũ).</summary>
+        [CommandMethod("CSV")]
+        public static void CmdOpenCsvTab()
+        {
+            BugGuard.Run("CSV", () =>
+            {
+                ActivateModuleTab("csv");
+            });
+        }
+
         /// <summary>
         /// (ohta_net_tab "guro"): mở palette và chuyển sang tab có module.Id đó; T nếu được,
         /// nil nếu không. Lisp của mục con dùng để mở tab của mình (lệnh GRO — mục 193 GURO).

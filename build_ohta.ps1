@@ -14,6 +14,10 @@ $GroTestProj = Join-Path $OhtaRoot "03_Guro\plugin\GroTool.Tests\GroTool.Tests.c
 $AiProj     = Join-Path $OhtaRoot "05_AI\plugin\AiTool.Plugin\AiTool.Plugin.csproj"
 $AiTestProj = Join-Path $OhtaRoot "05_AI\plugin\AiTool.Tests\AiTool.Tests.csproj"
 $HasAi = Test-Path $AiProj
+# 07_CSV: DLL rieng CSVTOOL.dll cua tab CSV (thay lisp xuat_csv v5.0.1)
+$CsvProj     = Join-Path $OhtaRoot "07_CSV\plugin\CsvTool.Plugin\CsvTool.Plugin.csproj"
+$CsvTestProj = Join-Path $OhtaRoot "07_CSV\plugin\CsvTool.Tests\CsvTool.Tests.csproj"
+$HasCsv = Test-Path $CsvProj
 # 06_Teams: DLL rieng TEAMSTOOL.dll cua tab Teams (ADR 0008)
 $TeamsProj     = Join-Path $OhtaRoot "06_Teams\plugin\TeamsTool.Plugin\TeamsTool.Plugin.csproj"
 $TeamsTestProj = Join-Path $OhtaRoot "06_Teams\plugin\TeamsTool.Tests\TeamsTool.Tests.csproj"
@@ -76,6 +80,12 @@ if ($HasAi) {
     dotnet build $AiProj @BuildArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Bien dich AiTool.Plugin (05_AI) THAT BAI!"
+    }
+}
+if ($HasCsv) {
+    dotnet build $CsvProj @BuildArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Bien dich CsvTool.Plugin (07_CSV) THAT BAI!"
     }
 }
 if ($HasTeams) {
@@ -157,12 +167,14 @@ if ($HasZwCad) {
     Publish-CadDll (Join-Path $OhtaRoot "_system\OhtaTool.Plugin\bin\Release\net48") (Join-Path $OhtaRoot "_system\bin\ZwCAD") "ZWCAD"
     Publish-CadDll (Join-Path $OhtaRoot "03_Guro\plugin\GroTool.Plugin\bin\Release\net48") (Join-Path $OhtaRoot "03_Guro\bin\ZwCAD") "ZWCAD" "GROTOOL"
     if ($HasAi) { Publish-CadDll (Join-Path $OhtaRoot "05_AI\plugin\AiTool.Plugin\bin\Release\net48") (Join-Path $OhtaRoot "05_AI\bin\ZwCAD") "ZWCAD" "AITOOL" }
+    if ($HasCsv) { Publish-CadDll (Join-Path $OhtaRoot "07_CSV\plugin\CsvTool.Plugin\bin\Release\net48") (Join-Path $OhtaRoot "07_CSV\bin\ZwCAD") "ZWCAD" "CSVTOOL" }
     if ($HasTeams) { Publish-CadDll (Join-Path $OhtaRoot "06_Teams\plugin\TeamsTool.Plugin\bin\Release\net48") (Join-Path $OhtaRoot "06_Teams\bin\ZwCAD") "ZWCAD" "TEAMSTOOL" }
 }
 if ($AutoCadSdkDir) {
     Publish-CadDll (Join-Path $OhtaRoot "_system\OhtaTool.Plugin\bin\Release\$AutoCadTfm") (Join-Path $OhtaRoot "_system\bin\AutoCAD") "AutoCAD $AutoCadYear"
     Publish-CadDll (Join-Path $OhtaRoot "03_Guro\plugin\GroTool.Plugin\bin\Release\$AutoCadTfm") (Join-Path $OhtaRoot "03_Guro\bin\AutoCAD") "AutoCAD $AutoCadYear" "GROTOOL"
     if ($HasAi) { Publish-CadDll (Join-Path $OhtaRoot "05_AI\plugin\AiTool.Plugin\bin\Release\$AutoCadTfm") (Join-Path $OhtaRoot "05_AI\bin\AutoCAD") "AutoCAD $AutoCadYear" "AITOOL" }
+    if ($HasCsv) { Publish-CadDll (Join-Path $OhtaRoot "07_CSV\plugin\CsvTool.Plugin\bin\Release\$AutoCadTfm") (Join-Path $OhtaRoot "07_CSV\bin\AutoCAD") "AutoCAD $AutoCadYear" "CSVTOOL" }
     if ($HasTeams) { Publish-CadDll (Join-Path $OhtaRoot "06_Teams\plugin\TeamsTool.Plugin\bin\Release\$AutoCadTfm") (Join-Path $OhtaRoot "06_Teams\bin\AutoCAD") "AutoCAD $AutoCadYear" "TEAMSTOOL" }
 }
 
@@ -179,6 +191,12 @@ if ($HasAi) {
     dotnet run --project $AiTestProj -c Release --nologo
     if ($LASTEXITCODE -ne 0) {
         throw "Unit Tests AiTool.Tests (05_AI) THAT BAI!"
+    }
+}
+if ($HasCsv) {
+    dotnet run --project $CsvTestProj -c Release --nologo
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unit Tests CsvTool.Tests (07_CSV) THAT BAI!"
     }
 }
 if ($HasTeams) {

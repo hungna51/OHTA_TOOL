@@ -1,0 +1,11 @@
+<UserControl x:Class="CsvTool.Views.CsvTabControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#F5F7FA"
+             FontFamily="Segoe UI, Meiryo UI, Yu Gothic UI"
+             FontSize="12">
+    <StackPanel Margin="10">
+        <TextBlock x:Name="TieuDe" FontSize="15" FontWeight="SemiBold"/>
+        <TextBlock x:Name="MoTa" TextWrapping="Wrap" Foreground="#555"/>
+    </StackPanel>
+</UserControl>

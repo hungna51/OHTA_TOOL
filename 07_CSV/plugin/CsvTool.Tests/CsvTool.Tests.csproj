@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Test cho phan LOGIC THUAN cua CsvTool.Plugin (thu muc Core/), chay KHONG can CAD.
+    Chay tu thu muc OHTA_TOOL: dotnet run (tham so project) 07_CSV/plugin/CsvTool.Tests
+    (build_ohta.ps1 tu chay).
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\CsvTool.Plugin\Core\*.cs" Link="Core\%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

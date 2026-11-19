@@ -51,6 +51,7 @@ $Dlls = @(
     "_system/bin/ZwCAD/OHTATOOL.dll", "_system/bin/AutoCAD/OHTATOOL.dll",
     "03_Guro/bin/ZwCAD/GROTOOL.dll",  "03_Guro/bin/AutoCAD/GROTOOL.dll",
     "05_AI/bin/ZwCAD/AITOOL.dll",     "05_AI/bin/AutoCAD/AITOOL.dll",
+    "07_CSV/bin/ZwCAD/CSVTOOL.dll",   "07_CSV/bin/AutoCAD/CSVTOOL.dll",
     "06_Teams/bin/ZwCAD/TEAMSTOOL.dll", "06_Teams/bin/AutoCAD/TEAMSTOOL.dll",
     "_apps/OhtaTeams/bin/OhtaTeams.exe", "_apps/OhtaTeams/bin/OhtaTeams.exe.config"
 )

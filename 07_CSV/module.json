@@ -1,0 +1,13 @@
+{
+  "id": "csv",
+  "enabled": true,
+  "adminOnly": true,
+  "order": 70,
+  "tabTitle": "CSV",
+  "title": "Xuất CSV thông tin tấm",
+  "version": "0.1",
+  "stage": "beta",
+  "description": "Xuất thông tin tấm (MText) · danh sách tấm · EXPORT <đơn>.csv + data/<đơn>-data.csv",
+  "accentColor": "#1E7F4F",
+  "tools": []
+}

@@ -68,6 +68,14 @@ namespace OhtaTool.Plugin.Views
 
             Register("teams", teamsFactory);
             Register("06_Teams", teamsFactory);
+
+            // Tab CSV: xuất thông tin tấm + EXPORT CSV, giao diện trong CSVTOOL.dll (thay lisp xuat_csv v5.0.1)
+            Func<ModuleManifest, Action, FrameworkElement> csvFactory = (manifest, reloadCallback) =>
+                DllTabLoader.TaoGiaoDien(manifest, "CSVTOOL", "CsvTool.CsvOhtaTab", "CSV") ??
+                new ModuleTabControl(new ModuleTabViewModel(manifest, reloadCallback));
+
+            Register("csv", csvFactory);
+            Register("07_CSV", csvFactory);
         }
 
         public static void Register(string moduleIdOrFolder, Func<ModuleManifest, Action, FrameworkElement> viewFactory)
