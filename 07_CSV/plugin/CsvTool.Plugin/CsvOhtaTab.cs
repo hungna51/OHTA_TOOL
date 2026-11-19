@@ -1,4 +1,5 @@
 using System.Windows;
+using CsvTool.ViewModels;
 using CsvTool.Views;
 
 namespace CsvTool
@@ -12,7 +13,7 @@ namespace CsvTool
     {
         public static FrameworkElement TaoGiaoDien(string tieuDe, string moTa, string mauNhan, string thuMucModule)
         {
-            return new CsvTabControl(tieuDe, moTa);
+            return new CsvTabControl(new CsvTabViewModel(tieuDe, moTa, mauNhan, thuMucModule));
         }
     }
 }

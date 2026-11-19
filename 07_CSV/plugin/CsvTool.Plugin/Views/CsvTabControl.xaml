@@ -3,9 +3,175 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="#F5F7FA"
              FontFamily="Segoe UI, Meiryo UI, Yu Gothic UI"
-             FontSize="12">
-    <StackPanel Margin="10">
-        <TextBlock x:Name="TieuDe" FontSize="15" FontWeight="SemiBold"/>
-        <TextBlock x:Name="MoTa" TextWrapping="Wrap" Foreground="#555"/>
-    </StackPanel>
+             FontSize="12"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="HienKhi"/>
+
+        <Style x:Key="Nut" TargetType="Button">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="NutPhu" TargetType="Button" BasedOn="{StaticResource Nut}">
+            <Setter Property="Foreground" Value="#323639"/>
+            <Setter Property="Background" Value="#E4E7EC"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+        </Style>
+
+        <Style x:Key="The" TargetType="Border">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#E1E4E8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="Margin" Value="10,8,10,0"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- header -->
+            <RowDefinition Height="Auto"/>   <!-- thanh nut -->
+            <RowDefinition Height="Auto"/>   <!-- cai dat -->
+            <RowDefinition Height="*"/>      <!-- danh sach tam -->
+            <RowDefinition Height="Auto"/>   <!-- trang thai -->
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{Binding AccentBrush}" Padding="12,10">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Command="{Binding CaiDatCmd}" Width="30" Height="30" Cursor="Hand"
+                        Background="#FFFFFF" BorderBrush="#CFD8DC" Content="⚙" FontSize="15"
+                        ToolTip="Cài đặt: sắp xếp, layer, bước spline, dung sai khe hở"/>
+                <StackPanel>
+                    <TextBlock Text="{Binding TieuDe}" FontSize="15" FontWeight="SemiBold" Foreground="#FFFFFF"/>
+                    <TextBlock Text="{Binding MoTa}" TextWrapping="Wrap" Foreground="#E8F5E9"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Border Grid.Row="1" Style="{StaticResource The}">
+            <StackPanel>
+                <WrapPanel>
+                    <Button x:Name="NutB1" Style="{StaticResource Nut}" Content="Xuất thông tin tấm" Command="{Binding B1Cmd}"
+                            ToolTip="Phân tích hình học → ghi MText thông tin tấm (tạm chạy lisp cũ)"/>
+                    <Button x:Name="NutExport" Style="{StaticResource Nut}" Content="EXPORT" Command="{Binding ExportCmd}"
+                            ToolTip="Chọn khung in → ghi &lt;đơn&gt;.csv + data\&lt;đơn&gt;-data.csv (có tấm lỗi thì không ghi)"/>
+                    <Button Style="{StaticResource NutPhu}" Content="Làm mới" Command="{Binding LamMoiCmd}"
+                            ToolTip="Chọn khung in → đọc lại danh sách tấm (không ghi CSV)"/>
+                </WrapPanel>
+                <WrapPanel Margin="0,8,0,0">
+                    <TextBlock Text="Chế độ tính:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <RadioButton GroupName="CheDo" Content="0 bình thường" IsChecked="{Binding CheDo0}" Margin="0,0,10,0"/>
+                    <RadioButton GroupName="CheDo" Content="1 chỉ gia công" IsChecked="{Binding CheDo1}" Margin="0,0,10,0"/>
+                    <RadioButton GroupName="CheDo" Content="2 vật liệu khách" IsChecked="{Binding CheDo2}"/>
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="2" Style="{StaticResource The}" Visibility="{Binding HienCaiDat, Converter={StaticResource HienKhi}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="Sắp xếp:" Margin="0,0,8,6"/>
+                <WrapPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,6">
+                    <RadioButton GroupName="Sx" Content="Trái → phải" IsChecked="{Binding SxTraiPhai}" Margin="0,0,10,0"/>
+                    <RadioButton GroupName="Sx" Content="Trên → dưới" IsChecked="{Binding SxTrenDuoi}" Margin="0,0,10,0"/>
+                    <RadioButton GroupName="Sx" Content="Theo tên" IsChecked="{Binding SxChuCai}"/>
+                </WrapPanel>
+                <CheckBox Grid.Row="1" Grid.ColumnSpan="2" Margin="0,0,0,6" IsChecked="{Binding DungLopMacDinh}"
+                          Content="Dùng layer mặc định (Khung_IN · 1-XY · TAPU_TMT)"/>
+                <TextBlock Grid.Row="2" Text="Layer khung:" Margin="0,0,8,4"/>
+                <TextBox Grid.Row="2" Grid.Column="1" Margin="0,0,0,4" Text="{Binding LopKhung}" IsEnabled="{Binding LopTuChon}"/>
+                <TextBlock Grid.Row="3" Text="Layer dim tổng:" Margin="0,0,8,4"/>
+                <TextBox Grid.Row="3" Grid.Column="1" Margin="0,0,0,4" Text="{Binding LopDim}" IsEnabled="{Binding LopTuChon}"/>
+                <TextBlock Grid.Row="4" Text="Layer tapu:" Margin="0,0,8,4"/>
+                <TextBox Grid.Row="4" Grid.Column="1" Margin="0,0,0,4" Text="{Binding LopTapu}" IsEnabled="{Binding LopTuChon}"/>
+                <TextBlock Grid.Row="5" Text="Bước spline:" Margin="0,0,8,4"/>
+                <TextBox Grid.Row="5" Grid.Column="1" Margin="0,0,0,4" Text="{Binding BuocSpline}"/>
+                <TextBlock Grid.Row="6" Text="Dung sai khe hở:" Margin="0,0,8,0"/>
+                <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding DungSaiKheHo}"/>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="3" Style="{StaticResource The}" Padding="0">
+            <DockPanel>
+                <CheckBox DockPanel.Dock="Top" Margin="10,8" Content="Chỉ tấm lỗi" IsChecked="{Binding ChiLoi}"/>
+                <DataGrid x:Name="Luoi" ItemsSource="{Binding DongHien}" AutoGenerateColumns="False"
+                          CanUserAddRows="False" CanUserDeleteRows="False" SelectionMode="Single"
+                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0"
+                          HorizontalGridLinesBrush="#ECEFF1" Background="#FFFFFF" RowHeaderWidth="0"
+                          SelectionChanged="DongChon" BeginningEdit="BatDauSua">
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CoLoi}" Value="True">
+                                    <Setter Property="Background" Value="#FDECEA"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="N" Binding="{Binding N}"/>
+                        <DataGridTextColumn Header="Q" Binding="{Binding Q}"/>
+                        <DataGridTextColumn Header="M" Binding="{Binding M}"/>
+                        <DataGridTextColumn Header="T" Binding="{Binding T}"/>
+                        <DataGridTextColumn Header="X × Y" Binding="{Binding XxY, Mode=OneWay}" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Lỗ nhỏ" Binding="{Binding LoNho, Mode=OneWay}" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Lỗ lớn" Binding="{Binding LoLon, Mode=OneWay}" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Tappu" Binding="{Binding Tappu}"/>
+                        <DataGridTextColumn Header="Sara" Binding="{Binding Sara}"/>
+                        <DataGridTextColumn Header="Pitchi lần" Binding="{Binding PitchiSoLan}"/>
+                        <DataGridTextColumn Header="Pitchi dài" Binding="{Binding PitchiDai}"/>
+                        <DataGridTextColumn Header="Vát" Binding="{Binding Vat}"/>
+                        <DataGridTextColumn Header="Đường bẻ" Binding="{Binding DuongBe, Mode=OneWay}" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Gia công" Binding="{Binding LoaiGiaCong}"/>
+                        <DataGridTextColumn Header="曲げ" Binding="{Binding MaMage, Mode=OneWay}" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Lỗi" Binding="{Binding Loi, Mode=OneWay}" IsReadOnly="True" Foreground="#C62828"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </Border>
+
+        <Border Grid.Row="4" Style="{StaticResource The}" Margin="10,8,10,10">
+            <StackPanel>
+                <TextBlock Text="{Binding TrangThai}" TextWrapping="Wrap"/>
+                <StackPanel Visibility="{Binding CoFile, Converter={StaticResource HienKhi}}" Margin="0,6,0,0">
+                    <DockPanel Margin="0,0,0,4">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Margin="6,0,0,0" Content="Mở" Command="{Binding MoFile10Cmd}"/>
+                        <TextBlock Text="{Binding File10}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Foreground="#555"/>
+                    </DockPanel>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Margin="6,0,0,0" Content="Mở" Command="{Binding MoFile35Cmd}"/>
+                        <TextBlock Text="{Binding File35}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Foreground="#555"/>
+                    </DockPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
 </UserControl>
