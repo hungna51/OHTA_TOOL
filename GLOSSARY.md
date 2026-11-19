@@ -42,6 +42,14 @@ _Avoid_: Fname, F-NAME, FN
 Tên tự do của một tấm, ghi ở dòng `N=` của F-name; mặc định là `<đơn>-<bango>` nhưng người dùng đổi được.
 _Avoid_: tên chi tiết, mã bản vẽ, mã tấm
 
+**MText thông tin tấm**:
+MText trên layer `KHUNG_IN` trong mỗi khung in, do nút "Xuất thông tin tấm" của tab CSV ghi: 12 dòng cố định (lỗ, tappu, sara, pitchi, vát, loại gia công, chế độ tính, giá…) + các dòng đường bẻ; EXPORT đọc lại để ghi CSV.
+_Avoid_: text báo giá, text KHUNG_IN
+
+**Dim tổng**:
+Hai dim thẳng (hoặc một dim phi) trên layer `1-XY` trong khung in, cho kích thước X × Y của tấm khi xuất CSV.
+_Avoid_: dim bao, dim XY
+
 **Mã khắc**:
 Mã ngắn đặt bên trong hình để khắc lên tấm khi cắt.
 _Avoid_: khắc chữ, mã khắc chữ

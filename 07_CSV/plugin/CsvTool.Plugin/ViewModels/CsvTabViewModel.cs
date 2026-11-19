@@ -218,7 +218,10 @@ namespace CsvTool.ViewModels
         private void GuiLenh(string lenh)
         {
             Document doc = CadApplication.DocumentManager.MdiActiveDocument;
-            if (doc != null) doc.SendStringToExecute("\x03\x03" + lenh, true, false, false);
+            if (doc == null) return;
+            // ESC xoá luôn khung chọn sẵn (pickfirst) → chỉ huỷ khi đang có lệnh chạy dở
+            bool dangLenh = !string.IsNullOrEmpty(Convert.ToString(CadApplication.GetSystemVariable("CMDNAMES")));
+            doc.SendStringToExecute((dangLenh ? "\x03\x03" : "") + lenh, true, false, false);
         }
 
         private bool _hienCaiDat;
