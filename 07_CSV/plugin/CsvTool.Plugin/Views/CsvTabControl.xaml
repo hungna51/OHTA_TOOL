@@ -45,6 +45,30 @@
             <Setter Property="Padding" Value="10"/>
             <Setter Property="Margin" Value="10,8,10,0"/>
         </Style>
+        <!-- o gia tri trong the tam: TextBox khong vien, Enter = ghi -->
+        <Style x:Key="O" TargetType="TextBox">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Padding" Value="3,2"/>
+            <Setter Property="Margin" Value="0,0,1,1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <EventSetter Event="KeyDown" Handler="OPhim"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding SuaDuoc}" Value="False">
+                    <Setter Property="IsReadOnly" Value="True"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="Nhan" TargetType="TextBlock">
+            <Setter Property="Background" Value="#DDEBF7"/>
+            <Setter Property="Foreground" Value="#1F4E79"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Padding" Value="4,1"/>
+            <Setter Property="Margin" Value="0,0,1,1"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -121,40 +145,112 @@
 
         <Border Grid.Row="3" Style="{StaticResource The}" Padding="0">
             <DockPanel>
-                <CheckBox DockPanel.Dock="Top" Margin="10,8" Content="Chỉ tấm lỗi" IsChecked="{Binding ChiLoi}"/>
-                <DataGrid x:Name="Luoi" ItemsSource="{Binding DongHien}" AutoGenerateColumns="False"
-                          CanUserAddRows="False" CanUserDeleteRows="False" SelectionMode="Single"
-                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0"
-                          HorizontalGridLinesBrush="#ECEFF1" Background="#FFFFFF" RowHeaderWidth="0"
-                          SelectionChanged="DongChon" BeginningEdit="BatDauSua">
-                    <DataGrid.RowStyle>
-                        <Style TargetType="DataGridRow">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding CoLoi}" Value="True">
-                                    <Setter Property="Background" Value="#FDECEA"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DataGrid.RowStyle>
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="N" Binding="{Binding N}"/>
-                        <DataGridTextColumn Header="Q" Binding="{Binding Q}"/>
-                        <DataGridTextColumn Header="M" Binding="{Binding M}"/>
-                        <DataGridTextColumn Header="T" Binding="{Binding T}"/>
-                        <DataGridTextColumn Header="X × Y" Binding="{Binding XxY, Mode=OneWay}" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Lỗ nhỏ" Binding="{Binding LoNho, Mode=OneWay}" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Lỗ lớn" Binding="{Binding LoLon, Mode=OneWay}" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Tappu" Binding="{Binding Tappu}"/>
-                        <DataGridTextColumn Header="Sara" Binding="{Binding Sara}"/>
-                        <DataGridTextColumn Header="Pitchi lần" Binding="{Binding PitchiSoLan}"/>
-                        <DataGridTextColumn Header="Pitchi dài" Binding="{Binding PitchiDai}"/>
-                        <DataGridTextColumn Header="Vát" Binding="{Binding Vat}"/>
-                        <DataGridTextColumn Header="Đường bẻ" Binding="{Binding DuongBe, Mode=OneWay}" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Gia công" Binding="{Binding LoaiGiaCong}"/>
-                        <DataGridTextColumn Header="曲げ" Binding="{Binding MaMage, Mode=OneWay}" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Lỗi" Binding="{Binding Loi, Mode=OneWay}" IsReadOnly="True" Foreground="#C62828"/>
-                    </DataGrid.Columns>
-                </DataGrid>
+                <DockPanel DockPanel.Dock="Top" Margin="10,8">
+                    <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Margin="0" Content="{Binding NhanChiTiet}"
+                            Command="{Binding ChiTietCmd}" ToolTip="Mở hoặc thu gọn mọi thẻ tấm"/>
+                    <CheckBox Content="Chỉ tấm lỗi" IsChecked="{Binding ChiLoi}" VerticalAlignment="Center"/>
+                </DockPanel>
+                <ScrollViewer x:Name="Cuon" VerticalScrollBarVisibility="Auto" Padding="10,0,10,10">
+                    <ItemsControl ItemsSource="{Binding DongHien}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- 1 the tam: ten | 3 tang thong so | gia tien. Nen xam + khe 1px = vien o -->
+                                <Border BorderBrush="#90A4AE" BorderThickness="1" CornerRadius="4" Margin="0,0,0,6"
+                                        Background="#CFD8DC" PreviewMouseLeftButtonDown="TheBam">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="80"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <DockPanel x:Name="OTen" Background="#E2F0D9" Margin="0,0,1,0">
+                                            <TextBlock x:Name="Mui" DockPanel.Dock="Left" Text="▸" Width="18" Padding="5,0,0,0"
+                                                       VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonUp="MuiBam"
+                                                       ToolTip="Mở / thu gọn tấm này"/>
+                                            <TextBox Style="{StaticResource O}" Text="{Binding N}" FontWeight="SemiBold" Background="Transparent"
+                                                     TextWrapping="Wrap" HorizontalContentAlignment="Left" VerticalAlignment="Center"/>
+                                        </DockPanel>
+
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding Loi}" Foreground="#C62828" TextWrapping="Wrap" Padding="6,4"
+                                                       Background="#FDECEA" Margin="0,0,1,1"
+                                                       Visibility="{Binding CoLoi, Converter={StaticResource HienKhi}}"/>
+                                            <StackPanel Visibility="{Binding SuaDuoc, Converter={StaticResource HienKhi}}">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="36"/><ColumnDefinition Width="64"/><ColumnDefinition Width="44"/>
+                                                        <ColumnDefinition Width="1.4*"/><ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                                                    <TextBlock Style="{StaticResource Nhan}" Text="Q"/>
+                                                    <TextBlock Style="{StaticResource Nhan}" Grid.Column="1" Text="M"/>
+                                                    <TextBlock Style="{StaticResource Nhan}" Grid.Column="2" Text="T"/>
+                                                    <TextBlock Style="{StaticResource Nhan}" Grid.Column="3" Text="X × Y"/>
+                                                    <TextBlock Style="{StaticResource Nhan}" Grid.Column="4" Text="Loại gia công"/>
+                                                    <TextBox Style="{StaticResource O}" Grid.Row="1" Text="{Binding Q}"/>
+                                                    <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="1" Text="{Binding M}"/>
+                                                    <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="2" Text="{Binding T}"/>
+                                                    <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="3" Text="{Binding XxY, Mode=OneWay}" IsReadOnly="True"/>
+                                                    <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="4" Text="{Binding LoaiGiaCong}"/>
+                                                </Grid>
+                                                <StackPanel x:Name="ChiTiet" Visibility="Collapsed">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="48"/><ColumnDefinition Width="48"/><ColumnDefinition Width="80"/>
+                                                            <ColumnDefinition Width="1.4*"/><ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                                                        <TextBlock Style="{StaticResource Nhan}" Text="Lỗ nhỏ"/>
+                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="1" Text="Lỗ lớn"/>
+                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="2" Text="Tapu &amp; sara"/>
+                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="3" Text="Pitchi số lần × dài"/>
+                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="4" Text="Chiều dài vát"/>
+                                                        <TextBox Style="{StaticResource O}" Grid.Row="1" Text="{Binding LoNho, Mode=OneWay}" IsReadOnly="True"/>
+                                                        <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="1" Text="{Binding LoLon, Mode=OneWay}" IsReadOnly="True"/>
+                                                        <Grid Grid.Row="1" Grid.Column="2" Background="#FFFFFF" Margin="0,0,1,1">
+                                                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                                            <TextBox Style="{StaticResource O}" Margin="0" Text="{Binding Tappu}" ToolTip="Lỗ Tappu"/>
+                                                            <TextBlock Grid.Column="1" Text="&amp;" VerticalAlignment="Center"/>
+                                                            <TextBox Style="{StaticResource O}" Grid.Column="2" Margin="0" Text="{Binding Sara}" ToolTip="Lỗ Sara"/>
+                                                        </Grid>
+                                                        <Grid Grid.Row="1" Grid.Column="3" Background="#FFFFFF" Margin="0,0,1,1">
+                                                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                                            <TextBox Style="{StaticResource O}" Margin="0" Text="{Binding PitchiSoLan}" ToolTip="Pitchi - Số lần"/>
+                                                            <TextBlock Grid.Column="1" Text="×" VerticalAlignment="Center"/>
+                                                            <TextBox Style="{StaticResource O}" Grid.Column="2" Margin="0" Text="{Binding PitchiDai}" ToolTip="Pitchi - Chiều dài (mm)"/>
+                                                        </Grid>
+                                                        <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="4" Text="{Binding Vat}"/>
+                                                    </Grid>
+                                                    <StackPanel Visibility="{Binding CoDuongBe, Converter={StaticResource HienKhi}}">
+                                                        <TextBlock Style="{StaticResource Nhan}" Text="Đường bẻ: số đường × chiều dài" TextAlignment="Center"/>
+                                                        <TextBlock Text="{Binding DuongBe}" Background="#FFFFFF" Padding="6,3" Margin="0,0,1,0"
+                                                                   TextAlignment="Center" TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <DockPanel Grid.Column="2" Background="#FFFFFF">
+                                            <TextBlock DockPanel.Dock="Top" Style="{StaticResource Nhan}" Margin="0,0,0,1" Text="Giá tiền"/>
+                                            <TextBox Style="{StaticResource O}" Margin="0" Text="{Binding GiaTien}" Foreground="#1565C0"
+                                                     VerticalAlignment="Center" ToolTip="Giá báo giá (ghi vào MText thông tin tấm)"/>
+                                        </DockPanel>
+                                    </Grid>
+                                </Border>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding MoRong}" Value="True">
+                                        <Setter TargetName="Mui" Property="Text" Value="▾"/>
+                                        <Setter TargetName="ChiTiet" Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding CoLoi}" Value="True">
+                                        <Setter TargetName="OTen" Property="Background" Value="#FDECEA"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </DockPanel>
         </Border>
 

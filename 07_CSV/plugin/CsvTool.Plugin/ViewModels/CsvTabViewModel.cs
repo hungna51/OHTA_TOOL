@@ -52,6 +52,21 @@ namespace CsvTool.ViewModels
         public ICommand ExportCmd { get; }
         public ICommand LamMoiCmd { get; }
         public ICommand CaiDatCmd { get; }
+        public ICommand ChiTietCmd { get; }
+
+        /// <summary>Nút bật/tắt chi tiết: mở hoặc thu gọn mọi thẻ tấm; thẻ mới tạo theo trạng thái này.</summary>
+        private bool _chiTiet;
+        public bool ChiTiet
+        {
+            get => _chiTiet;
+            set
+            {
+                _chiTiet = value;
+                foreach (DongTam d in _tatCa) d.MoRong = value;
+                Bao(); Bao(nameof(NhanChiTiet));
+            }
+        }
+        public string NhanChiTiet => _chiTiet ? "Xem rút gọn" : "Xem chi tiết";
         public ICommand MoFile10Cmd { get; }
         public ICommand MoFile35Cmd { get; }
 
@@ -66,6 +81,7 @@ namespace CsvTool.ViewModels
             ExportCmd = new Lenh(() => GuiLenh("CSVEXPORT "));
             LamMoiCmd = new Lenh(() => GuiLenh("CSVLAMMOI "));
             CaiDatCmd = new Lenh(() => HienCaiDat = !HienCaiDat);
+            ChiTietCmd = new Lenh(() => ChiTiet = !ChiTiet);
             MoFile10Cmd = new Lenh(() => Mo(File10));
             MoFile35Cmd = new Lenh(() => Mo(File35));
 
@@ -91,6 +107,7 @@ namespace CsvTool.ViewModels
             string trung = CsvXuat.TenTrung(sx);
             _tatCa = loi.Concat(sx.Select(t => new DongTam(this, theoHandle[t.HandleKhung], t,
                                                            trung != null && t.N == trung ? "Tên tấm trùng: " + trung : null))).ToList();
+            foreach (DongTam d in _tatCa) d.MoRong = _chiTiet;
             int soLoi = _tatCa.Count(d => d.CoLoi);
             Loc();
 

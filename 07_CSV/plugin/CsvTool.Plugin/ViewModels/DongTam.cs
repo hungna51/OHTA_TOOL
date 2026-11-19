@@ -33,7 +33,24 @@ namespace CsvTool.ViewModels
         public string XxY => Tam == null ? "" : Tam.X + " × " + Tam.Y;
         public string LoNho => Tam?.Tt.LoNho.ToString();
         public string LoLon => Tam?.Tt.LoLon.ToString();
-        public string DuongBe => Tam == null ? "" : string.Join("; ", Tam.Tt.DuongBe.Select(b => b.Dai + "×" + b.SoLuong));
+        // số đường × chiều dài, như bảng giấy của xưởng
+        public string DuongBe => Tam == null ? "" : string.Join("     ", Tam.Tt.DuongBe.Select(b => b.SoLuong + " × " + b.Dai));
+        public bool CoDuongBe => Tam != null && Tam.Tt.DuongBe.Count > 0;
+
+        private bool _moRong;
+        public bool MoRong { get => _moRong; set { _moRong = value; Bao(nameof(MoRong)); } }
+
+        public string GiaTien
+        {
+            get => Tam?.Tt.GiaBaoGia;
+            set
+            {
+                string v = (value ?? "").Trim();
+                if (Tam == null || v == Tam.Tt.GiaBaoGia) return;
+                if (_vm.SuaThongTin(this, "GIA BAO GIA", v)) Tam.Tt.GiaBaoGia = v;
+                Bao(nameof(GiaTien));
+            }
+        }
         public string MaMage => Tam == null ? "" : CsvXuat.MaMage(Tam.Tt.LoaiGiaCong);
 
         // MText thông tin tấm → SuaThongTin (nhãn đã bỏ dấu, viết hoa)
