@@ -142,6 +142,29 @@ namespace CsvTool.Core
             return str.Substring(batDau, j - batDau);
         }
 
+        /// <summary>
+        /// Thay giá trị trường F-name (N/M/T/Q) trong nội dung thô của 1 TEXT/MTEXT; trường không có
+        /// trong text này → null. MTEXT giữ nguyên khối định dạng "{\...;" đầu và "}" cuối.
+        /// </summary>
+        public static string ThayTruongFname(string noiDung, bool laMtext, char truong, string giaTri)
+        {
+            string dau = truong + "=";
+            noiDung = noiDung ?? "";
+            if (!laMtext) return noiDung.StartsWith(dau) ? dau + giaTri : null;
+            string[] doan = noiDung.Split(new[] { "\\P" }, StringSplitOptions.None);
+            bool boc = noiDung.StartsWith("{\\") && noiDung.EndsWith("}");
+            for (int i = 0; i < doan.Length; i++)
+            {
+                int batDau = 0;
+                if (i == 0 && boc) batDau = doan[0].IndexOf(';') + 1;
+                if (string.CompareOrdinal(doan[i], batDau, dau, 0, dau.Length) != 0) continue;
+                bool cuoi = boc && i == doan.Length - 1;
+                doan[i] = doan[i].Substring(0, batDau) + dau + giaTri + (cuoi ? "}" : "");
+                return string.Join("\\P", doan);
+            }
+            return null;
+        }
+
         private static bool CungLop(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 
         private static double Atof(string s) =>

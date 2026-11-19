@@ -69,6 +69,16 @@ namespace CsvTool.Tests
 
             Kiem("ExportA2b: giua 2 dau phay", PhanTichKhung.ExportA2b(",N=A-1,M=SS,", "N=", ","), "A-1");
             Kiem("ExportA2b: cuoi chuoi", PhanTichKhung.ExportA2b(",Q=12", "Q=", ","), "12");
+
+            Kiem("ThayTruongFname Mtext Q", PhanTichKhung.ThayTruongFname("N=A-1\\PM=SS400\\PT=3.2\\PQ=2\\PZ=1", true, 'Q', "5"),
+                 "N=A-1\\PM=SS400\\PT=3.2\\PQ=5\\PZ=1");
+            Kiem("ThayTruongFname Mtext boc {..}", PhanTichKhung.ThayTruongFname("{\\fArial|b0;N=A-1\\PQ=2}", true, 'N', "B-7"),
+                 "{\\fArial|b0;N=B-7\\PQ=2}");
+            Kiem("ThayTruongFname Mtext cuoi boc {..}", PhanTichKhung.ThayTruongFname("{\\fArial|b0;N=A-1\\PQ=2}", true, 'Q', "9"),
+                 "{\\fArial|b0;N=A-1\\PQ=9}");
+            Kiem("ThayTruongFname Text", PhanTichKhung.ThayTruongFname("T=1.6", false, 'T', "2.3"), "T=2.3");
+            Kiem("ThayTruongFname Text khac truong", PhanTichKhung.ThayTruongFname("M=SPHC", false, 'T', "2.3"), null);
+            Kiem("ThayTruongFname khong co", PhanTichKhung.ThayTruongFname("N=A\\PM=B", true, 'Q', "1"), null);
         }
     }
 }
