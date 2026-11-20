@@ -10,7 +10,7 @@ namespace CsvTool.Core
     /// <summary>Thứ tự dòng CSV (= csvmode của lisp).</summary>
     public enum KieuSapXep { TraiSangPhai = 1, TrenXuongDuoi = 2, ChuCai = 3 }
 
-    /// <summary>Ráp dòng và ghi 2 file CSV của nút EXPORT.</summary>
+    /// <summary>Ráp dòng, đọc / ghi data CSV (35 cột) và file cuối &lt;đơn&gt;.csv (10 cột).</summary>
     public static class CsvXuat
     {
         public const string TieuDe10 = "エクスポート用,数量,材質,板厚,noと安全,曲げ,X,Y,,単価";
@@ -66,7 +66,7 @@ namespace CsvTool.Core
               .Append(',').Append(O(tt.LoNho)).Append(',').Append(O(tt.LoLon))
               .Append(',').Append(O(tt.Tappu)).Append(',').Append(O(tt.Sara))
               .Append(',').Append(O(tt.PitchiSoLan)).Append(',').Append(O(tt.PitchiDai))
-              .Append(',').Append(O(tt.LoaiGiaCong)).Append(',').Append(LoaiCuon(tt.LoaiGiaCong))
+              .Append(',').Append(O(PhanTichKhung.ChuanHoaGiaCong(tt.LoaiGiaCong))).Append(',').Append(LoaiCuon(tt.LoaiGiaCong))
               .Append(',').Append(O(tt.Vat));
             for (int i = 0; i < 8; i++)
             {
@@ -101,36 +101,99 @@ namespace CsvTool.Core
             return null;
         }
 
+        public static string DuongCuoi(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, maDon + ".csv");
+        public static string DuongData(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, "data", maDon + "-data.csv");
+
         /// <summary>
         /// Ghi &lt;đơn&gt;.csv và data\&lt;đơn&gt;-data.csv (UTF-8 BOM, CRLF). Mở độc quyền cả hai trước;
         /// một file bị khoá (Excel đang mở) thì ném IOException và không file nào bị đổi.
         /// </summary>
-        public static void GhiHaiFile(string thuMucDwg, string maDon, IReadOnlyList<TamXuat> dsDaSapXep)
+        public static void GhiHaiFile(string thuMucDwg, string maDon, IReadOnlyList<TamXuat> dsDaSapXep) =>
+            GhiCacFile(thuMucDwg, (DuongCuoi(thuMucDwg, maDon), NoiDungCuoi(maDon, dsDaSapXep)),
+                                  (DuongData(thuMucDwg, maDon), NoiDungData(dsDaSapXep)));
+
+        /// <summary>Nút Quét / sửa ô: chỉ ghi data\&lt;đơn&gt;-data.csv (35 cột).</summary>
+        public static void GhiData(string thuMucDwg, string maDon, IReadOnlyList<TamXuat> dsDaSapXep) =>
+            GhiCacFile(thuMucDwg, (DuongData(thuMucDwg, maDon), NoiDungData(dsDaSapXep)));
+
+        /// <summary>Nút Xuất CSV: chỉ ghi file cuối &lt;đơn&gt;.csv (10 cột gửi nhà máy).</summary>
+        public static void GhiCuoi(string thuMucDwg, string maDon, IReadOnlyList<TamXuat> dsDaSapXep) =>
+            GhiCacFile(thuMucDwg, (DuongCuoi(thuMucDwg, maDon), NoiDungCuoi(maDon, dsDaSapXep)));
+
+        private static IEnumerable<string> NoiDungCuoi(string maDon, IEnumerable<TamXuat> ds) =>
+            new[] { TieuDe10 }.Concat(ds.Select(t => Dong10(t, maDon)));
+
+        private static IEnumerable<string> NoiDungData(IEnumerable<TamXuat> ds) => new[] { TieuDe35 }.Concat(ds.Select(Dong35));
+
+        private static void GhiCacFile(string thuMucDwg, params (string File, IEnumerable<string> Dong)[] tep)
         {
             if (string.IsNullOrWhiteSpace(thuMucDwg)) throw new InvalidOperationException("Bản vẽ chưa lưu");
-            string thuMucData = Path.Combine(thuMucDwg, "data");
-            Directory.CreateDirectory(thuMucData);
-            string f10 = Path.Combine(thuMucDwg, maDon + ".csv");
-            string f35 = Path.Combine(thuMucData, maDon + "-data.csv");
-
-            var noi10 = new[] { TieuDe10 }.Concat(dsDaSapXep.Select(t => Dong10(t, maDon)));
-            var noi35 = new[] { TieuDe35 }.Concat(dsDaSapXep.Select(Dong35));
-
+            Directory.CreateDirectory(Path.Combine(thuMucDwg, "data"));
             var moi = new List<string>();
-            FileStream s10 = null, s35 = null;
+            var luong = new List<FileStream>();
             try
             {
-                s10 = MoDocQuyen(f10, moi);
-                s35 = MoDocQuyen(f35, moi);
+                foreach (var t in tep) luong.Add(MoDocQuyen(t.File, moi));
             }
             catch
             {
-                s10?.Dispose(); s35?.Dispose();
+                foreach (var l in luong) l.Dispose();
                 foreach (string f in moi) try { File.Delete(f); } catch { }   // không để lại file rỗng vừa tạo
                 throw;
             }
-            using (s10) Ghi(s10, noi10);
-            using (s35) Ghi(s35, noi35);
+            for (int i = 0; i < tep.Length; i++)
+                using (luong[i]) Ghi(luong[i], tep[i].Dong);
+        }
+
+        /// <summary>
+        /// Đọc data\&lt;đơn&gt;-data.csv → thông tin tấm theo tên N (ngược của Dong35). Dòng thiếu cột bị bỏ;
+        /// đường bẻ "0,0" là ô trống của lisp nên bỏ qua.
+        /// </summary>
+        public static Dictionary<string, ThongTinTam> DocData(string noiDung)
+        {
+            var kq = new Dictionary<string, ThongTinTam>();
+            foreach (string dong in (noiDung ?? "").TrimStart('\uFEFF').Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
+            {
+                if (dong == TieuDe35 || dong.Trim() == "") continue;
+                List<string> o = TachO(dong);
+                if (o.Count < 35 || o[0] == "") continue;
+                int I(int i) => ThongTinTamParser.Atoi(o[i]);
+                var tt = new ThongTinTam
+                {
+                    LoNho = I(6), LoLon = I(7), Tappu = I(8), Sara = I(9), PitchiSoLan = I(10), PitchiDai = I(11),
+                    LoaiGiaCong = o[12], Vat = I(14), CheDoTinh = o[31], GiaBaoGia = o[32], TienVatLieu = o[33], UuDai = o[34],
+                };
+                for (int b = 0; b < 8; b++)
+                {
+                    int soLuong = I(15 + 2 * b), dai = I(16 + 2 * b);
+                    if (soLuong != 0 || dai != 0) tt.DuongBe.Add((dai, soLuong));
+                }
+                kq[o[0]] = tt;
+            }
+            return kq;
+        }
+
+        /// <summary>Tách 1 dòng CSV, ô có nháy kép (do O() bọc) giữ nguyên dấu phẩy bên trong.</summary>
+        public static List<string> TachO(string dong)
+        {
+            var kq = new List<string>();
+            var sb = new StringBuilder();
+            bool trongNhay = false;
+            for (int i = 0; i < dong.Length; i++)
+            {
+                char c = dong[i];
+                if (trongNhay)
+                {
+                    if (c != '"') sb.Append(c);
+                    else if (i + 1 < dong.Length && dong[i + 1] == '"') { sb.Append('"'); i++; }
+                    else trongNhay = false;
+                }
+                else if (c == '"') trongNhay = true;
+                else if (c == ',') { kq.Add(sb.ToString()); sb.Clear(); }
+                else sb.Append(c);
+            }
+            kq.Add(sb.ToString());
+            return kq;
         }
 
         private static FileStream MoDocQuyen(string f, List<string> moi)

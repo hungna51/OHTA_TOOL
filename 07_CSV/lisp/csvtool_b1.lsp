@@ -1,7 +1,9 @@
 ;;; csvtool_b1.lsp - nut "Xuat thong tin tam" (B1) cua tab CSV, giai doan 1.
 ;;; Chay thang che do 3 cua lisp xuat_csv v5.0.1 (khong bat DCL).
 ;;; Tab CSV (CSVTOOL.dll) nap file nay + xuat_csv_zwcad.lsp / xuat_csv_autocad.lsp roi goi:
-;;;   (csvtool-b1 "<layer khung>" "<layer tapu>")
+;;;   (csvtool-b1 "<layer khung>" "<layer tapu>" toan)
+;;; toan = T: moi khung tren layer khung (ssget "_X"); nil: hoi chon (keo vung).
+;;; Xong lisp, tab gui tiep lenh CSVQUET: C# doc MText vua tao -> data CSV -> xoa MText.
 ;;; Cai dat (spline_precision, gap_tolerance, calc_mode) do C# ghi vao
 ;;; HKCU\Software\Autodesk truoc khi goi - lisp cu doc o do.
 ;;; Giai doan 2 (hinh hoc B1 sang C#) se xoa ca thu muc lisp/.
@@ -10,7 +12,7 @@
   (CSV--to-str (vl-registry-read "HKEY_CURRENT_USER\\Software\\Autodesk" name) default)
 )
 
-(defun csvtool-b1 (frame-layer tapu-layer / *error* old-cmdecho doc blpoly poly don err-dwg-path)
+(defun csvtool-b1 (frame-layer tapu-layer toan / *error* old-cmdecho doc blpoly poly don err-dwg-path)
   (defun *error* (msg)
     (if doc (vl-catch-all-apply 'vla-EndUndoMark (list doc)))
     (if old-cmdecho (setvar "CMDECHO" old-cmdecho))
@@ -28,9 +30,14 @@
   )
   ;; Chon khung giong c:csv: loc layer khung truoc, khong co thi cho chon moi layer
   (setq blpoly (CSV--frame-filter frame-layer))
-  (prompt "\nChon khung in: ")
-  (setq poly (CSV--filter-valid-frames (cond ((ssget "_I" blpoly)) ((ssget blpoly)))))
-  (if (= poly nil)
+  (if toan
+    (setq poly (CSV--filter-valid-frames (ssget "_X" blpoly)))
+    (progn
+      (prompt "\nQuet vung - chon khung in (keo vung): ")
+      (setq poly (CSV--filter-valid-frames (cond ((ssget "_I" blpoly)) ((ssget blpoly)))))
+    )
+  )
+  (if (and (= poly nil) (not toan))
     (progn
       (setq blpoly (CSV--frame-filter nil))
       (prompt "\nChua chon duoc khung. Chon lai khung in (moi layer): ")
@@ -49,7 +56,7 @@
       (CSV--run-pricing-text-mode poly doc tapu-layer err-dwg-path)
       (vla-EndUndoMark doc)
       (setvar "CMDECHO" old-cmdecho)
-      (princ "\n[CSV] Xong B1 - bam Lam moi tren tab CSV de xem danh sach tam.")
+      (princ "\n[CSV] Xong phan tich hinh hoc - dang luu vao CSV data.")
       (princ)
     )
   )

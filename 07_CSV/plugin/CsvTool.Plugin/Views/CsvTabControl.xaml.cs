@@ -15,8 +15,11 @@ namespace CsvTool.Views
             InitializeComponent();
             _vm = vm;
             DataContext = vm;
-            NutB1.Background = vm.AccentBrush;
-            NutExport.Background = vm.AccentBrush;
+            NutQuetVung.Background = vm.AccentBrush;
+            NutQuetToan.Background = vm.AccentBrush;
+            NutXuat.BorderBrush = vm.AccentBrush;
+            NutXuat.Foreground = vm.AccentBrush;
+            KhungCheDo.BorderBrush = vm.AccentBrush;
             vm.DongHien.CollectionChanged += (s, e) => _dangChon = null;
         }
 

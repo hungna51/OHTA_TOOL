@@ -99,7 +99,7 @@ namespace CsvTool.Core
                               "Tấm này có gia công m: " + (coM ? "Có" : "Không") +
                               ", số loại đường bẻ: " + maxBe + ".\n" +
                               "Vui lòng kiểm tra xem có bị xuất trùng đè lên nhau không!\n" +
-                              "Nếu text này do phiên bản cũ tạo ra, hãy chạy lại \"Xuất thông tin tấm\".");
+                              "Nếu text này do phiên bản cũ tạo ra, hãy quét lại khung này (Quét theo vùng).");
             return (t, null);
         }
 

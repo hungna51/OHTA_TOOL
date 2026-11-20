@@ -1,4 +1,3 @@
-using CsvTool.CadServices;
 using CsvTool.ViewModels;
 #if ZWCAD
 using ZwSoft.ZwCAD.ApplicationServices;
@@ -15,18 +14,13 @@ using CadApplication = Autodesk.AutoCAD.ApplicationServices.Application;
 namespace CsvTool
 {
     /// <summary>
-    /// Lệnh nút "Làm mới" / "EXPORT" của tab CSV gửi qua SendStringToExecute: chọn khung cần ngữ cảnh
-    /// lệnh (UsePickSet = nhận cả khung chọn sẵn như ssget "_I"). Thông báo dòng lệnh viết không dấu.
+    /// CSVQUET: nút Quét gửi ngay sau lisp phân tích hình học — đọc mọi khung, chuyển MText thông tin
+    /// sang data CSV rồi làm mới danh sách tấm. Chạy trong ngữ cảnh lệnh để xoá MText được (Ctrl+Z).
     /// </summary>
     public class CsvCommands
     {
-        [CommandMethod("CSVLAMMOI", CommandFlags.UsePickSet)]
-        public void LamMoi() => Chay(false);
-
-        [CommandMethod("CSVEXPORT", CommandFlags.UsePickSet)]
-        public void Export() => Chay(true);
-
-        private static void Chay(bool export)
+        [CommandMethod("CSVQUET")]
+        public void Quet()
         {
             Document doc = CadApplication.DocumentManager.MdiActiveDocument;
             if (doc == null) return;
@@ -36,21 +30,8 @@ namespace CsvTool
                 doc.Editor.WriteMessage("\n[CSV] Mo tab CSV tren bang OHTA truoc (lenh CSV).");
                 return;
             }
-            try
-            {
-                var ids = QuetKhungCad.ChonKhung(doc, vm.CaiDat.LopKhungDung);
-                if (ids.Count == 0)
-                {
-                    doc.Editor.WriteMessage("\n[CSV] Khong co khung in hop le duoc chon.");
-                    return;
-                }
-                var (khung, dimzin) = QuetKhungCad.Quet(doc, ids);
-                vm.NhanKetQua(doc, khung, dimzin, export);
-            }
-            catch (System.Exception ex)
-            {
-                doc.Editor.WriteMessage("\n[CSV] Loi doc ban ve: " + ex.Message);
-            }
+            try { vm.SauQuet(doc); }
+            catch (System.Exception ex) { doc.Editor.WriteMessage("\n[CSV] Loi doc ban ve: " + ex.Message); }
         }
     }
 }

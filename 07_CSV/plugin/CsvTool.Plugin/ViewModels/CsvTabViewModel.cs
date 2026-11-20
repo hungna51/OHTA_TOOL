@@ -31,8 +31,9 @@ namespace CsvTool.ViewModels
     }
 
     /// <summary>
-    /// Tab CSV. Nút Làm mới / EXPORT gửi lệnh CSVLAMMOI / CSVEXPORT (chọn khung cần ngữ cảnh lệnh),
-    /// lệnh quét xong gọi NhanKetQua. Sửa ô ghi thẳng bản vẽ; CSV chỉ ghi khi EXPORT.
+    /// Tab CSV. Nút Quét chạy lisp hình học rồi lệnh CSVQUET gọi SauQuet: thông tin tấm lưu ở
+    /// data\&lt;đơn&gt;-data.csv (không để text trên bản vẽ). Sửa ô: N/Q/M/T ghi F-name, còn lại ghi data CSV.
+    /// Xuất CSV ghi file cuối &lt;đơn&gt;.csv.
     /// </summary>
     public sealed class CsvTabViewModel : INotifyPropertyChanged
     {
@@ -48,9 +49,9 @@ namespace CsvTool.ViewModels
         private List<DongTam> _tatCa = new List<DongTam>();
         private Document _docDanhSach;
 
-        public ICommand B1Cmd { get; }
-        public ICommand ExportCmd { get; }
-        public ICommand LamMoiCmd { get; }
+        public ICommand QuetVungCmd { get; }
+        public ICommand QuetToanCmd { get; }
+        public ICommand XuatCsvCmd { get; }
         public ICommand CaiDatCmd { get; }
         public ICommand ChiTietCmd { get; }
 
@@ -77,9 +78,9 @@ namespace CsvTool.ViewModels
             catch { AccentBrush = Brushes.SeaGreen; }
             try { CaiDat = CaiDatRegistry.Doc(); } catch { CaiDat = new CaiDatCsv(); }
 
-            B1Cmd = new Lenh(ChayB1);
-            ExportCmd = new Lenh(() => GuiLenh("CSVEXPORT "));
-            LamMoiCmd = new Lenh(() => GuiLenh("CSVLAMMOI "));
+            QuetVungCmd = new Lenh(() => Quet(false));
+            QuetToanCmd = new Lenh(() => Quet(true));
+            XuatCsvCmd = new Lenh(XuatCsv);
             CaiDatCmd = new Lenh(MoCaiDat);
             ChiTietCmd = new Lenh(() => ChiTiet = !ChiTiet);
             MoFile10Cmd = new Lenh(() => Mo(File10));
@@ -89,64 +90,125 @@ namespace CsvTool.ViewModels
             try { CadApplication.DocumentManager.DocumentActivated += (s, e) => DoiBanVe(e.Document); } catch { }
         }
 
-        // ── Kết quả quét ──────────────────────────────────────────────
+        // ── Quét: lisp phân tích hình học → CSVQUET → SauQuet ─────────
 
-        public void NhanKetQua(Document doc, List<KhungTho> khung, int dimzin, bool export)
+        private string _thuMuc, _maDon;
+
+        private void Quet(bool toanBanVe)
+        {
+            try { ChayB1Lisp.Chay(CaiDat, ThuMucModule, toanBanVe); }
+            catch (Exception ex) { TrangThai = "Không chạy được lệnh quét: " + ex.Message; }
+        }
+
+        /// <summary>
+        /// Gọi từ lệnh CSVQUET (sau lisp). Đọc mọi khung có F-name trên bản vẽ; thông tin tấm lấy từ MText
+        /// vừa quét hoặc từ data CSV. Ghi data CSV rồi mới xoá MText — ghi hỏng thì MText còn nguyên.
+        /// </summary>
+        public void SauQuet(Document doc)
         {
             VongDoTam.Xoa();
             _docDanhSach = doc;
-            var theoHandle = khung.ToDictionary(k => k.Handle);
-            var tot = new List<TamXuat>();
-            var loi = new List<DongTam>();
-            foreach (KhungTho k in khung)
+            if (Convert.ToInt32(CadApplication.GetSystemVariable("DWGTITLED")) != 1)
             {
-                var (tam, l) = PhanTichKhung.Chay(k, CaiDat.LopDimDung, dimzin);
-                if (tam != null) tot.Add(tam); else loi.Add(new DongTam(this, k, null, l));
-            }
-            var sx = CsvXuat.SapXep(tot, CaiDat.SapXep);
-            string trung = CsvXuat.TenTrung(sx);
-            _tatCa = loi.Concat(sx.Select(t => new DongTam(this, theoHandle[t.HandleKhung], t,
-                                                           trung != null && t.N == trung ? "Tên tấm trùng: " + trung : null))).ToList();
-            foreach (DongTam d in _tatCa) d.MoRong = _chiTiet;
-            int soLoi = _tatCa.Count(d => d.CoLoi);
-            Loc();
-
-            if (!export)
-            {
-                TrangThai = _tatCa.Count + " tấm, " + soLoi + " lỗi.";
+                _thuMuc = null;
+                TrangThai = "Bản vẽ chưa lưu — lưu bản vẽ rồi quét lại (data CSV nằm cạnh file bản vẽ).";
                 return;
             }
+            _thuMuc = Convert.ToString(CadApplication.GetSystemVariable("DWGPREFIX"));
+            _maDon = MaDon.TuTenFile(Convert.ToString(CadApplication.GetSystemVariable("DWGNAME")));
+            string fData = CsvXuat.DuongData(_thuMuc, _maDon);
+
+            Dictionary<string, ThongTinTam> cu;
+            try { cu = File.Exists(fData) ? CsvXuat.DocData(DocChiaSe(fData)) : new Dictionary<string, ThongTinTam>(); }
+            catch (Exception ex) { TrangThai = "Không đọc được " + fData + ": " + ex.Message; return; }
+
+            var (khung, dimzin) = QuetKhungCad.Quet(doc, QuetKhungCad.TatCaKhung(doc, CaiDat.LopKhungDung));
+            var tot = new List<(TamXuat Tam, KhungTho Khung, string CanhBao)>();
+            var loi = new List<DongTam>();
+            var coText = new List<long>();
+            foreach (KhungTho k in khung.Where(PhanTichKhung.CoFname))
+            {
+                if (PhanTichKhung.LaKhungChuThich(k))
+                {
+                    // không xoá text trong khung chú thích: có thể là nội dung mẫu của bảng
+                    loi.Add(new DongTam(this, k, null, PhanTichKhung.LoiKhungChuThich) { BoQua = true });
+                    continue;
+                }
+                var r = PhanTichKhung.Ghep(k, CaiDat.LopDimDung, dimzin, cu);
+                if (r.TuText) coText.Add(k.Handle);
+                if (r.Tam != null) tot.Add((r.Tam, k, r.Loi)); else loi.Add(new DongTam(this, k, null, r.Loi));
+            }
+            var theoHandle = tot.ToDictionary(x => x.Tam.HandleKhung);
+            _tatCa = loi.Concat(CsvXuat.SapXep(tot.Select(x => x.Tam), CaiDat.SapXep)
+                                      .Select(t => new DongTam(this, theoHandle[t.HandleKhung].Khung, t, theoHandle[t.HandleKhung].CanhBao)))
+                        .ToList();
+            foreach (DongTam d in _tatCa) d.MoRong = _chiTiet;
+            DanhGiaLai();
+            Loc();
+
+            string trung = CsvXuat.TenTrung(_tatCa.Where(d => d.Tam != null).Select(d => d.Tam));
+            if (trung != null)
+            {
+                TrangThai = "Tên tấm trùng \"" + trung + "\" — sửa N rồi quét lại (chưa lưu data CSV, text thông tin giữ nguyên).";
+                return;
+            }
+            if (!LuuData()) return;   // LuuData đã báo lỗi; giữ MText để quét lại không mất gì
+            int xoa = coText.Count == 0 ? 0 : GhiNguocCad.XoaTextThongTin(doc, coText);
+            File35 = fData;
+            TrangThai = "Quét " + _tatCa.Count(d => !d.BoQua) + " tấm, " + _tatCa.Count(d => d.CoLoi && !d.BoQua) + " lỗi · đã lưu data CSV" +
+                        (xoa > 0 ? " · xoá text thông tin ở " + coText.Count + " khung." : ".");
+        }
+
+        private static string DocChiaSe(string f)
+        {
+            using (var s = new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            using (var r = new StreamReader(s, System.Text.Encoding.UTF8)) return r.ReadToEnd();
+        }
+
+        /// <summary>Ghi lại data CSV từ mọi tấm đọc được (đã sắp xếp). Lỗi → báo, trả false.</summary>
+        internal bool LuuData()
+        {
+            if (_thuMuc == null) { BaoLoi("Chưa quét bản vẽ đã lưu — bấm Quét trước."); return false; }
+            try
+            {
+                CsvXuat.GhiData(_thuMuc, _maDon, CsvXuat.SapXep(_tatCa.Where(d => d.Tam != null).Select(d => d.Tam), CaiDat.SapXep));
+                return true;
+            }
+            catch (IOException) { BaoLoi("data\\" + _maDon + "-data.csv đang mở (Excel?) — đóng rồi làm lại."); }
+            catch (Exception ex) { BaoLoi("Không ghi được data CSV: " + ex.Message); }
+            return false;
+        }
+
+        /// <summary>Cảnh báo vát / pitchi + tên trùng cho mọi tấm đọc được (sau quét và sau mỗi lần sửa ô).</summary>
+        internal void DanhGiaLai()
+        {
+            var tam = _tatCa.Where(d => d.Tam != null).ToList();
+            var trung = new HashSet<string>(tam.GroupBy(d => d.Tam.N).Where(g => g.Count() > 1).Select(g => g.Key));
+            foreach (DongTam d in tam)
+                d.Loi = trung.Contains(d.Tam.N) ? "Tên tấm trùng: " + d.Tam.N : PhanTichKhung.KiemTra(d.Tam.Tt);
+        }
+
+        /// <summary>Nút Xuất CSV: file cuối &lt;đơn&gt;.csv từ danh sách đang hiện; còn thẻ lỗi thì không ghi.</summary>
+        private void XuatCsv()
+        {
+            VongDoTam.Xoa();
+            if (_thuMuc == null || _tatCa.Count == 0) { TrangThai = "Chưa có danh sách tấm — bấm Quét trước."; return; }
+            Document doc = CadApplication.DocumentManager.MdiActiveDocument;
+            if (doc != _docDanhSach) { TrangThai = "Danh sách không thuộc bản vẽ đang mở — quét lại."; return; }
+            int soLoi = _tatCa.Count(d => d.CoLoi && !d.BoQua);
             if (soLoi > 0)
             {
                 ChiLoi = true;
-                TrangThai = "Không xuất CSV: " + soLoi + " tấm lỗi — sửa rồi bấm EXPORT lại.";
+                TrangThai = "Không xuất CSV: còn " + soLoi + " tấm lỗi — sửa rồi bấm Xuất CSV lại.";
                 return;
             }
-            string thuMuc = Convert.ToString(CadApplication.GetSystemVariable("DWGPREFIX"));
-            bool daLuu = Convert.ToInt32(CadApplication.GetSystemVariable("DWGTITLED")) == 1;
-            if (!daLuu)
-            {
-                TrangThai = "Bản vẽ chưa lưu — lưu bản vẽ rồi bấm EXPORT lại.";
-                return;
-            }
-            string maDon = MaDon.TuTenFile(Convert.ToString(CadApplication.GetSystemVariable("DWGNAME")));
-            try
-            {
-                CsvXuat.GhiHaiFile(thuMuc, maDon, sx);
-            }
-            catch (IOException ex)
-            {
-                TrangThai = "File CSV đang mở (Excel?) — đóng rồi bấm lại. (" + ex.Message + ")";
-                return;
-            }
-            catch (Exception ex)
-            {
-                TrangThai = "Không ghi được CSV: " + ex.Message;
-                return;
-            }
-            File10 = Path.Combine(thuMuc, maDon + ".csv");
-            File35 = Path.Combine(thuMuc, "data", maDon + "-data.csv");
-            TrangThai = "Đã xuất " + sx.Count + " tấm.";
+            var ds = CsvXuat.SapXep(_tatCa.Where(d => d.Tam != null).Select(d => d.Tam), CaiDat.SapXep);
+            if (ds.Count == 0) { TrangThai = "Không có tấm nào để xuất."; return; }
+            try { CsvXuat.GhiCuoi(_thuMuc, _maDon, ds); }
+            catch (IOException) { TrangThai = _maDon + ".csv đang mở (Excel?) — đóng rồi bấm lại."; return; }
+            catch (Exception ex) { TrangThai = "Không ghi được CSV: " + ex.Message; return; }
+            File10 = CsvXuat.DuongCuoi(_thuMuc, _maDon);
+            TrangThai = "Đã xuất " + ds.Count + " tấm ra " + _maDon + ".csv.";
             Mo(File10);
         }
 
@@ -155,28 +217,26 @@ namespace CsvTool.ViewModels
             VongDoTam.Xoa();
             if (doc == _docDanhSach) return;
             _tatCa.Clear();
+            _thuMuc = null;
             Loc();
-            TrangThai = "Đổi bản vẽ — bấm Làm mới.";
+            TrangThai = "Đổi bản vẽ — bấm Quét để xem danh sách tấm.";
         }
 
         // ── Sửa ô ─────────────────────────────────────────────────────
 
-        internal bool SuaThongTin(DongTam d, string nhan, string giaTri) =>
-            ThuGhi(doc => GhiNguocCad.SuaThongTin(doc, d.Tam.HandleKhung, nhan, giaTri));
-
-        internal bool SuaFname(DongTam d, char truong, string giaTri) =>
-            ThuGhi(doc => GhiNguocCad.SuaFname(doc, d.Tam.HandleKhung, truong, giaTri));
-
-        private bool ThuGhi(Action<Document> ghi)
+        /// <summary>N/Q/M/T ghi vào F-name trên bản vẽ, rồi lưu lại data CSV (N đổi = đổi tên dòng).</summary>
+        internal bool SuaFname(DongTam d, char truong, string giaTri)
         {
             Document doc = CadApplication.DocumentManager.MdiActiveDocument;
             if (doc == null || doc != _docDanhSach)
             {
-                BaoLoi("Danh sách không thuộc bản vẽ đang mở — bấm Làm mới.");
+                BaoLoi("Danh sách không thuộc bản vẽ đang mở — quét lại.");
                 return false;
             }
-            try { ghi(doc); TrangThai = "Đã ghi vào bản vẽ (CSV chỉ đổi khi bấm EXPORT)."; return true; }
-            catch (Exception ex) { BaoLoi("Không ghi được: " + ex.Message); return false; }
+            try { GhiNguocCad.SuaFname(doc, d.Tam.HandleKhung, truong, giaTri); }
+            catch (Exception ex) { BaoLoi("Không ghi được F-name: " + ex.Message); return false; }
+            TrangThai = "Đã ghi F-name vào bản vẽ.";
+            return true;
         }
 
         internal void BaoLoi(string s) => TrangThai = s;
@@ -209,13 +269,14 @@ namespace CsvTool.ViewModels
             foreach (DongTam d in _tatCa.Where(d => !_chiLoi || d.CoLoi)) DongHien.Add(d);
         }
 
-        private string _trangThai = "Bấm Làm mới rồi chọn khung in để xem danh sách tấm.";
+        private string _trangThai = "Bấm Quét theo vùng hoặc Quét toàn bản vẽ để xem danh sách tấm.";
         public string TrangThai { get => _trangThai; set { _trangThai = value; Bao(); } }
 
         private string _file10, _file35;
-        public string File10 { get => _file10; private set { _file10 = value; Bao(); Bao(nameof(CoFile)); } }
-        public string File35 { get => _file35; private set { _file35 = value; Bao(); } }
-        public bool CoFile => !string.IsNullOrEmpty(_file10);
+        public string File10 { get => _file10; private set { _file10 = value; Bao(); Bao(nameof(CoFile10)); } }
+        public string File35 { get => _file35; private set { _file35 = value; Bao(); Bao(nameof(CoFile35)); } }
+        public bool CoFile10 => !string.IsNullOrEmpty(_file10);
+        public bool CoFile35 => !string.IsNullOrEmpty(_file35);
 
         private void Mo(string f)
         {
@@ -224,22 +285,7 @@ namespace CsvTool.ViewModels
             catch (Exception ex) { TrangThai = "Không mở được " + f + ": " + ex.Message; }
         }
 
-        // ── B1 + cài đặt ──────────────────────────────────────────────
-
-        private void ChayB1()
-        {
-            try { ChayB1Lisp.Chay(CaiDat, ThuMucModule); }
-            catch (Exception ex) { TrangThai = "Không chạy được Xuất thông tin tấm: " + ex.Message; }
-        }
-
-        private void GuiLenh(string lenh)
-        {
-            Document doc = CadApplication.DocumentManager.MdiActiveDocument;
-            if (doc == null) return;
-            // ESC xoá luôn khung chọn sẵn (pickfirst) → chỉ huỷ khi đang có lệnh chạy dở
-            bool dangLenh = !string.IsNullOrEmpty(Convert.ToString(CadApplication.GetSystemVariable("CMDNAMES")));
-            doc.SendStringToExecute((dangLenh ? "\x03\x03" : "") + lenh, true, false, false);
-        }
+        // ── Cài đặt ───────────────────────────────────────────────────
 
         /// <summary>Nút ⚙: cửa sổ cài đặt như tab AI / Guro; Lưu mới ghi registry.</summary>
         private void MoCaiDat()

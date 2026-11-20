@@ -43,4 +43,5 @@ UTF-8 có BOM, CRLF sau mọi dòng. Mở độc quyền cả hai trước khi g
 ## Test vàng (`CsvTool.Tests/TestVang.cs`)
 Đọc `OneDrive - OFT\xxxxx\<đơn>\<đơn>-s.dxf` + `<đơn>.csv` (129213, 125953, 127143) — **không chép bản vẽ khách vào repo** (repo public). Máy không có thì bỏ qua.
 - 125953: DXF ghi `T=6.0` nhưng CSV lisp ghi `6` — F-name bị chuẩn hoá lại sau khi xuất (DXF lưu sau CSV 2 giây). Test chỉ cho phép lệch dạng số ở cột Độ dày.
-- Bản vẽ mẫu có khung `Khung_IN` lớn chứa chú thích (cả MTEXT lẫn TEXT F-name) → khung đó luôn lỗi. Vì vậy EXPORT **bắt người dùng chọn khung** như lisp, không tự lấy mọi khung.
+- Bản vẽ mẫu có khung `Khung_IN` chú thích / bảng mẫu (nhiều F-name mẫu, cả MTEXT lẫn TEXT) → `PhanTichKhung.LaKhungChuThich` (≥ 2 dòng `N=`) nhận ra; tab hiện thẻ "Bỏ qua", không chặn Xuất CSV, không xoá text trong nó.
+- Từ v6.0.0 thông tin tấm lưu ở `data\<đơn>-data.csv` (ghép theo tên N), không để MText trên bản vẽ: `PhanTichKhung.Ghep` + `CsvXuat.DocData` (ngược của `Dong35`, test khứ hồi trong `TestDuLieu.cs`).

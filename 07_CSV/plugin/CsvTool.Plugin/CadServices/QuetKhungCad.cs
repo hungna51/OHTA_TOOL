@@ -22,40 +22,20 @@ namespace CsvTool.CadServices
         private const double Eps = 1e-6;
 
         /// <summary>
-        /// Chọn khung giống c:csv: lấy chọn sẵn (pickfirst) hoặc hỏi chọn *POLYLINE trên lớp khung;
-        /// không được thì hỏi lại không lọc lớp. Chỉ giữ khung hợp lệ (CSV--valid-frame-p). Huỷ → rỗng.
+        /// Mọi khung hợp lệ (CSV--valid-frame-p) trên lớp khung trong không gian hiện tại — danh sách tấm
+        /// luôn phản ánh cả bản vẽ, kể cả khi lisp chỉ quét một vùng.
         /// </summary>
-        public static List<ObjectId> ChonKhung(Document doc, string lopKhung)
+        public static List<ObjectId> TatCaKhung(Document doc, string lopKhung)
         {
-            Editor ed = doc.Editor;
-            bool coLop;
+            var ids = new List<ObjectId>();
+            using (doc.LockDocument())
             using (Transaction tr = doc.Database.TransactionManager.StartTransaction())
             {
-                var lt = (LayerTable)tr.GetObject(doc.Database.LayerTableId, OpenMode.ForRead);
-                coLop = !string.IsNullOrEmpty(lopKhung) && lt.Has(lopKhung);
+                foreach (ObjectId id in (BlockTableRecord)tr.GetObject(doc.Database.CurrentSpaceId, OpenMode.ForRead))
+                    if (id.ObjectClass.DxfName.EndsWith("POLYLINE")) ids.Add(id);
                 tr.Commit();
             }
-            // chọn sẵn trước khi bấm nút = ssget "_I" (lệnh cần CommandFlags.UsePickSet)
-            PromptSelectionResult r = ed.SelectImplied();
-            if (r.Status == PromptStatus.OK && r.Value != null)
-            {
-                ed.SetImpliedSelection(new ObjectId[0]);
-                var san = HopLe(doc, r.Value.GetObjectIds(), coLop ? lopKhung : null);
-                if (san.Count > 0) return san;
-            }
-            var kq = HopLe(doc, Chon(ed, coLop ? lopKhung : null, "\n[CSV] Chon khung in: "), null);
-            if (kq.Count == 0 && coLop)
-                kq = HopLe(doc, Chon(ed, null, "\n[CSV] Chua chon duoc khung. Chon lai khung in (moi layer): "), null);
-            return kq;
-        }
-
-        private static ObjectId[] Chon(Editor ed, string lop, string loiNhac)
-        {
-            var dk = new List<TypedValue> { new TypedValue((int)DxfCode.Start, "*POLYLINE") };
-            if (lop != null) dk.Add(new TypedValue((int)DxfCode.LayerName, lop));
-            PromptSelectionResult r = ed.GetSelection(new PromptSelectionOptions { MessageForAdding = loiNhac },
-                                                      new SelectionFilter(dk.ToArray()));
-            return r.Status == PromptStatus.OK && r.Value != null ? r.Value.GetObjectIds() : new ObjectId[0];
+            return HopLe(doc, ids.ToArray(), lopKhung);
         }
 
         /// <summary>Giữ polyline đúng lớp (nếu có) và hợp lệ: ≥ 4 đỉnh, kín hoặc đỉnh đầu ≈ đỉnh cuối.</summary>
@@ -148,7 +128,7 @@ namespace CsvTool.CadServices
         internal static List<Entity> TrongKhung(Transaction tr, Database db, long handleKhung)
         {
             ObjectId idKhung = db.GetObjectId(false, new Handle(handleKhung), 0);
-            if (idKhung.IsNull || idKhung.IsErased) throw new InvalidOperationException("Khung in không còn trong bản vẽ — bấm Làm mới.");
+            if (idKhung.IsNull || idKhung.IsErased) throw new InvalidOperationException("Khung in không còn trong bản vẽ — quét lại.");
             var dinh = DinhKhung((Entity)tr.GetObject(idKhung, OpenMode.ForRead), out _);
             double x0 = dinh.Min(p => p.X), x1 = dinh.Max(p => p.X), y0 = dinh.Min(p => p.Y), y1 = dinh.Max(p => p.Y);
             var kq = new List<Entity>();

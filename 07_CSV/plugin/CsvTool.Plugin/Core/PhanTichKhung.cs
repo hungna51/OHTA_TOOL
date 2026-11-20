@@ -38,7 +38,94 @@ namespace CsvTool.Core
         private const string LoiKhongFname = "Không tìm thấy F-name!!!";
         private const string LoiSoDim = "Số lượng dim tổng không đúng!!!";
 
+        public const string LoiChuaCoThongTin = "Chưa có thông tin tấm — bấm Quét theo vùng / Quét toàn bản vẽ.";
+
+        /// <summary>EXPORT kiểu lisp: F-name + dim + text thông tin bắt buộc; thiếu vát / pitchi là lỗi.</summary>
         public static (TamXuat Tam, string Loi) Chay(KhungTho k, string lopDim, int dimzin)
+        {
+            var (tam, loi) = DocFnameDim(k, lopDim, dimzin);
+            if (loi != null) return (null, loi);
+            var tt = DocText(k) ?? (null, ThongTinTamParser.LoiKhongCoText);
+            if (tt.Loi != null) return (null, tt.Loi);
+            string canhBao = KiemTra(tt.Tam);
+            if (canhBao != null) return (null, canhBao);
+            tt.Tam.LoaiGiaCong = ChuanHoaGiaCong(tt.Tam.LoaiGiaCong);
+            tam.Tt = tt.Tam;
+            return (tam, null);
+        }
+
+        /// <summary>
+        /// Luồng quét của tab: F-name + dim lấy từ bản vẽ; thông tin tấm lấy từ text vừa quét (TuText)
+        /// hoặc từ data CSV theo tên N. Giá / tiền vật liệu / ưu đãi người dùng đã nhập trong CSV được giữ
+        /// khi text quét lại để trống. Thiếu vát / pitchi → tấm vẫn có (sửa được) kèm cảnh báo trong Loi.
+        /// </summary>
+        public static (TamXuat Tam, string Loi, bool TuText) Ghep(KhungTho k, string lopDim, int dimzin,
+                                                                 IReadOnlyDictionary<string, ThongTinTam> cu)
+        {
+            var text = DocText(k);
+            var (tam, loi) = DocFnameDim(k, lopDim, dimzin);
+            if (loi != null) return (null, loi, text != null);
+            cu.TryGetValue(tam.N, out ThongTinTam daCo);
+            if (text != null)
+            {
+                if (text.Value.Loi != null) return (null, text.Value.Loi, true);
+                tam.Tt = text.Value.Tam;
+                if (daCo != null)
+                {
+                    if (tam.Tt.GiaBaoGia == "") tam.Tt.GiaBaoGia = daCo.GiaBaoGia;
+                    if (tam.Tt.TienVatLieu == "") tam.Tt.TienVatLieu = daCo.TienVatLieu;
+                    if (tam.Tt.UuDai == "") tam.Tt.UuDai = daCo.UuDai;
+                }
+            }
+            else if (daCo != null) tam.Tt = daCo;
+            else return (null, LoiChuaCoThongTin, false);
+            return (tam, KiemTra(tam.Tt), text != null);
+        }
+
+        /// <summary>Khung có text trên layer F-name (khung chú thích không có → không phải tấm).</summary>
+        public static bool CoFname(KhungTho k) => k.Text.Any(t => CungLop(t.Lop, LopFname));
+
+        public const string LoiKhungChuThich = "Bỏ qua — khung có nhiều F-name (khung chú thích / bảng mẫu), không tính vào CSV.";
+
+        /// <summary>
+        /// Khung chú thích của bản vẽ mẫu: có từ 2 dòng "N=" trên layer F-name (một tấm chỉ có 1 F-name).
+        /// Tab vẫn hiện nó (để không lặng lẽ bỏ sót) nhưng không chặn Xuất CSV.
+        /// </summary>
+        public static bool LaKhungChuThich(KhungTho k) =>
+            k.Text.Where(t => CungLop(t.Lop, LopFname))
+                  .Sum(t => t.LaMtext
+                      ? ThongTinTamParser.TachDong(t.NoiDung, true).Count(d => d.StartsWith("N="))
+                      : (t.NoiDung ?? "").StartsWith("N=") ? 1 : 0) >= 2;
+
+        /// <summary>Text thông tin (layer KHUNG_IN) của khung; không có → null.</summary>
+        public static (ThongTinTam Tam, string Loi)? DocText(KhungTho k)
+        {
+            // CSV--pricing-text-raw-list gom dòng bằng cons → thứ tự đảo ngược toàn bộ
+            var dong = new List<string>();
+            foreach (var x in k.Text.Where(x => CungLop(x.Lop, LopThongTin)))
+                dong.AddRange(ThongTinTamParser.TachDong(x.NoiDung, x.LaMtext));
+            dong.Reverse();
+            if (!ThongTinTamParser.LaTextThongTin(dong)) return null;
+            return ThongTinTamParser.Doc(dong);
+        }
+
+        /// <summary>Có gia công k mà chưa có vát / m(pitchi) mà thiếu số lần hoặc chiều dài → lời cảnh báo.</summary>
+        public static string KiemTra(ThongTinTam tt)
+        {
+            string gc = (tt.LoaiGiaCong ?? "").ToUpperInvariant();
+            if (gc.Contains("K") && tt.Vat <= 0)
+                return "Chi tiết có gia công vát (k) nhưng chưa nhập chiều dài vát!";
+            if (gc.Contains("PITCHI") && (tt.PitchiSoLan <= 0 || tt.PitchiDai <= 0))
+                return "Chi tiết có gia công m(pitchi) nhưng chưa nhập Pitchi - Số lần hoặc Pitchi - Chiều dài (mm)!";
+            return null;
+        }
+
+        /// <summary>Như lisp trước khi ghi CSV: m(pitchi) → m, bỏ loại trùng. Gọi lại nhiều lần vẫn ra như nhau.</summary>
+        public static string ChuanHoaGiaCong(string gc) =>
+            string.Join(", ", (gc ?? "").Replace("m(pitchi)", "m").Split(new[] { ", " }, StringSplitOptions.None).Distinct()).Trim(' ');
+
+        /// <summary>F-name (N, M, T, Q) + dim tổng (X ≥ Y) của khung; Tt để trống.</summary>
+        public static (TamXuat Tam, string Loi) DocFnameDim(KhungTho k, string lopDim, int dimzin)
         {
             var fnMtext = k.Text.Where(t => CungLop(t.Lop, LopFname) && t.LaMtext).ToList();
             var fnText = k.Text.Where(t => CungLop(t.Lop, LopFname) && !t.LaMtext).ToList();
@@ -88,29 +175,9 @@ namespace CsvTool.Core
                 if (phi.Count > 1) return (null, LoiSoDim);
                 gx = gy = Rtos(phi[0].DoDai, phi[0].Dimdec, dimzin);
             }
-
-            // CSV--pricing-text-raw-list gom dòng bằng cons → thứ tự đảo ngược toàn bộ
-            var dong = new List<string>();
-            foreach (var x in k.Text.Where(x => CungLop(x.Lop, LopThongTin)))
-                dong.AddRange(ThongTinTamParser.TachDong(x.NoiDung, x.LaMtext));
-            dong.Reverse();
-            var tt = ThongTinTamParser.LaTextThongTin(dong)
-                ? ThongTinTamParser.Doc(dong)
-                : (null, ThongTinTamParser.LoiKhongCoText);
-            if (tt.Loi != null) return (null, tt.Loi);
-
-            string gc = tt.Tam.LoaiGiaCong ?? "";
-            if (gc.ToUpperInvariant().Contains("K") && tt.Tam.Vat <= 0)
-                return (null, "Chi tiết có gia công vát (k) nhưng chưa nhập chiều dài vát!");
-            if (gc.ToUpperInvariant().Contains("PITCHI") && (tt.Tam.PitchiSoLan <= 0 || tt.Tam.PitchiDai <= 0))
-                return (null, "Chi tiết có gia công m(pitchi) nhưng chưa nhập Pitchi - Số lần hoặc Pitchi - Chiều dài (mm)!");
-
-            var thay = gc.Replace("m(pitchi)", "m").Split(new[] { ", " }, StringSplitOptions.None).Distinct();
-            tt.Tam.LoaiGiaCong = string.Join(", ", thay).Trim(' ');
-
             return (new TamXuat
             {
-                N = n, M = m, T = t, Q = q, X = gx, Y = gy, Tt = tt.Tam,
+                N = n, M = m, T = t, Q = q, X = gx, Y = gy,
                 DiemX = k.MinX, DiemY = k.MaxY, HandleKhung = k.Handle,
             }, null);
         }

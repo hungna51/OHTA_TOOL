@@ -30,6 +30,9 @@ namespace CsvTool.Tests
                     var r = PhanTichKhung.Chay(k, CaiDatCsv.LopDimMacDinh, dimzin);
                     if (r.Tam != null) tam.Add(r.Tam); else loi.Add(r.Loi.Split('\n')[0]);
                 }
+                var conLai = khung.Where(k => PhanTichKhung.CoFname(k) && !PhanTichKhung.LaKhungChuThich(k)).ToList();
+                Kiem("Vang_" + don + ": bo khung chu thich -> moi khung tam doc duoc F-name + dim (" + conLai.Count + "/" + khung.Count + ")",
+                     string.Join(" | ", conLai.Select(k => PhanTichKhung.DocFnameDim(k, CaiDatCsv.LopDimMacDinh, dimzin).Loi).Where(l => l != null)), "");
                 string[] mau = Encoding.UTF8.GetString(DxfThuGon.DocChiaSe(csv)).TrimStart('﻿').Split(new[] { "\r\n" }, StringSplitOptions.None);
                 if (mau[0] != CsvXuat.TieuDe35)
                 {
