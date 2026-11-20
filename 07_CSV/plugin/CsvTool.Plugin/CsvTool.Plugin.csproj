@@ -68,6 +68,10 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\settings_logo.png" LogicalName="CsvTool.Assets.settings_logo.png" />
+  </ItemGroup>
+
   <!-- Xuat DLL ra 07_CSV/bin/ZwCAD va 07_CSV/bin/AutoCAD (build_ohta.ps1 tat buoc nay va tu chep) -->
   <Target Name="CopyOutputToCsvBin" AfterTargets="Build" Condition="'$(SkipPostBuildCopy)' != 'true'">
     <PropertyGroup>

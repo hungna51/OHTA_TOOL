@@ -75,19 +75,44 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>   <!-- header -->
             <RowDefinition Height="Auto"/>   <!-- thanh nut -->
-            <RowDefinition Height="Auto"/>   <!-- cai dat -->
             <RowDefinition Height="*"/>      <!-- danh sach tam -->
             <RowDefinition Height="Auto"/>   <!-- trang thai -->
         </Grid.RowDefinitions>
 
+        <!-- Header: cung kieu tab AI / Guro, nut cai dat nen trang banh rang to mau tab -->
         <Border Grid.Row="0" Background="{Binding AccentBrush}" Padding="12,10">
-            <DockPanel>
-                <Button DockPanel.Dock="Right" Command="{Binding CaiDatCmd}" Width="30" Height="30" Cursor="Hand"
-                        Background="#FFFFFF" BorderBrush="#CFD8DC" Content="⚙" FontSize="15"
-                        ToolTip="Cài đặt: sắp xếp, layer, bước spline, dung sai khe hở"/>
-                <StackPanel>
-                    <TextBlock Text="{Binding TieuDe}" FontSize="15" FontWeight="SemiBold" Foreground="#FFFFFF"/>
-                    <TextBlock Text="{Binding MoTa}" TextWrapping="Wrap" Foreground="#E8F5E9"/>
+            <DockPanel LastChildFill="True">
+                <Button DockPanel.Dock="Right" Command="{Binding CaiDatCmd}"
+                        Width="30" Height="30" Margin="6,0,0,0" VerticalAlignment="Top" Cursor="Hand"
+                        ToolTip="Cài đặt CSV: thứ tự tấm, layer, bước spline, dung sai khe hở">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="#FFFFFF" BorderBrush="#CFD8DC"
+                                    BorderThickness="1" CornerRadius="4">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#ECEFF1"/>
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#90A4AE"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#CFD8DC"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                    <Rectangle Width="18" Height="18" Fill="{Binding AccentBrush}">
+                        <Rectangle.OpacityMask>
+                            <ImageBrush ImageSource="{Binding SettingsLogo}" Stretch="Uniform"/>
+                        </Rectangle.OpacityMask>
+                    </Rectangle>
+                </Button>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding TieuDe}" Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding MoTa}" Foreground="#E8F5E9" FontSize="10.5" Margin="0,1,0,0"
+                               TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -111,39 +136,7 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="2" Style="{StaticResource The}" Visibility="{Binding HienCaiDat, Converter={StaticResource HienKhi}}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Text="Sắp xếp:" Margin="0,0,8,6"/>
-                <WrapPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,6">
-                    <RadioButton GroupName="Sx" Content="Trái → phải" IsChecked="{Binding SxTraiPhai}" Margin="0,0,10,0"/>
-                    <RadioButton GroupName="Sx" Content="Trên → dưới" IsChecked="{Binding SxTrenDuoi}" Margin="0,0,10,0"/>
-                    <RadioButton GroupName="Sx" Content="Theo tên" IsChecked="{Binding SxChuCai}"/>
-                </WrapPanel>
-                <CheckBox Grid.Row="1" Grid.ColumnSpan="2" Margin="0,0,0,6" IsChecked="{Binding DungLopMacDinh}"
-                          Content="Dùng layer mặc định (Khung_IN · 1-XY · TAPU_TMT)"/>
-                <TextBlock Grid.Row="2" Text="Layer khung:" Margin="0,0,8,4"/>
-                <TextBox Grid.Row="2" Grid.Column="1" Margin="0,0,0,4" Text="{Binding LopKhung}" IsEnabled="{Binding LopTuChon}"/>
-                <TextBlock Grid.Row="3" Text="Layer dim tổng:" Margin="0,0,8,4"/>
-                <TextBox Grid.Row="3" Grid.Column="1" Margin="0,0,0,4" Text="{Binding LopDim}" IsEnabled="{Binding LopTuChon}"/>
-                <TextBlock Grid.Row="4" Text="Layer tapu:" Margin="0,0,8,4"/>
-                <TextBox Grid.Row="4" Grid.Column="1" Margin="0,0,0,4" Text="{Binding LopTapu}" IsEnabled="{Binding LopTuChon}"/>
-                <TextBlock Grid.Row="5" Text="Bước spline:" Margin="0,0,8,4"/>
-                <TextBox Grid.Row="5" Grid.Column="1" Margin="0,0,0,4" Text="{Binding BuocSpline}"/>
-                <TextBlock Grid.Row="6" Text="Dung sai khe hở:" Margin="0,0,8,0"/>
-                <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding DungSaiKheHo}"/>
-            </Grid>
-        </Border>
-
-        <Border Grid.Row="3" Style="{StaticResource The}" Padding="0">
+        <Border Grid.Row="2" Style="{StaticResource The}" Padding="0">
             <DockPanel>
                 <DockPanel DockPanel.Dock="Top" Margin="10,8">
                     <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Margin="0" Content="{Binding NhanChiTiet}"
@@ -254,7 +247,7 @@
             </DockPanel>
         </Border>
 
-        <Border Grid.Row="4" Style="{StaticResource The}" Margin="10,8,10,10">
+        <Border Grid.Row="3" Style="{StaticResource The}" Margin="10,8,10,10">
             <StackPanel>
                 <TextBlock Text="{Binding TrangThai}" TextWrapping="Wrap"/>
                 <StackPanel Visibility="{Binding CoFile, Converter={StaticResource HienKhi}}" Margin="0,6,0,0">

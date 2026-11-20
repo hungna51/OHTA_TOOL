@@ -80,7 +80,7 @@ namespace CsvTool.ViewModels
             B1Cmd = new Lenh(ChayB1);
             ExportCmd = new Lenh(() => GuiLenh("CSVEXPORT "));
             LamMoiCmd = new Lenh(() => GuiLenh("CSVLAMMOI "));
-            CaiDatCmd = new Lenh(() => HienCaiDat = !HienCaiDat);
+            CaiDatCmd = new Lenh(MoCaiDat);
             ChiTietCmd = new Lenh(() => ChiTiet = !ChiTiet);
             MoFile10Cmd = new Lenh(() => Mo(File10));
             MoFile35Cmd = new Lenh(() => Mo(File35));
@@ -241,31 +241,44 @@ namespace CsvTool.ViewModels
             doc.SendStringToExecute((dangLenh ? "\x03\x03" : "") + lenh, true, false, false);
         }
 
-        private bool _hienCaiDat;
-        public bool HienCaiDat { get => _hienCaiDat; set { _hienCaiDat = value; Bao(); } }
+        /// <summary>Nút ⚙: cửa sổ cài đặt như tab AI / Guro; Lưu mới ghi registry.</summary>
+        private void MoCaiDat()
+        {
+            try
+            {
+                var w = new Views.CsvCaiDatWindow(CaiDat, AccentBrush);
+                if (CadApplication.ShowModalWindow(w) == true) Luu();
+            }
+            catch (Exception ex) { TrangThai = "Không mở được cài đặt: " + ex.Message; }
+        }
+
+        /// <summary>Bánh răng của nút ⚙ (cùng ảnh với tab AI / Guro), tô màu tab qua OpacityMask.</summary>
+        public ImageSource SettingsLogo => _settingsLogo ?? (_settingsLogo = NapLogo());
+        private static ImageSource _settingsLogo;
+
+        private static ImageSource NapLogo()
+        {
+            try
+            {
+                using (Stream s = typeof(CsvTabViewModel).Assembly.GetManifestResourceStream("CsvTool.Assets.settings_logo.png"))
+                {
+                    if (s == null) return null;
+                    var bmp = new System.Windows.Media.Imaging.BitmapImage();
+                    bmp.BeginInit();
+                    bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                    bmp.StreamSource = s;
+                    bmp.EndInit();
+                    bmp.Freeze();
+                    return bmp;
+                }
+            }
+            catch (Exception) { return null; }
+        }
 
         public bool CheDo0 { get => CaiDat.CheDoTinh == 0; set { if (value) DatCheDo(0); } }
         public bool CheDo1 { get => CaiDat.CheDoTinh == 1; set { if (value) DatCheDo(1); } }
         public bool CheDo2 { get => CaiDat.CheDoTinh == 2; set { if (value) DatCheDo(2); } }
         private void DatCheDo(int v) { CaiDat.CheDoTinh = v; Luu(nameof(CheDo0), nameof(CheDo1), nameof(CheDo2)); }
-
-        public bool SxTraiPhai { get => CaiDat.SapXep == KieuSapXep.TraiSangPhai; set { if (value) DatSx(KieuSapXep.TraiSangPhai); } }
-        public bool SxTrenDuoi { get => CaiDat.SapXep == KieuSapXep.TrenXuongDuoi; set { if (value) DatSx(KieuSapXep.TrenXuongDuoi); } }
-        public bool SxChuCai { get => CaiDat.SapXep == KieuSapXep.ChuCai; set { if (value) DatSx(KieuSapXep.ChuCai); } }
-        private void DatSx(KieuSapXep k) { CaiDat.SapXep = k; Luu(nameof(SxTraiPhai), nameof(SxTrenDuoi), nameof(SxChuCai)); }
-
-        public bool DungLopMacDinh { get => CaiDat.DungLopMacDinh; set { CaiDat.DungLopMacDinh = value; Luu(nameof(DungLopMacDinh), nameof(LopTuChon)); } }
-        public bool LopTuChon => !CaiDat.DungLopMacDinh;
-        public string LopKhung { get => CaiDat.LopKhung; set { CaiDat.LopKhung = Gon(value, CaiDatCsv.LopKhungMacDinh); Luu(nameof(LopKhung)); } }
-        public string LopDim { get => CaiDat.LopDim; set { CaiDat.LopDim = Gon(value, CaiDatCsv.LopDimMacDinh); Luu(nameof(LopDim)); } }
-        public string LopTapu { get => CaiDat.LopTapu; set { CaiDat.LopTapu = Gon(value, CaiDatCsv.LopTapuMacDinh); Luu(nameof(LopTapu)); } }
-        public string BuocSpline { get => So(CaiDat.BuocSpline); set { if (DocSo(value, out double d)) CaiDat.BuocSpline = d; Luu(nameof(BuocSpline)); } }
-        public string DungSaiKheHo { get => So(CaiDat.DungSaiKheHo); set { if (DocSo(value, out double d)) CaiDat.DungSaiKheHo = d; Luu(nameof(DungSaiKheHo)); } }
-
-        private static string Gon(string s, string macDinh) => string.IsNullOrWhiteSpace(s) ? macDinh : s.Trim();
-        private static string So(double d) => d.ToString(CultureInfo.InvariantCulture);
-        private static bool DocSo(string s, out double d) =>
-            double.TryParse((s ?? "").Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out d) && d > 0;
 
         private void Luu(params string[] ten)
         {
