@@ -1857,7 +1857,9 @@
   (cond
     ((or (bg--chua codes '(26412 22259)) ; U+672CU+56F3
          (and (member 26412 codes)       ; U+672C (khong phai ky tu dem sau chu so)
-              (null (gro--tim-sl (list (car (member 26412 codes))))))
+              (null (gro--tim-sl (list (car (member 26412 codes)))))
+              ;; muc 232: "t9*Gyakuzu 1HON" - HON la ky tu dem, dong nay la GYAKUZU
+              (not (gro--gyaku-p codes)))
      )
      "HONZU"
     )
