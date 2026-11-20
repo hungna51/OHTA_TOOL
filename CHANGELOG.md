@@ -35,6 +35,10 @@ Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_oh
 - ⚙ → 🤖 AI → **Nguồn AI**: chạy AI bằng **Claude Code** hoặc **Antigravity** đã cài và đăng nhập trên máy thay cho key API (tính trong gói của người dùng, chậm hơn).
 - Phòng **Triển khai**: AI đọc tiết diện, chương trình trải phẳng theo bảng TV (V, δ như tab Fname; ấn 1 lần, cuộn), ra **X × Y** và **trien_khai.csv**, đổi V từng tấm, gửi bảng tóm tắt lên chuỗi đơn để người check kiểm. Nút **📐 Vẽ DXF** vẽ bản trải phẳng (ezdxf, trên môi trường vẽ của xưởng: layer, kiểu chữ, dim, F-name thật) cho từng tấm theo thư viện mẫu biên dạng; gặp hình chưa có mẫu thì AI đề xuất mẫu mới, máy Admin duyệt thêm vào thư viện. Máy cần Python + ezdxf (app hỏi cài).
 
+## v1.4.4
+
+- **Guro 1.6.4**: cặp tấm 本図 / 逆図 ghi số lượng kiểu dấu nhân (`本図 ｔ6*2` + `逆図 ｔ6*2`, không có 枚) nay ra đúng số lượng và tách đủ 2 tấm — trước đây CSV để trống Q và báo `Error Q!!!`. Dòng quy cách thép dẹt `FB6*50` không bị nhầm là số lượng.
+
 ## v1.4.3
 
 - Tab **Print (`OI` v2.1)**: tự động thêm ô **`材料寸法チェック`** vào góc trên-trái mỗi trang PDF khi in chế độ **Theo khung**, tự tính kích thước theo tỷ lệ từng khung `Khung_IN` (mặc định `150 × 50 mm CAD`, chỉnh/bật-tắt trong **⚙ Cài đặt in**), và thu nhỏ nhẹ hình in gốc xuống dưới để không bị đè.

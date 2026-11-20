@@ -83,6 +83,7 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 | 228 | **Bước C# đã nghiệm thu chạy `cs` mặc định (Guro 1.6.3 / OHTA 1.4.2).** Máy đội chưa từng gõ `GROCS` nên registry trống → `ghephc`, `cungbogoc`, `doctext3b`, `dimkhop3b`, `chuyenlayer3b` chạy lisp (ghép hình chiếu ~28 s). Nay `GroCongTac.MacDinhCs` + `DocCheDo(buoc, giaTri)`: registry CHƯA đặt → `cs`; đã đặt (kể cả `lisp`) thì giữ. Bước mới chuyển C# sau này chỉ vào danh sách khi đã nghiệm thu A/B. |
 | 229 | **Tấm vát không nhận khi `カイサキ加工` viết ở text riêng** (dòng trên `t=9mm*1`): cột V (`m` / `k` / `*`) chỉ tính từ chính text ghi chú có `t=` (`gro--fields`). Nay V tính trên ghi chú + text ghi chú tách rời đã gộp vào tấm (mục 128, `gro--gc-cua`) + dòng số lượng; T= / M= vẫn chỉ từ ghi chú. `gro--it-la-tam-be-p` (tấm nhiều hình) cũng xét thêm text tách rời đã gộp. |
 | 230 | **Tấm vát `カイサキ加工` viết dòng riêng đã có V=k nhưng không được xếp sang cột phải.** Bước 6e (xếp cụm, mục 109) tự tính lại V từ ghi chú + dòng số lượng (`all-codes-cum`), không có text tách rời đã gộp. Nay dùng luôn `V=` đầu vòng ghi chú (mục 229) — một nguồn cho cả F-name / CSV lẫn xếp cụm. |
+| 231 | **Cặp 本図/逆図 viết kiểu dấu nhân không ra số lượng** (131203-2, tấm 54, 20/11/2026): `本図 ｔ6*2` + `逆図 ｔ6*2` ghép cặp xong thì 逆図 thành dòng phụ, nhánh dòng phụ (TH1) của `gro--so-luong` chỉ tìm số trước 枚 → Q rỗng, `Error Q!!! 0-2-54 Q=`. Sửa: dòng phụ và dòng chính không có 枚 thì thử `gro--tim-nhan` (số sau `*`/`＊`/`×`) như TH3; dòng phụ có quy cách `FB<số>*<số>` (`FB6*50`, `FB 6*50`, `gro--co-fb-p`) thì không lấy. **231b**: bản đầu dùng `(or ...)` để lấy số → AutoLISP `or` chỉ trả **T** → `incorrect type - T` (bước "gan tam CPL", `itoa`). Luật: lấy giá trị dự phòng dùng `cond`, không dùng `or`. **Chưa kiểm trên CAD.** | [10-csv.md](10-csv.md) |
 | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) | Hộp thoại DCL + **bản .NET** (dialog `gro`, bảng DST), **tab Guro** | 18, 19, 20, 52, 55, 56, 64, 86, 192, 193, 194, 195, 196, 197 |
 | [06-encoding-chuoi.md](06-encoding-chuoi.md) | Encoding và xử lý chuỗi (CP932 / Unicode) | 2, 9, 15, 16, 50, 57 |
 | [07-tach-du-lieu.md](07-tach-du-lieu.md) | Tách độ dày, số lượng, mã khắc, **ghép dòng số lượng** | 10, 11, 17, 23, 24, 32, 43, 54, 168 |
@@ -98,14 +99,14 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 
 ## Mục lục mục lỗi
 
-1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–230 tại đây.
+1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–231 tại đây.
 
 > ### ⚠ SỐ MỤC LÀ CỐ ĐỊNH, KHÔNG ĐƯỢC ĐÁNH SỐ LẠI
 > Mã nguồn `.lsp` tham chiếu tới chúng ở **17 chỗ** (`CLAUDE.md muc 13`, `muc 29`, `muc 85`, `muc 86`, …) và các file rule tham chiếu chéo nhau ở **59 chỗ**. Đổi số là hỏng cả 59 chỗ đó cùng lúc.
 >
 > Thêm mục mới thì **nối tiếp số lớn nhất hiện có + 1**, bỏ vào file theo chủ đề, rồi cập nhật bảng dưới.
 >
-> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **230**.
+> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **231**.
 
 > ### Lệnh chẩn đoán cũ
 > `grosort` / `grodbg` / `growp` / `grostyle` / `bgdbg` thuộc bản đầy đủ cũ `guro ZWCAD(BG MK FN).lsp`, không có trong `guro_gro.lsp`. Các mục bên dưới nhắc tới chúng là ghi chép lịch sử. Lịch sử thay đổi lisp nay nằm trong git của OHTA_TOOL.
