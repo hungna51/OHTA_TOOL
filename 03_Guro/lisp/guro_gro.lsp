@@ -2739,15 +2739,16 @@
      (foreach d dongphu 
        ;; muc 231: dong phu kieu dau nhan (Gyakuzu t6*2, khong co mai) -> so sau dau nhan;
        ;; tru dong phu ghi quy cach FB<so>*<so> (FB6*50 = thep det, khong phai so luong)
-       (setq n  (or (car (gro--tim-sl (bg--so-ascii (gro--it-codes d))))
-                    (if (not (gro--co-fb-p (bg--so-ascii (gro--it-codes d))))
-                      (gro--tim-nhan (bg--so-ascii (gro--it-codes d)))))
+       ;; AutoLISP: (or ...) chi tra T/nil -> phai dung cond de lay gia tri
+       (setq n  (cond ((car (gro--tim-sl (bg--so-ascii (gro--it-codes d)))))
+                      ((not (gro--co-fb-p (bg--so-ascii (gro--it-codes d))))
+                       (gro--tim-nhan (bg--so-ascii (gro--it-codes d)))))
              sl (cons n sl)
        )
      )
      ;; Neu tren chinh dong ghi chu co so luong (vd "t=4.5 Honzu 2mai" va dong phu "Gyakuzu 2mai")
      ;; thi gop so luong cua dong chinh vao dau danh sach neu dong phu chi co 1 tam va dong chinh co tu khoa Honzu
-     (setq sl-chinh (or (gro--tim-sl codes) (if (setq n (gro--tim-nhan codes)) (list n))))
+     (setq sl-chinh (cond ((gro--tim-sl codes)) ((setq n (gro--tim-nhan codes)) (list n))))
      (if (and sl-chinh 
               (= (length dongphu) 1) 
               (or (member 26412 codes) (bg--chua codes '(26412 22259)))
