@@ -4,10 +4,10 @@
   "adminOnly": true,
   "order": 70,
   "tabTitle": "CSV",
-  "title": "Xuất CSV thông tin tấm",
-  "version": "0.1",
+  "title": "CSV",
+  "version": "6.0.0",
   "stage": "beta",
-  "description": "Xuất thông tin tấm (MText) · danh sách tấm · EXPORT <đơn>.csv + data/<đơn>-data.csv",
+  "description": "lisp xuất csv và thông tin tấm",
   "accentColor": "#1E7F4F",
   "tools": []
 }
