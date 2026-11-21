@@ -168,7 +168,52 @@
                 <DockPanel DockPanel.Dock="Top" Margin="10,8">
                     <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Margin="0" Content="{Binding NhanChiTiet}"
                             Command="{Binding ChiTietCmd}" ToolTip="Mở hoặc thu gọn mọi thẻ tấm"/>
-                    <CheckBox Content="Chỉ tấm lỗi" IsChecked="{Binding ChiLoi}" VerticalAlignment="Center"/>
+                    <CheckBox DockPanel.Dock="Left" Content="Chỉ tấm lỗi" IsChecked="{Binding ChiLoi}" VerticalAlignment="Center"/>
+                    <Border Margin="8,0" Background="#FFFFFF" BorderBrush="#B0BEC5" BorderThickness="1" CornerRadius="5" Height="26">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Left" Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="#78909C"
+                                       Margin="7,0,5,0" VerticalAlignment="Center"/>
+                            <Button DockPanel.Dock="Right" Content="×" Width="20" Foreground="#607D8B" Cursor="Hand" Focusable="False"
+                                    Click="XoaTim" ToolTip="Xoá từ khoá (Esc)">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="Transparent">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding TimKiem}" Value="">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Grid>
+                                <TextBlock Text="Tìm tên, vật liệu..." Foreground="#90A4AE" VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" IsHitTestVisible="False">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TimKiem}" Value="">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBox x:Name="OTim" Text="{Binding TimKiem, UpdateSourceTrigger=PropertyChanged}" Background="Transparent"
+                                         BorderThickness="0" Padding="0" VerticalContentAlignment="Center" PreviewKeyDown="TimPhim"
+                                         ToolTip="Tìm theo tên, vật liệu, độ dày, số lượng, X, Y, gia công. Nhiều từ cách nhau bằng dấu cách"/>
+                            </Grid>
+                        </DockPanel>
+                    </Border>
                 </DockPanel>
                 <ScrollViewer x:Name="Cuon" VerticalScrollBarVisibility="Auto" Padding="10,0,10,10">
                     <ItemsControl ItemsSource="{Binding DongHien}">

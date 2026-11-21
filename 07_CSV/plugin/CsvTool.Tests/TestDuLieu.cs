@@ -13,6 +13,11 @@ namespace CsvTool.Tests
         {
             Console.WriteLine("[DuLieu - CSV data]");
 
+            var tim = new TamXuat { N = "131217-5", M = "SS400", T = "6.0", Q = "36", X = "575", Y = "65", Tt = new ThongTinTam { LoaiGiaCong = "m, k" } };
+            Kiem("KhopTim: hoa thuong, nhieu tu, rong", CsvXuat.KhopTim(tim, null, "ss400 575") && CsvXuat.KhopTim(tim, null, "  "), true);
+            Kiem("KhopTim: thieu 1 tu -> khong khop", CsvXuat.KhopTim(tim, null, "ss400 SUS"), false);
+            Kiem("KhopTim: the loi tim theo noi dung, bo dau", CsvXuat.KhopTim(null, "Khung thiếu F-name", "thieu"), true);
+
             Kiem("TachO: o co nhay giu dau phay", string.Join("|", CsvXuat.TachO("A,\"m, k\",\"x\"\"y\",")), "A|m, k|x\"y|");
 
             // khứ hồi: Dong35 → DocData → Dong35 giữ nguyên từng ký tự

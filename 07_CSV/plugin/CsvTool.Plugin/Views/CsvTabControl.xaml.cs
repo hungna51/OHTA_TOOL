@@ -36,6 +36,19 @@ namespace CsvTool.Views
             if ((sender as FrameworkElement)?.DataContext is DongTam d) d.MoRong = !d.MoRong;
         }
 
+        private void XoaTim(object sender, RoutedEventArgs e)
+        {
+            _vm.TimKiem = "";
+            OTim.Focus();
+        }
+
+        private void TimPhim(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Escape) return;
+            _vm.TimKiem = "";
+            e.Handled = true;
+        }
+
         /// <summary>Enter trong ô = ghi ngay (mặc định TextBox chỉ ghi khi rời ô).</summary>
         private void OPhim(object sender, KeyEventArgs e)
         {

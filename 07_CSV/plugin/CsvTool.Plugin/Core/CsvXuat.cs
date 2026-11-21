@@ -101,6 +101,13 @@ namespace CsvTool.Core
             return null;
         }
 
+        /// <summary>Ô tìm kiếm: mọi từ khoá phải có trong thẻ, không phân biệt hoa thường / dấu. Thẻ lỗi (t = null) tìm theo nội dung lỗi.</summary>
+        public static bool KhopTim(TamXuat t, string loi, string tim)
+        {
+            string the = ThongTinTamParser.ChuanHoa(string.Join(" ", t?.N, t?.M, t?.T, t?.Q, t?.X, t?.Y, t?.Tt?.LoaiGiaCong, loi));
+            return ThongTinTamParser.ChuanHoa(tim).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).All(k => the.Contains(k));
+        }
+
         public static string DuongCuoi(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, maDon + ".csv");
         public static string DuongData(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, "data", maDon + "-data.csv");
 

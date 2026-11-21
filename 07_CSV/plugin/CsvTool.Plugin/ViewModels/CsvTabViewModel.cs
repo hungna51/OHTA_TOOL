@@ -198,6 +198,7 @@ namespace CsvTool.ViewModels
             int soLoi = _tatCa.Count(d => d.CoLoi && !d.BoQua);
             if (soLoi > 0)
             {
+                TimKiem = "";   // từ khoá đang lọc không được che mất tấm lỗi
                 ChiLoi = true;
                 TrangThai = "Không xuất CSV: còn " + soLoi + " tấm lỗi — sửa rồi bấm Xuất CSV lại.";
                 return;
@@ -263,10 +264,13 @@ namespace CsvTool.ViewModels
         private bool _chiLoi;
         public bool ChiLoi { get => _chiLoi; set { _chiLoi = value; Bao(); Loc(); } }
 
+        private string _timKiem = "";
+        public string TimKiem { get => _timKiem; set { _timKiem = value ?? ""; Bao(); Loc(); } }
+
         private void Loc()
         {
             DongHien.Clear();
-            foreach (DongTam d in _tatCa.Where(d => !_chiLoi || d.CoLoi)) DongHien.Add(d);
+            foreach (DongTam d in _tatCa.Where(d => (!_chiLoi || d.CoLoi) && CsvXuat.KhopTim(d.Tam, d.Loi, _timKiem))) DongHien.Add(d);
         }
 
         private string _trangThai = "Bấm Quét theo vùng hoặc Quét toàn bản vẽ để xem danh sách tấm.";
