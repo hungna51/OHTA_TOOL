@@ -55,6 +55,12 @@ namespace CsvTool.Views
             _vm.ChonLoi(l);
         }
 
+        /// <summary>Lăn chuột qua ô chọn đang đóng không được đổi giá trị (làm đổi giá tấm mà không hay).</summary>
+        private void ComboKhongLan(object sender, MouseWheelEventArgs e)
+        {
+            if (sender is ComboBox c && !c.IsDropDownOpen) e.Handled = true;
+        }
+
         private void GiaTuDongBam(object sender, RoutedEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is DongTam d) _vm.VeGiaTuDong(d);

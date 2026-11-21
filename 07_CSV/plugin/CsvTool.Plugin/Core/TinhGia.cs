@@ -26,6 +26,20 @@ namespace CsvTool.Core
     public static class TinhGia
     {
         public static readonly string[] DsLoaiPitchi = { "Pitchi", "Non", "NonLech", "Kakumaru", "KakumaruLech" };
+        public static readonly string[] DsLoaiCuon = { "Không", "Nửa hình", "Cả hình" };
+        public const double GiaCuonNuaHinh = 6000, GiaCuonCaHinh = 12000;   // 2 mức cố định trong form của web
+
+        /// <summary>
+        /// Đơn giá cuộn của tấm: đã chọn trên thẻ thì theo đó (âm = chọn Không), chưa chọn thì suy từ
+        /// loại gia công: r1 (cung tròn) = nửa hình, r2 (ống tròn) = cả hình.
+        /// </summary>
+        public static double DonGiaCuonCua(TamXuat t, GiaTam g)
+        {
+            double chon = g?.DonGiaCuon ?? 0;
+            if (chon != 0) return Math.Max(chon, 0);
+            string loai = CsvXuat.LoaiCuon(t.Tt.LoaiGiaCong);
+            return loai == "2" ? GiaCuonCaHinh : loai == "1" ? GiaCuonNuaHinh : 0;
+        }
 
         // Math.round của JS: .5 luôn làm tròn lên
         private static double TronJs(double x) => Math.Floor(x + 0.5);
@@ -141,15 +155,13 @@ namespace CsvTool.Core
         {
             if (!So(t.T, out double doDay) || !So(t.X, out double x) || !So(t.Y, out double y) || !So(t.Q, out double q))
                 return (null, "Độ dày, kích thước hoặc số lượng không phải số.");
-            if (CsvXuat.LoaiCuon(t.Tt.LoaiGiaCong) != "0" && (g?.DonGiaCuon ?? 0) <= 0)
-                return (null, "Có cuộn, chưa nhập đơn giá cuộn.");
             int.TryParse(t.Tt.CheDoTinh, out int cheDo);
             var v = new DauVaoGia
             {
                 VatLieu = t.M, CongTy = congTy, LoaiPitchi = g?.LoaiPitchi ?? "Pitchi", DoDay = doDay, X = x, Y = y, SoLuong = q,
                 LoNho = t.Tt.LoNho, LoLon = t.Tt.LoLon, Tappu = t.Tt.Tappu, Sara = t.Tt.Sara,
                 PitchiSoLan = t.Tt.PitchiSoLan, PitchiDai = t.Tt.PitchiDai, VatMm = t.Tt.Vat,
-                DonGiaCuon = g?.DonGiaCuon ?? 0, DonGiaDatNgoai = g?.DonGiaDatNgoai ?? 0, LamTron250 = g?.LamTron250 ?? false, CheDoTinh = cheDo,
+                DonGiaCuon = DonGiaCuonCua(t, g), DonGiaDatNgoai = g?.DonGiaDatNgoai ?? 0, LamTron250 = g?.LamTron250 ?? false, CheDoTinh = cheDo,
             };
             v.Be.AddRange(t.Tt.DuongBe.Select(b => ((double)b.SoLuong, (double)b.Dai)));
             return (v, null);

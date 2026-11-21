@@ -12,7 +12,7 @@ namespace CsvTool.Core
     {
         [DataMember] public bool TuDong;          // giá hiện tại do tool tính; false + có giá = giá sửa tay
         [DataMember] public string LoaiPitchi = "Pitchi";
-        [DataMember] public double DonGiaCuon;
+        [DataMember] public double DonGiaCuon;    // 0 = theo r1/r2, âm = chọn Không, dương = đơn giá đã chọn
         [DataMember] public double DonGiaDatNgoai;
         [DataMember] public bool LamTron250;
     }

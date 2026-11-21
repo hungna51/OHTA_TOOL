@@ -99,9 +99,25 @@ namespace CsvTool.ViewModels
         public string LoaiPitchi
         {
             get => Tam == null ? null : _vm.XemGia(Tam.N)?.LoaiPitchi ?? "Pitchi";
-            set => SuaGia(g => g.LoaiPitchi = value ?? "Pitchi");
+            // ComboBox đẩy null khi thẻ bị dựng lại: không được coi là người dùng chọn
+            set { if (value != null && value != LoaiPitchi) SuaGia(g => g.LoaiPitchi = value); }
         }
-        public string DonGiaCuon { get => SoGia(_vm.XemGia(Tam?.N)?.DonGiaCuon); set => SuaSoGia(value, (g, d) => g.DonGiaCuon = d); }
+        public string[] DsLoaiCuon => TinhGia.DsLoaiCuon;
+        public string LoaiCuonGia
+        {
+            get
+            {
+                if (Tam == null) return null;
+                double d = TinhGia.DonGiaCuonCua(Tam, _vm.XemGia(Tam.N));
+                return d == TinhGia.GiaCuonCaHinh ? "Cả hình" : d == TinhGia.GiaCuonNuaHinh ? "Nửa hình" : d > 0 ? null : "Không";
+            }
+            set
+            {
+                if (value == null || value == LoaiCuonGia) return;
+                double d = value == "Cả hình" ? TinhGia.GiaCuonCaHinh : value == "Nửa hình" ? TinhGia.GiaCuonNuaHinh : -1;
+                SuaGia(g => g.DonGiaCuon = d);
+            }
+        }
         public string DonGiaDatNgoai { get => SoGia(_vm.XemGia(Tam?.N)?.DonGiaDatNgoai); set => SuaSoGia(value, (g, d) => g.DonGiaDatNgoai = d); }
         public bool LamTron250 { get => _vm.XemGia(Tam?.N)?.LamTron250 == true; set => SuaGia(g => g.LamTron250 = value); }
 

@@ -345,12 +345,13 @@
                                                         </Grid.ColumnDefinitions>
                                                         <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
                                                         <TextBlock Style="{StaticResource Nhan}" Text="Loại pitchi"/>
-                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="1" Text="Giá cuộn" ToolTip="Đơn giá cuộn"/>
+                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="1" Text="Cuộn" ToolTip="Nửa hình 6.000, cả hình 12.000. Tự nhận theo r1 / r2"/>
                                                         <TextBlock Style="{StaticResource Nhan}" Grid.Column="2" Text="Đặt ngoài" ToolTip="Đơn giá vật liệu đặt ngoài (khi bảng giá = 0)"/>
                                                         <TextBlock Style="{StaticResource Nhan}" Grid.Column="3" Text="Tròn 250" ToolTip="Giá dưới 250 thì tính 250"/>
                                                         <ComboBox Grid.Row="1" Margin="0,0,1,1" BorderThickness="0" Background="#FFFFFF" FontSize="11"
-                                                                  ItemsSource="{Binding DsLoaiPitchi}" SelectedItem="{Binding LoaiPitchi}"/>
-                                                        <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="1" Text="{Binding DonGiaCuon}"/>
+                                                                  ItemsSource="{Binding DsLoaiPitchi}" SelectedItem="{Binding LoaiPitchi}" PreviewMouseWheel="ComboKhongLan"/>
+                                                        <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,0,1,1" BorderThickness="0" Background="#FFFFFF" FontSize="11"
+                                                                  ItemsSource="{Binding DsLoaiCuon}" SelectedItem="{Binding LoaiCuonGia}" PreviewMouseWheel="ComboKhongLan"/>
                                                         <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="2" Text="{Binding DonGiaDatNgoai}"/>
                                                         <Border Grid.Row="1" Grid.Column="3" Background="#FFFFFF" Margin="0,0,1,1">
                                                             <CheckBox IsChecked="{Binding LamTron250}" HorizontalAlignment="Center" VerticalAlignment="Center"/>

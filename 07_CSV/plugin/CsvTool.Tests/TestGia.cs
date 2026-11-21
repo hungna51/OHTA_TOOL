@@ -76,7 +76,13 @@ namespace CsvTool.Tests
             Kiem("ApDung: tam thuong co gia, danh dau tu dong", tu.Tt.GiaBaoGia != "" && don.Tam["A-1"].TuDong, true);
             Kiem("ApDung: gia da co la gia tay, khong de", tay.Tt.GiaBaoGia + "|" + don.Tam.ContainsKey("A-2"), "12,000|True");
             Kiem("ApDung: khong co vat lieu -> canh bao", cb["A-3"], "Chưa có giá: SPCC dày 6.");
-            Kiem("ApDung: cuon chua co don gia", cb["A-4"], "Có cuộn, chưa nhập đơn giá cuộn.");
+            Kiem("Cuon: r1 tu tinh nua hinh, gia cao hon tam khong cuon",
+                 cb.ContainsKey("A-4") + "|" + TinhGia.DonGiaCuonCua(cuon, don.Tam["A-4"]) + "|" + (double.Parse(cuon.Tt.GiaBaoGia) > double.Parse(tu.Tt.GiaBaoGia)), "False|6000|True");
+            var cuonOng = TamGia("A-5"); cuonOng.Tt.LoaiGiaCong = "m, r2";
+            Kiem("Cuon: r2 = ca hinh", TinhGia.DonGiaCuonCua(cuonOng, null), 12000.0);
+            Kiem("Cuon: chon tren the uu tien hon r1/r2", TinhGia.DonGiaCuonCua(cuonOng, new GiaTam { DonGiaCuon = 6000 }), 6000.0);
+            Kiem("Cuon: chon Khong thi khong tinh", TinhGia.DonGiaCuonCua(cuonOng, new GiaTam { DonGiaCuon = -1 }), 0.0);
+            Kiem("Cuon: khong co r -> khong tinh", TinhGia.DonGiaCuonCua(TamGia("A-6"), null), 0.0);
             string giaCu = tu.Tt.GiaBaoGia;
             tu.X = "100";
             TinhGia.ApDung(new[] { tu }, don, b);
