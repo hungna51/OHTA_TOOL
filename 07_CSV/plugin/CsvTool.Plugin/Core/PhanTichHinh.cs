@@ -46,7 +46,7 @@ namespace CsvTool.Core
     public sealed class KetQuaHinh
     {
         public ThongTinTam Tam;
-        public LoiQuet Loi;
+        public List<LoiQuet> Loi = new List<LoiQuet>();   // mọi lỗi biên dạng của tấm
         public List<LoiQuet> CanhBao = new List<LoiQuet>();
     }
 
@@ -113,12 +113,8 @@ namespace CsvTool.Core
         public static KetQuaHinh Chay(DuLieuHinh d, double tol, int cheDoTinh, Func<string, int, int?> hoiSoNhan)
         {
             var kq = new KetQuaHinh();
-            var loi = Bien(d, tol, out int nho, out int lon);
-            if (loi != null)
-            {
-                kq.Loi = new LoiQuet { Handle = d.HandleKhung, LaLoi = true, NoiDung = loi.Value.Msg, ViTri = loi.Value.ViTri };
-                return kq;
-            }
+            kq.Loi = Bien(d, tol, out int nho, out int lon);
+            if (kq.Loi.Count > 0) return kq;
             string fname = string.Concat(d.ChuFname.Select(c => "," + c.NoiDung));
             var be = DuongBe(d, fname, hoiSoNhan, s => kq.CanhBao.Add(new LoiQuet { Handle = d.HandleKhung, NoiDung = s }));
             var tt = new ThongTinTam
@@ -140,26 +136,39 @@ namespace CsvTool.Core
             public double DienTich, ChuVi, MinX, MinY, MaxX, MaxY;
         }
 
-        private static (string Msg, List<(double MinX, double MinY, double MaxX, double MaxY)> ViTri)? Bien(DuLieuHinh d, double tol, out int nho, out int lon)
+        /// <summary>
+        /// Báo đủ mọi lỗi: nét đã báo lỗi được loại ra rồi kiểm tra tiếp phần còn lại.
+        /// Biên ngoài còn hở thì không biết vòng nào là biên, nên chỉ kiểm tra các vòng kín có chồng nhau không.
+        /// </summary>
+        private static List<LoiQuet> Bien(DuLieuHinh d, double tol, out int nho, out int lon)
         {
             nho = lon = 0;
+            var kq = new List<LoiQuet>();
+            void Them(string msg, IEnumerable<(double MinX, double MinY, double MaxX, double MaxY)> viTri) =>
+                kq.Add(new LoiQuet { Handle = d.HandleKhung, LaLoi = true, NoiDung = msg, ViTri = viTri.ToList() });
+
             if (d.SaiKakou.Count > 0)
-                return ("Có đối tượng không hợp lệ trên layer 0-KAKOU: " + string.Join(", ", d.SaiKakou.Select(x => x.Loai).Distinct()) +
-                        ". Chỉ chấp nhận LINE/ARC/CIRCLE/ELLIPSE/SPLINE/LWPOLYLINE/POLYLINE.", d.SaiKakou.Select(x => x.Hop).ToList());
+                Them("Có đối tượng không hợp lệ trên layer 0-KAKOU: " + string.Join(", ", d.SaiKakou.Select(x => x.Loai).Distinct()) +
+                     ". Chỉ chấp nhận LINE/ARC/CIRCLE/ELLIPSE/SPLINE/LWPOLYLINE/POLYLINE.", d.SaiKakou.Select(x => x.Hop));
             if (d.SaiFname.Count > 0)
-                return ("Có đối tượng không hợp lệ trên layer 2-F-NAME: " + string.Join(", ", d.SaiFname.Select(x => x.Loai).Distinct()) +
-                        ". Chỉ chấp nhận TEXT/MTEXT.", d.SaiFname.Select(x => x.Hop).ToList());
-            if (d.Net.Count == 0) return ("Không tìm thấy đối tượng 0-KAKOU trong khung.", new List<(double, double, double, double)>());
+                Them("Có đối tượng không hợp lệ trên layer 2-F-NAME: " + string.Join(", ", d.SaiFname.Select(x => x.Loai).Distinct()) +
+                     ". Chỉ chấp nhận TEXT/MTEXT.", d.SaiFname.Select(x => x.Hop));
+            if (d.Net.Count == 0)
+            {
+                Them("Không tìm thấy đối tượng 0-KAKOU trong khung.", new List<(double, double, double, double)>());
+                return kq;
+            }
 
             var bang0 = d.Net.Where(n => n.Loai != "CIRCLE" && !n.Kin && KC(n.Dau, n.Cuoi) <= Eps && n.DoDai <= Eps).ToList();
             if (bang0.Count > 0)
-                return ("Có " + bang0.Count + " đối tượng có chiều dài = 0 (điểm đầu = điểm cuối). Xóa đi đối tượng này.", bang0.Select(HopNet).ToList());
+                Them("Có " + bang0.Count + " đối tượng có chiều dài = 0 (điểm đầu = điểm cuối). Xóa đi đối tượng này.", bang0.Select(HopNet));
+            var net = d.Net.Except(bang0).ToList();
 
-            var tu = DiemTu(d.Net, tol);
-            if (tu.Count > 0) return ("Có đối tượng mở hoặc chồng chéo!!!", tu.Select(p => (p.X, p.Y, p.X, p.Y)).ToList());
+            var tu = DiemTu(net, tol);
+            if (tu.Count > 0) Them("Có đối tượng mở hoặc chồng chéo!!!", tu.Select(p => (p.X, p.Y, p.X, p.Y)));
 
-            var nhom = NhomVong(d.Net, tol, out var ho);
-            if (ho.Count > 0) return ("Có biên dạng chưa khép kín", ho.Select(p => (p.X, p.Y, p.X, p.Y)).ToList());
+            var nhom = NhomVong(net, tol, out var ho, out var nhomHo);
+            if (ho.Count > 0 && tu.Count == 0) Them("Có biên dạng chưa khép kín", ho.Select(p => (p.X, p.Y, p.X, p.Y)));
 
             var vong = new List<Vong>();
             var hong = new List<NetCat>();
@@ -168,26 +177,41 @@ namespace CsvTool.Core
                 Vong v = TaoVong(g, tol);
                 if (v == null) hong.AddRange(g); else vong.Add(v);
             }
-            if (hong.Count > 0) return ("Biên dạng cắt giao nhau, vui lòng kiểm tra lại!", hong.Select(HopNet).ToList());
+            if (hong.Count > 0) Them("Biên dạng cắt giao nhau, vui lòng kiểm tra lại!", hong.Select(HopNet));
+
             Vong ngoai = vong.OrderByDescending(v => v.DienTich).FirstOrDefault();
-            if (ngoai == null) return ("Không xác định được biên dạng cắt!!!", new List<(double, double, double, double)>());
+            if (ngoai == null)
+            {
+                if (kq.Count == 0) Them("Không xác định được biên dạng cắt!!!", new List<(double, double, double, double)>());
+                return kq;
+            }
+            bool tinBienNgoai = hong.Concat(nhomHo.SelectMany(g => g)).All(n =>
+            {
+                var h = HopNet(n);
+                return h.MinX >= ngoai.MinX && h.MaxX <= ngoai.MaxX && h.MinY >= ngoai.MinY && h.MaxY <= ngoai.MaxY;
+            });
 
             var lo = new List<Vong>();
-            var thua = new List<NetCat>();
-            foreach (Vong v in vong.Where(x => x != ngoai))
-                if (NamTrongVong(v, ngoai)) lo.Add(v); else thua.AddRange(v.Nguon);
-            if (thua.Count > 0) return ("Có nét vẽ thừa hoặc chi tiết thừa nằm ngoài biên dạng chính!!!", thua.Select(HopNet).ToList());
+            if (tinBienNgoai)
+            {
+                var thua = new List<NetCat>();
+                foreach (Vong v in vong.Where(x => x != ngoai))
+                    if (NamTrongVong(v, ngoai)) lo.Add(v); else thua.AddRange(v.Nguon);
+                if (thua.Count > 0) Them("Có nét vẽ thừa hoặc chi tiết thừa nằm ngoài biên dạng chính!!!", thua.Select(HopNet));
+            }
+            else lo = vong;
 
             var chong = new HashSet<NetCat>();
             for (int i = 0; i < lo.Count; i++)
                 for (int j = i + 1; j < lo.Count; j++)
                     if (LanChong(lo[i], lo[j])) { chong.UnionWith(lo[i].Nguon); chong.UnionWith(lo[j].Nguon); }
-            if (chong.Count > 0) return ("Có lỗ trùng hoặc giao nhau trong biên dạng cắt!!!", chong.Select(HopNet).ToList());
+            if (chong.Count > 0) Them("Có lỗ trùng hoặc giao nhau trong biên dạng cắt!!!", chong.Select(HopNet));
 
+            if (kq.Count > 0) return kq;
             double chuVi30 = Math.PI * 30.0;
             nho = lo.Count(v => v.ChuVi <= chuVi30 + Eps);
             lon = lo.Count - nho;
-            return null;
+            return kq;
         }
 
         private static (double MinX, double MinY, double MaxX, double MaxY) HopNet(NetCat n) =>
@@ -227,9 +251,10 @@ namespace CsvTool.Core
         }
 
         /// <summary>CSV--group-curves-by-loop: nét tự kín thành 1 nhóm, nét hở gom theo đầu mút chạm nhau.</summary>
-        private static List<List<NetCat>> NhomVong(List<NetCat> net, double tol, out List<(double X, double Y)> ho)
+        private static List<List<NetCat>> NhomVong(List<NetCat> net, double tol, out List<(double X, double Y)> ho, out List<List<NetCat>> nhomHo)
         {
             ho = new List<(double, double)>();
+            nhomHo = new List<List<NetCat>>();
             var kq = new List<List<NetCat>>();
             var moHo = new List<NetCat>();
             foreach (NetCat n in net)
@@ -256,8 +281,9 @@ namespace CsvTool.Core
                             hang.Enqueue(k);
                         }
                 }
-                ho.AddRange(DemDiem(cum.SelectMany(n => new[] { n.Dau, n.Cuoi }), tol).Where(x => x.Dem != 2).Select(x => x.Diem));
-                kq.Add(cum);
+                var hoCum = DemDiem(cum.SelectMany(n => new[] { n.Dau, n.Cuoi }), tol).Where(x => x.Dem != 2).Select(x => x.Diem).ToList();
+                ho.AddRange(hoCum);
+                if (hoCum.Count > 0) nhomHo.Add(cum); else kq.Add(cum);
             }
             return kq;
         }

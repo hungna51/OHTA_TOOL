@@ -131,7 +131,7 @@ namespace CsvTool.ViewModels
                 {
                     KetQuaHinh r = PhanTichHinh.Chay(d, CaiDat.DungSaiKheHo, CaiDat.CheDoTinh, (ten, soDoan) => QuetHinhCad.HoiSoNhan(doc, ten, soDoan));
                     if (r.Tam != null) quet[d.HandleKhung] = r.Tam;
-                    if (r.Loi != null) loiMoi.Add(r.Loi);
+                    loiMoi.AddRange(r.Loi);
                     loiMoi.AddRange(r.CanhBao);
                 }
                 catch (Exception ex)
@@ -181,14 +181,15 @@ namespace CsvTool.ViewModels
                     continue;
                 }
                 var r = PhanTichKhung.Ghep(k, CaiDat.LopDimDung, dimzin, cu, quet);
-                string loiHinh = LoiChan(k.Handle)?.NoiDung;
-                if (r.Tam != null) tot.Add((r.Tam, k, r.Loi));
-                else loi.Add(new DongTam(this, k, null, loiHinh ?? r.Loi) { LoiQuet = loiHinh });
+                if (r.Tam != null) { tot.Add((r.Tam, k, r.Loi)); continue; }
+                string loiHinh = LoiHinhCua(k.Handle);
+                string khac = loiHinh != null && r.Loi == PhanTichKhung.LoiChuaCoThongTin ? null : r.Loi;
+                loi.Add(new DongTam(this, k, null, NoiLoi(loiHinh, khac)) { LoiQuet = loiHinh, LoiKhac = khac });
             }
             var theoHandle = tot.ToDictionary(x => x.Tam.HandleKhung);
             _tatCa = loi.Concat(CsvXuat.SapXep(tot.Select(x => x.Tam), CaiDat.SapXep)
                                       .Select(t => new DongTam(this, theoHandle[t.HandleKhung].Khung, t, theoHandle[t.HandleKhung].CanhBao)
-                                      { LoiQuet = LoiChan(t.HandleKhung)?.NoiDung }))
+                                      { LoiQuet = LoiHinhCua(t.HandleKhung) }))
                         .ToList();
             foreach (DongTam d in _tatCa) d.MoRong = _chiTiet;
             DanhGiaLai();
@@ -231,14 +232,24 @@ namespace CsvTool.ViewModels
             var tam = _tatCa.Where(d => d.Tam != null).ToList();
             var trung = new HashSet<string>(tam.GroupBy(d => d.Tam.N).Where(g => g.Count() > 1).Select(g => g.Key));
             foreach (DongTam d in tam)
-                d.Loi = d.LoiQuet ?? (trung.Contains(d.Tam.N) ? "Tên tấm trùng: " + d.Tam.N : PhanTichKhung.KiemTra(d.Tam.Tt));
+            {
+                d.LoiKhac = trung.Contains(d.Tam.N) ? "Tên tấm trùng: " + d.Tam.N : PhanTichKhung.KiemTra(d.Tam.Tt);
+                d.Loi = NoiLoi(d.LoiQuet, d.LoiKhac);
+            }
             GomLoi();
         }
 
         private Dictionary<long, List<LoiQuet>> _loiKhung = new Dictionary<long, List<LoiQuet>>();
 
-        private LoiQuet LoiChan(long handle) =>
-            _loiKhung.TryGetValue(handle, out var ds) ? ds.FirstOrDefault(l => l.LaLoi) : null;
+        /// <summary>Mọi lỗi hình học của khung, mỗi lỗi 1 dòng để hiện trên thẻ; không có → null.</summary>
+        private string LoiHinhCua(long handle)
+        {
+            if (!_loiKhung.TryGetValue(handle, out var ds)) return null;
+            var loi = ds.Where(l => l.LaLoi).Select(l => l.NoiDung).ToList();
+            return loi.Count == 0 ? null : string.Join("\n", loi);
+        }
+
+        private static string NoiLoi(string a, string b) => a == null ? b : b == null ? a : a + "\n" + b;
 
         private void GomLoi()
         {
@@ -246,8 +257,9 @@ namespace CsvTool.ViewModels
             foreach (DongTam d in _tatCa.Where(x => !x.BoQua))
             {
                 _loiKhung.TryGetValue(d.Khung.Handle, out var ds);
-                if (d.CoLoi)
-                    DsLoi.Add(new DongLoi(d, d.Loi, true, d.LoiQuet != null ? LoiChan(d.Khung.Handle) : null));
+                foreach (LoiQuet l in ds?.Where(x => x.LaLoi) ?? Enumerable.Empty<LoiQuet>())
+                    DsLoi.Add(new DongLoi(d, l.NoiDung, true, l));
+                if (d.LoiKhac != null) DsLoi.Add(new DongLoi(d, d.LoiKhac, true, null));
                 foreach (LoiQuet w in ds?.Where(l => !l.LaLoi) ?? Enumerable.Empty<LoiQuet>())
                     DsLoi.Add(new DongLoi(d, w.NoiDung, false, w));
             }

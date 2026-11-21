@@ -54,6 +54,8 @@ namespace CsvTool.ViewModels
         public bool BoQua { get; set; }
         /// <summary>Lỗi hình học của lượt quét gần nhất: giữ qua các lần sửa ô, tới khi quét lại khung này.</summary>
         public string LoiQuet { get; set; }
+        /// <summary>Lỗi ngoài hình học (F-name, dim, tên trùng, thiếu vát / pitchi) để danh sách lỗi hiện cùng lúc.</summary>
+        public string LoiKhac { get; set; }
         public bool SuaDuoc => Tam != null;
         public string Loi { get => _loi; set { _loi = value; Bao(nameof(Loi)); Bao(nameof(CoLoi)); } }
 
