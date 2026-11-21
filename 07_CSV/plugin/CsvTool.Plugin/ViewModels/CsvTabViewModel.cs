@@ -135,7 +135,7 @@ namespace CsvTool.ViewModels
                     continue;
                 }
                 var r = PhanTichKhung.Ghep(k, CaiDat.LopDimDung, dimzin, cu);
-                if (r.TuText) coText.Add(k.Handle);
+                if (r.TuText && r.Tam != null) coText.Add(k.Handle);   // khung lỗi giữ text: chưa lưu được vào CSV
                 if (r.Tam != null) tot.Add((r.Tam, k, r.Loi)); else loi.Add(new DongTam(this, k, null, r.Loi));
             }
             var theoHandle = tot.ToDictionary(x => x.Tam.HandleKhung);

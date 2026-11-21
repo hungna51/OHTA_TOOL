@@ -13,7 +13,7 @@ namespace CsvTool.CadServices
 {
     /// <summary>
     /// Nút "Quét theo vùng" / "Quét toàn bản vẽ" giai đoạn 1: chạy chế độ 3 của lisp xuat_csv cũ
-    /// (phân tích hình học → MText) qua csvtool_b1.lsp, rồi lệnh CSVQUET chuyển MText sang data CSV.
+    /// (phân tích hình học → MText) qua csvtool_b1.lsp, lisp chạy xong tự gọi CSVQUET để chuyển text sang data CSV.
     /// </summary>
     public static class ChayB1Lisp
     {
@@ -47,7 +47,7 @@ namespace CsvTool.CadServices
                 doc.SendStringToExecute("\x03\x03" + nap + "\n", true, false, false);
                 try { if (doc.UserData != null) doc.UserData[KhoaDaNap] = true; } catch { }
             }
-            string lenh = "(csvtool-b1 \"" + c.LopKhungDung + "\" \"" + c.LopTapuDung + "\" " + (toanBanVe ? "T" : "nil") + ")\nCSVQUET";
+            string lenh = "(csvtool-b1 \"" + c.LopKhungDung + "\" \"" + c.LopTapuDung + "\" " + (toanBanVe ? "T" : "nil") + ")";
             doc.SendStringToExecute((daNap ? "\x03\x03" : "") + lenh + "\n", true, false, true);
         }
 

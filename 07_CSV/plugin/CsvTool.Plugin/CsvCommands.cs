@@ -14,7 +14,7 @@ using CadApplication = Autodesk.AutoCAD.ApplicationServices.Application;
 namespace CsvTool
 {
     /// <summary>
-    /// CSVQUET: nút Quét gửi ngay sau lisp phân tích hình học — đọc mọi khung, chuyển MText thông tin
+    /// CSVQUET: lisp gọi khi phân tích hình học xong — đọc mọi khung, chuyển MText thông tin
     /// sang data CSV rồi làm mới danh sách tấm. Chạy trong ngữ cảnh lệnh để xoá MText được (Ctrl+Z).
     /// </summary>
     public class CsvCommands

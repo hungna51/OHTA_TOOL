@@ -3809,6 +3809,7 @@
                               minpt maxpt area h ins width mt
                              )
 
+  (if csvtool--xoa-text-cu (csvtool--xoa-text-cu en))
   (CSV--ensure-layer doc "KHUNG_IN")
   (CSV--ensure-text-style doc "CSV" "arial.ttf")
 

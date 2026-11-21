@@ -3853,6 +3853,7 @@
                              )
 
   (setq *CSV--dbg-step* "ensure-layer")
+  (if csvtool--xoa-text-cu (csvtool--xoa-text-cu en))
   (CSV--ensure-layer doc "KHUNG_IN")
   (setq *CSV--dbg-step* "ensure-text-style")
   (CSV--ensure-text-style doc "CSV" "arial.ttf")
