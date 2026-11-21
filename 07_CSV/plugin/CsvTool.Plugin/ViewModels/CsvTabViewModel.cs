@@ -264,7 +264,7 @@ namespace CsvTool.ViewModels
                 var ds = _tatCa.Where(d => d.Tam != null && !d.BoQua).Select(d => d.Tam).ToList();
                 var (tong, coGia) = TinhGia.TongTien(ds);
                 return coGia == 0 ? "Tổng đơn: chưa có giá"
-                    : "Tổng đơn: " + tong.ToString("#,0", CultureInfo.InvariantCulture) + " · " + coGia + "/" + ds.Count + " tấm";
+                    : "Tổng đơn: " + tong.ToString("#,0", CultureInfo.InvariantCulture) + " ¥ · " + coGia + "/" + ds.Count + " tấm";
             }
         }
 

@@ -231,7 +231,9 @@
                                             <Button DockPanel.Dock="Right" Content="↺" Width="18" Cursor="Hand" BorderThickness="0" Background="Transparent"
                                                     Foreground="#E65100" Click="GiaTuDongBam" ToolTip="Giá sửa tay. Bấm để quay về giá tự tính"
                                                     Visibility="{Binding LaGiaTay, Converter={StaticResource HienKhi}}"/>
-                                            <TextBox Margin="0" Text="{Binding GiaTien}" VerticalAlignment="Center" ToolTip="Đơn giá 1 tấm (lưu ở data CSV)">
+                                            <TextBlock DockPanel.Dock="Left" Text="@" Padding="5,0,0,0" VerticalAlignment="Center"
+                                                       Foreground="{Binding Foreground, ElementName=OGia}" ToolTip="Đơn giá 1 tấm"/>
+                                            <TextBox x:Name="OGia" Margin="0" Text="{Binding GiaTien}" VerticalAlignment="Center" HorizontalContentAlignment="Left" ToolTip="Đơn giá 1 tấm (lưu ở data CSV)">
                                                 <TextBox.Style>
                                                     <Style TargetType="TextBox" BasedOn="{StaticResource O}">
                                                         <Setter Property="Foreground" Value="#1565C0"/>
