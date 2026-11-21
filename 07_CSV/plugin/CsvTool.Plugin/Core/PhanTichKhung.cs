@@ -29,6 +29,15 @@ namespace CsvTool.Core
         public long HandleKhung;
     }
 
+    /// <summary>Một lỗi (chặn xuất) hoặc cảnh báo của lượt quét, kèm các vị trí trên bản vẽ (WCS).</summary>
+    public sealed class LoiQuet
+    {
+        public long Handle;
+        public bool LaLoi;
+        public string NoiDung;
+        public List<(double MinX, double MinY, double MaxX, double MaxY)> ViTri = new List<(double, double, double, double)>();
+    }
+
     /// <summary>Chép đúng hành vi CSV--analyze-one-frame (EXPORT, không chạy hình học).</summary>
     public static class PhanTichKhung
     {
@@ -92,6 +101,12 @@ namespace CsvTool.Core
             if (cu.Tappu + cu.Sara == moi.Tappu) { moi.Tappu = cu.Tappu; moi.Sara = cu.Sara; }
             return moi;
         }
+
+        /// <summary>Tên N để hiện ở danh sách lỗi, kể cả khi F-name chưa đủ trường; không có → null.</summary>
+        public static string TenKhung(KhungTho k) =>
+            k.Text.Where(t => CungLop(t.Lop, LopFname))
+                  .SelectMany(t => t.LaMtext ? ThongTinTamParser.TachDong(t.NoiDung, true) : new List<string> { t.NoiDung ?? "" })
+                  .Where(d => d.StartsWith("N=") && d.Length > 2).Select(d => d.Substring(2)).FirstOrDefault();
 
         /// <summary>Khung có text trên layer F-name (khung chú thích không có → không phải tấm).</summary>
         public static bool CoFname(KhungTho k) => k.Text.Any(t => CungLop(t.Lop, LopFname));

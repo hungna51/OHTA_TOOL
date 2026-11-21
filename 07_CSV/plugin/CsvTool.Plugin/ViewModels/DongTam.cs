@@ -4,6 +4,35 @@ using CsvTool.Core;
 
 namespace CsvTool.ViewModels
 {
+    /// <summary>Một dòng danh sách lỗi: bấm lần lượt để đi qua từng vị trí lỗi trên bản vẽ.</summary>
+    public sealed class DongLoi : INotifyPropertyChanged
+    {
+        public DongTam Dong { get; }
+        public LoiQuet Goc { get; }
+        public string Ten => Dong.N;
+        public string NoiDung { get; }
+        public bool LaLoi { get; }
+        public int SoViTri => Goc?.ViTri.Count ?? 0;
+        private int _dangXem = -1;
+
+        public DongLoi(DongTam dong, string noiDung, bool laLoi, LoiQuet goc)
+        {
+            Dong = dong; NoiDung = noiDung; LaLoi = laLoi; Goc = goc;
+        }
+
+        public string NhanViTri => SoViTri == 0 ? "Xem khung" : "Vị trí " + (_dangXem < 0 ? 1 : _dangXem + 1) + "/" + SoViTri;
+
+        /// <summary>Vị trí kế tiếp (quay vòng); gọi khi SoViTri &gt; 0.</summary>
+        public (double MinX, double MinY, double MaxX, double MaxY) Tiep()
+        {
+            _dangXem = (_dangXem + 1) % SoViTri;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NhanViTri)));
+            return Goc.ViTri[_dangXem];
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+    }
+
     /// <summary>
     /// Một dòng danh sách tấm: bọc TamXuat (đọc được) hoặc chỉ có lỗi. Ô sửa được gọi ngược
     /// CsvTabViewModel.Sua — ghi bản vẽ hỏng thì giá trị cũ hiện lại (PropertyChanged).
@@ -23,11 +52,13 @@ namespace CsvTool.ViewModels
         public bool CoLoi => _loi != null;
         /// <summary>Khung chú thích: hiện để người dùng thấy nhưng không chặn Xuất CSV.</summary>
         public bool BoQua { get; set; }
+        /// <summary>Lỗi hình học của lượt quét gần nhất: giữ qua các lần sửa ô, tới khi quét lại khung này.</summary>
+        public string LoiQuet { get; set; }
         public bool SuaDuoc => Tam != null;
         public string Loi { get => _loi; set { _loi = value; Bao(nameof(Loi)); Bao(nameof(CoLoi)); } }
 
         // F-name → SuaFname
-        public string N { get => Tam?.N; set => SuaF('N', value, v => Tam.N = v); }
+        public string N { get => Tam?.N ?? PhanTichKhung.TenKhung(Khung) ?? "(chưa có tên)"; set => SuaF('N', value, v => Tam.N = v); }
         public string Q { get => Tam?.Q; set => SuaF('Q', value, v => Tam.Q = v); }
         public string M { get => Tam?.M; set => SuaF('M', value, v => Tam.M = v); }
         public string T { get => Tam?.T; set => SuaF('T', value, v => Tam.T = v); }

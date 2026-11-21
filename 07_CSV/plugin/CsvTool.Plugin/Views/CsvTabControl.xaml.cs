@@ -36,6 +36,11 @@ namespace CsvTool.Views
             if ((sender as FrameworkElement)?.DataContext is DongTam d) d.MoRong = !d.MoRong;
         }
 
+        private void LoiBam(object sender, MouseButtonEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is DongLoi l) _vm.ChonLoi(l);
+        }
+
         private void XoaTim(object sender, RoutedEventArgs e)
         {
             _vm.TimKiem = "";
@@ -61,7 +66,8 @@ namespace CsvTool.Views
         public void ScrollByMouseWheel(int wheelDelta)
         {
             if (wheelDelta == 0) return;
-            Cuon.ScrollToVerticalOffset(Cuon.VerticalOffset - wheelDelta / 120.0 * 48.0);
+            ScrollViewer c = CuonLoi.IsMouseOver ? CuonLoi : Cuon;
+            c.ScrollToVerticalOffset(c.VerticalOffset - wheelDelta / 120.0 * 48.0);
         }
     }
 }

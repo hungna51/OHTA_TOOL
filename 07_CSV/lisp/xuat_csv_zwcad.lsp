@@ -3649,6 +3649,11 @@
   result
 )
 
+;; Tab CSV nap csvtool_b1.lsp: canh bao vao danh sach loi thay vi alert.
+(defun CSV--bao-tam (msg)
+  (if csvtool--canh-bao (csvtool--canh-bao msg) (alert msg))
+)
+
 (defun CSV--bend-list-smart (pts contents / press-mode groups ann-offset result group
                               res segs anns n-segs n-anns seg len n-press n-normal
                               tam-name has-no-ann-warn has-press-warn)
@@ -3685,7 +3690,7 @@
           (setq has-no-ann-warn T)
           (setq result (CSV--bend-add-to-result result len 1)))
          ((= (car res) 'error)
-          (alert (strcat "T\U+1EA5m " tam-name ": C\U+00F3 k\U+00FD hi\U+1EC7u b\U+1EBB th\U+01B0\U+1EDDng v\U+00E0 nh\U+1EA5n 1 l\U+1EA7n c\U+00F9ng nh\U+00F3m - m\U+00E2u thu\U+1EABn!"))
+          (CSV--bao-tam (strcat "T\U+1EA5m " tam-name ": C\U+00F3 k\U+00FD hi\U+1EC7u b\U+1EBB th\U+01B0\U+1EDDng v\U+00E0 nh\U+1EA5n 1 l\U+1EA7n c\U+00F9ng nh\U+00F3m - m\U+00E2u thu\U+1EABn!"))
           (setq result (CSV--bend-add-to-result result len 1)))
          ((= (car res) 'split)
           (setq segs (cadr res)
@@ -3708,10 +3713,10 @@
        )
      )
      (if has-no-ann-warn
-       (alert (strcat "T\U+1EA5m " tam-name ": C\U+00F3 \U+0111\U+01B0\U+1EDDng b\U+1EBB kh\U+00F4ng t\U+00ECm th\U+1EA5y k\U+00FD hi\U+1EC7u, ki\U+1EC3m tra l\U+1EA1i!"))
+       (CSV--bao-tam (strcat "T\U+1EA5m " tam-name ": C\U+00F3 \U+0111\U+01B0\U+1EDDng b\U+1EBB kh\U+00F4ng t\U+00ECm th\U+1EA5y k\U+00FD hi\U+1EC7u, ki\U+1EC3m tra l\U+1EA1i!"))
      )
      (if has-press-warn
-       (alert (strcat "T\U+1EA5m " tam-name ": C\U+00F3 nh\U+00F3m \U+0111\U+01B0\U+1EDDng b\U+1EBB \U+00EDt k\U+00FD hi\U+1EC7u h\U+01A1n s\U+1ED1 \U+0111o\U+1EA1n, ki\U+1EC3m tra l\U+1EA1i!"))
+       (CSV--bao-tam (strcat "T\U+1EA5m " tam-name ": C\U+00F3 nh\U+00F3m \U+0111\U+01B0\U+1EDDng b\U+1EBB \U+00EDt k\U+00FD hi\U+1EC7u h\U+01A1n s\U+1ED1 \U+0111o\U+1EA1n, ki\U+1EC3m tra l\U+1EA1i!"))
      )
      (vl-sort result '(lambda (a b) (> (car a) (car b))))
     )

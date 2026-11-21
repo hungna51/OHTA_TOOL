@@ -47,6 +47,11 @@ namespace CsvTool.ViewModels
 
         public ObservableCollection<DongTam> DongHien { get; } = new ObservableCollection<DongTam>();
         private List<DongTam> _tatCa = new List<DongTam>();
+        /// <summary>Danh sách tổng hợp lỗi + cảnh báo của bản vẽ đang quét.</summary>
+        public ObservableCollection<DongLoi> DsLoi { get; } = new ObservableCollection<DongLoi>();
+        public bool CoDsLoi => DsLoi.Count > 0;
+        public string NhanDsLoi => "Lỗi và cảnh báo (" + DsLoi.Count(l => l.LaLoi) + " lỗi, " + DsLoi.Count(l => !l.LaLoi) + " cảnh báo)";
+        private const string KhoaLoiQuet = "CSVTOOL_LOI_QUET";
         private Document _docDanhSach;
 
         public ICommand QuetVungCmd { get; }
@@ -123,13 +128,23 @@ namespace CsvTool.ViewModels
             catch (Exception ex) { TrangThai = "Không đọc được " + fData + ": " + ex.Message; return; }
 
             Dictionary<long, ThongTinTam> quet;
+            List<LoiQuet> loiMoi;
             string fQuet = ChayB1Lisp.FileKetQua;
             try
             {
-                quet = CsvXuat.DocKetQuaQuet(File.Exists(fQuet) ? DocChiaSe(fQuet) : "", CaiDat.CheDoTinh);
+                string ketQua = File.Exists(fQuet) ? DocChiaSe(fQuet) : "";
+                quet = CsvXuat.DocKetQuaQuet(ketQua, CaiDat.CheDoTinh);
+                loiMoi = CsvXuat.DocLoiQuet(ketQua);
                 File.Delete(fQuet);
             }
             catch (Exception ex) { TrangThai = "Không đọc được kết quả quét: " + ex.Message; return; }
+
+            // quét theo vùng: khung ngoài vùng giữ lỗi của lượt trước, khung vừa quét thay bằng kết quả mới
+            var loiKhung = doc.UserData[KhoaLoiQuet] as Dictionary<long, List<LoiQuet>> ?? new Dictionary<long, List<LoiQuet>>();
+            doc.UserData[KhoaLoiQuet] = loiKhung;
+            foreach (long h in quet.Keys.Concat(loiMoi.Select(l => l.Handle)).ToList()) loiKhung.Remove(h);
+            foreach (var g in loiMoi.GroupBy(l => l.Handle)) loiKhung[g.Key] = g.ToList();
+            _loiKhung = loiKhung;
 
             var (khung, dimzin) = QuetKhungCad.Quet(doc, QuetKhungCad.TatCaKhung(doc, CaiDat.LopKhungDung));
             var tot = new List<(TamXuat Tam, KhungTho Khung, string CanhBao)>();
@@ -142,11 +157,14 @@ namespace CsvTool.ViewModels
                     continue;
                 }
                 var r = PhanTichKhung.Ghep(k, CaiDat.LopDimDung, dimzin, cu, quet);
-                if (r.Tam != null) tot.Add((r.Tam, k, r.Loi)); else loi.Add(new DongTam(this, k, null, r.Loi));
+                string loiHinh = LoiChan(k.Handle)?.NoiDung;
+                if (r.Tam != null) tot.Add((r.Tam, k, r.Loi));
+                else loi.Add(new DongTam(this, k, null, loiHinh ?? r.Loi) { LoiQuet = loiHinh });
             }
             var theoHandle = tot.ToDictionary(x => x.Tam.HandleKhung);
             _tatCa = loi.Concat(CsvXuat.SapXep(tot.Select(x => x.Tam), CaiDat.SapXep)
-                                      .Select(t => new DongTam(this, theoHandle[t.HandleKhung].Khung, t, theoHandle[t.HandleKhung].CanhBao)))
+                                      .Select(t => new DongTam(this, theoHandle[t.HandleKhung].Khung, t, theoHandle[t.HandleKhung].CanhBao)
+                                      { LoiQuet = LoiChan(t.HandleKhung)?.NoiDung }))
                         .ToList();
             foreach (DongTam d in _tatCa) d.MoRong = _chiTiet;
             DanhGiaLai();
@@ -189,7 +207,52 @@ namespace CsvTool.ViewModels
             var tam = _tatCa.Where(d => d.Tam != null).ToList();
             var trung = new HashSet<string>(tam.GroupBy(d => d.Tam.N).Where(g => g.Count() > 1).Select(g => g.Key));
             foreach (DongTam d in tam)
-                d.Loi = trung.Contains(d.Tam.N) ? "Tên tấm trùng: " + d.Tam.N : PhanTichKhung.KiemTra(d.Tam.Tt);
+                d.Loi = d.LoiQuet ?? (trung.Contains(d.Tam.N) ? "Tên tấm trùng: " + d.Tam.N : PhanTichKhung.KiemTra(d.Tam.Tt));
+            GomLoi();
+        }
+
+        private Dictionary<long, List<LoiQuet>> _loiKhung = new Dictionary<long, List<LoiQuet>>();
+
+        private LoiQuet LoiChan(long handle) =>
+            _loiKhung.TryGetValue(handle, out var ds) ? ds.FirstOrDefault(l => l.LaLoi) : null;
+
+        private void GomLoi()
+        {
+            DsLoi.Clear();
+            foreach (DongTam d in _tatCa.Where(x => !x.BoQua))
+            {
+                _loiKhung.TryGetValue(d.Khung.Handle, out var ds);
+                if (d.CoLoi)
+                    DsLoi.Add(new DongLoi(d, d.Loi, true, d.LoiQuet != null ? LoiChan(d.Khung.Handle) : null));
+                foreach (LoiQuet w in ds?.Where(l => !l.LaLoi) ?? Enumerable.Empty<LoiQuet>())
+                    DsLoi.Add(new DongLoi(d, w.NoiDung, false, w));
+            }
+            Bao(nameof(CoDsLoi)); Bao(nameof(NhanDsLoi));
+        }
+
+        /// <summary>Bấm dòng lỗi: zoom tới vị trí lỗi kế tiếp + vòng đỏ tạm; lỗi không có vị trí riêng thì zoom cả khung.</summary>
+        public void ChonLoi(DongLoi l)
+        {
+            Document doc = CadApplication.DocumentManager.MdiActiveDocument;
+            if (l == null || doc == null || doc != _docDanhSach) return;
+            if (l.SoViTri == 0)
+            {
+                ZoomCad.ToiHop(doc, l.Dong.Khung.MinX, l.Dong.Khung.MinY, l.Dong.Khung.MaxX, l.Dong.Khung.MaxY);
+                VongDoTam.Xoa();
+                KhungTho k = l.Dong.Khung;
+                double w0 = k.MaxX - k.MinX, h0 = k.MaxY - k.MinY;
+                try { VongDoTam.Hien(doc, (k.MinX + k.MaxX) / 2, (k.MinY + k.MaxY) / 2, 0.55 * Math.Sqrt(w0 * w0 + h0 * h0)); }
+                catch (Exception ex) { TrangThai = "Không vẽ được vòng đỏ: " + ex.Message; }
+                return;
+            }
+            var v = l.Tiep();
+            KhungTho f = l.Dong.Khung;
+            // nới theo cỡ khung để điểm hở (hộp = 0) vẫn thấy được nét xung quanh
+            double le = Math.Max(0.12 * Math.Max(f.MaxX - f.MinX, f.MaxY - f.MinY), 1.0);
+            double cx = (v.MinX + v.MaxX) / 2, cy = (v.MinY + v.MaxY) / 2, dx = v.MaxX - v.MinX, dy = v.MaxY - v.MinY;
+            ZoomCad.ToiHop(doc, v.MinX - le, v.MinY - le, v.MaxX + le, v.MaxY + le);
+            try { VongDoTam.Hien(doc, cx, cy, Math.Max(0.6 * Math.Sqrt(dx * dx + dy * dy), le * 0.3)); }
+            catch (Exception ex) { TrangThai = "Không vẽ được vòng đỏ: " + ex.Message; }
         }
 
         /// <summary>Nút Xuất CSV: file cuối &lt;đơn&gt;.csv từ danh sách đang hiện; còn thẻ lỗi thì không ghi.</summary>
@@ -223,6 +286,7 @@ namespace CsvTool.ViewModels
             if (doc == _docDanhSach) return;
             _tatCa.Clear();
             _thuMuc = null;
+            GomLoi();
             Loc();
             TrangThai = "Đổi bản vẽ — bấm Quét để xem danh sách tấm.";
         }
@@ -274,7 +338,7 @@ namespace CsvTool.ViewModels
         private void Loc()
         {
             DongHien.Clear();
-            foreach (DongTam d in _tatCa.Where(d => (!_chiLoi || d.CoLoi) && CsvXuat.KhopTim(d.Tam, d.Loi, _timKiem))) DongHien.Add(d);
+            foreach (DongTam d in _tatCa.Where(d => (!_chiLoi || d.CoLoi) && CsvXuat.KhopTim(d.Tam, d.N + " " + d.Loi, _timKiem))) DongHien.Add(d);
         }
 
         private string _trangThai = "Bấm Quét theo vùng hoặc Quét toàn bản vẽ để xem danh sách tấm.";

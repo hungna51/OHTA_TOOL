@@ -206,6 +206,32 @@ namespace CsvTool.Core
             return kq;
         }
 
+        /// <summary>Dòng lỗi (E) / cảnh báo (W) trong file kết quả: E|W, handle, nội dung, "x1,y1,x2,y2;...". Dòng sai dạng bị bỏ.</summary>
+        public static List<LoiQuet> DocLoiQuet(string noiDung)
+        {
+            var kq = new List<LoiQuet>();
+            var so = System.Globalization.CultureInfo.InvariantCulture;
+            foreach (string dong in (noiDung ?? "").TrimStart('\uFEFF').Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string[] o = dong.Split('\t');
+                if (o.Length != 4 || (o[0] != "E" && o[0] != "W") ||
+                    !long.TryParse(o[1], System.Globalization.NumberStyles.HexNumber, so, out long handle)) continue;
+                var loi = new LoiQuet
+                {
+                    Handle = handle, LaLoi = o[0] == "E",
+                    NoiDung = System.Text.RegularExpressions.Regex.Replace(o[2], @"\\U\+([0-9A-Fa-f]{4})",
+                        m => ((char)Convert.ToInt32(m.Groups[1].Value, 16)).ToString()),
+                };
+                foreach (string hop in o[3].Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    double[] v = hop.Split(',').Select(x => double.TryParse(x, System.Globalization.NumberStyles.Float, so, out double d) ? d : double.NaN).ToArray();
+                    if (v.Length == 4 && !v.Any(double.IsNaN)) loi.ViTri.Add((v[0], v[1], v[2], v[3]));
+                }
+                kq.Add(loi);
+            }
+            return kq;
+        }
+
         /// <summary>Tách 1 dòng CSV, ô có nháy kép (do O() bọc) giữ nguyên dấu phẩy bên trong.</summary>
         public static List<string> TachO(string dong)
         {

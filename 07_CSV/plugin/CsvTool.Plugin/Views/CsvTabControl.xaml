@@ -215,6 +215,36 @@
                         </DockPanel>
                     </Border>
                 </DockPanel>
+                <!-- Danh sach tong hop loi: bam dong = zoom toi vi tri loi, bam tiep = vi tri ke -->
+                <Expander DockPanel.Dock="Top" IsExpanded="True" Margin="10,0,10,8" Foreground="#C62828" FontWeight="SemiBold"
+                          Header="{Binding NhanDsLoi}" Visibility="{Binding CoDsLoi, Converter={StaticResource HienKhi}}">
+                    <ScrollViewer x:Name="CuonLoi" MaxHeight="180" VerticalScrollBarVisibility="Auto" Margin="0,4,0,0">
+                        <ItemsControl ItemsSource="{Binding DsLoi}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border x:Name="DongLoiBd" Background="#FFF8E1" BorderBrush="#FFCA28" BorderThickness="3,0,0,0" CornerRadius="2"
+                                            Padding="6,3" Margin="0,0,0,3" Cursor="Hand" MouseLeftButtonUp="LoiBam"
+                                            ToolTip="Bấm để zoom tới lỗi, bấm tiếp để sang vị trí kế">
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding NhanViTri}" Foreground="#1565C0" FontWeight="Normal"
+                                                       FontSize="11" Margin="6,0,0,0"/>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Ten}" Foreground="#263238" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding NoiDung}" Foreground="#37474F" FontWeight="Normal" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding LaLoi}" Value="True">
+                                            <Setter TargetName="DongLoiBd" Property="Background" Value="#FDECEA"/>
+                                            <Setter TargetName="DongLoiBd" Property="BorderBrush" Value="#C62828"/>
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Expander>
                 <ScrollViewer x:Name="Cuon" VerticalScrollBarVisibility="Auto" Padding="10,0,10,10">
                     <ItemsControl ItemsSource="{Binding DongHien}">
                         <ItemsControl.ItemTemplate>

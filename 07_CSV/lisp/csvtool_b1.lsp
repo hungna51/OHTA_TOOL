@@ -5,6 +5,8 @@
 ;;; toan = T: moi khung tren layer khung (ssget "_X"); nil: hoi chon (keo vung).
 ;;; Ket qua KHONG ghi len ban ve: moi khung 1 dong trong file ket qua (UTF-8), cot cach bang TAB:
 ;;;   handle  lo-nho  lo-lon  tapu  vat  dai*so;dai*so  loai-gia-cong
+;;; Loi / canh bao cung file, khong ve len ban ve, khong dung ca luot:
+;;;   E|W  handle  noi-dung  x1,y1,x2,y2;x1,y1,x2,y2
 ;;; Xong, lisp tu goi CSVQUET (khong xep hang tu C#: ssget se nuot chu do):
 ;;; C# doc file ket qua -> data\<don>-data.csv.
 ;;; Cai dat (spline_precision, gap_tolerance, calc_mode) do C# ghi vao
@@ -46,28 +48,95 @@
   (if (> (sslength kq) 0) kq)
 )
 
-;; Thay ham cung ten cua lisp cu (file nay nap sau): gom ket qua, khong tao MText.
-(defun CSV--add-pricing-text (doc en hole-small hole-big tapu-sara vat-count
-                              bend-list machining-str / tab be item
-                             )
-  (setq tab (chr 9)
-        be  ""
+;; Bo TAB / xuong dong de 1 loi nam tron 1 dong file ket qua.
+(defun csvtool--sach (s) (vl-string-translate "\t\r\n" "   " s))
+
+(defun csvtool--hop (a b)
+  (strcat (rtos (car a) 2 3) "," (rtos (cadr a) 2 3) "," (rtos (car b) 2 3) "," (rtos (cadr b) 2 3))
+)
+
+;; Hop bao WCS cua 1 doi tuong dang "x1,y1,x2,y2"; khong doc duoc -> nil.
+(defun csvtool--hop-en (en / a b)
+  (if (and en (entget en)
+           (not (vl-catch-all-error-p
+                  (vl-catch-all-apply 'vla-getBoundingBox (list (vlax-ename->vla-object en) 'a 'b))
+                ))
+      )
+    (csvtool--hop (vlax-safearray->list a) (vlax-safearray->list b))
   )
+)
+
+;; Vi tri loi: doi tuong lisp cu da danh dau + diem ho (open-endpoint).
+(defun csvtool--vi-tri (res / kq p s)
+  (foreach en *CSV--tru-error-dwg*
+    (if (setq p (csvtool--hop-en en)) (setq kq (cons p kq)))
+  )
+  (if (and (= (type res) 'LIST) (eq (caddr res) 'open-endpoint))
+    (foreach d (cadddr res)
+      (if (and (= (type d) 'LIST) (numberp (car d))) (setq kq (cons (csvtool--hop d d) kq)))
+    )
+  )
+  (setq s "")
+  (foreach p kq (setq s (strcat s (if (= s "") "" ";") p)))
+  s
+)
+
+(defun csvtool--ghi-loi (loai han msg box)
+  (setq *csvtool--dong* (cons (strcat loai "\t" han "\t" (csvtool--sach msg) "\t" box) *csvtool--dong*))
+)
+
+;; CSV--bao-tam cua lisp cu goi: canh bao khong chan xuat, zoom toi khung.
+(defun csvtool--canh-bao (msg)
+  (csvtool--ghi-loi "W" *csvtool--handle* msg "")
+)
+
+(defun csvtool--ghi-ok (han small big tapu vat bend-list machining / be)
+  (setq be "")
   (foreach item bend-list
     (setq be (strcat be (if (= be "") "" ";") (rtos (car item) 2 0) "*" (itoa (cadr item))))
   )
-  (setq *csvtool--dong* (cons (strcat (cdr (assoc 5 (entget en))) tab
-                                      (itoa hole-small) tab (itoa hole-big) tab
-                                      (itoa tapu-sara) tab (itoa vat-count) tab
-                                      be tab (if machining-str machining-str "")
+  (setq *csvtool--dong* (cons (strcat han "\t" (itoa small) "\t" (itoa big) "\t" (itoa tapu) "\t"
+                                      (itoa vat) "\t" be "\t" (if machining machining "")
                               )
                               *csvtool--dong*
                         )
   )
-  nil
 )
 
-(defun csvtool-b1 (frame-layer tapu-layer toan f-ket-qua / *error* old-cmdecho doc blpoly poly don err-dwg-path ctr size kq)
+;; Thay CSV--run-pricing-text-mode: moi khung loi ghi vao danh sach roi quet tiep,
+;; khong doi mau khung, khong MText loi, khong alert, khong tao -ERROR.dwg.
+(defun csvtool--quet-cac-khung (poly doc tapu-layer / n en pts han res gc msg dung)
+  (setq n 0)
+  (while (and (not dung) (setq en (ssname poly n)))
+    (setq n                    (1+ n)
+          pts                  (CSV--get-polyline-vertices en)
+          han                  (cdr (assoc 5 (entget en)))
+          *csvtool--handle*    han
+          *CSV--tru-error-dwg* nil
+          *CSV--dbg-step*      nil
+          msg                  nil
+    )
+    (princ (strcat "\n[CSV] Quet khung " (itoa n) "/" (itoa (sslength poly))))
+    (setq res (vl-catch-all-apply 'CSV--collect-pricing-data (list pts doc tapu-layer)))
+    (cond
+      ((vl-catch-all-error-p res)
+       (setq msg (vl-catch-all-error-message res))
+       (if (wcmatch (strcase msg) "*BREAK,*CANCEL*,*EXIT*") (setq dung T msg nil))
+      )
+      ((= (car res) 'error) (setq msg (cadr res)))
+      (T
+       (setq gc (vl-catch-all-apply 'CSV--scan-machining-texts (list pts (nth 5 res))))
+       (if (vl-catch-all-error-p gc)
+         (setq msg (strcat "Loi quet loai gia cong: " (vl-catch-all-error-message gc)))
+         (csvtool--ghi-ok han (nth 1 res) (nth 2 res) (nth 3 res) (nth 4 res) (nth 5 res) gc)
+       )
+      )
+    )
+    (if msg (csvtool--ghi-loi "E" han msg (csvtool--vi-tri res)))
+  )
+)
+
+(defun csvtool-b1 (frame-layer tapu-layer toan f-ket-qua / *error* old-cmdecho doc blpoly poly ctr size kq)
   (defun *error* (msg)
     (if doc (vl-catch-all-apply 'vla-EndUndoMark (list doc)))
     (if old-cmdecho (setvar "CMDECHO" old-cmdecho))
@@ -104,10 +173,8 @@
     (princ "\n[CSV] Khong co khung de quet.")
     (progn
       (setvar "CMDECHO" 0)
-      (setq don          (vl-string-right-trim "- S A s a . d f x g w" (getvar "DWGNAME"))
-            err-dwg-path (strcat (getvar "DWGPREFIX") don "-ERROR.dwg")
-            ctr          (getvar "VIEWCTR")
-            size         (getvar "VIEWSIZE")
+      (setq ctr  (getvar "VIEWCTR")
+            size (getvar "VIEWSIZE")
       )
       (vla-StartUndoMark doc)
       ;; ssget "_WP" chi thay doi tuong tren man hinh
@@ -116,7 +183,7 @@
             *csvtool--dong* nil
       )
       (if poly
-        (setq kq (vl-catch-all-apply 'CSV--run-pricing-text-mode (list poly doc tapu-layer err-dwg-path)))
+        (setq kq (vl-catch-all-apply 'csvtool--quet-cac-khung (list poly doc tapu-layer)))
       )
       (command "_.ZOOM" "_C" ctr size)
       (vla-EndUndoMark doc)
