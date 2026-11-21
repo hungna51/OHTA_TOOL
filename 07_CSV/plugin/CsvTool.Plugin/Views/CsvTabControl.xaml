@@ -59,7 +59,7 @@
             <Setter Property="Margin" Value="0,0,1,1"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <EventSetter Event="KeyDown" Handler="OPhim"/>
+            <EventSetter Event="PreviewKeyDown" Handler="OPhim"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding SuaDuoc}" Value="False">
                     <Setter Property="IsReadOnly" Value="True"/>

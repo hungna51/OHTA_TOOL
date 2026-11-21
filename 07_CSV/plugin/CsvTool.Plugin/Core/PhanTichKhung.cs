@@ -205,6 +205,14 @@ namespace CsvTool.Core
             return str.Substring(batDau, j - batDau);
         }
 
+        /// <summary>Độ dày người dùng gõ → ít nhất 1 số lẻ (6 → 6.0, 3,2 → 3.2), không làm tròn số lẻ có sẵn (1.25). Sai → null.</summary>
+        public static string ChuanDoDay(string s)
+        {
+            s = (s ?? "").Trim().Replace(',', '.');
+            return double.TryParse(s, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out double d) && d > 0
+                ? d.ToString("0.0#####", CultureInfo.InvariantCulture) : null;
+        }
+
         /// <summary>
         /// Thay giá trị trường F-name (N/M/T/Q) trong nội dung thô của 1 TEXT/MTEXT; trường không có
         /// trong text này → null. MTEXT giữ nguyên khối định dạng "{\...;" đầu và "}" cuối.

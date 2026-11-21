@@ -63,7 +63,18 @@ namespace CsvTool.ViewModels
         public string N { get => Tam?.N ?? PhanTichKhung.TenKhung(Khung) ?? "(chưa có tên)"; set => SuaF('N', value, v => Tam.N = v); }
         public string Q { get => Tam?.Q; set => SuaF('Q', value, v => Tam.Q = v); }
         public string M { get => Tam?.M; set => SuaF('M', value, v => Tam.M = v); }
-        public string T { get => Tam?.T; set => SuaF('T', value, v => Tam.T = v); }
+        public string T
+        {
+            get => Tam?.T;
+            set
+            {
+                if (Tam == null) return;
+                string v = PhanTichKhung.ChuanDoDay(value);
+                if (v == null) _vm.BaoLoi("\"" + value + "\" không phải độ dày hợp lệ.");
+                else SuaF('T', v, x => Tam.T = x);
+                Bao(nameof(T));   // gõ 6 khi đang là 6.0 cũng phải hiện lại 6.0
+            }
+        }
 
         public string XxY => Tam == null ? "" : Tam.X + " × " + Tam.Y;
         public string LoNho => Tam?.Tt.LoNho.ToString();

@@ -95,6 +95,11 @@ namespace CsvTool.Tests
             Kiem("TongTien: don gia x Q, bo tam chua co gia", tong.Tong + "|" + tong.CoGia, "36300|2");
             Kiem("Dong10: cot don gia, boc nhay khi co phay", CsvXuat.Dong10(tay, "9").EndsWith(",,\"12,000\""), true);
 
+            Kiem("ChuanDoDay: so nguyen -> 1 so le", PhanTichKhung.ChuanDoDay("6"), "6.0");
+            Kiem("ChuanDoDay: dau phay", PhanTichKhung.ChuanDoDay(" 3,2 "), "3.2");
+            Kiem("ChuanDoDay: giu so le co san", PhanTichKhung.ChuanDoDay("1.25"), "1.25");
+            Kiem("ChuanDoDay: sai -> null", PhanTichKhung.ChuanDoDay("abc") ?? PhanTichKhung.ChuanDoDay("0") ?? PhanTichKhung.ChuanDoDay("-1") ?? PhanTichKhung.ChuanDoDay(""), null);
+
             string thu = Path.Combine(Path.GetTempPath(), "csvtool_gia_" + Guid.NewGuid().ToString("N"));
             try
             {

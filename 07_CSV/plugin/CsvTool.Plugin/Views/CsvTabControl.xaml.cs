@@ -76,9 +76,11 @@ namespace CsvTool.Views
         /// <summary>Enter trong ô = ghi ngay (mặc định TextBox chỉ ghi khi rời ô).</summary>
         private void OPhim(object sender, KeyEventArgs e)
         {
-            if (e.Key != Key.Enter || !(sender is TextBox t)) return;
-            t.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
-            e.Handled = true;
+            if ((e.Key != Key.Enter && e.Key != Key.Tab) || !(sender is TextBox t) || t.IsReadOnly) return;
+            var b = t.GetBindingExpression(TextBox.TextProperty);
+            b?.UpdateSource();
+            if (b?.Status == System.Windows.Data.BindingStatus.Active) b.UpdateTarget();
+            e.Handled = e.Key == Key.Enter;   // Tab vẫn chuyển sang ô kế tiếp
         }
 
         /// <summary>DllTabLoader của OHTATOOL gọi bằng phản chiếu để lăn chuột trên PaletteSet.</summary>

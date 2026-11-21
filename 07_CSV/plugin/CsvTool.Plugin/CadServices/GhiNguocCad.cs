@@ -34,6 +34,7 @@ namespace CsvTool.CadServices
                     e.UpgradeOpen();
                     if (laM) ((MText)e).Contents = moi; else ((DBText)e).TextString = moi;
                     tr.Commit();
+                    doc.Editor.UpdateScreen();   // gọi từ palette: không tự vẽ lại tới khi có lệnh khác
                     return;
                 }
                 throw new InvalidOperationException(loi);
