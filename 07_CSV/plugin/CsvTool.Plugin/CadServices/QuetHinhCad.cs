@@ -4,11 +4,13 @@ using System.Linq;
 using CsvTool.Core;
 #if ZWCAD
 using ZwSoft.ZwCAD.ApplicationServices;
+using ZwSoft.ZwCAD.Colors;
 using ZwSoft.ZwCAD.DatabaseServices;
 using ZwSoft.ZwCAD.EditorInput;
 using ZwSoft.ZwCAD.Geometry;
 #else
 using Autodesk.AutoCAD.ApplicationServices;
+using Autodesk.AutoCAD.Colors;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
@@ -41,10 +43,12 @@ namespace CsvTool.CadServices
             {
                 var lopAn = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var netLop = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                var lopTrang = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (ObjectId id in (LayerTable)tr.GetObject(db.LayerTableId, OpenMode.ForRead))
                 {
                     var l = (LayerTableRecord)tr.GetObject(id, OpenMode.ForRead);
                     if (l.IsOff || l.IsFrozen) lopAn.Add(l.Name);
+                    if (LaTrang(l.Color)) lopTrang.Add(l.Name);
                     netLop[l.Name] = ((LinetypeTableRecord)tr.GetObject(l.LinetypeObjectId, OpenMode.ForRead)).Name;
                 }
 
@@ -55,7 +59,7 @@ namespace CsvTool.CadServices
                     if (gc != null) { dan.Add(gc); continue; }
                     Extents3d hop;
                     try { hop = e.GeometricExtents; } catch { continue; }
-                    PhanVaoKhung(e, id.ObjectClass.DxfName, hop, khung, ds, chuQuanh, netLop, c);
+                    PhanVaoKhung(e, id.ObjectClass.DxfName, hop, khung, ds, chuQuanh, netLop, lopTrang, c);
                 }
                 tr.Commit();
             }
@@ -63,7 +67,7 @@ namespace CsvTool.CadServices
         }
 
         private static void PhanVaoKhung(Entity e, string loai, Extents3d hop, IReadOnlyList<KhungTho> khung, List<DuLieuHinh> ds,
-                                         List<ChuHinh> chuQuanh, Dictionary<string, string> netLop, CaiDatCsv c)
+                                         List<ChuHinh> chuQuanh, Dictionary<string, string> netLop, HashSet<string> lopTrang, CaiDatCsv c)
         {
             bool laKakou = Cung(e.Layer, LopKakou), laFname = Cung(e.Layer, PhanTichKhung.LopFname), laTapu = e is Hatch && Cung(e.Layer, c.LopTapuDung);
             var hopGon = (hop.MinPoint.X, hop.MinPoint.Y, hop.MaxPoint.X, hop.MaxPoint.Y);
@@ -82,6 +86,9 @@ namespace CsvTool.CadServices
             bool laBe = hopLe && e is Line &&
                         (lt.StartsWith("DASHED", StringComparison.Ordinal) ||
                          (lt.Equals("BYLAYER", StringComparison.OrdinalIgnoreCase) && netLop.TryGetValue(e.Layer, out string ltLop) && ltLop.StartsWith("DASHED", StringComparison.Ordinal)));
+            // 2-F-NAME đã có lỗi "đối tượng không hợp lệ" riêng; khung tấm không phải nét cắt
+            bool trangSaiLop = !laKakou && !laFname && !Cung(e.Layer, c.LopKhungDung) && e is Curve && LoaiNet.Contains(loai) &&
+                               (e.Color.IsByLayer ? lopTrang.Contains(e.Layer) : LaTrang(e.Color));
             NetCat net = null;
             NetBe be = laBe ? new NetBe { X1 = ((Line)e).StartPoint.X, Y1 = ((Line)e).StartPoint.Y, X2 = ((Line)e).EndPoint.X, Y2 = ((Line)e).EndPoint.Y } : null;
 
@@ -95,6 +102,7 @@ namespace CsvTool.CadServices
                 if (chu != null) d.ChuTrongKhung.Add(chu);
                 if (laTapu) d.SoHatch++;
                 if (laFname && chu == null) d.SaiFname.Add((loai, hopGon));
+                if (trangSaiLop) d.NetTrangSaiLop.Add((e.Layer, hopGon));
                 if (!laKakou) continue;
                 if (!hopLe) { d.SaiKakou.Add((loai, hopGon)); continue; }
                 if (be != null) d.Be.Add(be);
@@ -103,6 +111,10 @@ namespace CsvTool.CadServices
                 d.Net.Add(net);
             }
         }
+
+        // ByBlock trong model space hiện màu trắng như ACI 7
+        private static bool LaTrang(Color m) =>
+            m.IsByBlock || (m.IsByAci ? m.ColorIndex == 7 : !m.IsByLayer && m.Red == 255 && m.Green == 255 && m.Blue == 255);
 
         private static bool Cung(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 

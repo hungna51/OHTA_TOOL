@@ -80,6 +80,14 @@ namespace CsvTool.Tests
             Kiem("Du loi: net ho nho trong bien van kiem phan con lai", LoiHinh(ChayHinh(loHo.Concat(new[] { Tron(75, 50, 10) }))),
                  "Nét cắt bị hở hoặc chồng nhau. Nối lại cho kín. | Có lỗ trùng hoặc chồng nhau. Xoá bớt hoặc sửa lại.");
 
+            var trang = ChayHinh(ChuNhat(100, 100), d =>
+            {
+                d.NetTrangSaiLop.Add(("0", (10, 10, 20, 20)));
+                d.NetTrangSaiLop.Add(("0", (30, 30, 40, 40)));
+                d.NetTrangSaiLop.Add(("VE", (50, 50, 60, 60)));
+            });
+            Kiem("NetTrang: bao layer, du vi tri, chan tam", LoiHinh(trang) + "|" + trang.Loi[0].ViTri.Count + "|" + (trang.Tam == null),
+                 "Nét màu trắng sai layer: 0, VE. Chuyển sang 0-KAKOU.|3|True");
             var cloud = CloudLoi.Tao(new[] { (10.0, 10.0, 20.0, 20.0), (21.0, 10.0, 30.0, 20.0), (500.0, 500.0, 500.0, 500.0) }, 100);
             Kiem("Cloud: hop chong nhau gop lam 1, diem ho co cloud rieng", cloud.Count, 2);
             var vien = LamPhang.Polyline(cloud[0], true);

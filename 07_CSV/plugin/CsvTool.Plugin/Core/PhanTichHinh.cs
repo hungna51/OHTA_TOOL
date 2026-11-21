@@ -36,6 +36,8 @@ namespace CsvTool.Core
         public List<NetBe> Be = new List<NetBe>();
         public List<(string Loai, (double MinX, double MinY, double MaxX, double MaxY) Hop)> SaiKakou = new List<(string, (double, double, double, double))>();
         public List<(string Loai, (double MinX, double MinY, double MaxX, double MaxY) Hop)> SaiFname = new List<(string, (double, double, double, double))>();
+        /// <summary>Nét màu trắng trong khung nhưng không ở 0-KAKOU: dễ là nét cắt vẽ nhầm layer, file cắt sẽ mất nét.</summary>
+        public List<(string Lop, (double MinX, double MinY, double MaxX, double MaxY) Hop)> NetTrangSaiLop = new List<(string, (double, double, double, double))>();
         public int SoHatch;
         public List<ChuHinh> ChuTrongKhung = new List<ChuHinh>();   // chọn trọn trong khung
         public List<ChuHinh> ChuFname = new List<ChuHinh>();        // F-name chạm khung
@@ -151,6 +153,9 @@ namespace CsvTool.Core
                 Them("0-KAKOU có đối tượng không hợp lệ: " + string.Join(", ", d.SaiKakou.Select(x => x.Loai).Distinct()), d.SaiKakou.Select(x => x.Hop));
             if (d.SaiFname.Count > 0)
                 Them("2-F-NAME có đối tượng không hợp lệ: " + string.Join(", ", d.SaiFname.Select(x => x.Loai).Distinct()), d.SaiFname.Select(x => x.Hop));
+            if (d.NetTrangSaiLop.Count > 0)
+                Them("Nét màu trắng sai layer: " + string.Join(", ", d.NetTrangSaiLop.Select(x => x.Lop).Distinct()) + ". Chuyển sang 0-KAKOU.",
+                     d.NetTrangSaiLop.Select(x => x.Hop));
             if (d.Net.Count == 0)
             {
                 Them("Khung chưa có nét cắt (layer 0-KAKOU).", new List<(double, double, double, double)>());
