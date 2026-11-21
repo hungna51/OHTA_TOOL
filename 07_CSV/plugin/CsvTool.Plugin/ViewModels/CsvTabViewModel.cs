@@ -117,7 +117,7 @@ namespace CsvTool.ViewModels
         /// <summary>Lệnh CSVQUETVUNG / CSVQUETTOAN: phân tích hình học các khung, một khung lỗi không làm dừng lượt quét.</summary>
         public void QuetCad(Document doc, bool toanBanVe)
         {
-            VongDoTam.Xoa();
+            CloudLoiTam.Xoa();
             List<Autodesk_ObjectId> ids = toanBanVe ? QuetKhungCad.TatCaKhung(doc, CaiDat.LopKhungDung) : QuetKhungCad.ChonVung(doc, CaiDat.LopKhungDung);
             if (ids == null) { TrangThai = "Đã huỷ quét."; return; }
 
@@ -266,35 +266,43 @@ namespace CsvTool.ViewModels
             Bao(nameof(CoDsLoi)); Bao(nameof(NhanDsLoi));
         }
 
-        /// <summary>Bấm dòng lỗi: zoom tới vị trí lỗi kế tiếp + vòng đỏ tạm; lỗi không có vị trí riêng thì zoom cả khung.</summary>
+        /// <summary>Bấm dòng lỗi: zoom sát vị trí kế tiếp, cloud vẫn hiện ở mọi lỗi của tấm; lỗi không có vị trí thì zoom cả khung.</summary>
         public void ChonLoi(DongLoi l)
         {
             Document doc = CadApplication.DocumentManager.MdiActiveDocument;
             if (l == null || doc == null || doc != _docDanhSach) return;
-            if (l.SoViTri == 0)
-            {
-                ZoomCad.ToiHop(doc, l.Dong.Khung.MinX, l.Dong.Khung.MinY, l.Dong.Khung.MaxX, l.Dong.Khung.MaxY);
-                VongDoTam.Xoa();
-                KhungTho k = l.Dong.Khung;
-                double w0 = k.MaxX - k.MinX, h0 = k.MaxY - k.MinY;
-                try { VongDoTam.Hien(doc, (k.MinX + k.MaxX) / 2, (k.MinY + k.MaxY) / 2, 0.55 * Math.Sqrt(w0 * w0 + h0 * h0)); }
-                catch (Exception ex) { TrangThai = "Không vẽ được vòng đỏ: " + ex.Message; }
-                return;
-            }
-            var v = l.Tiep();
             KhungTho f = l.Dong.Khung;
-            // nới theo cỡ khung để điểm hở (hộp = 0) vẫn thấy được nét xung quanh
-            double le = Math.Max(0.12 * Math.Max(f.MaxX - f.MinX, f.MaxY - f.MinY), 1.0);
-            double cx = (v.MinX + v.MaxX) / 2, cy = (v.MinY + v.MaxY) / 2, dx = v.MaxX - v.MinX, dy = v.MaxY - v.MinY;
-            ZoomCad.ToiHop(doc, v.MinX - le, v.MinY - le, v.MaxX + le, v.MaxY + le);
-            try { VongDoTam.Hien(doc, cx, cy, Math.Max(0.6 * Math.Sqrt(dx * dx + dy * dy), le * 0.3)); }
-            catch (Exception ex) { TrangThai = "Không vẽ được vòng đỏ: " + ex.Message; }
+            if (l.SoViTri == 0) ZoomCad.ToiHop(doc, f.MinX, f.MinY, f.MaxX, f.MaxY);
+            else
+            {
+                var v = l.Tiep();
+                // nới theo cỡ khung để điểm hở (hộp = 0) vẫn thấy được nét xung quanh
+                double le = Math.Max(0.12 * Math.Max(f.MaxX - f.MinX, f.MaxY - f.MinY), 1.0);
+                ZoomCad.ToiHop(doc, v.MinX - le, v.MinY - le, v.MaxX + le, v.MaxY + le);
+            }
+            HienCloud(doc, l.Dong);
+        }
+
+        private void HienCloud(Document doc, DongTam d)
+        {
+            CloudLoiTam.Xoa();
+            if (!_loiKhung.TryGetValue(d.Khung.Handle, out var ds)) return;
+            KhungTho k = d.Khung;
+            try { CloudLoiTam.Hien(doc, CloudLoi.Tao(ds.Where(l => l.LaLoi).SelectMany(l => l.ViTri), Math.Max(k.MaxX - k.MinX, k.MaxY - k.MinY))); }
+            catch (Exception ex) { TrangThai = "Không vẽ được cloud: " + ex.Message; }
+        }
+
+        /// <summary>Esc trên tab.</summary>
+        public void XoaCloud()
+        {
+            CloudLoiTam.Xoa();
+            CadApplication.DocumentManager.MdiActiveDocument?.Editor.UpdateScreen();
         }
 
         /// <summary>Nút Xuất CSV: file cuối &lt;đơn&gt;.csv từ danh sách đang hiện; còn thẻ lỗi thì không ghi.</summary>
         private void XuatCsv()
         {
-            VongDoTam.Xoa();
+            CloudLoiTam.Xoa();
             if (_thuMuc == null || _tatCa.Count == 0) { TrangThai = "Chưa có danh sách tấm — bấm Quét trước."; return; }
             Document doc = CadApplication.DocumentManager.MdiActiveDocument;
             if (doc != _docDanhSach) { TrangThai = "Danh sách không thuộc bản vẽ đang mở — quét lại."; return; }
@@ -318,8 +326,8 @@ namespace CsvTool.ViewModels
 
         private void DoiBanVe(Document doc)
         {
-            VongDoTam.Xoa();
-            if (doc == _docDanhSach) return;
+            if (doc == _docDanhSach) return;   // kích hoạt lại đúng bản vẽ: giữ cloud
+            CloudLoiTam.Xoa();
             _tatCa.Clear();
             _thuMuc = null;
             GomLoi();
@@ -346,21 +354,16 @@ namespace CsvTool.ViewModels
 
         internal void BaoLoi(string s) => TrangThai = s;
 
-        // ── Chọn dòng → zoom / vòng đỏ ────────────────────────────────
+        // ── Chọn thẻ → zoom cả tấm + cloud mọi đối tượng lỗi ──────────
 
         public void ChonDong(DongTam d)
         {
-            VongDoTam.Xoa();
+            CloudLoiTam.Xoa();
             Document doc = CadApplication.DocumentManager.MdiActiveDocument;
             if (d == null || doc == null || doc != _docDanhSach) return;
             KhungTho k = d.Khung;
             ZoomCad.ToiHop(doc, k.MinX, k.MinY, k.MaxX, k.MaxY);
-            if (d.CoLoi)
-            {
-                double w = k.MaxX - k.MinX, h = k.MaxY - k.MinY;
-                try { VongDoTam.Hien(doc, (k.MinX + k.MaxX) / 2, (k.MinY + k.MaxY) / 2, 0.55 * Math.Sqrt(w * w + h * h)); }
-                catch (Exception ex) { TrangThai = "Không vẽ được vòng đỏ: " + ex.Message; }
-            }
+            HienCloud(doc, d);
         }
 
         // ── Lọc, trạng thái ───────────────────────────────────────────

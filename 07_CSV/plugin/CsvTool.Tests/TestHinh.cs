@@ -51,7 +51,7 @@ namespace CsvTool.Tests
             dai0.Add(new NetCat { Loai = "ARC", DoDai = 0, Diem = { (10, 10), (10, 10) } });
             Kiem("Bien: chieu dai 0", LoiHinh(ChayHinh(dai0)).StartsWith("Có 1 nét dài bằng 0"), true);
             Kiem("Bien: doi tuong la tren 0-KAKOU",
-                 LoiHinh(ChayHinh(ChuNhat(50, 50), d => d.SaiKakou.Add(("MTEXT", (1, 1, 2, 2))))).StartsWith("Layer 0-KAKOU có đối tượng lạ: MTEXT"), true);
+                 LoiHinh(ChayHinh(ChuNhat(50, 50), d => d.SaiKakou.Add(("MTEXT", (1, 1, 2, 2))))).Equals("0-KAKOU có đối tượng không hợp lệ: MTEXT"), true);
 
             Kiem("Bien: chi tiet thua ngoai bien", LoiHinh(ChayHinh(ChuNhat(100, 100).Concat(new[] { Tron(300, 50, 10) }))),
                  "Có nét thừa hoặc lỗ cắt qua biên tấm.");
@@ -79,6 +79,12 @@ namespace CsvTool.Tests
             var loHo = ChuNhat(100, 100).Concat(new[] { Duong(30, 30, 40, 30), Tron(70, 50, 10) });
             Kiem("Du loi: net ho nho trong bien van kiem phan con lai", LoiHinh(ChayHinh(loHo.Concat(new[] { Tron(75, 50, 10) }))),
                  "Nét cắt bị hở hoặc chồng nhau. Nối lại cho kín. | Có lỗ trùng hoặc chồng nhau. Xoá bớt hoặc sửa lại.");
+
+            var cloud = CloudLoi.Tao(new[] { (10.0, 10.0, 20.0, 20.0), (21.0, 10.0, 30.0, 20.0), (500.0, 500.0, 500.0, 500.0) }, 100);
+            Kiem("Cloud: hop chong nhau gop lam 1, diem ho co cloud rieng", cloud.Count, 2);
+            var vien = LamPhang.Polyline(cloud[0], true);
+            Kiem("Cloud: cung cong ra ngoai, bao tron doi tuong",
+                 vien.Min(p => p.X) < 8.8 && vien.Max(p => p.X) > 31.2 && vien.Min(p => p.Y) < 8.8 && vien.Max(p => p.Y) > 21.2, true);
 
             var bulge = LamPhang.Polyline(new[] { (0.0, 0.0, 1.0), (10.0, 0.0, 1.0) }, true);
             double rMax = bulge.Max(p => Math.Sqrt((p.X - 5) * (p.X - 5) + p.Y * p.Y));

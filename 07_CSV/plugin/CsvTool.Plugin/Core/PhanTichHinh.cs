@@ -148,11 +148,9 @@ namespace CsvTool.Core
                 kq.Add(new LoiQuet { Handle = d.HandleKhung, LaLoi = true, NoiDung = msg, ViTri = viTri.ToList() });
 
             if (d.SaiKakou.Count > 0)
-                Them("Layer 0-KAKOU có đối tượng lạ: " + string.Join(", ", d.SaiKakou.Select(x => x.Loai).Distinct()) +
-                     ". Xoá hoặc chuyển layer.", d.SaiKakou.Select(x => x.Hop));
+                Them("0-KAKOU có đối tượng không hợp lệ: " + string.Join(", ", d.SaiKakou.Select(x => x.Loai).Distinct()), d.SaiKakou.Select(x => x.Hop));
             if (d.SaiFname.Count > 0)
-                Them("Layer 2-F-NAME có đối tượng lạ: " + string.Join(", ", d.SaiFname.Select(x => x.Loai).Distinct()) +
-                     ". Chỉ dùng TEXT/MTEXT.", d.SaiFname.Select(x => x.Hop));
+                Them("2-F-NAME có đối tượng không hợp lệ: " + string.Join(", ", d.SaiFname.Select(x => x.Loai).Distinct()), d.SaiFname.Select(x => x.Hop));
             if (d.Net.Count == 0)
             {
                 Them("Khung chưa có nét cắt (layer 0-KAKOU).", new List<(double, double, double, double)>());

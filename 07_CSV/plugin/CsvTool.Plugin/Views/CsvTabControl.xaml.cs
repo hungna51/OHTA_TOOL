@@ -21,6 +21,14 @@ namespace CsvTool.Views
             NutXuat.Foreground = vm.AccentBrush;
             KhungCheDo.BorderBrush = vm.AccentBrush;
             vm.DongHien.CollectionChanged += (s, e) => _dangChon = null;
+            Focusable = true;   // bấm thẻ / dòng lỗi xong, Esc trên tab xoá được cloud
+            KeyDown += (s, e) =>
+            {
+                if (e.Key != Key.Escape) return;
+                _vm.XoaCloud();
+                _dangChon = null;
+                e.Handled = true;
+            };
         }
 
         /// <summary>Bấm vào thẻ tấm (kể cả vào ô để sửa) → zoom tới khung; bấm lại cùng thẻ thì không zoom lại.</summary>
@@ -28,6 +36,7 @@ namespace CsvTool.Views
         {
             if (!((sender as FrameworkElement)?.DataContext is DongTam d) || d == _dangChon) return;
             _dangChon = d;
+            Focus();
             _vm.ChonDong(d);
         }
 
@@ -38,7 +47,10 @@ namespace CsvTool.Views
 
         private void LoiBam(object sender, MouseButtonEventArgs e)
         {
-            if ((sender as FrameworkElement)?.DataContext is DongLoi l) _vm.ChonLoi(l);
+            if (!((sender as FrameworkElement)?.DataContext is DongLoi l)) return;
+            _dangChon = null;   // bấm lại thẻ của tấm này vẫn zoom về cả tấm
+            Focus();
+            _vm.ChonLoi(l);
         }
 
         private void XoaTim(object sender, RoutedEventArgs e)
@@ -49,7 +61,7 @@ namespace CsvTool.Views
 
         private void TimPhim(object sender, KeyEventArgs e)
         {
-            if (e.Key != Key.Escape) return;
+            if (e.Key != Key.Escape || _vm.TimKiem == "") return;   // ô trống: Esc đi tiếp để xoá cloud
             _vm.TimKiem = "";
             e.Handled = true;
         }
