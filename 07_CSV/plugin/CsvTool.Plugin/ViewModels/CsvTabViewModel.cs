@@ -101,8 +101,8 @@ namespace CsvTool.ViewModels
         }
 
         /// <summary>
-        /// Gọi từ lệnh CSVQUET (sau lisp). Đọc mọi khung có F-name trên bản vẽ; thông tin tấm lấy từ MText
-        /// vừa quét hoặc từ data CSV. Ghi data CSV rồi mới xoá MText — ghi hỏng thì MText còn nguyên.
+        /// Gọi từ lệnh CSVQUET (sau lisp). Đọc mọi khung có F-name trên bản vẽ; thông tin tấm lấy từ
+        /// file kết quả lisp vừa ghi hoặc từ data CSV, rồi lưu data CSV. Không tạo / xoá gì trên bản vẽ.
         /// </summary>
         public void SauQuet(Document doc)
         {
@@ -122,20 +122,26 @@ namespace CsvTool.ViewModels
             try { cu = File.Exists(fData) ? CsvXuat.DocData(DocChiaSe(fData)) : new Dictionary<string, ThongTinTam>(); }
             catch (Exception ex) { TrangThai = "Không đọc được " + fData + ": " + ex.Message; return; }
 
+            Dictionary<long, ThongTinTam> quet;
+            string fQuet = ChayB1Lisp.FileKetQua;
+            try
+            {
+                quet = CsvXuat.DocKetQuaQuet(File.Exists(fQuet) ? DocChiaSe(fQuet) : "", CaiDat.CheDoTinh);
+                File.Delete(fQuet);
+            }
+            catch (Exception ex) { TrangThai = "Không đọc được kết quả quét: " + ex.Message; return; }
+
             var (khung, dimzin) = QuetKhungCad.Quet(doc, QuetKhungCad.TatCaKhung(doc, CaiDat.LopKhungDung));
             var tot = new List<(TamXuat Tam, KhungTho Khung, string CanhBao)>();
             var loi = new List<DongTam>();
-            var coText = new List<long>();
             foreach (KhungTho k in khung.Where(PhanTichKhung.CoFname))
             {
                 if (PhanTichKhung.LaKhungChuThich(k))
                 {
-                    // không xoá text trong khung chú thích: có thể là nội dung mẫu của bảng
                     loi.Add(new DongTam(this, k, null, PhanTichKhung.LoiKhungChuThich) { BoQua = true });
                     continue;
                 }
-                var r = PhanTichKhung.Ghep(k, CaiDat.LopDimDung, dimzin, cu);
-                if (r.TuText && r.Tam != null) coText.Add(k.Handle);   // khung lỗi giữ text: chưa lưu được vào CSV
+                var r = PhanTichKhung.Ghep(k, CaiDat.LopDimDung, dimzin, cu, quet);
                 if (r.Tam != null) tot.Add((r.Tam, k, r.Loi)); else loi.Add(new DongTam(this, k, null, r.Loi));
             }
             var theoHandle = tot.ToDictionary(x => x.Tam.HandleKhung);
@@ -149,14 +155,12 @@ namespace CsvTool.ViewModels
             string trung = CsvXuat.TenTrung(_tatCa.Where(d => d.Tam != null).Select(d => d.Tam));
             if (trung != null)
             {
-                TrangThai = "Tên tấm trùng \"" + trung + "\" — sửa N rồi quét lại (chưa lưu data CSV, text thông tin giữ nguyên).";
+                TrangThai = "Tên tấm trùng \"" + trung + "\" — sửa N rồi quét lại (chưa lưu data CSV).";
                 return;
             }
-            if (!LuuData()) return;   // LuuData đã báo lỗi; giữ MText để quét lại không mất gì
-            int xoa = coText.Count == 0 ? 0 : GhiNguocCad.XoaTextThongTin(doc, coText);
+            if (!LuuData()) return;   // LuuData đã báo lỗi; đóng file rồi quét lại
             File35 = fData;
-            TrangThai = "Quét " + _tatCa.Count(d => !d.BoQua) + " tấm, " + _tatCa.Count(d => d.CoLoi && !d.BoQua) + " lỗi · đã lưu data CSV" +
-                        (xoa > 0 ? " · xoá text thông tin ở " + coText.Count + " khung." : ".");
+            TrangThai = "Quét " + _tatCa.Count(d => !d.BoQua) + " tấm, " + _tatCa.Count(d => d.CoLoi && !d.BoQua) + " lỗi · đã lưu data CSV.";
         }
 
         private static string DocChiaSe(string f)

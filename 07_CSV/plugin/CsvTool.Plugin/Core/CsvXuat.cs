@@ -180,6 +180,32 @@ namespace CsvTool.Core
             return kq;
         }
 
+        /// <summary>
+        /// File kết quả lisp (csvtool_b1.lsp), mỗi khung 1 dòng, cột cách bằng TAB:
+        /// handle, lỗ nhỏ, lỗ lớn, tapu, vát, "dài*số;dài*số", loại gia công. Dòng sai dạng bị bỏ.
+        /// </summary>
+        public static Dictionary<long, ThongTinTam> DocKetQuaQuet(string noiDung, int cheDoTinh)
+        {
+            var kq = new Dictionary<long, ThongTinTam>();
+            foreach (string dong in (noiDung ?? "").TrimStart('﻿').Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string[] o = dong.Split('\t');
+                if (o.Length != 7 || !long.TryParse(o[0], System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out long handle)) continue;
+                var tt = new ThongTinTam
+                {
+                    LoNho = ThongTinTamParser.Atoi(o[1]), LoLon = ThongTinTamParser.Atoi(o[2]), Tappu = ThongTinTamParser.Atoi(o[3]),
+                    Vat = ThongTinTamParser.Atoi(o[4]), LoaiGiaCong = o[6], CheDoTinh = cheDoTinh.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                };
+                foreach (string be in o[5].Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string[] x = be.Split('*');
+                    if (x.Length == 2) tt.DuongBe.Add((ThongTinTamParser.Atoi(x[0]), ThongTinTamParser.Atoi(x[1])));
+                }
+                kq[handle] = tt;
+            }
+            return kq;
+        }
+
         /// <summary>Tách 1 dòng CSV, ô có nháy kép (do O() bọc) giữ nguyên dấu phẩy bên trong.</summary>
         public static List<string> TachO(string dong)
         {

@@ -55,31 +55,42 @@ namespace CsvTool.Core
         }
 
         /// <summary>
-        /// Luồng quét của tab: F-name + dim lấy từ bản vẽ; thông tin tấm lấy từ text vừa quét (TuText)
-        /// hoặc từ data CSV theo tên N. Giá / tiền vật liệu / ưu đãi người dùng đã nhập trong CSV được giữ
-        /// khi text quét lại để trống. Thiếu vát / pitchi → tấm vẫn có (sửa được) kèm cảnh báo trong Loi.
+        /// Luồng quét của tab: F-name + dim lấy từ bản vẽ; thông tin tấm theo thứ tự: kết quả vừa quét
+        /// (theo handle khung) → data CSV (theo tên N) → text cũ của bản vẽ trước v6 (chỉ đọc, không xoá).
+        /// Thiếu vát / pitchi → tấm vẫn có (sửa được) kèm cảnh báo trong Loi.
         /// </summary>
-        public static (TamXuat Tam, string Loi, bool TuText) Ghep(KhungTho k, string lopDim, int dimzin,
-                                                                 IReadOnlyDictionary<string, ThongTinTam> cu)
+        public static (TamXuat Tam, string Loi) Ghep(KhungTho k, string lopDim, int dimzin,
+                                                     IReadOnlyDictionary<string, ThongTinTam> cu,
+                                                     IReadOnlyDictionary<long, ThongTinTam> quet)
         {
-            var text = DocText(k);
             var (tam, loi) = DocFnameDim(k, lopDim, dimzin);
-            if (loi != null) return (null, loi, text != null);
+            if (loi != null) return (null, loi);
             cu.TryGetValue(tam.N, out ThongTinTam daCo);
-            if (text != null)
-            {
-                if (text.Value.Loi != null) return (null, text.Value.Loi, true);
-                tam.Tt = text.Value.Tam;
-                if (daCo != null)
-                {
-                    if (tam.Tt.GiaBaoGia == "") tam.Tt.GiaBaoGia = daCo.GiaBaoGia;
-                    if (tam.Tt.TienVatLieu == "") tam.Tt.TienVatLieu = daCo.TienVatLieu;
-                    if (tam.Tt.UuDai == "") tam.Tt.UuDai = daCo.UuDai;
-                }
-            }
+            if (quet.TryGetValue(k.Handle, out ThongTinTam moi)) tam.Tt = GiuGiaTriNhapTay(moi, daCo);
             else if (daCo != null) tam.Tt = daCo;
-            else return (null, LoiChuaCoThongTin, false);
-            return (tam, KiemTra(tam.Tt), text != null);
+            else
+            {
+                var text = DocText(k);
+                if (text == null) return (null, LoiChuaCoThongTin);
+                if (text.Value.Loi != null) return (null, text.Value.Loi);
+                tam.Tt = text.Value.Tam;
+            }
+            return (tam, KiemTra(tam.Tt));
+        }
+
+        /// <summary>CSV là nơi lưu duy nhất: quét lại không được xoá số người dùng đã nhập mà lisp không đo được.</summary>
+        private static ThongTinTam GiuGiaTriNhapTay(ThongTinTam moi, ThongTinTam cu)
+        {
+            if (cu == null) return moi;
+            moi.PitchiSoLan = cu.PitchiSoLan;
+            moi.PitchiDai = cu.PitchiDai;
+            moi.GiaBaoGia = cu.GiaBaoGia;
+            moi.TienVatLieu = cu.TienVatLieu;
+            moi.UuDai = cu.UuDai;
+            if (moi.Vat == 0) moi.Vat = cu.Vat;
+            // lisp chỉ đếm tổng Tapu + Sara: tổng không đổi thì giữ cách chia người dùng đã sửa
+            if (cu.Tappu + cu.Sara == moi.Tappu) { moi.Tappu = cu.Tappu; moi.Sara = cu.Sara; }
+            return moi;
         }
 
         /// <summary>Khung có text trên layer F-name (khung chú thích không có → không phải tấm).</summary>

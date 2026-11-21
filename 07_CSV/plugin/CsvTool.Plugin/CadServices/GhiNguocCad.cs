@@ -11,33 +11,9 @@ using Autodesk.AutoCAD.DatabaseServices;
 
 namespace CsvTool.CadServices
 {
-    /// <summary>Ghi ngược lên bản vẽ: sửa F-name của khung, xoá text thông tin đã chuyển sang CSV.</summary>
+    /// <summary>Ghi ngược lên bản vẽ: sửa F-name của khung.</summary>
     public static class GhiNguocCad
     {
-        /// <summary>
-        /// Xoá text thông tin tấm (layer KHUNG_IN) trong các khung đã chuyển sang data CSV. Chỉ gọi SAU khi
-        /// ghi CSV thành công — xoá trước mà ghi hỏng là mất dữ liệu. Ctrl+Z hoàn tác được.
-        /// </summary>
-        public static int XoaTextThongTin(Document doc, IEnumerable<long> handleKhung)
-        {
-            int dem = 0;
-            Database db = doc.Database;
-            using (doc.LockDocument())
-            using (Transaction tr = db.TransactionManager.StartTransaction())
-            {
-                foreach (long h in handleKhung)
-                    foreach (Entity e in QuetKhungCad.TrongKhung(tr, db, h))
-                    {
-                        if (!string.Equals(e.Layer, PhanTichKhung.LopThongTin, StringComparison.OrdinalIgnoreCase)) continue;
-                        e.UpgradeOpen();
-                        e.Erase();
-                        dem++;
-                    }
-                tr.Commit();
-            }
-            return dem;
-        }
-
         /// <summary>truong ∈ N, M, T, Q: thay dòng "X=..." trong F-name (layer 2-F-NAME) của khung.</summary>
         public static void SuaFname(Document doc, long handleKhung, char truong, string giaTri) =>
             Sua(doc, handleKhung, PhanTichKhung.LopFname, (noi, laM) => PhanTichKhung.ThayTruongFname(noi, laM, truong, giaTri),

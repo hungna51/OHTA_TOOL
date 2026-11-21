@@ -13,7 +13,7 @@ namespace CsvTool.CadServices
 {
     /// <summary>
     /// Nút "Quét theo vùng" / "Quét toàn bản vẽ" giai đoạn 1: chạy chế độ 3 của lisp xuat_csv cũ
-    /// (phân tích hình học → MText) qua csvtool_b1.lsp, lisp chạy xong tự gọi CSVQUET để chuyển text sang data CSV.
+    /// (phân tích hình học, không tạo text trên bản vẽ) qua csvtool_b1.lsp, lisp chạy xong tự gọi CSVQUET để lưu vào data CSV.
     /// </summary>
     public static class ChayB1Lisp
     {
@@ -24,6 +24,9 @@ namespace CsvTool.CadServices
 #else
         private const string FileLisp = "xuat_csv_autocad.lsp";
 #endif
+
+        /// <summary>Lisp ghi kết quả phân tích vào đây (riêng từng tiến trình CAD), CSVQUET đọc rồi xoá.</summary>
+        public static string FileKetQua => Path.Combine(Path.GetTempPath(), "csvtool_quet_" + System.Diagnostics.Process.GetCurrentProcess().Id + ".txt");
 
         public static void Chay(CaiDatCsv c, string thuMucModule, bool toanBanVe)
         {
@@ -47,7 +50,9 @@ namespace CsvTool.CadServices
                 doc.SendStringToExecute("\x03\x03" + nap + "\n", true, false, false);
                 try { if (doc.UserData != null) doc.UserData[KhoaDaNap] = true; } catch { }
             }
-            string lenh = "(csvtool-b1 \"" + c.LopKhungDung + "\" \"" + c.LopTapuDung + "\" " + (toanBanVe ? "T" : "nil") + ")";
+            File.Delete(FileKetQua);   // kết quả cũ không được lẫn vào lượt quét này
+            string lenh = "(csvtool-b1 \"" + c.LopKhungDung + "\" \"" + c.LopTapuDung + "\" " + (toanBanVe ? "T" : "nil") +
+                          " \"" + DuongLisp(FileKetQua) + "\")";
             doc.SendStringToExecute((daNap ? "\x03\x03" : "") + lenh + "\n", true, false, true);
         }
 
