@@ -1,6 +1,9 @@
+using System;
 using System.Globalization;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
+using CsvTool.CadServices;
 using CsvTool.Core;
 
 namespace CsvTool.Views
@@ -23,9 +26,31 @@ namespace CsvTool.Views
             LopTuChon.IsEnabled = !c.DungLopMacDinh;
             BuocSpline.Text = c.BuocSpline.ToString(CultureInfo.InvariantCulture);
             DungSai.Text = c.DungSaiKheHo.ToString(CultureInfo.InvariantCulture);
+            TtDb.Text = CaiDatRegistry.DocKetNoi() != null ? "Đã lưu kết nối." : "Chưa có kết nối.";   // không hiện lại chuỗi có mật khẩu
         }
 
         private void DoiMacDinh(object sender, RoutedEventArgs e) => LopTuChon.IsEnabled = DungMacDinh.IsChecked != true;
+
+        private async void KiemTraDb(object sender, RoutedEventArgs e)
+        {
+            string chuoi = string.IsNullOrWhiteSpace(ODb.Password) ? CaiDatRegistry.DocKetNoi() : ODb.Password.Trim();
+            if (chuoi == null) { TtDb.Text = "Nhập chuỗi kết nối trước."; return; }
+            NutThuDb.IsEnabled = false;
+            TtDb.Text = "Đang kết nối...";
+            try
+            {
+                BangGia b = await Task.Run(() => new NguonPostgres(chuoi).Doc());
+                TtDb.Text = "Kết nối được: " + b.Dong.Count + " dòng giá, " + b.CongTyUuDai.Count + " công ty.";
+            }
+            catch (Exception ex) { TtDb.Text = "Không kết nối được: " + ex.Message; }
+            finally { NutThuDb.IsEnabled = true; }
+        }
+
+        private void XoaDb(object sender, RoutedEventArgs e)
+        {
+            try { CaiDatRegistry.XoaKetNoi(); ODb.Clear(); TtDb.Text = "Đã xoá kết nối và bản sao bảng giá."; }
+            catch (Exception ex) { TtDb.Text = "Không xoá được: " + ex.Message; }
+        }
 
         private void Luu(object sender, RoutedEventArgs e)
         {
@@ -34,6 +59,16 @@ namespace CsvTool.Views
                 Loi.Text = "Bước spline và dung sai khe hở phải là số lớn hơn 0.";
                 Loi.Visibility = Visibility.Visible;
                 return;
+            }
+            if (!string.IsNullOrWhiteSpace(ODb.Password))
+            {
+                try { KetNoiDb.Phan(ODb.Password); CaiDatRegistry.GhiKetNoi(ODb.Password.Trim()); }
+                catch (Exception ex)
+                {
+                    Loi.Text = ex.Message;
+                    Loi.Visibility = Visibility.Visible;
+                    return;
+                }
             }
             _c.SapXep = SxTrenDuoi.IsChecked == true ? KieuSapXep.TrenXuongDuoi
                       : SxChuCai.IsChecked == true ? KieuSapXep.ChuCai : KieuSapXep.TraiSangPhai;

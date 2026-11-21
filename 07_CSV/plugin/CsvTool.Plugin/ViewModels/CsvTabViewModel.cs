@@ -216,7 +216,8 @@ namespace CsvTool.ViewModels
 
         // ── Tính giá ──────────────────────────────────────────────────
 
-        private readonly INguonBangGia _nguonGia = new NguonChuaKetNoi();
+        private readonly NguonGiaCoDem _nguonGia = new NguonGiaCoDem();
+        private bool _dangDocGia;
         private BangGia _bangGia;
         private GiaDon _giaDon;
 
@@ -261,14 +262,20 @@ namespace CsvTool.ViewModels
             }
         }
 
-        private void TinhGiaDon()
+        private async void TinhGiaDon()
         {
+            if (_dangDocGia) return;
             if (_thuMuc == null || _tatCa.Count == 0) { TrangThai = "Chưa có danh sách tấm. Bấm Quét trước."; return; }
             if (_giaDon == null) { TrangThai = "File " + _maDon + "-gia.json bị hỏng. Sửa hoặc xoá file rồi quét lại."; return; }
+            GiaDon donDangTinh = _giaDon;
             BangGia b;
-            try { b = _nguonGia.Doc(); }
+            _dangDocGia = true;
+            TrangThai = "Đang đọc bảng giá...";
+            try { b = await System.Threading.Tasks.Task.Run(() => _nguonGia.Doc()); }   // không treo CAD khi mạng chậm
             catch (Exception ex) { TrangThai = "Không đọc được bảng giá: " + ex.Message; return; }
-            if (b == null) { TrangThai = "Chưa kết nối bảng giá."; return; }
+            finally { _dangDocGia = false; }
+            if (b == null) { TrangThai = "Chưa kết nối bảng giá. Nhập kết nối ở nút cài đặt."; return; }
+            if (_giaDon != donDangTinh) { TrangThai = "Danh sách vừa đổi, bấm Tính giá lại."; return; }
             try
             {
                 var w = new Views.CsvNhapCongTyWindow(b.CongTyUuDai.Keys.OrderBy(x => x), _giaDon.CongTy, AccentBrush);
@@ -276,6 +283,7 @@ namespace CsvTool.ViewModels
                 _giaDon.CongTy = w.CongTy;
             }
             catch (Exception ex) { TrangThai = "Không mở được ô nhập công ty: " + ex.Message; return; }
+            if (_giaDon != donDangTinh) { TrangThai = "Danh sách vừa đổi, bấm Tính giá lại."; return; }
             _bangGia = b;
             ApDungGia();
             DanhGiaLai();
@@ -283,7 +291,8 @@ namespace CsvTool.ViewModels
             LuuGia();
             var ds = _tatCa.Where(d => d.Tam != null && !d.BoQua).Select(d => d.Tam).ToList();
             TrangThai = "Đã tính giá " + TinhGia.TongTien(ds).CoGia + "/" + ds.Count + " tấm · " + _giaDon.CongTy +
-                        (b.CongTyUuDai.ContainsKey(_giaDon.CongTy) ? "." : " (không có trong danh sách, tính giá thường).");
+                        (b.CongTyUuDai.ContainsKey(_giaDon.CongTy) ? "." : " (không có trong danh sách, tính giá thường).") +
+                        (_nguonGia.GhiChu == null ? "" : " " + _nguonGia.GhiChu);
         }
 
         /// <summary>Nút ↺ trên ô giá: bỏ giá sửa tay, quay về giá tự tính.</summary>

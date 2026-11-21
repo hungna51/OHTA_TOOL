@@ -107,6 +107,19 @@
             </StackPanel>
         </Border>
 
+        <Border Style="{StaticResource The}">
+            <StackPanel>
+                <TextBlock Text="BẢNG GIÁ (DATABASE)" Style="{StaticResource TieuDeThe}"/>
+                <TextBlock Text="Chuỗi kết nối tài khoản chỉ đọc (postgresql://...)" Margin="0,0,0,4"/>
+                <PasswordBox x:Name="ODb" Padding="6,3" Margin="0,0,0,6" VerticalContentAlignment="Center"/>
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Content="Xoá kết nối" Click="XoaDb" Margin="6,0,0,0"/>
+                    <Button x:Name="NutThuDb" DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Content="Kiểm tra" Click="KiemTraDb" Margin="6,0,0,0"/>
+                    <TextBlock x:Name="TtDb" Foreground="#52606D" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+
         <TextBlock x:Name="Loi" Foreground="#C62828" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,0,0,8"/>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

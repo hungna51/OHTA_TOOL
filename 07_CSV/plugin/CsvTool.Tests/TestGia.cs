@@ -65,7 +65,6 @@ namespace CsvTool.Tests
                 Kiem("Web: " + o[0] + " " + o[1] + " " + o[18] + " che do " + o[16], r.Kq == null ? r.Loi : r.Kq.Gia1Tam + "/" + r.Kq.AllIn, o[19] + "/" + o[20]);
             }
             Kiem("Khong co gia vat lieu", TinhGia.Tinh(new DauVaoGia { VatLieu = "SPCC", DoDay = 1, X = 10, Y = 10, SoLuong = 1 }, b).Loi, "Chưa có giá: SPCC dày 1.");
-            Kiem("Nguon chua ket noi", new NguonChuaKetNoi().Doc(), null);
 
             TamXuat TamGia(string n, string gia = "") => new TamXuat { N = n, M = "SS400", T = "6.0", Q = "3", X = "575", Y = "1219", Tt = new ThongTinTam { GiaBaoGia = gia, CheDoTinh = "0" } };
             var tu = TamGia("A-1");

@@ -39,6 +39,7 @@ namespace CsvTool.Tests
             TestCaiDat();
             TestDuLieu();
             TestGia();
+            TestDb();
             TestHinh();
             TestVang();
 
