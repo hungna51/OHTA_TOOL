@@ -38,6 +38,37 @@ namespace CsvTool.CadServices
             return HopLe(doc, ids.ToArray(), lopKhung);
         }
 
+        /// <summary>
+        /// Quét theo vùng: dùng khung đang chọn sẵn, không có thì kéo vùng trên lớp khung; vẫn không có
+        /// khung thì cho chọn trên mọi layer. Esc → null.
+        /// </summary>
+        public static List<ObjectId> ChonVung(Document doc, string lopKhung)
+        {
+            Editor ed = doc.Editor;
+            bool coLop;
+            using (Transaction tr = doc.Database.TransactionManager.StartTransaction())
+            {
+                coLop = ((LayerTable)tr.GetObject(doc.Database.LayerTableId, OpenMode.ForRead)).Has(lopKhung);
+                tr.Commit();
+            }
+            string lop = coLop ? lopKhung : null;
+            PromptSelectionResult r = ed.SelectImplied();
+            var kq = r.Status == PromptStatus.OK ? HopLe(doc, r.Value.GetObjectIds(), lop) : new List<ObjectId>();
+            if (kq.Count > 0) return kq;
+
+            var locPoly = new TypedValue((int)DxfCode.Start, "*POLYLINE");
+            var loc = coLop ? new SelectionFilter(new[] { locPoly, new TypedValue((int)DxfCode.LayerName, lopKhung) })
+                            : new SelectionFilter(new[] { locPoly });
+            r = ed.GetSelection(new PromptSelectionOptions { MessageForAdding = "\n[CSV] Quet vung - chon khung in (keo vung): " }, loc);
+            if (r.Status == PromptStatus.Cancel) return null;
+            if (r.Status == PromptStatus.OK && (kq = HopLe(doc, r.Value.GetObjectIds(), lop)).Count > 0) return kq;
+
+            r = ed.GetSelection(new PromptSelectionOptions { MessageForAdding = "\n[CSV] Chua chon duoc khung. Chon lai khung in (moi layer): " },
+                                new SelectionFilter(new[] { locPoly }));
+            if (r.Status == PromptStatus.Cancel) return null;
+            return r.Status == PromptStatus.OK ? HopLe(doc, r.Value.GetObjectIds(), null) : new List<ObjectId>();
+        }
+
         /// <summary>Giữ polyline đúng lớp (nếu có) và hợp lệ: ≥ 4 đỉnh, kín hoặc đỉnh đầu ≈ đỉnh cuối.</summary>
         private static List<ObjectId> HopLe(Document doc, ObjectId[] ids, string lop)
         {

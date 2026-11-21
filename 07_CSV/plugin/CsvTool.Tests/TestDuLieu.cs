@@ -33,15 +33,9 @@ namespace CsvTool.Tests
             var cu = new Dictionary<string, ThongTinTam> { ["A-1"] = doc["A-1"] };
             var khongCo = new Dictionary<string, ThongTinTam>();
             var chuaQuet = new Dictionary<long, ThongTinTam>();
-            var quet = CsvXuat.DocKetQuaQuet("﻿2F1\t3\t1\t4\t0\t150*2;80*1\tm, k\r\nhong\r\n", 1);
-            Kiem("DocKetQuaQuet: handle hex, duong be, bo dong hong",
-                 quet.Count == 1 && quet.ContainsKey(0x2F1) ? quet[0x2F1].LoNho + "|" + quet[0x2F1].Tappu + "|" + quet[0x2F1].LoaiGiaCong + "|" + quet[0x2F1].CheDoTinh + "|" +
-                                                              string.Join(";", quet[0x2F1].DuongBe.Select(b => b.Dai + "x" + b.SoLuong)) : "", "3|4|m, k|1|150x2;80x1");
-            var dsLoi = CsvXuat.DocLoiQuet("﻿2F1\t3\t1\t4\t0\t\tm\r\nE\t2F2\tH\\U+1EDF nét\t1,2,3,4;.5,-.5,.5,-.5\r\nW\t2F3\tThiếu ký hiệu\t\r\nX\t2F4\tsai\t\r\n");
-            Kiem("DocLoiQuet: E/W, giai ma \\U+, nhieu vi tri, bo dong khac",
-                 dsLoi.Count == 2 ? dsLoi[0].Handle + "|" + dsLoi[0].LaLoi + "|" + dsLoi[0].NoiDung + "|" + dsLoi[0].ViTri.Count + "|" + dsLoi[0].ViTri[1].MinX + "|" + dsLoi[1].LaLoi + "|" + dsLoi[1].ViTri.Count : "",
-                 "754|True|Hở nét|2|0.5|False|0");
-            Kiem("DocKetQuaQuet: khong doc nham dong loi", CsvXuat.DocKetQuaQuet("E\t2F2\tloi\t1,2,3,4\r\n", 0).Count, 0);
+            var tQuet = new ThongTinTam { LoNho = 3, LoLon = 1, Tappu = 4, LoaiGiaCong = "m, k", CheDoTinh = "1" };
+            tQuet.DuongBe.Add((150, 2));
+            var quet = new Dictionary<long, ThongTinTam> { [0x2F1] = tQuet };
             Kiem("TenKhung: lay N khi F-name thieu truong", PhanTichKhung.TenKhung(KhungMau(text: new[] { Fn("N=A-7\\PM=SS400") })), "A-7");
             var kQuet = KhungMau(text: new[] { Fn("N=A-1\\PM=SS400\\PT=3.2\\PQ=2") });
             kQuet.Handle = 0x2F1;

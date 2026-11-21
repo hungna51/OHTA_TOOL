@@ -38,6 +38,7 @@ namespace CsvTool.Tests
             TestCsvXuat();
             TestCaiDat();
             TestDuLieu();
+            TestHinh();
             TestVang();
 
             Console.WriteLine();

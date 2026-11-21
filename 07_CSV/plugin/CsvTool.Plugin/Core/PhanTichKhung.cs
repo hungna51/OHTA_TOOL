@@ -117,11 +117,14 @@ namespace CsvTool.Core
         /// Khung chú thích của bản vẽ mẫu: có từ 2 dòng "N=" trên layer F-name (một tấm chỉ có 1 F-name).
         /// Tab vẫn hiện nó (để không lặng lẽ bỏ sót) nhưng không chặn Xuất CSV.
         /// </summary>
-        public static bool LaKhungChuThich(KhungTho k) =>
+        public static bool LaKhungChuThich(KhungTho k) => SoDongN(k) >= 2;
+
+        /// <summary>Số dòng "N=" trên layer F-name; chỉ khung có đúng 1 dòng mới được phân tích hình học.</summary>
+        public static int SoDongN(KhungTho k) =>
             k.Text.Where(t => CungLop(t.Lop, LopFname))
                   .Sum(t => t.LaMtext
                       ? ThongTinTamParser.TachDong(t.NoiDung, true).Count(d => d.StartsWith("N="))
-                      : (t.NoiDung ?? "").StartsWith("N=") ? 1 : 0) >= 2;
+                      : (t.NoiDung ?? "").StartsWith("N=") ? 1 : 0);
 
         /// <summary>Text thông tin (layer KHUNG_IN) của khung; không có → null.</summary>
         public static (ThongTinTam Tam, string Loi)? DocText(KhungTho k)

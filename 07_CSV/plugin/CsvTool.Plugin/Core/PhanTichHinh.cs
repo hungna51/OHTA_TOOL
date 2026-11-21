@@ -1,0 +1,575 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+
+namespace CsvTool.Core
+{
+    /// <summary>Một nét cắt trên 0-KAKOU đã làm phẳng thành dãy điểm từ đầu tới cuối nét.</summary>
+    public sealed class NetCat
+    {
+        public long Handle;
+        public string Loai;      // LINE, ARC, CIRCLE, ELLIPSE, SPLINE, LWPOLYLINE, POLYLINE
+        public bool Kin;         // cờ closed của polyline / spline; circle luôn kín
+        public double DoDai;     // chiều dài thật, không phải của dãy điểm
+        public List<(double X, double Y)> Diem = new List<(double, double)>();
+        public (double X, double Y) Dau => Diem[0];
+        public (double X, double Y) Cuoi => Diem[Diem.Count - 1];
+    }
+
+    public sealed class NetBe { public double X1, Y1, X2, Y2; }
+
+    public sealed class ChuHinh { public string Lop, NoiDung; public double MinX, MinY, MaxX, MaxY; }
+
+    /// <summary>LEADER / MULTILEADER: chữ và các đầu mũi tên.</summary>
+    public sealed class GhiChuDan
+    {
+        public string Lop, NoiDung;
+        public List<(double X, double Y)> Mui = new List<(double, double)>();
+    }
+
+    /// <summary>Mọi thứ phép phân tích hình học cần của một khung tấm.</summary>
+    public sealed class DuLieuHinh
+    {
+        public long HandleKhung;
+        public List<NetCat> Net = new List<NetCat>();
+        public List<NetBe> Be = new List<NetBe>();
+        public List<(string Loai, (double MinX, double MinY, double MaxX, double MaxY) Hop)> SaiKakou = new List<(string, (double, double, double, double))>();
+        public List<(string Loai, (double MinX, double MinY, double MaxX, double MaxY) Hop)> SaiFname = new List<(string, (double, double, double, double))>();
+        public int SoHatch;
+        public List<ChuHinh> ChuTrongKhung = new List<ChuHinh>();   // chọn trọn trong khung
+        public List<ChuHinh> ChuFname = new List<ChuHinh>();        // F-name chạm khung
+        public List<ChuHinh> ChuQuanh = new List<ChuHinh>();        // ký hiệu bẻ có thể nằm ngoài khung
+        public List<GhiChuDan> Dan = new List<GhiChuDan>();
+    }
+
+    public sealed class KetQuaHinh
+    {
+        public ThongTinTam Tam;
+        public LoiQuet Loi;
+        public List<LoiQuet> CanhBao = new List<LoiQuet>();
+    }
+
+    /// <summary>Làm phẳng cung tròn / polyline có bulge, sai số dây cung ≤ 0.005 mm.</summary>
+    public static class LamPhang
+    {
+        private const double SaiSoDay = 0.005;
+
+        /// <summary>Điểm trên cung từ góc a0, quét góc có dấu (rad), gồm cả 2 đầu.</summary>
+        public static List<(double X, double Y)> Cung(double cx, double cy, double r, double a0, double quet)
+        {
+            double buoc = r > SaiSoDay ? 2 * Math.Acos(1 - SaiSoDay / r) : Math.PI / 4;
+            int n = Math.Min(2000, Math.Max(8, (int)Math.Ceiling(Math.Abs(quet) / buoc)));
+            var kq = new List<(double, double)>(n + 1);
+            for (int i = 0; i <= n; i++)
+            {
+                double a = a0 + quet * i / n;
+                kq.Add((cx + r * Math.Cos(a), cy + r * Math.Sin(a)));
+            }
+            return kq;
+        }
+
+        /// <summary>Polyline đỉnh + bulge; kín thì điểm cuối trùng điểm đầu.</summary>
+        public static List<(double X, double Y)> Polyline(IReadOnlyList<(double X, double Y, double Bulge)> dinh, bool kin)
+        {
+            var kq = new List<(double, double)>();
+            if (dinh.Count == 0) return kq;
+            kq.Add((dinh[0].X, dinh[0].Y));
+            int soCanh = kin ? dinh.Count : dinh.Count - 1;
+            for (int i = 0; i < soCanh; i++)
+            {
+                var p = dinh[i];
+                var q = dinh[(i + 1) % dinh.Count];
+                double dx = q.X - p.X, dy = q.Y - p.Y, d = Math.Sqrt(dx * dx + dy * dy);
+                if (Math.Abs(p.Bulge) < 1e-9 || d < 1e-12) { kq.Add((q.X, q.Y)); continue; }
+                double h = d * (1 - p.Bulge * p.Bulge) / (4 * p.Bulge);
+                double cx = (p.X + q.X) / 2 - dy / d * h, cy = (p.Y + q.Y) / 2 + dx / d * h;
+                double r = Math.Sqrt((p.X - cx) * (p.X - cx) + (p.Y - cy) * (p.Y - cy));
+                var cung = Cung(cx, cy, r, Math.Atan2(p.Y - cy, p.X - cx), 4 * Math.Atan(p.Bulge));
+                cung[cung.Count - 1] = (q.X, q.Y);
+                kq.AddRange(cung.Skip(1));
+            }
+            return kq;
+        }
+    }
+
+    /// <summary>
+    /// Phân tích hình học 1 khung, thay CSV--analyze-boundary + CSV--bend-list-smart + CSV--scan-machining-texts
+    /// của lisp v5.0.1. Vòng biên tính trên đa giác đã làm phẳng, không tạo REGION tạm trên bản vẽ.
+    /// </summary>
+    public static class PhanTichHinh
+    {
+        private const double Eps = 1e-4;
+        private const double NguongSau = 0.01;   // lớn hơn sai số dây cung của 2 cung tiếp xúc
+        private const double BeTol = 0.001;
+
+        private const string Poshi = "\u767A\u62BC\u3057", Shimame = "\u30B7\u30DE\u76EE", Hikishiro = "\u5F15\u4EE3";
+        private const string MageKakudo = "\u66F2\u3052\u89D2\u5EA6", Tappu = "\u30BF\u30C3\u30D7";
+        private const string Saramomi = "\u76BF\u3082\u307F", Kaisaki = "\u958B\u5148\u65BD\u5DE5\u7BC4\u56F2";
+
+        private static readonly Regex MaU = new Regex(@"\\U\+([0-9A-Fa-f]{4})", RegexOptions.Compiled);
+
+        /// <summary>hoiSoNhan(tên tấm, số đoạn): số đường bẻ nhấn 1 lần khi ký hiệu không khớp; null = không nhập.</summary>
+        public static KetQuaHinh Chay(DuLieuHinh d, double tol, int cheDoTinh, Func<string, int, int?> hoiSoNhan)
+        {
+            var kq = new KetQuaHinh();
+            var loi = Bien(d, tol, out int nho, out int lon);
+            if (loi != null)
+            {
+                kq.Loi = new LoiQuet { Handle = d.HandleKhung, LaLoi = true, NoiDung = loi.Value.Msg, ViTri = loi.Value.ViTri };
+                return kq;
+            }
+            string fname = string.Concat(d.ChuFname.Select(c => "," + c.NoiDung));
+            var be = DuongBe(d, fname, hoiSoNhan, s => kq.CanhBao.Add(new LoiQuet { Handle = d.HandleKhung, NoiDung = s }));
+            var tt = new ThongTinTam
+            {
+                LoNho = nho, LoLon = lon, Tappu = d.SoHatch, LoaiGiaCong = LoaiGiaCong(d.ChuTrongKhung, be.Count > 0),
+                CheDoTinh = cheDoTinh.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            };
+            tt.DuongBe.AddRange(be);
+            kq.Tam = tt;
+            return kq;
+        }
+
+        // ── Biên dạng ────────────────────────────────────────────────
+
+        private sealed class Vong
+        {
+            public List<(double X, double Y)> Diem;
+            public List<NetCat> Nguon;
+            public double DienTich, ChuVi, MinX, MinY, MaxX, MaxY;
+        }
+
+        private static (string Msg, List<(double MinX, double MinY, double MaxX, double MaxY)> ViTri)? Bien(DuLieuHinh d, double tol, out int nho, out int lon)
+        {
+            nho = lon = 0;
+            if (d.SaiKakou.Count > 0)
+                return ("Có đối tượng không hợp lệ trên layer 0-KAKOU: " + string.Join(", ", d.SaiKakou.Select(x => x.Loai).Distinct()) +
+                        ". Chỉ chấp nhận LINE/ARC/CIRCLE/ELLIPSE/SPLINE/LWPOLYLINE/POLYLINE.", d.SaiKakou.Select(x => x.Hop).ToList());
+            if (d.SaiFname.Count > 0)
+                return ("Có đối tượng không hợp lệ trên layer 2-F-NAME: " + string.Join(", ", d.SaiFname.Select(x => x.Loai).Distinct()) +
+                        ". Chỉ chấp nhận TEXT/MTEXT.", d.SaiFname.Select(x => x.Hop).ToList());
+            if (d.Net.Count == 0) return ("Không tìm thấy đối tượng 0-KAKOU trong khung.", new List<(double, double, double, double)>());
+
+            var bang0 = d.Net.Where(n => n.Loai != "CIRCLE" && !n.Kin && KC(n.Dau, n.Cuoi) <= Eps && n.DoDai <= Eps).ToList();
+            if (bang0.Count > 0)
+                return ("Có " + bang0.Count + " đối tượng có chiều dài = 0 (điểm đầu = điểm cuối). Xóa đi đối tượng này.", bang0.Select(HopNet).ToList());
+
+            var tu = DiemTu(d.Net, tol);
+            if (tu.Count > 0) return ("Có đối tượng mở hoặc chồng chéo!!!", tu.Select(p => (p.X, p.Y, p.X, p.Y)).ToList());
+
+            var nhom = NhomVong(d.Net, tol, out var ho);
+            if (ho.Count > 0) return ("Có biên dạng chưa khép kín", ho.Select(p => (p.X, p.Y, p.X, p.Y)).ToList());
+
+            var vong = new List<Vong>();
+            var hong = new List<NetCat>();
+            foreach (var g in nhom)
+            {
+                Vong v = TaoVong(g, tol);
+                if (v == null) hong.AddRange(g); else vong.Add(v);
+            }
+            if (hong.Count > 0) return ("Biên dạng cắt giao nhau, vui lòng kiểm tra lại!", hong.Select(HopNet).ToList());
+            Vong ngoai = vong.OrderByDescending(v => v.DienTich).FirstOrDefault();
+            if (ngoai == null) return ("Không xác định được biên dạng cắt!!!", new List<(double, double, double, double)>());
+
+            var lo = new List<Vong>();
+            var thua = new List<NetCat>();
+            foreach (Vong v in vong.Where(x => x != ngoai))
+                if (NamTrongVong(v, ngoai)) lo.Add(v); else thua.AddRange(v.Nguon);
+            if (thua.Count > 0) return ("Có nét vẽ thừa hoặc chi tiết thừa nằm ngoài biên dạng chính!!!", thua.Select(HopNet).ToList());
+
+            var chong = new HashSet<NetCat>();
+            for (int i = 0; i < lo.Count; i++)
+                for (int j = i + 1; j < lo.Count; j++)
+                    if (LanChong(lo[i], lo[j])) { chong.UnionWith(lo[i].Nguon); chong.UnionWith(lo[j].Nguon); }
+            if (chong.Count > 0) return ("Có lỗ trùng hoặc giao nhau trong biên dạng cắt!!!", chong.Select(HopNet).ToList());
+
+            double chuVi30 = Math.PI * 30.0;
+            nho = lo.Count(v => v.ChuVi <= chuVi30 + Eps);
+            lon = lo.Count - nho;
+            return null;
+        }
+
+        private static (double MinX, double MinY, double MaxX, double MaxY) HopNet(NetCat n) =>
+            (n.Diem.Min(p => p.X), n.Diem.Min(p => p.Y), n.Diem.Max(p => p.X), n.Diem.Max(p => p.Y));
+
+        private static double KC((double X, double Y) a, (double X, double Y) b) =>
+            Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y));
+
+        /// <summary>CSV--find-freepoints: đầu mút không có đúng 2 nét gặp nhau.</summary>
+        private static List<(double X, double Y)> DiemTu(List<NetCat> net, double tol)
+        {
+            var dau = new List<(double, double)>();
+            foreach (NetCat n in net)
+            {
+                bool co;
+                switch (n.Loai)
+                {
+                    case "LINE": case "ARC": co = true; break;
+                    case "LWPOLYLINE": case "POLYLINE": co = !n.Kin; break;
+                    case "SPLINE": case "ELLIPSE": co = KC(n.Dau, n.Cuoi) > tol; break;
+                    default: co = false; break;
+                }
+                if (co) { dau.Add(n.Dau); dau.Add(n.Cuoi); }
+            }
+            return DemDiem(dau, tol).Where(x => x.Dem != 2).Select(x => x.Diem).ToList();
+        }
+
+        private static List<((double X, double Y) Diem, int Dem)> DemDiem(IEnumerable<(double X, double Y)> ds, double tol)
+        {
+            var kq = new List<((double X, double Y) Diem, int Dem)>();
+            foreach (var p in ds)
+            {
+                int i = kq.FindIndex(x => KC(p, x.Diem) <= tol);
+                if (i >= 0) kq[i] = (kq[i].Diem, kq[i].Dem + 1); else kq.Add((p, 1));
+            }
+            return kq;
+        }
+
+        /// <summary>CSV--group-curves-by-loop: nét tự kín thành 1 nhóm, nét hở gom theo đầu mút chạm nhau.</summary>
+        private static List<List<NetCat>> NhomVong(List<NetCat> net, double tol, out List<(double X, double Y)> ho)
+        {
+            ho = new List<(double, double)>();
+            var kq = new List<List<NetCat>>();
+            var moHo = new List<NetCat>();
+            foreach (NetCat n in net)
+            {
+                bool tuKin = n.Loai == "CIRCLE" ||
+                             ((n.Loai == "LWPOLYLINE" || n.Loai == "POLYLINE" || n.Loai == "SPLINE") && (n.Kin || KC(n.Dau, n.Cuoi) <= tol));
+                if (tuKin) kq.Add(new List<NetCat> { n }); else moHo.Add(n);
+            }
+            var daXet = new HashSet<NetCat>();
+            foreach (NetCat goc in moHo)
+            {
+                if (!daXet.Add(goc)) continue;
+                var cum = new List<NetCat>();
+                var hang = new Queue<NetCat>();
+                hang.Enqueue(goc);
+                while (hang.Count > 0)
+                {
+                    NetCat c = hang.Dequeue();
+                    cum.Add(c);
+                    foreach (NetCat k in moHo)
+                        if (!daXet.Contains(k) && (KC(c.Dau, k.Dau) <= tol || KC(c.Dau, k.Cuoi) <= tol || KC(c.Cuoi, k.Dau) <= tol || KC(c.Cuoi, k.Cuoi) <= tol))
+                        {
+                            daXet.Add(k);
+                            hang.Enqueue(k);
+                        }
+                }
+                ho.AddRange(DemDiem(cum.SelectMany(n => new[] { n.Dau, n.Cuoi }), tol).Where(x => x.Dem != 2).Select(x => x.Diem));
+                kq.Add(cum);
+            }
+            return kq;
+        }
+
+        /// <summary>Nối các nét của nhóm thành 1 đa giác; suy biến hoặc tự cắt → null (REGION của lisp cũng hỏng).</summary>
+        private static Vong TaoVong(List<NetCat> nhom, double tol)
+        {
+            var diem = new List<(double X, double Y)>(nhom[0].Diem);
+            var con = new List<NetCat>(nhom.Skip(1));
+            while (con.Count > 0)
+            {
+                var cuoi = diem[diem.Count - 1];
+                int i = con.FindIndex(n => KC(cuoi, n.Dau) <= tol || KC(cuoi, n.Cuoi) <= tol);
+                if (i < 0) return null;
+                bool xuoi = KC(cuoi, con[i].Dau) <= tol;
+                diem.AddRange(xuoi ? con[i].Diem.Skip(1) : Enumerable.Reverse(con[i].Diem).Skip(1));
+                con.RemoveAt(i);
+            }
+            if (KC(diem[0], diem[diem.Count - 1]) > tol) return null;
+            diem.RemoveAt(diem.Count - 1);
+            var gon = new List<(double X, double Y)>(diem.Count);
+            foreach (var p in diem)
+                if (gon.Count == 0 || KC(gon[gon.Count - 1], p) > 1e-9) gon.Add(p);
+            if (gon.Count < 3) return null;
+
+            double s = 0;
+            for (int i = 0; i < gon.Count; i++)
+            {
+                var a = gon[i];
+                var b = gon[(i + 1) % gon.Count];
+                s += a.X * b.Y - b.X * a.Y;
+            }
+            var v = new Vong
+            {
+                Diem = gon, Nguon = nhom, DienTich = Math.Abs(s) / 2, ChuVi = nhom.Sum(n => n.DoDai),
+                MinX = gon.Min(p => p.X), MinY = gon.Min(p => p.Y), MaxX = gon.Max(p => p.X), MaxY = gon.Max(p => p.Y),
+            };
+            return v.DienTich <= Eps || TuCat(v) ? null : v;
+        }
+
+        private static bool TuCat(Vong v)
+        {
+            int n = v.Diem.Count;
+            for (int i = 0; i < n; i++)
+                for (int j = i + 2; j < n; j++)
+                {
+                    if (i == 0 && j == n - 1) continue;
+                    if (CatSau(v.Diem[i], v.Diem[(i + 1) % n], v.Diem[j], v.Diem[(j + 1) % n])) return true;
+                }
+            return false;
+        }
+
+        private static bool CatNhau(Vong a, Vong b)
+        {
+            int m = a.Diem.Count, n = b.Diem.Count;
+            for (int i = 0; i < m; i++)
+                for (int j = 0; j < n; j++)
+                    if (CatSau(a.Diem[i], a.Diem[(i + 1) % m], b.Diem[j], b.Diem[(j + 1) % n])) return true;
+            return false;
+        }
+
+        /// <summary>2 đoạn cắt nhau thật: mọi đầu mút cách đường kia &gt; NguongSau, nên 2 cung tiếp xúc không bị tính.</summary>
+        private static bool CatSau((double X, double Y) a, (double X, double Y) b, (double X, double Y) c, (double X, double Y) d)
+        {
+            if (Math.Max(a.X, b.X) < Math.Min(c.X, d.X) || Math.Max(c.X, d.X) < Math.Min(a.X, b.X) ||
+                Math.Max(a.Y, b.Y) < Math.Min(c.Y, d.Y) || Math.Max(c.Y, d.Y) < Math.Min(a.Y, b.Y)) return false;
+            double d1 = KcCoDau(c, d, a), d2 = KcCoDau(c, d, b), d3 = KcCoDau(a, b, c), d4 = KcCoDau(a, b, d);
+            return d1 * d2 < 0 && d3 * d4 < 0 &&
+                   Math.Min(Math.Min(Math.Abs(d1), Math.Abs(d2)), Math.Min(Math.Abs(d3), Math.Abs(d4))) > NguongSau;
+        }
+
+        private static double KcCoDau((double X, double Y) a, (double X, double Y) b, (double X, double Y) p)
+        {
+            double dx = b.X - a.X, dy = b.Y - a.Y, l = Math.Sqrt(dx * dx + dy * dy);
+            return l < 1e-12 ? 0 : (dx * (p.Y - a.Y) - dy * (p.X - a.X)) / l;
+        }
+
+        private static bool TrongDaGiac((double X, double Y) p, List<(double X, double Y)> da)
+        {
+            bool trong = false;
+            for (int i = 0, j = da.Count - 1; i < da.Count; j = i++)
+                if ((da[i].Y > p.Y) != (da[j].Y > p.Y) &&
+                    p.X < (da[j].X - da[i].X) * (p.Y - da[i].Y) / (da[j].Y - da[i].Y) + da[i].X)
+                    trong = !trong;
+            return trong;
+        }
+
+        private static double KcBien((double X, double Y) p, List<(double X, double Y)> da)
+        {
+            double m = double.MaxValue;
+            for (int i = 0; i < da.Count; i++)
+            {
+                var a = da[i];
+                var b = da[(i + 1) % da.Count];
+                m = Math.Min(m, KcDoan(p.X, p.Y, a.X, a.Y, b.X, b.Y));
+            }
+            return m;
+        }
+
+        private static bool NamTrongVong(Vong trong, Vong ngoai)
+        {
+            if (trong.MinX < ngoai.MinX - 2 * NguongSau || trong.MaxX > ngoai.MaxX + 2 * NguongSau ||
+                trong.MinY < ngoai.MinY - 2 * NguongSau || trong.MaxY > ngoai.MaxY + 2 * NguongSau) return false;
+            foreach (var p in trong.Diem)
+                if (!TrongDaGiac(p, ngoai.Diem) && KcBien(p, ngoai.Diem) > 2 * NguongSau) return false;
+            return !CatNhau(trong, ngoai);
+        }
+
+        /// <summary>Một điểm chắc chắn nằm trong đa giác: giữa cặp giao đầu tiên của đường quét ngang.</summary>
+        private static (double X, double Y) DiemTrong(Vong v)
+        {
+            double y = v.MinY + (v.MaxY - v.MinY) * 0.5137;   // lệch giữa để không đi đúng qua đỉnh
+            var xs = new List<double>();
+            for (int i = 0; i < v.Diem.Count; i++)
+            {
+                var a = v.Diem[i];
+                var b = v.Diem[(i + 1) % v.Diem.Count];
+                if ((a.Y > y) != (b.Y > y)) xs.Add(a.X + (y - a.Y) / (b.Y - a.Y) * (b.X - a.X));
+            }
+            xs.Sort();
+            return xs.Count >= 2 ? ((xs[0] + xs[1]) / 2, y) : (v.Diem[0].X, v.Diem[0].Y);
+        }
+
+        private static bool LanChong(Vong a, Vong b)
+        {
+            if (a.MaxX < b.MinX || b.MaxX < a.MinX || a.MaxY < b.MinY || b.MaxY < a.MinY) return false;
+            return TrongDaGiac(DiemTrong(a), b.Diem) || TrongDaGiac(DiemTrong(b), a.Diem) || CatNhau(a, b);
+        }
+
+        // ── Đường bẻ ─────────────────────────────────────────────────
+
+        private sealed class NhomBe
+        {
+            public double DirX, DirY, BaseX, BaseY, Min, Max;
+            public List<(double A, double B)> Doan = new List<(double, double)>();
+            public int Dai => (int)Math.Truncate(Max - Min + 0.5);
+            public double Chieu(double x, double y) => (x - BaseX) * DirX + (y - BaseY) * DirY;
+        }
+
+        private static (double X, double Y)? HuongBe(NetBe b)
+        {
+            double dx = b.X2 - b.X1, dy = b.Y2 - b.Y1, l = Math.Sqrt(dx * dx + dy * dy);
+            if (l <= 0) return null;
+            dx /= l; dy /= l;
+            return dx < 0 || (Math.Abs(dx) <= 1e-12 && dy < 0) ? (-dx, -dy) : (dx, dy);
+        }
+
+        private static List<NhomBe> NhomDuongBe(IEnumerable<NetBe> be)
+        {
+            var kq = new List<NhomBe>();
+            foreach (NetBe b in be)
+            {
+                var h = HuongBe(b);
+                if (h == null) continue;
+                NhomBe g = kq.FirstOrDefault(x =>
+                    Math.Abs(x.DirX * h.Value.Y - x.DirY * h.Value.X) <= BeTol &&
+                    Math.Abs((b.X1 - x.BaseX) * x.DirY - (b.Y1 - x.BaseY) * x.DirX) <= BeTol &&
+                    Math.Abs((b.X2 - x.BaseX) * x.DirY - (b.Y2 - x.BaseY) * x.DirX) <= BeTol);
+                if (g == null)
+                {
+                    g = new NhomBe { DirX = h.Value.X, DirY = h.Value.Y, BaseX = b.X1, BaseY = b.Y1 };
+                    double c = g.Chieu(b.X2, b.Y2);
+                    g.Min = Math.Min(0, c); g.Max = Math.Max(0, c);
+                    g.Doan.Add((g.Min, g.Max));
+                    kq.Insert(0, g);
+                    continue;
+                }
+                double p = g.Chieu(b.X1, b.Y1), q = g.Chieu(b.X2, b.Y2);
+                g.Min = Math.Min(g.Min, Math.Min(p, q));
+                g.Max = Math.Max(g.Max, Math.Max(p, q));
+                g.Doan.Insert(0, (Math.Min(p, q), Math.Max(p, q)));
+            }
+            return kq;
+        }
+
+        private static void Cong(List<(int Dai, int SoLuong)> ds, int dai, int so)
+        {
+            int i = ds.FindIndex(x => x.Dai == dai);
+            if (i >= 0) ds[i] = (dai, ds[i].SoLuong + so); else ds.Add((dai, so));
+        }
+
+        private static List<(int Dai, int SoLuong)> DuongBe(DuLieuHinh d, string fname, Func<string, int, int?> hoiSoNhan, Action<string> canhBao)
+        {
+            var nhom = NhomDuongBe(d.Be);
+            var kq = new List<(int Dai, int SoLuong)>();
+            if (!CoPoshi(fname))
+                foreach (NhomBe g in nhom) Cong(kq, g.Dai, 1);
+            else if (!fname.Contains("V=") && !CoShimame(fname))
+                foreach (NhomBe g in nhom) Cong(kq, g.Dai, 2);
+            else
+            {
+                string ten = fname.Contains("N=") ? PhanTichKhung.ExportA2b(fname, "N=", ",") : "?";
+                bool thieuKyHieu = false, itKyHieu = false;
+                foreach (NhomBe g in nhom)
+                {
+                    var ghiChu = KyHieuCua(g, d);
+                    bool coNhan = ghiChu.Any(a => CoPoshi(a.Chu)), coKhac = ghiChu.Any(a => !CoPoshi(a.Chu));
+                    int soDoan = g.Doan.Count;
+                    if (coNhan && !coKhac)
+                    {
+                        if (soDoan > 1 && ghiChu.Count < soDoan) itKyHieu = true;
+                        Cong(kq, g.Dai, 2);
+                    }
+                    else if (!coNhan)
+                    {
+                        if (ghiChu.Count == 0) thieuKyHieu = true;
+                        Cong(kq, g.Dai, 1);
+                    }
+                    else if (soDoan == 1)
+                    {
+                        canhBao("Tấm " + ten + ": Có ký hiệu bẻ thường và nhấn 1 lần cùng nhóm - mâu thuẫn!");
+                        Cong(kq, g.Dai, 1);
+                    }
+                    else if (ghiChu.Count == soDoan)
+                    {
+                        foreach (var s in g.Doan)
+                        {
+                            double giua = (s.A + s.B) / 2;
+                            var gan = ghiChu.OrderBy(a => Math.Abs(g.Chieu(a.X, a.Y) - giua)).First();
+                            Cong(kq, (int)Math.Truncate(s.B - s.A + 0.5), CoPoshi(gan.Chu) ? 2 : 1);
+                        }
+                    }
+                    else
+                    {
+                        int? nhap = hoiSoNhan?.Invoke(ten, soDoan);
+                        if (nhap == null || nhap < 0 || nhap > soDoan)
+                        {
+                            canhBao("Tấm " + ten + ": Số đoạn bẻ và số ký hiệu không khớp, chưa nhập số đường nhấn 1 lần nên tính là bẻ thường!");
+                            nhap = 0;
+                        }
+                        Cong(kq, g.Dai, 2 * nhap.Value + (soDoan - nhap.Value));
+                    }
+                }
+                if (thieuKyHieu) canhBao("Tấm " + ten + ": Có đường bẻ không tìm thấy ký hiệu, kiểm tra lại!");
+                if (itKyHieu) canhBao("Tấm " + ten + ": Có nhóm đường bẻ ít ký hiệu hơn số đoạn, kiểm tra lại!");
+            }
+            return kq.OrderByDescending(x => x.Dai).ToList();
+        }
+
+        /// <summary>Ký hiệu của 1 nhóm bẻ: chữ chạm đường bẻ, hoặc leader có mũi tên cách đường bẻ ≤ 5 mm.</summary>
+        private static List<(string Chu, double X, double Y)> KyHieuCua(NhomBe g, DuLieuHinh d)
+        {
+            double x1 = g.BaseX + g.DirX * g.Min, y1 = g.BaseY + g.DirY * g.Min;
+            double x2 = g.BaseX + g.DirX * g.Max, y2 = g.BaseY + g.DirY * g.Max;
+            var kq = new List<(string, double, double)>();
+            foreach (ChuHinh c in d.ChuQuanh)
+                if (!LaFname(c.Lop) && !string.IsNullOrEmpty(c.NoiDung) && DoanChamHop(x1, y1, x2, y2, c.MinX, c.MinY, c.MaxX, c.MaxY))
+                    kq.Add((c.NoiDung, (c.MinX + c.MaxX) / 2, (c.MinY + c.MaxY) / 2));
+            foreach (GhiChuDan a in d.Dan)
+            {
+                if (LaFname(a.Lop) || string.IsNullOrEmpty(a.NoiDung)) continue;
+                foreach (var m in a.Mui)
+                    if (KcDoan(m.X, m.Y, x1, y1, x2, y2) <= 5.0) { kq.Add((a.NoiDung, m.X, m.Y)); break; }
+            }
+            return kq;
+        }
+
+        private static bool LaFname(string lop) => string.Equals(lop, PhanTichKhung.LopFname, StringComparison.OrdinalIgnoreCase);
+
+        private static double KcDoan(double px, double py, double sx, double sy, double ex, double ey)
+        {
+            double dx = ex - sx, dy = ey - sy, l2 = dx * dx + dy * dy;
+            double t = l2 < 1e-12 ? 0 : Math.Max(0, Math.Min(1, ((px - sx) * dx + (py - sy) * dy) / l2));
+            double cx = sx + t * dx - px, cy = sy + t * dy - py;
+            return Math.Sqrt(cx * cx + cy * cy);
+        }
+
+        /// <summary>Đoạn thẳng có chạm hình chữ nhật không (cắt Liang-Barsky).</summary>
+        private static bool DoanChamHop(double x1, double y1, double x2, double y2, double minX, double minY, double maxX, double maxY)
+        {
+            double t0 = 0, t1 = 1, dx = x2 - x1, dy = y2 - y1;
+            bool Cat(double p, double q)
+            {
+                if (p == 0) return q >= 0;
+                double r = q / p;
+                if (p < 0) { if (r > t1) return false; if (r > t0) t0 = r; }
+                else { if (r < t0) return false; if (r < t1) t1 = r; }
+                return true;
+            }
+            return Cat(-dx, x1 - minX) && Cat(dx, maxX - x1) && Cat(-dy, y1 - minY) && Cat(dy, maxY - y1);
+        }
+
+        // ── Loại gia công ────────────────────────────────────────────
+
+        private static string GiaiMa(string s) => MaU.Replace(s ?? "", m => ((char)Convert.ToInt32(m.Groups[1].Value, 16)).ToString());
+
+        // lisp còn nhận chữ đầu ở dạng mã "\U+767A" khi chuỗi chưa giải mã
+        private static bool CoPoshi(string s) => GiaiMa(s).Contains(Poshi) || (s ?? "").Contains("\\U+767A");
+        private static bool CoShimame(string s) => GiaiMa(s).Contains(Shimame) || (s ?? "").Contains("\\U+30B7");
+
+        /// <summary>CSV--scan-machining-texts: đọc mọi chữ trong khung ra "m, m(pitchi), t, s, k".</summary>
+        public static string LoaiGiaCong(IEnumerable<ChuHinh> chu, bool coDuongBe)
+        {
+            bool m = coDuongBe, pitchi = false, t = false, s = false, k = false;
+            foreach (ChuHinh c in chu)
+            {
+                if (c.NoiDung == null) continue;
+                string v = GiaiMa(c.NoiDung), hoa = v.ToUpperInvariant();
+                if (hoa.Contains("V=") || hoa.Contains("U=") || hoa.Contains("P=") || hoa.Contains("R=") || CoPoshi(c.NoiDung) ||
+                    (CoShimame(c.NoiDung) && v.Contains(Hikishiro))) m = true;
+                if (v.Contains(MageKakudo)) pitchi = true;
+                if (v.Contains(Tappu)) t = true;
+                if (v.Contains(Saramomi)) s = true;
+                if (v.Contains(Kaisaki)) k = true;
+            }
+            var kq = new List<string>();
+            if (m) kq.Add("m");
+            if (pitchi) kq.Add("m(pitchi)");
+            if (t) kq.Add("t");
+            if (s) kq.Add("s");
+            if (k) kq.Add("k");
+            return string.Join(", ", kq);
+        }
+    }
+}

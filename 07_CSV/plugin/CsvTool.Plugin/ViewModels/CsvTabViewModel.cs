@@ -13,9 +13,11 @@ using CsvTool.CadServices;
 using CsvTool.Core;
 #if ZWCAD
 using ZwSoft.ZwCAD.ApplicationServices;
+using Autodesk_ObjectId = ZwSoft.ZwCAD.DatabaseServices.ObjectId;
 using CadApplication = ZwSoft.ZwCAD.ApplicationServices.Application;
 #else
 using Autodesk.AutoCAD.ApplicationServices;
+using Autodesk_ObjectId = Autodesk.AutoCAD.DatabaseServices.ObjectId;
 using CadApplication = Autodesk.AutoCAD.ApplicationServices.Application;
 #endif
 
@@ -31,7 +33,7 @@ namespace CsvTool.ViewModels
     }
 
     /// <summary>
-    /// Tab CSV. Nút Quét chạy lisp hình học rồi lệnh CSVQUET gọi SauQuet: thông tin tấm lưu ở
+    /// Tab CSV. Nút Quét gửi lệnh CSVQUETVUNG / CSVQUETTOAN, phân tích hình học bằng C#: thông tin tấm lưu ở
     /// data\&lt;đơn&gt;-data.csv (không để text trên bản vẽ). Sửa ô: N/Q/M/T ghi F-name, còn lại ghi data CSV.
     /// Xuất CSV ghi file cuối &lt;đơn&gt;.csv.
     /// </summary>
@@ -95,23 +97,57 @@ namespace CsvTool.ViewModels
             try { CadApplication.DocumentManager.DocumentActivated += (s, e) => DoiBanVe(e.Document); } catch { }
         }
 
-        // ── Quét: lisp phân tích hình học → CSVQUET → SauQuet ─────────
+        // ── Quét: chọn khung → PhanTichHinh → SauQuet ─────────────────
 
         private string _thuMuc, _maDon;
 
         private void Quet(bool toanBanVe)
         {
-            try { ChayB1Lisp.Chay(CaiDat, ThuMucModule, toanBanVe); }
+            try
+            {
+                Document doc = CadApplication.DocumentManager.MdiActiveDocument;
+                if (doc == null) return;
+                // không huỷ khi rảnh: ^C sẽ xoá khung người dùng đã chọn sẵn
+                string huy = Convert.ToInt32(CadApplication.GetSystemVariable("CMDACTIVE")) == 0 ? "" : "\x03\x03";
+                doc.SendStringToExecute(huy + (toanBanVe ? "CSVQUETTOAN" : "CSVQUETVUNG") + "\n", true, false, true);
+            }
             catch (Exception ex) { TrangThai = "Không chạy được lệnh quét: " + ex.Message; }
         }
 
-        /// <summary>
-        /// Gọi từ lệnh CSVQUET (sau lisp). Đọc mọi khung có F-name trên bản vẽ; thông tin tấm lấy từ
-        /// file kết quả lisp vừa ghi hoặc từ data CSV, rồi lưu data CSV. Không tạo / xoá gì trên bản vẽ.
-        /// </summary>
-        public void SauQuet(Document doc)
+        /// <summary>Lệnh CSVQUETVUNG / CSVQUETTOAN: phân tích hình học các khung, một khung lỗi không làm dừng lượt quét.</summary>
+        public void QuetCad(Document doc, bool toanBanVe)
         {
             VongDoTam.Xoa();
+            List<Autodesk_ObjectId> ids = toanBanVe ? QuetKhungCad.TatCaKhung(doc, CaiDat.LopKhungDung) : QuetKhungCad.ChonVung(doc, CaiDat.LopKhungDung);
+            if (ids == null) { TrangThai = "Đã huỷ quét."; return; }
+
+            var (daChon, _) = QuetKhungCad.Quet(doc, ids);
+            var hinh = QuetHinhCad.Doc(doc, daChon.Where(k => PhanTichKhung.SoDongN(k) == 1).ToList(), CaiDat);
+            var quet = new Dictionary<long, ThongTinTam>();
+            var loiMoi = new List<LoiQuet>();
+            foreach (DuLieuHinh d in hinh)
+            {
+                try
+                {
+                    KetQuaHinh r = PhanTichHinh.Chay(d, CaiDat.DungSaiKheHo, CaiDat.CheDoTinh, (ten, soDoan) => QuetHinhCad.HoiSoNhan(doc, ten, soDoan));
+                    if (r.Tam != null) quet[d.HandleKhung] = r.Tam;
+                    if (r.Loi != null) loiMoi.Add(r.Loi);
+                    loiMoi.AddRange(r.CanhBao);
+                }
+                catch (Exception ex)
+                {
+                    loiMoi.Add(new LoiQuet { Handle = d.HandleKhung, LaLoi = true, NoiDung = "Lỗi phân tích hình học: " + ex.Message });
+                }
+            }
+            SauQuet(doc, quet, loiMoi);
+        }
+
+        /// <summary>
+        /// Đọc mọi khung có F-name trên bản vẽ; thông tin tấm lấy từ kết quả vừa phân tích
+        /// hoặc từ data CSV, rồi lưu data CSV. Không tạo / xoá gì trên bản vẽ.
+        /// </summary>
+        private void SauQuet(Document doc, Dictionary<long, ThongTinTam> quet, List<LoiQuet> loiMoi)
+        {
             _docDanhSach = doc;
             if (Convert.ToInt32(CadApplication.GetSystemVariable("DWGTITLED")) != 1)
             {
@@ -126,18 +162,6 @@ namespace CsvTool.ViewModels
             Dictionary<string, ThongTinTam> cu;
             try { cu = File.Exists(fData) ? CsvXuat.DocData(DocChiaSe(fData)) : new Dictionary<string, ThongTinTam>(); }
             catch (Exception ex) { TrangThai = "Không đọc được " + fData + ": " + ex.Message; return; }
-
-            Dictionary<long, ThongTinTam> quet;
-            List<LoiQuet> loiMoi;
-            string fQuet = ChayB1Lisp.FileKetQua;
-            try
-            {
-                string ketQua = File.Exists(fQuet) ? DocChiaSe(fQuet) : "";
-                quet = CsvXuat.DocKetQuaQuet(ketQua, CaiDat.CheDoTinh);
-                loiMoi = CsvXuat.DocLoiQuet(ketQua);
-                File.Delete(fQuet);
-            }
-            catch (Exception ex) { TrangThai = "Không đọc được kết quả quét: " + ex.Message; return; }
 
             // quét theo vùng: khung ngoài vùng giữ lỗi của lượt trước, khung vừa quét thay bằng kết quả mới
             var loiKhung = doc.UserData[KhoaLoiQuet] as Dictionary<long, List<LoiQuet>> ?? new Dictionary<long, List<LoiQuet>>();

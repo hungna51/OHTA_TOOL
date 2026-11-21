@@ -21,12 +21,5 @@ namespace CsvTool.CadServices
             using (RegistryKey moi = Registry.CurrentUser.CreateSubKey(KhoaMoi))
                 c.Ghi((k, v) => moi.SetValue(k, v));
         }
-
-        /// <summary>Ghi 1 giá trị vào khoá cũ (lisp B1 tạm thời còn đọc ở đó).</summary>
-        public static void GhiKhoaCu(string ten, object giaTri)
-        {
-            using (RegistryKey cu = Registry.CurrentUser.CreateSubKey(KhoaCu))
-                cu.SetValue(ten, giaTri);
-        }
     }
 }
