@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace CsvTool.Core
 {
-    /// <summary>Giá trị đọc từ MText thông tin tấm (layer KHUNG_IN) — xem CSV--pricing-text-content của lisp.</summary>
+    /// <summary>Thông tin gia công của 1 tấm, lưu ở data\&lt;đơn&gt;-data.csv.</summary>
     public sealed class ThongTinTam
     {
         public int LoNho, LoLon, Tappu, Sara, PitchiSoLan, PitchiDai, Vat;
@@ -16,11 +16,9 @@ namespace CsvTool.Core
         public string LoaiGiaCong = "", CheDoTinh = "", GiaBaoGia = "", TienVatLieu = "", UuDai = "";
     }
 
-    /// <summary>Chép đúng hành vi CSV--mtext-plain / CSV--pricing-text-lines / CSV--pricing-data-from-text.</summary>
+    /// <summary>Tách dòng MText và chuẩn hoá chuỗi, chép hành vi CSV--mtext-plain của lisp.</summary>
     public static class ThongTinTamParser
     {
-        public const string LoiKhongCoText = "Không có text thông tin trong khung.";
-
         private static readonly Regex EscapeU = new Regex(@"\\U\+([0-9A-Fa-f]{4})");
 
         /// <summary>Tách nội dung thô của 1 TEXT/MTEXT thành các dòng đã trim.</summary>
@@ -47,89 +45,6 @@ namespace CsvTool.Core
             return txt;
         }
 
-        public static bool LaTextThongTin(IEnumerable<string> dong) =>
-            dong.Any(l => { string u = l.ToUpperInvariant(); return u.Contains("TAPPU") || u.Contains("TAPU&SARA"); });
-
-        /// <summary>
-        /// Đọc toàn bộ dòng text thông tin của 1 khung. Thứ tự dòng = thứ tự lisp duyệt
-        /// (người gọi quyết định); đường bẻ giữ đúng thứ tự gặp.
-        /// </summary>
-        public static (ThongTinTam Tam, string Loi) Doc(IReadOnlyList<string> tatCaDong)
-        {
-            if (tatCaDong == null || tatCaDong.Count == 0) return (null, LoiKhongCoText);
-
-            var t = new ThongTinTam();
-            bool coM = false;
-            int maxBe = 0;
-            foreach (string line in tatCaDong)
-            {
-                string u = ChuanHoa(line);
-                string v = SauHaiCham(line);
-                if (WcMatch(u, "L*TAPPU:*")) t.Tappu = Atoi(v);
-                else if (WcMatch(u, "L*SARA:*")) t.Sara = Atoi(v);
-                else if (WcMatch(u, "PITCHI*(MM)*")) t.PitchiDai = Atoi(v);
-                else if (WcMatch(u, "PITCHI*")) t.PitchiSoLan = Atoi(v);
-                else if (WcMatch(u, "CH*NH:*")) t.CheDoTinh = v ?? "";
-                else if (WcMatch(u, "GI*")) t.GiaBaoGia = v ?? "";
-                else if (WcMatch(u, "TI*")) t.TienVatLieu = v ?? "";
-                else if (WcMatch(u, "*(%):*")) t.UuDai = v ?? "";
-                else if (WcMatch(u, "L*NH*:*")) t.LoNho = Atoi(v);
-                else if (WcMatch(u, "L*L*N:*")) t.LoLon = Atoi(v);
-                else if (WcMatch(u, "VAT:*") || WcMatch(u, "*VAT:*") || u.StartsWith("V") || WcMatch(u, "*CHI*U D*I V*T:*"))
-                    t.Vat = Atoi(v);
-                else if (WcMatch(u, "*C*C LO*I GIA C*NG*"))
-                {
-                    t.LoaiGiaCong = v ?? "";
-                    if (t.LoaiGiaCong.ToUpperInvariant().Contains("M")) coM = true;
-                }
-                else if (v != null && v.Contains("x"))
-                {
-                    int xp = v.IndexOf('x');
-                    t.DuongBe.Add((Atoi(v.Substring(0, xp).Trim(' ')), Atoi(v.Substring(xp + 1).Trim(' '))));
-                    int c = line.IndexOf(':');
-                    int idx = SoCuoi(line.Substring(0, c).Trim(' '));
-                    if (idx > maxBe) maxBe = idx;
-                }
-            }
-
-            int canCo = 12 + (coM ? maxBe : 0);
-            if (tatCaDong.Count != canCo)
-                return (null, "Text thông tin cũ sai số dòng (có " + tatCaDong.Count + ", cần " + canCo + "). Quét lại tấm này.");
-            return (t, null);
-        }
-
-        /// <summary>
-        /// Thay giá trị sau dấu ":" của dòng có nhãn (không dấu, chữ hoa, vd "LO SARA") trong nội dung
-        /// MText thô; các dòng khác giữ nguyên từng ký tự. Không thấy nhãn → InvalidOperationException.
-        /// </summary>
-        public static string ThayGiaTri(string noiDungMtext, string nhanKhongDau, string giaTriMoi)
-        {
-            string[] doan = (noiDungMtext ?? "").Split(new[] { "\\P" }, StringSplitOptions.None);
-            string can = nhanKhongDau.Trim().ToUpperInvariant();
-            for (int i = 0; i < doan.Length; i++)
-            {
-                int c = doan[i].IndexOf(':');
-                if (c < 0) continue;
-                string nhan = doan[i].Substring(0, c);
-                if (i == 0) nhan = BoBocMtext(nhan + ":").TrimEnd(':');
-                if (ChuanHoa(nhan).Trim() != can) continue;
-                string sau = doan[i].Substring(c + 1);
-                // giữ kiểu cũ: "Lỗ Sara: 0" có cách, "Chế độ tính:0" thì không
-                string dem = sau.StartsWith(" ") || sau.Trim().Length == 0 ? " " : "";
-                bool dongNgoac = i == doan.Length - 1 && doan[i].EndsWith("}") && noiDungMtext.StartsWith("{\\");
-                doan[i] = doan[i].Substring(0, c + 1) + dem + giaTriMoi + (dongNgoac ? "}" : "");
-                return string.Join("\\P", doan);
-            }
-            throw new InvalidOperationException("Không tìm thấy dòng \"" + nhanKhongDau + "\" trong MText thông tin tấm.");
-        }
-
-        /// <summary>wcmatch rút gọn: chỉ ký tự đại diện '*', so khớp nguyên chuỗi.</summary>
-        public static bool WcMatch(string s, string mau)
-        {
-            string re = "^" + string.Join(".*", mau.Split('*').Select(Regex.Escape)) + "$";
-            return Regex.IsMatch(s ?? "", re, RegexOptions.Singleline);
-        }
-
         /// <summary>Giải mã \U+XXXX, bỏ dấu tiếng Việt, viết hoa — để cả 2 cách CAD lưu chữ cho cùng kết quả.</summary>
         public static string ChuanHoa(string s)
         {
@@ -143,13 +58,6 @@ namespace CsvTool.Core
             return sb.ToString().Normalize(NormalizationForm.FormC).ToUpperInvariant();
         }
 
-        /// <summary>CSV--line-value-after-colon: phần sau ":" đầu tiên đã trim; không có ":" → null.</summary>
-        public static string SauHaiCham(string line)
-        {
-            int c = line.IndexOf(':');
-            return c < 0 ? null : line.Substring(c + 1).Trim(' ');
-        }
-
         /// <summary>atoi của AutoLISP: dấu + chữ số ở đầu chuỗi, không có → 0.</summary>
         public static int Atoi(string s)
         {
@@ -158,12 +66,5 @@ namespace CsvTool.Core
             return m.Success && int.TryParse(m.Value.Trim(), out int n) ? n : 0;
         }
 
-        /// <summary>CSV--trailing-int: số nguyên ở cuối nhãn ("Đường bẻ 12" → 12), không có → 0.</summary>
-        private static int SoCuoi(string s)
-        {
-            int i = s.Length;
-            while (i > 0 && char.IsDigit(s[i - 1]) && s[i - 1] < 128) i--;
-            return i == s.Length ? 0 : int.Parse(s.Substring(i));
-        }
     }
 }

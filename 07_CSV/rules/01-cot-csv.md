@@ -1,6 +1,6 @@
-# 01 — Cột CSV, MText thông tin tấm, kiểm lỗi EXPORT
+# 01 — Cột CSV, thông tin tấm, kiểm lỗi
 
-Nguồn: lisp `xuat_csv_v5.0.1` (`CSV--analyze-one-frame`, `CSV--pricing-data-from-text`, ráp dòng trong `c:csv`).
+Nguồn: lisp `xuat_csv_v5.0.1` (`CSV--analyze-one-frame`, ráp dòng trong `c:csv`).
 Mã C#: `plugin/CsvTool.Plugin/Core/` (`ThongTinTam.cs`, `PhanTichKhung.cs`, `CsvXuat.cs`).
 
 ## 2 file của EXPORT (ghi cả hai hoặc không ghi gì)
@@ -17,7 +17,7 @@ UTF-8 có BOM, CRLF sau mọi dòng. Mở độc quyền cả hai trước khi g
 ### `<đơn>.csv` (10 cột)
 `N` · `Q` · `M` (giữ nguyên chuỗi, không đổi SPHC/SS400 như GRO) · `T` · `<đơn>-` · **曲げ** · `X` · `Y` (dim tổng, X ≥ Y) · *(trống)* · **単価** *(trống — chưa có cơ chế tính tiền)*.
 
-**曲げ** chỉ dựa vào dòng "Các loại gia công" (đã chuẩn hoá): `m`/`m(pitchi)`→`m`, `k`, `s`, `t`, `r1`/`r2`→`r`; từ 2 loại trở lên → `*`; không có → trống. Mã lạ bị bỏ qua.
+**曲げ** chỉ dựa vào cột "Loại gia công" (đã chuẩn hoá): `m`/`m(pitchi)`→`m`, `k`, `s`, `t`, `r1`/`r2`→`r`; từ 2 loại trở lên → `*`; không có → trống. Mã lạ bị bỏ qua.
 
 ### `data\<đơn>-data.csv` (35 cột)
 Đúng bảng cột trong luật lisp `05-csv-output.md`. Điểm dễ sai:
@@ -27,16 +27,13 @@ UTF-8 có BOM, CRLF sau mọi dòng. Mở độc quyền cả hai trước khi g
 - 8 cặp Bẻ: (Số đường, Dài), thiếu → `0`, quá 8 loại thì bỏ phần dư.
 - 4 cột cuối giữ nguyên chuỗi người dùng gõ (trống → ô trống).
 
-## Đọc text thông tin tấm (layer `KHUNG_IN`, TEXT hoặc MTEXT)
-- Gom mọi dòng của mọi TEXT/MTEXT `KHUNG_IN` nằm trọn trong khung, rồi **đảo ngược toàn bộ** (lisp gom bằng `cons`) — thứ tự đường bẻ trong CSV phụ thuộc điều này.
-- Chỉ nhận khi có dòng chứa `TAPPU` hoặc `TAPU&SARA`.
-- So nhãn sau khi giải mã `\U+XXXX`, bỏ dấu, viết hoa → TEXT font SHX (lưu `\U+1ED7`) và TrueType (lưu chữ thật) cho cùng kết quả.
-- Số dòng phải bằng `12 + (có "m" ? chỉ số đường bẻ lớn nhất : 0)`.
+## Nguồn thông tin tấm
+Kết quả quét của khung → `data\<đơn>-data.csv` theo tên N → không có thì báo "Chưa có thông tin tấm". **Không đọc text trên layer `KHUNG_IN`**, text còn sót trên bản vẽ cũ bị bỏ qua.
 
-## Kiểm lỗi từng khung (thứ tự như lisp, gặp lỗi đầu là dừng)
+## Kiểm lỗi từng khung
 1. F-name: trộn MTEXT + TEXT · nhiều hơn 1 MTEXT · không thấy · TEXT dưới 4 dòng (lisp bỏ qua) · trường N/M/T/Q rỗng.
 2. Dim tổng (layer dim, cờ 70): dim thẳng `32/160` phải đúng 2; không có thì dim phi `3/35/163` phải đúng 1 (X = Y).
-3. Text thông tin: không có / sai số dòng.
+3. Biên dạng: xem `PhanTichHinh`, báo đủ mọi lỗi của tấm.
 4. Có `k` mà vát ≤ 0 · có `pitchi` mà Pitchi số lần hoặc chiều dài ≤ 0.
 5. Sau khi gom mọi khung: N trùng → không ghi.
 
@@ -45,5 +42,5 @@ UTF-8 có BOM, CRLF sau mọi dòng. Mở độc quyền cả hai trước khi g
 - 125953: DXF ghi `T=6.0` nhưng CSV lisp ghi `6` — F-name bị chuẩn hoá lại sau khi xuất (DXF lưu sau CSV 2 giây). Test chỉ cho phép lệch dạng số ở cột Độ dày.
 - Bản vẽ mẫu có khung `Khung_IN` chú thích / bảng mẫu (nhiều F-name mẫu, cả MTEXT lẫn TEXT) → `PhanTichKhung.LaKhungChuThich` (≥ 2 dòng `N=`) nhận ra; tab hiện thẻ "Bỏ qua", không chặn Xuất CSV, không xoá text trong nó.
 - Từ v6.0.0 thông tin tấm lưu ở `data\<đơn>-data.csv` (ghép theo tên N): `PhanTichKhung.Ghep` + `CsvXuat.DocData` (ngược của `Dong35`, test khứ hồi trong `TestDuLieu.cs`).
-- Quét **chỉ đọc bản vẽ**: `QuetHinhCad` đọc Database (bỏ layer tắt / đóng băng), `PhanTichHinh` tính trên đa giác đã làm phẳng thay REGION của lisp (sai số dây cung 0.005, ngưỡng cắt thật 0.01 để 2 cung tiếp xúc không bị tính là giao). Test đối chiếu CSV lisp: `DoiChieuHinh` trong `TestHinh.cs`. Quét lại giữ Pitchi, giá, tiền vật liệu, ưu đãi, vát đã nhập, và cách chia Tapu/Sara khi tổng không đổi. Text `KHUNG_IN` của bản vẽ cũ chỉ được đọc khi tấm chưa có trong CSV.
+- Quét **chỉ đọc bản vẽ**: `QuetHinhCad` đọc Database (bỏ layer tắt / đóng băng), `PhanTichHinh` tính trên đa giác đã làm phẳng thay REGION của lisp (sai số dây cung 0.005, ngưỡng cắt thật 0.01 để 2 cung tiếp xúc không bị tính là giao). Test đối chiếu CSV lisp: `DoiChieuHinh` trong `TestHinh.cs`. Quét lại giữ Pitchi, giá, tiền vật liệu, ưu đãi, vát đã nhập, và cách chia Tapu/Sara khi tổng không đổi.
 - Lỗi quét không ghi lên bản vẽ và không dừng lượt quét (không đổi màu khung, không MText lỗi, không alert, không `-ERROR.dwg`): `PhanTichHinh.Chay` trả **mọi** `LoiQuet` của tấm kèm hộp vị trí (nét đã báo lỗi được loại ra rồi kiểm tiếp; biên ngoài còn hở thì không kết luận "nét thừa", chỉ kiểm các vòng kín có chồng nhau không), tab gom vào danh sách lỗi. Lỗi chặn Xuất CSV tới khi quét lại khung đó, cảnh báo thì không. Riêng trường hợp đường bẻ phải nhập tay vẫn hỏi trên dòng lệnh.

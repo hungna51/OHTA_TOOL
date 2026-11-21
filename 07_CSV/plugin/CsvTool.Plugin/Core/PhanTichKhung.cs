@@ -42,30 +42,15 @@ namespace CsvTool.Core
     public static class PhanTichKhung
     {
         public const string LopFname = "2-F-NAME";
-        public const string LopThongTin = "KHUNG_IN";
 
         private const string LoiKhongFname = "Không tìm thấy F-name.";
         private const string LoiSoDim = "Sai số dim tổng (cần 2 dim, hoặc 1 dim phi).";
 
         public const string LoiChuaCoThongTin = "Chưa có thông tin tấm. Bấm Quét.";
 
-        /// <summary>EXPORT kiểu lisp: F-name + dim + text thông tin bắt buộc; thiếu vát / pitchi là lỗi.</summary>
-        public static (TamXuat Tam, string Loi) Chay(KhungTho k, string lopDim, int dimzin)
-        {
-            var (tam, loi) = DocFnameDim(k, lopDim, dimzin);
-            if (loi != null) return (null, loi);
-            var tt = DocText(k) ?? (null, ThongTinTamParser.LoiKhongCoText);
-            if (tt.Loi != null) return (null, tt.Loi);
-            string canhBao = KiemTra(tt.Tam);
-            if (canhBao != null) return (null, canhBao);
-            tt.Tam.LoaiGiaCong = ChuanHoaGiaCong(tt.Tam.LoaiGiaCong);
-            tam.Tt = tt.Tam;
-            return (tam, null);
-        }
-
         /// <summary>
         /// Luồng quét của tab: F-name + dim lấy từ bản vẽ; thông tin tấm theo thứ tự: kết quả vừa quét
-        /// (theo handle khung) → data CSV (theo tên N) → text cũ của bản vẽ trước v6 (chỉ đọc, không xoá).
+        /// (theo handle khung) → data CSV (theo tên N).
         /// Thiếu vát / pitchi → tấm vẫn có (sửa được) kèm cảnh báo trong Loi.
         /// </summary>
         public static (TamXuat Tam, string Loi) Ghep(KhungTho k, string lopDim, int dimzin,
@@ -77,13 +62,7 @@ namespace CsvTool.Core
             cu.TryGetValue(tam.N, out ThongTinTam daCo);
             if (quet.TryGetValue(k.Handle, out ThongTinTam moi)) tam.Tt = GiuGiaTriNhapTay(moi, daCo);
             else if (daCo != null) tam.Tt = daCo;
-            else
-            {
-                var text = DocText(k);
-                if (text == null) return (null, LoiChuaCoThongTin);
-                if (text.Value.Loi != null) return (null, text.Value.Loi);
-                tam.Tt = text.Value.Tam;
-            }
+            else return (null, LoiChuaCoThongTin);
             return (tam, KiemTra(tam.Tt));
         }
 
@@ -125,18 +104,6 @@ namespace CsvTool.Core
                   .Sum(t => t.LaMtext
                       ? ThongTinTamParser.TachDong(t.NoiDung, true).Count(d => d.StartsWith("N="))
                       : (t.NoiDung ?? "").StartsWith("N=") ? 1 : 0);
-
-        /// <summary>Text thông tin (layer KHUNG_IN) của khung; không có → null.</summary>
-        public static (ThongTinTam Tam, string Loi)? DocText(KhungTho k)
-        {
-            // CSV--pricing-text-raw-list gom dòng bằng cons → thứ tự đảo ngược toàn bộ
-            var dong = new List<string>();
-            foreach (var x in k.Text.Where(x => CungLop(x.Lop, LopThongTin)))
-                dong.AddRange(ThongTinTamParser.TachDong(x.NoiDung, x.LaMtext));
-            dong.Reverse();
-            if (!ThongTinTamParser.LaTextThongTin(dong)) return null;
-            return ThongTinTamParser.Doc(dong);
-        }
 
         /// <summary>Có gia công k mà chưa có vát / m(pitchi) mà thiếu số lần hoặc chiều dài → lời cảnh báo.</summary>
         public static string KiemTra(ThongTinTam tt)

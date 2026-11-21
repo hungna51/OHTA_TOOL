@@ -21,7 +21,9 @@ namespace CsvTool.Tests
             Kiem("TachO: o co nhay giu dau phay", string.Join("|", CsvXuat.TachO("A,\"m, k\",\"x\"\"y\",")), "A|m, k|x\"y|");
 
             // khứ hồi: Dong35 → DocData → Dong35 giữ nguyên từng ký tự
-            var t = PhanTichKhung.Chay(KhungMau(), "1-XY", 8).Tam;
+            var t = PhanTichKhung.DocFnameDim(KhungMau(), "1-XY", 8).Tam;
+            t.Tt = new ThongTinTam { LoNho = 4, LoLon = 1, Tappu = 2, LoaiGiaCong = "m", CheDoTinh = "0", UuDai = "5.5" };
+            t.Tt.DuongBe.Add((200, 1));
             t.Tt.GiaBaoGia = "12,000"; t.Tt.DuongBe.Add((150, 2));
             string dong = CsvXuat.Dong35(t);
             var doc = CsvXuat.DocData("﻿" + CsvXuat.TieuDe35 + "\r\n" + dong + "\r\n");
@@ -44,19 +46,18 @@ namespace CsvTool.Tests
             Kiem("Ghep_Quet: lay ket qua quet, giu so nhap tay trong CSV",
                  gop.Tam == null ? gop.Loi : gop.Tam.Tt.LoNho + "|" + gop.Tam.Tt.Tappu + "|" + gop.Tam.Tt.Sara + "|" + gop.Tam.Tt.Vat + "|" + gop.Tam.Tt.PitchiDai + "|" + gop.Tam.Tt.GiaBaoGia,
                  "3|3|1|70|50|9");
-            var textCu = PhanTichKhung.Ghep(KhungMau(), "1-XY", 8, khongCo, chuaQuet);
-            Kiem("Ghep_TextCu: ban ve truoc v6 chua co CSV -> doc text", textCu.Tam == null ? textCu.Loi : textCu.Tam.Tt.DuongBe.Count.ToString(), "1");
+            var textCu = PhanTichKhung.Ghep(KhungMau(text: new[] { Fn("N=A-1\\PM=SS400\\PT=3.2\\PQ=2"), new TextTho { Lop = "KHUNG_IN", NoiDung = "Lỗ Tappu: 2", LaMtext = true } }), "1-XY", 8, khongCo, chuaQuet);
+            Kiem("Ghep_TextCu: khong doc text cu tren ban ve", textCu.Loi, PhanTichKhung.LoiChuaCoThongTin);
             var tuCsv = PhanTichKhung.Ghep(KhungMau(text: new[] { Fn("N=A-1\\PM=SS400\\PT=3.2\\PQ=2") }), "1-XY", 8, cu, chuaQuet);
             Kiem("Ghep_TuCsv: khong quet -> lay CSV, F-name/dim tu ban ve",
                  tuCsv.Tam == null ? tuCsv.Loi : tuCsv.Tam.Tt.DuongBe.Count + "|" + tuCsv.Tam.X, "2|300");
             var chua = PhanTichKhung.Ghep(KhungMau(text: new[] { Fn("N=B-9\\PM=SS400\\PT=3.2\\PQ=2") }), "1-XY", 8, cu, chuaQuet);
             Kiem("Ghep_ChuaCo: khong text, khong CSV", chua.Loi, PhanTichKhung.LoiChuaCoThongTin);
 
-            var vat = MauThongTin.Select(s => s.StartsWith("Các loại") ? "Các loại gia công: m, k" : s).ToList();
-            var canhBao = PhanTichKhung.Ghep(KhungMau(text: new[] { Fn("N=A-1\\PM=SS400\\PT=3.2\\PQ=2"), Tt(vat) }), "1-XY", 8, khongCo, chuaQuet);
+            var thieuVat = new Dictionary<string, ThongTinTam> { ["A-1"] = new ThongTinTam { LoaiGiaCong = "m, k" } };
+            var canhBao = PhanTichKhung.Ghep(KhungMau(text: new[] { Fn("N=A-1\\PM=SS400\\PT=3.2\\PQ=2") }), "1-XY", 8, thieuVat, chuaQuet);
             Kiem("Ghep_ThieuVat: van co tam (sua duoc) + canh bao", canhBao.Tam != null && (canhBao.Loi ?? "").Contains("vát"), true);
-            Kiem("Chay_ThieuVat: EXPORT kieu lisp van la loi", PhanTichKhung.Chay(KhungMau(text: new[] { Fn("N=A-1\\PM=SS400\\PT=3.2\\PQ=2"), Tt(vat) }), "1-XY", 8).Tam, null);
-            Kiem("CoFname: khung chu thich khong co F-name", PhanTichKhung.CoFname(KhungMau(text: new[] { Tt(MauThongTin) })), false);
+            Kiem("CoFname: khung chu thich khong co F-name", PhanTichKhung.CoFname(KhungMau(text: new[] { new TextTho { Lop = "KHUNG_IN", NoiDung = "x" } })), false);
             Kiem("LaKhungChuThich: 2 dong N= (TEXT + MTEXT)",
                  PhanTichKhung.LaKhungChuThich(KhungMau(text: new[] { Fn("N=A"), Fn("N=B", false), Fn("Q=1", false) })), true);
             Kiem("LaKhungChuThich: khung tam binh thuong", PhanTichKhung.LaKhungChuThich(KhungMau()), false);

@@ -11,7 +11,7 @@ namespace CsvTool.Tests
     {
         /// <summary>
         /// Test vàng: đọc &lt;đơn&gt;-s.dxf của đơn thật trong OneDrive\xxxxx (KHÔNG chép vào repo public),
-        /// chạy EXPORT rồi so từng byte với &lt;đơn&gt;.csv 35 cột do lisp xuất. Máy không có thư mục → bỏ qua.
+        /// phân tích bằng C# rồi so từng byte với &lt;đơn&gt;.csv 35 cột do lisp xuất. Máy không có thư mục → bỏ qua.
         /// </summary>
         private static void TestVang()
         {
@@ -25,10 +25,15 @@ namespace CsvTool.Tests
                 var (khung, dimzin) = DxfThuGon.Doc(dxf, CaiDatCsv.LopKhungMacDinh, CaiDatCsv.LopDimMacDinh);
                 var tam = new List<TamXuat>();
                 var loi = new List<string>();
-                foreach (var k in khung)
+                var hinh = DxfThuGon.DocHinh(dxf, khung, CaiDatCsv.LopTapuMacDinh);
+                for (int ik = 0; ik < khung.Count; ik++)
                 {
-                    var r = PhanTichKhung.Chay(k, CaiDatCsv.LopDimMacDinh, dimzin);
-                    if (r.Tam != null) tam.Add(r.Tam); else loi.Add(r.Loi.Split('\n')[0]);
+                    var r = PhanTichKhung.DocFnameDim(khung[ik], CaiDatCsv.LopDimMacDinh, dimzin);
+                    if (r.Tam == null) { loi.Add(r.Loi.Split('\n')[0]); continue; }
+                    var h = PhanTichHinh.Chay(hinh[ik], 0.01, 0, null);
+                    if (h.Tam == null) { loi.Add(h.Loi[0].NoiDung); continue; }
+                    r.Tam.Tt = h.Tam;
+                    tam.Add(r.Tam);
                 }
                 var conLai = khung.Where(k => PhanTichKhung.CoFname(k) && !PhanTichKhung.LaKhungChuThich(k)).ToList();
                 Kiem("Vang_" + don + ": bo khung chu thich -> moi khung tam doc duoc F-name + dim (" + conLai.Count + "/" + khung.Count + ")",
