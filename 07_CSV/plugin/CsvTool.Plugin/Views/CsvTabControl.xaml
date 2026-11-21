@@ -269,8 +269,21 @@
 
                                         <DockPanel Grid.Column="1" Background="#FFFFFF" Margin="0,0,0,1">
                                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource Nhan}" Margin="0,0,1,0" Padding="5,4,5,0" Text="Giá tiền"/>
-                                            <TextBox Style="{StaticResource O}" Margin="0" Text="{Binding GiaTien}" Foreground="#1565C0"
-                                                     VerticalAlignment="Center" ToolTip="Giá báo giá (lưu ở data CSV)"/>
+                                            <Button DockPanel.Dock="Right" Content="↺" Width="18" Cursor="Hand" BorderThickness="0" Background="Transparent"
+                                                    Foreground="#E65100" Click="GiaTuDongBam" ToolTip="Giá sửa tay. Bấm để quay về giá tự tính"
+                                                    Visibility="{Binding LaGiaTay, Converter={StaticResource HienKhi}}"/>
+                                            <TextBox Margin="0" Text="{Binding GiaTien}" VerticalAlignment="Center" ToolTip="Đơn giá 1 tấm (lưu ở data CSV)">
+                                                <TextBox.Style>
+                                                    <Style TargetType="TextBox" BasedOn="{StaticResource O}">
+                                                        <Setter Property="Foreground" Value="#1565C0"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding LaGiaTay}" Value="True">
+                                                                <Setter Property="Foreground" Value="#E65100"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBox.Style>
+                                            </TextBox>
                                         </DockPanel>
 
                                         <StackPanel Grid.Row="1" Grid.ColumnSpan="2">
@@ -322,9 +335,27 @@
                                                     </Grid>
                                                     <StackPanel>
                                                         <TextBlock Style="{StaticResource Nhan}" Text="Đường bẻ: số đường × chiều dài" TextAlignment="Center"/>
-                                                        <TextBlock Text="{Binding DuongBe}" Background="#FFFFFF" Padding="6,3" Margin="0,0,1,0"
+                                                        <TextBlock Text="{Binding DuongBe}" Background="#FFFFFF" Padding="6,3" Margin="0,0,1,1"
                                                                    TextAlignment="Center" TextWrapping="Wrap"/>
                                                     </StackPanel>
+                                                    <!-- thong tin chi dung de tinh gia, luu o data\<don>-gia.json -->
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="1.35*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="0.8*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                                                        <TextBlock Style="{StaticResource Nhan}" Text="Loại pitchi"/>
+                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="1" Text="Giá cuộn" ToolTip="Đơn giá cuộn"/>
+                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="2" Text="Đặt ngoài" ToolTip="Đơn giá vật liệu đặt ngoài (khi bảng giá = 0)"/>
+                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="3" Text="Tròn 250" ToolTip="Giá dưới 250 thì tính 250"/>
+                                                        <ComboBox Grid.Row="1" Margin="0,0,1,1" BorderThickness="0" Background="#FFFFFF" FontSize="11"
+                                                                  ItemsSource="{Binding DsLoaiPitchi}" SelectedItem="{Binding LoaiPitchi}"/>
+                                                        <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="1" Text="{Binding DonGiaCuon}"/>
+                                                        <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="2" Text="{Binding DonGiaDatNgoai}"/>
+                                                        <Border Grid.Row="1" Grid.Column="3" Background="#FFFFFF" Margin="0,0,1,1">
+                                                            <CheckBox IsChecked="{Binding LamTron250}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </Grid>
                                                 </StackPanel>
                                             </StackPanel>
                                         </StackPanel>
@@ -388,6 +419,12 @@
                                      Content="VL khách" ToolTip="Vật liệu khách cấp"/>
                     </Grid>
                 </Border>
+
+                <DockPanel Margin="0,0,0,8">
+                    <Button x:Name="NutTinhGia" DockPanel.Dock="Right" Style="{StaticResource NutVien}" Width="88" Command="{Binding TinhGiaCmd}"
+                            Content="Tính giá" ToolTip="Nhập công ty rồi tính giá mọi tấm; giá sửa tay được giữ"/>
+                    <TextBlock Text="{Binding NhanTongTien}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                </DockPanel>
 
                 <TextBlock Text="{Binding TrangThai}" TextWrapping="Wrap" Foreground="#52606D"/>
                 <DockPanel Margin="0,6,0,0" Visibility="{Binding CoFile10, Converter={StaticResource HienKhi}}">

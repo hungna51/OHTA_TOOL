@@ -38,6 +38,7 @@
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
     <!-- Cho phep bien dich .NET 4.8 bang .NET SDK hien dai ma khong can cai VS Developer Pack -->
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="ZwDatabaseMgd">
       <HintPath>$(ZwCadSdkDir)\ZwDatabaseMgd.dll</HintPath>
       <Private>False</Private>

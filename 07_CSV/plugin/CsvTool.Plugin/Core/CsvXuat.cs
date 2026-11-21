@@ -80,7 +80,7 @@ namespace CsvTool.Core
         }
 
         public static string Dong10(TamXuat t, string maDon) =>
-            string.Join(",", O(t.N), O(t.Q), O(t.M), O(t.T), O(maDon + "-"), MaMage(t.Tt.LoaiGiaCong), t.X, t.Y, "", "");
+            string.Join(",", O(t.N), O(t.Q), O(t.M), O(t.T), O(maDon + "-"), MaMage(t.Tt.LoaiGiaCong), t.X, t.Y, "", O(t.Tt.GiaBaoGia));
 
         public static List<TamXuat> SapXep(IEnumerable<TamXuat> ds, KieuSapXep k)
         {
@@ -110,6 +110,7 @@ namespace CsvTool.Core
 
         public static string DuongCuoi(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, maDon + ".csv");
         public static string DuongData(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, "data", maDon + "-data.csv");
+        public static string DuongGia(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, "data", maDon + "-gia.json");
 
         /// <summary>
         /// Ghi &lt;đơn&gt;.csv và data\&lt;đơn&gt;-data.csv (UTF-8 BOM, CRLF). Mở độc quyền cả hai trước;

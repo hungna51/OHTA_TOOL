@@ -19,6 +19,8 @@ namespace CsvTool.Views
             NutQuetToan.Background = vm.AccentBrush;
             NutXuat.BorderBrush = vm.AccentBrush;
             NutXuat.Foreground = vm.AccentBrush;
+            NutTinhGia.BorderBrush = vm.AccentBrush;
+            NutTinhGia.Foreground = vm.AccentBrush;
             KhungCheDo.BorderBrush = vm.AccentBrush;
             vm.DongHien.CollectionChanged += (s, e) => _dangChon = null;
             Focusable = true;   // bấm thẻ / dòng lỗi xong, Esc trên tab xoá được cloud
@@ -51,6 +53,11 @@ namespace CsvTool.Views
             _dangChon = null;   // bấm lại thẻ của tấm này vẫn zoom về cả tấm
             Focus();
             _vm.ChonLoi(l);
+        }
+
+        private void GiaTuDongBam(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is DongTam d) _vm.VeGiaTuDong(d);
         }
 
         private void XoaTim(object sender, RoutedEventArgs e)

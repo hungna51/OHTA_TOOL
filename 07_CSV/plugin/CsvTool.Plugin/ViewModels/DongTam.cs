@@ -78,8 +78,56 @@ namespace CsvTool.ViewModels
         public string GiaTien
         {
             get => Tam?.Tt.GiaBaoGia;
-            set { string cu = Tam?.Tt.GiaBaoGia; SuaChu(value, cu, v => Tam.Tt.GiaBaoGia = v); }
+            set
+            {
+                if (Tam == null) return;
+                string v = (value ?? "").Trim(), cu = Tam.Tt.GiaBaoGia;
+                if (v == cu) return;
+                GiaTam g = _vm.GiaCua(Tam.N);
+                bool tuDongCu = g?.TuDong ?? false;
+                Luu(() => { Tam.Tt.GiaBaoGia = v; if (g != null) g.TuDong = false; },
+                    () => { Tam.Tt.GiaBaoGia = cu; if (g != null) g.TuDong = tuDongCu; });
+                Bao(null);
+            }
         }
+
+        // ── Tính giá: thông tin riêng lưu ở data\<đơn>-gia.json ──
+        /// <summary>Lý do chưa tính được giá; hiện ở danh sách cảnh báo, không chặn Xuất CSV.</summary>
+        public string CanhBaoGia { get; set; }
+        public bool LaGiaTay => Tam != null && !string.IsNullOrEmpty(Tam.Tt.GiaBaoGia) && _vm.XemGia(Tam.N)?.TuDong != true;
+        public string[] DsLoaiPitchi => TinhGia.DsLoaiPitchi;
+        public string LoaiPitchi
+        {
+            get => Tam == null ? null : _vm.XemGia(Tam.N)?.LoaiPitchi ?? "Pitchi";
+            set => SuaGia(g => g.LoaiPitchi = value ?? "Pitchi");
+        }
+        public string DonGiaCuon { get => SoGia(_vm.XemGia(Tam?.N)?.DonGiaCuon); set => SuaSoGia(value, (g, d) => g.DonGiaCuon = d); }
+        public string DonGiaDatNgoai { get => SoGia(_vm.XemGia(Tam?.N)?.DonGiaDatNgoai); set => SuaSoGia(value, (g, d) => g.DonGiaDatNgoai = d); }
+        public bool LamTron250 { get => _vm.XemGia(Tam?.N)?.LamTron250 == true; set => SuaGia(g => g.LamTron250 = value); }
+
+        private static string SoGia(double? d) => d > 0 ? d.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "";
+
+        private void SuaSoGia(string giaTri, System.Action<GiaTam, double> gan)
+        {
+            string s = (giaTri ?? "").Trim();
+            if (s == "") SuaGia(g => gan(g, 0));
+            else if (TinhGia.SoTien(s, out double d) && d >= 0) SuaGia(g => gan(g, d));
+            else { _vm.BaoLoi("\"" + giaTri + "\" không phải số ≥ 0."); Bao(null); }
+        }
+
+        private void SuaGia(System.Action<GiaTam> doi)
+        {
+            GiaTam g = Tam == null ? null : _vm.GiaCua(Tam.N);
+            if (g == null) { _vm.BaoLoi("Chưa đọc được dữ liệu giá của đơn, quét lại."); Bao(null); return; }
+            doi(g);
+            _vm.TinhLaiNeuCo();
+            _vm.DanhGiaLai();
+            if (_vm.LuuData()) _vm.LuuGia();
+            Bao(null);
+        }
+
+        public void BaoGia() { Bao(nameof(GiaTien)); Bao(nameof(LaGiaTay)); }
+
         public string MaMage => Tam == null ? "" : CsvXuat.MaMage(Tam.Tt.LoaiGiaCong);
 
         // thông tin tấm → data CSV (không còn text trên bản vẽ)
@@ -101,9 +149,12 @@ namespace CsvTool.ViewModels
             if (giaTri == "") _vm.BaoLoi("Trường " + truong + "= không được để trống.");
             else if (_vm.SuaFname(this, truong, giaTri))
             {
+                string tenCu = Tam.N;
                 gan(giaTri);
+                if (truong == 'N') _vm.DoiTenGia(tenCu, giaTri);
+                _vm.TinhLaiNeuCo();
                 _vm.DanhGiaLai();
-                _vm.LuuData();   // hỏng thì đã báo; bản vẽ đúng, CSV đồng bộ lại ở lần quét sau
+                if (_vm.LuuData()) _vm.LuuGia();   // hỏng thì đã báo; bản vẽ đúng, CSV đồng bộ lại ở lần quét sau
             }
             Bao(truong.ToString());
         }
@@ -128,8 +179,9 @@ namespace CsvTool.ViewModels
         private void Luu(System.Action doi, System.Action hoan)
         {
             doi();
-            if (_vm.LuuData()) { _vm.DanhGiaLai(); _vm.BaoLoi("Đã lưu data CSV."); }
-            else hoan();
+            _vm.TinhLaiNeuCo();
+            if (_vm.LuuData()) { _vm.LuuGia(); _vm.DanhGiaLai(); _vm.BaoLoi("Đã lưu data CSV."); }
+            else { hoan(); _vm.TinhLaiNeuCo(); }
         }
 
         private string Truong(char t) => t == 'N' ? Tam.N : t == 'Q' ? Tam.Q : t == 'M' ? Tam.M : Tam.T;
