@@ -109,6 +109,9 @@ namespace CsvTool.Tests
                 Kiem("GiaDon: doi ten giu thong tin", r.Tam.ContainsKey("A-1") + "|" + r.Tam["A-9"].DonGiaCuon, "False|6000");
                 r.DoiTen("A-9", "A-2");
                 Kiem("GiaDon: ten moi trung -> khong de tam kia", r.Tam["A-2"].LamTron250, true);
+                Kiem("TepDangMo: file ranh", CsvXuat.TepDangMo(f, f + ".chua-co"), null);
+                using (new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    Kiem("TepDangMo: file dang bi giu", CsvXuat.TepDangMo(f + ".chua-co", f), f);
                 File.WriteAllText(f, "{hong");
                 KiemNemBatKy("GiaDon: file hong -> bao loi, khong coi la trong", () => GiaDon.DocFile(f));
             }

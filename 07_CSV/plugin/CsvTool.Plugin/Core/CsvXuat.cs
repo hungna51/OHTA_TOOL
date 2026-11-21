@@ -112,6 +112,19 @@ namespace CsvTool.Core
         public static string DuongData(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, "data", maDon + "-data.csv");
         public static string DuongGia(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, "data", maDon + "-gia.json");
 
+        /// <summary>File đầu tiên đang bị chương trình khác giữ (Excel...); không có → null. File chưa tồn tại không tính.</summary>
+        public static string TepDangMo(params string[] tep)
+        {
+            foreach (string f in tep)
+            {
+                if (!File.Exists(f)) continue;
+                try { using (new FileStream(f, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { } }
+                catch (IOException) { return f; }
+                catch (UnauthorizedAccessException) { return f; }
+            }
+            return null;
+        }
+
         /// <summary>
         /// Ghi &lt;đơn&gt;.csv và data\&lt;đơn&gt;-data.csv (UTF-8 BOM, CRLF). Mở độc quyền cả hai trước;
         /// một file bị khoá (Excel đang mở) thì ném IOException và không file nào bị đổi.

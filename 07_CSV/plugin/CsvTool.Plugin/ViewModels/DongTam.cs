@@ -82,7 +82,7 @@ namespace CsvTool.ViewModels
             {
                 if (Tam == null) return;
                 string v = (value ?? "").Trim(), cu = Tam.Tt.GiaBaoGia;
-                if (v == cu) return;
+                if (v == cu || BiKhoa()) return;
                 GiaTam g = _vm.GiaCua(Tam.N);
                 bool tuDongCu = g?.TuDong ?? false;
                 Luu(() => { Tam.Tt.GiaBaoGia = v; if (g != null) g.TuDong = false; },
@@ -133,6 +133,7 @@ namespace CsvTool.ViewModels
 
         private void SuaGia(System.Action<GiaTam> doi)
         {
+            if (Tam != null && BiKhoa()) return;
             GiaTam g = Tam == null ? null : _vm.GiaCua(Tam.N);
             if (g == null) { _vm.BaoLoi("Chưa đọc được dữ liệu giá của đơn, quét lại."); Bao(null); return; }
             doi(g);
@@ -161,7 +162,7 @@ namespace CsvTool.ViewModels
         private void SuaF(char truong, string giaTri, System.Action<string> gan)
         {
             giaTri = (giaTri ?? "").Trim();
-            if (Tam == null || giaTri == Truong(truong)) return;
+            if (Tam == null || giaTri == Truong(truong) || (giaTri != "" && BiKhoa())) return;
             if (giaTri == "") _vm.BaoLoi("Trường " + truong + "= không được để trống.");
             else if (_vm.SuaFname(this, truong, giaTri))
             {
@@ -179,14 +180,14 @@ namespace CsvTool.ViewModels
         {
             if (Tam == null) return;
             if (!int.TryParse((giaTri ?? "").Trim(), out int so) || so < 0) _vm.BaoLoi("\"" + giaTri + "\" không phải số nguyên ≥ 0.");
-            else if (so != cu) Luu(() => gan(so), () => gan(cu.Value));
+            else if (so != cu && !BiKhoa()) Luu(() => gan(so), () => gan(cu.Value));
             Bao(null);   // trả mọi ô về giá trị đang có
         }
 
         private void SuaChu(string giaTri, string cu, System.Action<string> gan)
         {
             string v = (giaTri ?? "").Trim();
-            if (Tam == null || v == cu) return;
+            if (Tam == null || v == cu || BiKhoa()) return;
             Luu(() => gan(v), () => gan(cu));
             Bao(null);
         }
@@ -198,6 +199,14 @@ namespace CsvTool.ViewModels
             _vm.TinhLaiNeuCo();
             if (_vm.LuuData()) { _vm.DanhGiaLai(); _vm.SauThayDoi(); }
             else { hoan(); _vm.TinhLaiNeuCo(); }
+        }
+
+        /// <summary>File đang mở: bỏ thay đổi, trả ô về giá trị cũ sau khi binding xong (ComboBox không nhận nếu trả ngay).</summary>
+        private bool BiKhoa()
+        {
+            if (_vm.ChoPhepSua()) return false;
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new System.Action(() => Bao(null)));
+            return true;
         }
 
         private string Truong(char t) => t == 'N' ? Tam.N : t == 'Q' ? Tam.Q : t == 'M' ? Tam.M : Tam.T;

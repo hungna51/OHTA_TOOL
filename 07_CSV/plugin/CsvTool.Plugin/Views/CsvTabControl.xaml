@@ -35,6 +35,12 @@
             <Setter Property="Foreground" Value="#323639"/>
             <Setter Property="Background" Value="#E4E7EC"/>
             <Setter Property="FontWeight" Value="Normal"/>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.45"/>
+                    <Setter Property="Cursor" Value="Arrow"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="The" TargetType="Border">
@@ -344,14 +350,13 @@
                         Content="Quét..." ToolTip="Mở thiết lập quét và tính giá"/>
 
                 <TextBlock Text="{Binding TrangThai}" TextWrapping="Wrap" Foreground="#52606D"/>
-                <DockPanel Margin="0,6,0,0" Visibility="{Binding CoFile10, Converter={StaticResource HienKhi}}">
-                    <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Margin="6,0,0,0" Padding="8,3" Content="Mở" Command="{Binding MoFile10Cmd}"/>
-                    <TextBlock Text="{Binding File10}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Foreground="#555"/>
-                </DockPanel>
-                <DockPanel Margin="0,4,0,0" Visibility="{Binding CoFile35, Converter={StaticResource HienKhi}}">
-                    <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Margin="6,0,0,0" Padding="8,3" Content="Mở" Command="{Binding MoFile35Cmd}"/>
-                    <TextBlock Text="{Binding File35}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Foreground="#555"/>
-                </DockPanel>
+                <Grid Margin="0,7,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <Button Style="{StaticResource NutPhu}" Padding="6,5" Content="File CSV" Command="{Binding MoFile10Cmd}"
+                            IsEnabled="{Binding CoFile10}" ToolTip="{Binding File10}" ToolTipService.ShowOnDisabled="False"/>
+                    <Button Grid.Column="1" Style="{StaticResource NutPhu}" Margin="0" Padding="6,5" Content="File data" Command="{Binding MoFile35Cmd}"
+                            IsEnabled="{Binding CoFile35}" ToolTip="{Binding File35}" ToolTipService.ShowOnDisabled="False"/>
+                </Grid>
             </StackPanel>
         </Border>
     </Grid>

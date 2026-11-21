@@ -120,8 +120,11 @@ namespace CsvTool.ViewModels
             string fGia = null;
             if (Convert.ToInt32(CadApplication.GetSystemVariable("DWGTITLED")) == 1)
             {
-                fGia = CsvXuat.DuongGia(Convert.ToString(CadApplication.GetSystemVariable("DWGPREFIX")),
-                                        MaDon.TuTenFile(Convert.ToString(CadApplication.GetSystemVariable("DWGNAME"))));
+                string thu = Convert.ToString(CadApplication.GetSystemVariable("DWGPREFIX"));
+                string ma = MaDon.TuTenFile(Convert.ToString(CadApplication.GetSystemVariable("DWGNAME")));
+                string dangMo = CsvXuat.TepDangMo(CsvXuat.DuongCuoi(thu, ma), CsvXuat.DuongData(thu, ma));
+                if (dangMo != null) { TrangThai = Path.GetFileName(dangMo) + " đang mở. Đóng file rồi quét lại."; return; }
+                fGia = CsvXuat.DuongGia(thu, ma);
                 try { don = GiaDon.DocFile(fGia); } catch (Exception) { }   // file hỏng: SauQuet sẽ báo, không ghi đè
             }
             var w = new Views.CsvThietLapQuetWindow(Path.GetFileNameWithoutExtension(doc.Name), QuetKhungCad.TatCaKhung(doc, CaiDat.LopKhungDung).Count,
@@ -189,7 +192,9 @@ namespace CsvTool.ViewModels
             }
             _thuMuc = Convert.ToString(CadApplication.GetSystemVariable("DWGPREFIX"));
             _maDon = MaDon.TuTenFile(Convert.ToString(CadApplication.GetSystemVariable("DWGNAME")));
-            string fData = CsvXuat.DuongData(_thuMuc, _maDon);
+            string fData = CsvXuat.DuongData(_thuMuc, _maDon), fCuoi = CsvXuat.DuongCuoi(_thuMuc, _maDon);
+            File10 = File.Exists(fCuoi) ? fCuoi : null;
+            File35 = File.Exists(fData) ? fData : null;
 
             Dictionary<string, ThongTinTam> cu;
             try { cu = File.Exists(fData) ? CsvXuat.DocData(DocChiaSe(fData)) : new Dictionary<string, ThongTinTam>(); }
@@ -357,6 +362,7 @@ namespace CsvTool.ViewModels
         /// <summary>Nút ↺ trên ô giá: bỏ giá sửa tay, quay về giá tự tính.</summary>
         internal void VeGiaTuDong(DongTam d)
         {
+            if (!ChoPhepSua()) return;
             if (_bangGia == null || _giaDon == null || _giaDon.CongTy == "") { TrangThai = "Chưa có bảng giá. Bấm Quét... và tích Tính giá."; return; }
             GiaCua(d.Tam.N).TuDong = true;
             ApDungGia();
@@ -465,6 +471,7 @@ namespace CsvTool.ViewModels
             _tatCa.Clear();
             _thuMuc = null;
             _giaDon = null;
+            File10 = File35 = null;
             GomLoi();
             Loc();
             TrangThai = "Đổi bản vẽ — bấm Quét để xem danh sách tấm.";
@@ -488,6 +495,16 @@ namespace CsvTool.ViewModels
         }
 
         internal void BaoLoi(string s) => TrangThai = s;
+
+        /// <summary>File CSV / data đang mở thì không cho đổi gì, để bản vẽ, tab và 2 file không lệch nhau.</summary>
+        internal bool ChoPhepSua()
+        {
+            if (_thuMuc == null) return true;
+            string f = CsvXuat.TepDangMo(CsvXuat.DuongCuoi(_thuMuc, _maDon), CsvXuat.DuongData(_thuMuc, _maDon));
+            if (f == null) return true;
+            TrangThai = Path.GetFileName(f) + " đang mở. Đóng file rồi sửa lại.";
+            return false;
+        }
 
         // ── Chọn thẻ → zoom cả tấm + cloud mọi đối tượng lỗi ──────────
 
