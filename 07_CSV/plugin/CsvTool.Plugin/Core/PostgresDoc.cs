@@ -70,7 +70,8 @@ namespace CsvTool.Core
                 ns.Write(new byte[] { 0, 0, 0, 8, 4, 210, 22, 47 }, 0, 8);   // SSLRequest
                 if (ns.ReadByte() != 'S') throw new IOException("Máy chủ không hỗ trợ mã hoá SSL nên tool không gửi đăng nhập.");
                 var ssl = new SslStream(ns, false, (s, cert, chain, loi) => !k.KiemChungChi || loi == SslPolicyErrors.None);
-                try { ssl.AuthenticateAsClient(k.Host, null, SslProtocols.None, false); }
+                // .NET 4.8 (ZWCAD) không nhận SslProtocols.None ở đây
+                try { ssl.AuthenticateAsClient(k.Host, null, SslProtocols.Tls12, false); }
                 catch (AuthenticationException) { throw new IOException("Không xác minh được chứng chỉ máy chủ. Nếu nhà cung cấp dùng chứng chỉ riêng, thêm ?sslmode=require vào chuỗi kết nối."); }
                 return new PostgresDoc(ssl, k.User, k.Database, k.Password, tcp);
             }
