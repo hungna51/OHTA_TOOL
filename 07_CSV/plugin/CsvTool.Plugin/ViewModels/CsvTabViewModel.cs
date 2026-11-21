@@ -118,17 +118,17 @@ namespace CsvTool.ViewModels
             CloudLoiTam.Xoa();
             GiaDon don = null;
             string fGia = null;
+            Func<string> tepDangMo = () => null;
             if (Convert.ToInt32(CadApplication.GetSystemVariable("DWGTITLED")) == 1)
             {
                 string thu = Convert.ToString(CadApplication.GetSystemVariable("DWGPREFIX"));
                 string ma = MaDon.TuTenFile(Convert.ToString(CadApplication.GetSystemVariable("DWGNAME")));
-                string dangMo = CsvXuat.TepDangMo(CsvXuat.DuongCuoi(thu, ma), CsvXuat.DuongData(thu, ma));
-                if (dangMo != null) { TrangThai = Path.GetFileName(dangMo) + " đang mở. Đóng file rồi quét lại."; return; }
+                tepDangMo = () => CsvXuat.TepDangMo(CsvXuat.DuongCuoi(thu, ma), CsvXuat.DuongData(thu, ma));
                 fGia = CsvXuat.DuongGia(thu, ma);
                 try { don = GiaDon.DocFile(fGia); } catch (Exception) { }   // file hỏng: SauQuet sẽ báo, không ghi đè
             }
             var w = new Views.CsvThietLapQuetWindow(Path.GetFileNameWithoutExtension(doc.Name), QuetKhungCad.TatCaKhung(doc, CaiDat.LopKhungDung).Count,
-                NguonGiaCoDem.DsCongTyDem(), don?.CongTy, !(don?.KhongTinhSauQuet ?? false), don?.CheDoTinh ?? CaiDat.CheDoTinh, AccentBrush);
+                NguonGiaCoDem.DsCongTyDem(), don?.CongTy, !(don?.KhongTinhSauQuet ?? false), don?.CheDoTinh ?? CaiDat.CheDoTinh, AccentBrush, tepDangMo);
             if (CadApplication.ShowModalWindow(w) != true) { TrangThai = "Đã huỷ quét."; return; }
 
             CaiDat.CheDoTinh = w.CheDo;
