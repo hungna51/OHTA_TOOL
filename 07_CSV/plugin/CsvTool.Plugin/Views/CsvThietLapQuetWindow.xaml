@@ -57,7 +57,9 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="Bd" Background="Transparent" BorderBrush="{DynamicResource Mau}" BorderThickness="1,0,0,0" Padding="2,6">
+                        <Border x:Name="Bd" Background="Transparent" BorderBrush="{DynamicResource Mau}" Padding="2,6"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -95,12 +97,18 @@
                         <TextBlock Text="Công ty" VerticalAlignment="Center"/>
                         <ComboBox x:Name="OCongTy" Grid.Column="1" IsEditable="True" IsTextSearchEnabled="True" Padding="6,4"/>
                         <TextBlock Grid.Row="2" Text="Chế độ tính" VerticalAlignment="Center"/>
-                        <Border Grid.Row="2" Grid.Column="1" BorderBrush="{DynamicResource Mau}" BorderThickness="1" CornerRadius="5" ClipToBounds="True">
-                            <Grid Margin="-1,0,0,0">
+                        <Border Grid.Row="2" Grid.Column="1" BorderBrush="{DynamicResource Mau}" BorderThickness="1" CornerRadius="5">
+                            <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-                                <RadioButton x:Name="CheDo0" Style="{StaticResource Seg}" GroupName="CheDo" Content="Thường" Checked="DoiCheDo"/>
-                                <RadioButton x:Name="CheDo1" Grid.Column="1" Style="{StaticResource Seg}" GroupName="CheDo" Content="Gia công" Checked="DoiCheDo"/>
-                                <RadioButton x:Name="CheDo2" Grid.Column="2" Style="{StaticResource Seg}" GroupName="CheDo" Content="VL khách" Checked="DoiCheDo"/>
+                                <RadioButton x:Name="CheDo0" Style="{StaticResource Seg}" GroupName="CheDo" Content="Thường" Checked="DoiCheDo" BorderThickness="0">
+                                    <RadioButton.Tag><CornerRadius>4,0,0,4</CornerRadius></RadioButton.Tag>
+                                </RadioButton>
+                                <RadioButton x:Name="CheDo1" Grid.Column="1" Style="{StaticResource Seg}" GroupName="CheDo" Content="Gia công" Checked="DoiCheDo" BorderThickness="1,0,0,0">
+                                    <RadioButton.Tag><CornerRadius>0</CornerRadius></RadioButton.Tag>
+                                </RadioButton>
+                                <RadioButton x:Name="CheDo2" Grid.Column="2" Style="{StaticResource Seg}" GroupName="CheDo" Content="VL khách" Checked="DoiCheDo" BorderThickness="1,0,0,0">
+                                    <RadioButton.Tag><CornerRadius>0,4,4,0</CornerRadius></RadioButton.Tag>
+                                </RadioButton>
                             </Grid>
                         </Border>
                         <TextBlock x:Name="MoTaCheDo" Grid.Row="3" Grid.Column="1" FontSize="11" Foreground="#7B8794" Margin="0,5,0,0" TextWrapping="Wrap"/>

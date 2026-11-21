@@ -138,7 +138,7 @@ namespace CsvTool.ViewModels
             doi(g);
             _vm.TinhLaiNeuCo();
             _vm.DanhGiaLai();
-            if (_vm.LuuData()) _vm.LuuGia();
+            if (_vm.LuuData()) _vm.SauThayDoi();
             Bao(null);
         }
 
@@ -170,7 +170,7 @@ namespace CsvTool.ViewModels
                 if (truong == 'N') _vm.DoiTenGia(tenCu, giaTri);
                 _vm.TinhLaiNeuCo();
                 _vm.DanhGiaLai();
-                if (_vm.LuuData()) _vm.LuuGia();   // hỏng thì đã báo; bản vẽ đúng, CSV đồng bộ lại ở lần quét sau
+                if (_vm.LuuData()) _vm.SauThayDoi();   // hỏng thì đã báo; bản vẽ đúng, CSV đồng bộ lại ở lần quét sau
             }
             Bao(truong.ToString());
         }
@@ -196,7 +196,7 @@ namespace CsvTool.ViewModels
         {
             doi();
             _vm.TinhLaiNeuCo();
-            if (_vm.LuuData()) { _vm.LuuGia(); _vm.DanhGiaLai(); _vm.BaoLoi("Đã lưu data CSV."); }
+            if (_vm.LuuData()) { _vm.DanhGiaLai(); _vm.SauThayDoi(); }
             else { hoan(); _vm.TinhLaiNeuCo(); }
         }
 

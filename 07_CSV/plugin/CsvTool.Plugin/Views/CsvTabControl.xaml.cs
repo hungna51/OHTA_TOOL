@@ -16,10 +16,6 @@ namespace CsvTool.Views
             _vm = vm;
             DataContext = vm;
             NutQuet.Background = vm.AccentBrush;
-            NutXuat.BorderBrush = vm.AccentBrush;
-            NutXuat.Foreground = vm.AccentBrush;
-            NutTinhGia.BorderBrush = vm.AccentBrush;
-            NutTinhGia.Foreground = vm.AccentBrush;
             vm.DongHien.CollectionChanged += (s, e) => _dangChon = null;
             Focusable = true;   // bấm thẻ / dòng lỗi xong, Esc trên tab xoá được cloud
             KeyDown += (s, e) =>

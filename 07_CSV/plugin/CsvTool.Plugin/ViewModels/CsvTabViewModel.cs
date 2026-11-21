@@ -36,7 +36,7 @@ namespace CsvTool.ViewModels
     /// <summary>
     /// Tab CSV. Lệnh CSV và nút Quét... mở dialog thiết lập (CSVTHIETLAP), phân tích hình học bằng C#: thông tin tấm lưu ở
     /// data\&lt;đơn&gt;-data.csv (không để text trên bản vẽ). Sửa ô: N/Q/M/T ghi F-name, còn lại ghi data CSV.
-    /// Xuất CSV ghi file cuối &lt;đơn&gt;.csv.
+    /// File cuối &lt;đơn&gt;.csv tự cập nhật sau khi quét và sau mỗi thay đổi trên tab.
     /// </summary>
     public sealed class CsvTabViewModel : INotifyPropertyChanged
     {
@@ -58,10 +58,8 @@ namespace CsvTool.ViewModels
         private Document _docDanhSach;
 
         public ICommand QuetCmd { get; }
-        public ICommand XuatCsvCmd { get; }
         public ICommand CaiDatCmd { get; }
         public ICommand ChiTietCmd { get; }
-        public ICommand TinhGiaCmd { get; }
 
         /// <summary>Nút bật/tắt chi tiết: mở hoặc thu gọn mọi thẻ tấm; thẻ mới tạo theo trạng thái này.</summary>
         private bool _chiTiet;
@@ -87,10 +85,8 @@ namespace CsvTool.ViewModels
             try { CaiDat = CaiDatRegistry.Doc(); } catch { CaiDat = new CaiDatCsv(); }
 
             QuetCmd = new Lenh(GoiThietLap);
-            XuatCsvCmd = new Lenh(XuatCsv);
             CaiDatCmd = new Lenh(MoCaiDat);
             ChiTietCmd = new Lenh(() => ChiTiet = !ChiTiet);
-            TinhGiaCmd = new Lenh(TinhGiaDon);
             MoFile10Cmd = new Lenh(() => Mo(File10));
             MoFile35Cmd = new Lenh(() => Mo(File35));
 
@@ -169,11 +165,13 @@ namespace CsvTool.ViewModels
                     loiMoi.Add(new LoiQuet { Handle = d.HandleKhung, LaLoi = true, NoiDung = "Không phân tích được: " + ex.Message });
                 }
             }
-            if (SauQuet(doc, quet, loiMoi) && tinhGia && _giaDon != null)
+            bool daQuet = SauQuet(doc, quet, loiMoi);
+            if (daQuet && tinhGia && _giaDon != null)
             {
                 _giaDon.CongTy = congTy;
                 TinhGiaSauQuet(TrangThai + " ");
             }
+            else if (daQuet) XuatTuDong(TrangThai + " ");
         }
 
         /// <summary>
@@ -318,46 +316,52 @@ namespace CsvTool.ViewModels
             if (!LuuData()) return;
             LuuGia();
             var ds = _tatCa.Where(d => d.Tam != null && !d.BoQua).Select(d => d.Tam).ToList();
-            TrangThai = tienTo + "Đã tính giá " + TinhGia.TongTien(ds).CoGia + "/" + ds.Count + " tấm · " + _giaDon.CongTy +
+            string kq = tienTo + "Đã tính giá " + TinhGia.TongTien(ds).CoGia + "/" + ds.Count + " tấm · " + _giaDon.CongTy +
                         (b.CongTyUuDai.ContainsKey(_giaDon.CongTy) ? "." : " (không có trong danh sách, tính giá thường).") +
                         (_nguonGia.GhiChu == null ? "" : " " + _nguonGia.GhiChu);
+            XuatTuDong(kq + " ");
+        }
+
+        /// <summary>Sau mỗi thay đổi trên tab: lưu thông tin giá rồi cập nhật file cuối.</summary>
+        internal void SauThayDoi()
+        {
+            string truoc = TrangThai;
+            LuuGia();
+            XuatTuDong(TrangThai != truoc && TrangThai.StartsWith("Không ghi") ? TrangThai + " " : "");
+        }
+
+        /// <summary>Ghi &lt;đơn&gt;.csv. Còn tấm lỗi thì giữ nguyên file cũ và báo, để không gửi nhà máy danh sách thiếu.</summary>
+        private void XuatTuDong(string tienTo)
+        {
+            if (_thuMuc == null) return;
+            int soLoi = _tatCa.Count(d => d.CoLoi && !d.BoQua);
+            if (soLoi > 0) { TrangThai = tienTo + "Chưa cập nhật " + _maDon + ".csv: còn " + soLoi + " tấm lỗi."; return; }
+            var ds = CsvXuat.SapXep(_tatCa.Where(d => d.Tam != null && !d.BoQua).Select(d => d.Tam), CaiDat.SapXep);
+            if (ds.Count == 0) { TrangThai = tienTo + "Không có tấm nào để xuất."; return; }
+            try { CsvXuat.GhiCuoi(_thuMuc, _maDon, ds); }
+            catch (IOException) { TrangThai = tienTo + _maDon + ".csv đang mở (Excel?). Đóng file, lần thay đổi sau sẽ tự cập nhật."; return; }
+            catch (Exception ex) { TrangThai = tienTo + "Không ghi được CSV: " + ex.Message; return; }
+            File10 = CsvXuat.DuongCuoi(_thuMuc, _maDon);
+            TrangThai = tienTo + "Đã cập nhật " + _maDon + ".csv (" + ds.Count + " tấm).";
         }
 
         private async void TinhGiaSauQuet(string tienTo)
         {
             GiaDon don = _giaDon;
             BangGia b = await DocBangGiaNen(tienTo);
-            if (b != null && _giaDon == don) ApDungVaLuu(b, tienTo);
-        }
-
-        /// <summary>Nút Tính giá: tính lại không cần quét, hỏi công ty trước.</summary>
-        private async void TinhGiaDon()
-        {
-            if (_thuMuc == null || _tatCa.Count == 0) { TrangThai = "Chưa có danh sách tấm. Bấm Quét trước."; return; }
-            if (_giaDon == null) { TrangThai = "File " + _maDon + "-gia.json bị hỏng. Sửa hoặc xoá file rồi quét lại."; return; }
-            GiaDon don = _giaDon;
-            BangGia b = await DocBangGiaNen("");
-            if (b == null) return;
-            if (_giaDon != don) { TrangThai = "Danh sách vừa đổi, bấm Tính giá lại."; return; }
-            try
-            {
-                var w = new Views.CsvNhapCongTyWindow(b.CongTyUuDai.Keys.OrderBy(x => x), _giaDon.CongTy, AccentBrush);
-                if (CadApplication.ShowModalWindow(w) != true) { TrangThai = "Đã huỷ tính giá."; return; }
-                if (_giaDon != don) { TrangThai = "Danh sách vừa đổi, bấm Tính giá lại."; return; }
-                _giaDon.CongTy = w.CongTy;
-            }
-            catch (Exception ex) { TrangThai = "Không mở được ô nhập công ty: " + ex.Message; return; }
-            ApDungVaLuu(b, "");
+            if (_giaDon != don) return;
+            if (b != null) ApDungVaLuu(b, tienTo);
+            else XuatTuDong(TrangThai + " ");   // không đọc được giá vẫn cập nhật thông số, giữ giá đang có
         }
 
         /// <summary>Nút ↺ trên ô giá: bỏ giá sửa tay, quay về giá tự tính.</summary>
         internal void VeGiaTuDong(DongTam d)
         {
-            if (_bangGia == null || _giaDon == null || _giaDon.CongTy == "") { TrangThai = "Chưa kết nối bảng giá. Giá tay được giữ nguyên."; return; }
+            if (_bangGia == null || _giaDon == null || _giaDon.CongTy == "") { TrangThai = "Chưa có bảng giá. Bấm Quét... và tích Tính giá."; return; }
             GiaCua(d.Tam.N).TuDong = true;
             ApDungGia();
             DanhGiaLai();
-            if (LuuData()) { LuuGia(); TrangThai = "Đã quay về giá tự tính."; }
+            if (LuuData()) SauThayDoi();
         }
 
         private static string DocChiaSe(string f)
@@ -452,31 +456,6 @@ namespace CsvTool.ViewModels
         {
             CloudLoiTam.Xoa();
             CadApplication.DocumentManager.MdiActiveDocument?.Editor.UpdateScreen();
-        }
-
-        /// <summary>Nút Xuất CSV: file cuối &lt;đơn&gt;.csv từ danh sách đang hiện; còn thẻ lỗi thì không ghi.</summary>
-        private void XuatCsv()
-        {
-            CloudLoiTam.Xoa();
-            if (_thuMuc == null || _tatCa.Count == 0) { TrangThai = "Chưa có danh sách tấm — bấm Quét trước."; return; }
-            Document doc = CadApplication.DocumentManager.MdiActiveDocument;
-            if (doc != _docDanhSach) { TrangThai = "Danh sách không thuộc bản vẽ đang mở — quét lại."; return; }
-            int soLoi = _tatCa.Count(d => d.CoLoi && !d.BoQua);
-            if (soLoi > 0)
-            {
-                TimKiem = "";   // từ khoá đang lọc không được che mất tấm lỗi
-                ChiLoi = true;
-                TrangThai = "Không xuất CSV: còn " + soLoi + " tấm lỗi — sửa rồi bấm Xuất CSV lại.";
-                return;
-            }
-            var ds = CsvXuat.SapXep(_tatCa.Where(d => d.Tam != null).Select(d => d.Tam), CaiDat.SapXep);
-            if (ds.Count == 0) { TrangThai = "Không có tấm nào để xuất."; return; }
-            try { CsvXuat.GhiCuoi(_thuMuc, _maDon, ds); }
-            catch (IOException) { TrangThai = _maDon + ".csv đang mở (Excel?) — đóng rồi bấm lại."; return; }
-            catch (Exception ex) { TrangThai = "Không ghi được CSV: " + ex.Message; return; }
-            File10 = CsvXuat.DuongCuoi(_thuMuc, _maDon);
-            TrangThai = "Đã xuất " + ds.Count + " tấm ra " + _maDon + ".csv.";
-            Mo(File10);
         }
 
         private void DoiBanVe(Document doc)

@@ -69,29 +69,6 @@
             <Setter Property="Margin" Value="0,0,1,1"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         </Style>
-        <!-- nut vien (Xuat CSV): nen trang, vien + chu mau tab (dat o code-behind) -->
-        <Style x:Key="NutVien" TargetType="Button">
-            <Setter Property="Background" Value="#FFFFFF"/>
-            <Setter Property="BorderThickness" Value="1.5"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="4,6"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#ECEFF1"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -359,23 +336,12 @@
             </DockPanel>
         </Border>
 
-        <!-- Thanh duoi: tong don · 3 nut luon 1 hang · trang thai -->
+        <!-- Thanh duoi: tong don · nut Quet · trang thai (CSV tu cap nhat) -->
         <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#E1E4E8" BorderThickness="0,1,0,0" Padding="10,8,10,10">
             <StackPanel>
                 <TextBlock Text="{Binding NhanTongTien}" FontWeight="SemiBold" Margin="0,0,0,8" TextTrimming="CharacterEllipsis"/>
-                <Grid Margin="0,0,0,8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1.2*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Button x:Name="NutQuet" Style="{StaticResource Nut}" Margin="0,0,6,0" Padding="4,8" Command="{Binding QuetCmd}"
-                            Content="Quét..." ToolTip="Mở thiết lập quét và tính giá"/>
-                    <Button x:Name="NutTinhGia" Grid.Column="1" Style="{StaticResource NutVien}" Margin="0,0,6,0" Command="{Binding TinhGiaCmd}"
-                            Content="Tính giá" ToolTip="Tính lại giá mọi tấm, không quét; giá sửa tay được giữ"/>
-                    <Button x:Name="NutXuat" Grid.Column="2" Style="{StaticResource NutVien}" Command="{Binding XuatCsvCmd}"
-                            Content="Xuất CSV" ToolTip="Tạo file cuối &lt;đơn&gt;.csv (10 cột gửi nhà máy) từ danh sách tấm; còn tấm lỗi thì không ghi"/>
-                </Grid>
+                <Button x:Name="NutQuet" Style="{StaticResource Nut}" Margin="0,0,0,8" Padding="4,8" Command="{Binding QuetCmd}"
+                        Content="Quét..." ToolTip="Mở thiết lập quét và tính giá"/>
 
                 <TextBlock Text="{Binding TrangThai}" TextWrapping="Wrap" Foreground="#52606D"/>
                 <DockPanel Margin="0,6,0,0" Visibility="{Binding CoFile10, Converter={StaticResource HienKhi}}">
