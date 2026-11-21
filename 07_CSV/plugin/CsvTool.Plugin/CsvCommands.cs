@@ -14,18 +14,13 @@ using CadApplication = Autodesk.AutoCAD.ApplicationServices.Application;
 namespace CsvTool
 {
     /// <summary>
-    /// Hai nút Quét của tab gửi các lệnh này: chạy trong ngữ cảnh lệnh để chọn vùng và hỏi số trên dòng lệnh được.
+    /// Lệnh CSV và nút Quét... gọi lệnh này: chạy trong ngữ cảnh lệnh để chọn vùng và hỏi số trên dòng lệnh được.
     /// Phân tích hình học bằng C#, kết quả lưu vào data CSV, không thay đổi bản vẽ.
     /// </summary>
     public class CsvCommands
     {
-        [CommandMethod("CSVQUETVUNG", CommandFlags.UsePickSet)]
-        public void QuetVung() => Quet(false);
-
-        [CommandMethod("CSVQUETTOAN")]
-        public void QuetToan() => Quet(true);
-
-        private static void Quet(bool toanBanVe)
+        [CommandMethod("CSVTHIETLAP", CommandFlags.UsePickSet)]
+        public void ThietLap()
         {
             Document doc = CadApplication.DocumentManager.MdiActiveDocument;
             if (doc == null) return;
@@ -35,7 +30,7 @@ namespace CsvTool
                 doc.Editor.WriteMessage("\n[CSV] Mo tab CSV tren bang OHTA truoc (lenh CSV).");
                 return;
             }
-            try { vm.QuetCad(doc, toanBanVe); }
+            try { vm.MoThietLap(doc); }
             catch (System.Exception ex) { doc.Editor.WriteMessage("\n[CSV] Loi doc ban ve: " + ex.Message); }
         }
     }

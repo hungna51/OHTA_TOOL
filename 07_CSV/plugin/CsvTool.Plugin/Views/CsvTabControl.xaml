@@ -92,30 +92,6 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
-        <!-- che do tinh: 3 nut lien nhau, nut dang chon to mau tab -->
-        <Style x:Key="Seg" TargetType="RadioButton">
-            <Setter Property="Foreground" Value="{Binding AccentBrush}"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="Bd" Background="Transparent" BorderBrush="{Binding AccentBrush}" BorderThickness="1,0,0,0" Padding="2,5">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#ECEFF1"/>
-                            </Trigger>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{Binding AccentBrush}"/>
-                                <Setter Property="Foreground" Value="#FFFFFF"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -383,49 +359,23 @@
             </DockPanel>
         </Border>
 
-        <!-- Thanh duoi: 3 nut luon 1 hang (cot co dinh) · che do tinh dang nut sang · trang thai -->
+        <!-- Thanh duoi: tong don · 3 nut luon 1 hang · trang thai -->
         <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#E1E4E8" BorderThickness="0,1,0,0" Padding="10,8,10,10">
             <StackPanel>
+                <TextBlock Text="{Binding NhanTongTien}" FontWeight="SemiBold" Margin="0,0,0,8" TextTrimming="CharacterEllipsis"/>
                 <Grid Margin="0,0,0,8">
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.2*"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="1.15*"/>
-                        <ColumnDefinition Width="0.85*"/>
+                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Button x:Name="NutQuetVung" Style="{StaticResource Nut}" Margin="0,0,6,0" Padding="4,7" Command="{Binding QuetVungCmd}"
-                            ToolTip="Kéo vùng chọn khung in → phân tích hình học → lưu data CSV, làm mới danh sách">
-                        <TextBlock Text="Quét theo vùng" TextTrimming="CharacterEllipsis"/>
-                    </Button>
-                    <Button x:Name="NutQuetToan" Grid.Column="1" Style="{StaticResource Nut}" Margin="0,0,6,0" Padding="4,7" Command="{Binding QuetToanCmd}"
-                            ToolTip="Mọi khung in trên bản vẽ → phân tích hình học → lưu data CSV, làm mới danh sách">
-                        <TextBlock Text="Quét toàn bản vẽ" TextTrimming="CharacterEllipsis"/>
-                    </Button>
+                    <Button x:Name="NutQuet" Style="{StaticResource Nut}" Margin="0,0,6,0" Padding="4,8" Command="{Binding QuetCmd}"
+                            Content="Quét..." ToolTip="Mở thiết lập quét và tính giá"/>
+                    <Button x:Name="NutTinhGia" Grid.Column="1" Style="{StaticResource NutVien}" Margin="0,0,6,0" Command="{Binding TinhGiaCmd}"
+                            Content="Tính giá" ToolTip="Tính lại giá mọi tấm, không quét; giá sửa tay được giữ"/>
                     <Button x:Name="NutXuat" Grid.Column="2" Style="{StaticResource NutVien}" Command="{Binding XuatCsvCmd}"
-                            ToolTip="Tạo file cuối &lt;đơn&gt;.csv (10 cột gửi nhà máy) từ danh sách tấm; còn tấm lỗi thì không ghi">
-                        <TextBlock Text="Xuất CSV" TextTrimming="CharacterEllipsis"/>
-                    </Button>
+                            Content="Xuất CSV" ToolTip="Tạo file cuối &lt;đơn&gt;.csv (10 cột gửi nhà máy) từ danh sách tấm; còn tấm lỗi thì không ghi"/>
                 </Grid>
-
-                <Border x:Name="KhungCheDo" BorderThickness="1" CornerRadius="5" Margin="0,0,0,8">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Chế độ tính" Foreground="#52606D" VerticalAlignment="Center" Margin="8,0"/>
-                        <RadioButton Grid.Column="1" Style="{StaticResource Seg}" GroupName="CheDo" IsChecked="{Binding CheDo0}"
-                                     Content="Thường" ToolTip="Tính bình thường"/>
-                        <RadioButton Grid.Column="2" Style="{StaticResource Seg}" GroupName="CheDo" IsChecked="{Binding CheDo1}"
-                                     Content="Gia công" ToolTip="Chỉ tính gia công"/>
-                        <RadioButton Grid.Column="3" Style="{StaticResource Seg}" GroupName="CheDo" IsChecked="{Binding CheDo2}"
-                                     Content="VL khách" ToolTip="Vật liệu khách cấp"/>
-                    </Grid>
-                </Border>
-
-                <DockPanel Margin="0,0,0,8">
-                    <Button x:Name="NutTinhGia" DockPanel.Dock="Right" Style="{StaticResource NutVien}" Width="88" Command="{Binding TinhGiaCmd}"
-                            Content="Tính giá" ToolTip="Nhập công ty rồi tính giá mọi tấm; giá sửa tay được giữ"/>
-                    <TextBlock Text="{Binding NhanTongTien}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                </DockPanel>
 
                 <TextBlock Text="{Binding TrangThai}" TextWrapping="Wrap" Foreground="#52606D"/>
                 <DockPanel Margin="0,6,0,0" Visibility="{Binding CoFile10, Converter={StaticResource HienKhi}}">

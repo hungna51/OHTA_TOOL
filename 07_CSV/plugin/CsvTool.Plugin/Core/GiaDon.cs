@@ -22,6 +22,8 @@ namespace CsvTool.Core
     public sealed class GiaDon
     {
         [DataMember] public string CongTy = "";
+        [DataMember] public bool KhongTinhSauQuet;   // mặc định có tính giá sau quét
+        [DataMember] public int? CheDoTinh;
         [DataMember] public Dictionary<string, GiaTam> Tam = new Dictionary<string, GiaTam>();
 
         public GiaTam Lay(string ten)

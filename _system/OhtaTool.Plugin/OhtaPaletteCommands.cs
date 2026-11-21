@@ -116,13 +116,15 @@ namespace OhtaTool.Plugin
             });
         }
 
-        /// <summary>CSV: mở bảng OHTA và chuyển sang tab CSV (thay lệnh CSV của lisp xuat_csv cũ).</summary>
+        /// <summary>CSV: mở bảng OHTA, chuyển sang tab CSV và hiện dialog thiết lập quét.</summary>
         [CommandMethod("CSV")]
         public static void CmdOpenCsvTab()
         {
             BugGuard.Run("CSV", () =>
             {
-                ActivateModuleTab("csv");
+                // CSVTHIETLAP nằm trong CSVTOOL.dll (không tham chiếu trực tiếp): hiện dialog thiết lập quét
+                if (ActivateModuleTab("csv"))
+                    CadCompat.ActiveDocument?.SendStringToExecute("CSVTHIETLAP\n", true, false, false);
             });
         }
 

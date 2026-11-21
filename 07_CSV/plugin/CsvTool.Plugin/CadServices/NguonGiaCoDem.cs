@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using CsvTool.Core;
 
@@ -46,6 +48,9 @@ namespace CsvTool.CadServices
             try { return File.Exists(FileDem) ? BangGia.TuByte(ProtectedData.Unprotect(File.ReadAllBytes(FileDem), Muoi, DataProtectionScope.CurrentUser)) : null; }
             catch (Exception) { return null; }
         }
+
+        /// <summary>Danh sách công ty từ bản sao, để mở dialog ngay không phải chờ mạng.</summary>
+        public static List<string> DsCongTyDem() => DocDem()?.CongTyUuDai.Keys.OrderBy(x => x).ToList() ?? new List<string>();
 
         public static void XoaDem()
         {
