@@ -347,7 +347,13 @@
         <!-- Thanh duoi: tong don · nut Quet · trang thai (CSV tu cap nhat) -->
         <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#E1E4E8" BorderThickness="0,1,0,0" Padding="10,8,10,10">
             <StackPanel>
-                <TextBlock Text="{Binding NhanTongTien}" FontWeight="SemiBold" Margin="0,0,0,8" TextTrimming="CharacterEllipsis"/>
+                <DockPanel Margin="0,0,0,8">
+                    <ComboBox DockPanel.Dock="Right" Width="130" Margin="8,0,0,0" FontSize="11" VerticalAlignment="Center"
+                              ItemsSource="{Binding DsCongTy}" SelectedItem="{Binding CongTy}" IsEnabled="{Binding CoGiaDon}"
+                              PreviewMouseWheel="ComboKhongLan" ToolTip="Công ty tính giá. Đổi là tính lại giá tự động"/>
+                    <TextBlock Text="{Binding NhanTongTien}" ToolTip="{Binding NhanTongTien}" FontWeight="SemiBold"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                </DockPanel>
                 <Button x:Name="NutQuet" Style="{StaticResource Nut}" Margin="0,0,0,8" Padding="4,8" Command="{Binding QuetCmd}"
                         Content="Quét..." ToolTip="Mở thiết lập quét và tính giá"/>
 

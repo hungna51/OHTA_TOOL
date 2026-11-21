@@ -203,6 +203,7 @@ namespace CsvTool.ViewModels
             string loiGia = null;
             try { _giaDon = GiaDon.DocFile(CsvXuat.DuongGia(_thuMuc, _maDon)); }
             catch (Exception) { _giaDon = null; loiGia = " File " + _maDon + "-gia.json bị hỏng, chưa tính giá được."; }
+            CapNhatDsCongTy();
 
             // quét theo vùng: khung ngoài vùng giữ lỗi của lượt trước, khung vừa quét thay bằng kết quả mới
             var loiKhung = doc.UserData[KhoaLoiQuet] as Dictionary<long, List<LoiQuet>> ?? new Dictionary<long, List<LoiQuet>>();
@@ -266,6 +267,42 @@ namespace CsvTool.ViewModels
                 return coGia == 0 ? "Tổng đơn: chưa có giá"
                     : "Tổng đơn: " + tong.ToString("#,0", CultureInfo.InvariantCulture) + " ¥ · " + coGia + "/" + ds.Count + " tấm";
             }
+        }
+
+        public List<string> DsCongTy { get; private set; } = new List<string>();
+        public bool CoGiaDon => _giaDon != null;
+
+        /// <summary>Đổi công ty ở thanh dưới: tính lại giá tự động, giá sửa tay giữ nguyên.</summary>
+        public string CongTy
+        {
+            get => _giaDon?.CongTy;
+            // ComboBox đẩy null khi đổi danh sách: không được coi là người dùng chọn
+            set { if (!string.IsNullOrEmpty(value) && _giaDon != null && value != _giaDon.CongTy) DoiCongTy(value); }
+        }
+
+        private void CapNhatDsCongTy()
+        {
+            List<string> ds = _bangGia != null ? _bangGia.CongTyUuDai.Keys.OrderBy(x => x).ToList() : NguonGiaCoDem.DsCongTyDem();
+            if (!string.IsNullOrEmpty(CongTy) && !ds.Contains(CongTy)) ds.Insert(0, CongTy);
+            DsCongTy = ds;
+            Bao(nameof(DsCongTy)); Bao(nameof(CoGiaDon)); Bao(nameof(CongTy));
+        }
+
+        private async void DoiCongTy(string moi)
+        {
+            GiaDon don = _giaDon;
+            // chỉ đổi công ty khi có bảng giá, để tên công ty luôn khớp với giá đang hiện
+            BangGia b = ChoPhepSua() ? await DocBangGiaNen("") : null;
+            if (_giaDon != don) return;
+            if (b != null && ChoPhepSua())
+            {
+                don.CongTy = moi;
+                don.KhongTinhSauQuet = false;
+                ApDungVaLuu(b, "");
+                CapNhatDsCongTy();
+                return;
+            }
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() => Bao(nameof(CongTy))));
         }
 
         internal GiaTam XemGia(string ten) =>
@@ -472,6 +509,7 @@ namespace CsvTool.ViewModels
             _thuMuc = null;
             _giaDon = null;
             File10 = File35 = null;
+            CapNhatDsCongTy();
             GomLoi();
             Loc();
             TrangThai = "Đổi bản vẽ — bấm Quét để xem danh sách tấm.";
