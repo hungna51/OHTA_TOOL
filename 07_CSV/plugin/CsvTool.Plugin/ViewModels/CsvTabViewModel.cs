@@ -136,7 +136,7 @@ namespace CsvTool.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    loiMoi.Add(new LoiQuet { Handle = d.HandleKhung, LaLoi = true, NoiDung = "Lỗi phân tích hình học: " + ex.Message });
+                    loiMoi.Add(new LoiQuet { Handle = d.HandleKhung, LaLoi = true, NoiDung = "Không phân tích được: " + ex.Message });
                 }
             }
             SauQuet(doc, quet, loiMoi);
@@ -198,7 +198,7 @@ namespace CsvTool.ViewModels
             string trung = CsvXuat.TenTrung(_tatCa.Where(d => d.Tam != null).Select(d => d.Tam));
             if (trung != null)
             {
-                TrangThai = "Tên tấm trùng \"" + trung + "\" — sửa N rồi quét lại (chưa lưu data CSV).";
+                TrangThai = "Tên tấm trùng \"" + trung + "\". Sửa N rồi quét lại.";
                 return;
             }
             if (!LuuData()) return;   // LuuData đã báo lỗi; đóng file rồi quét lại

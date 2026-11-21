@@ -44,13 +44,13 @@ namespace CsvTool.Tests
             thieu.RemoveAt(0);           // 13 dòng, có m + 2 loại đường bẻ -> cần 14
             var s = ThongTinTamParser.Doc(thieu);
             Kiem("Doc_SaiSoDong: thong bao",
-                 s.Loi != null && s.Loi.StartsWith("Số lượng text thông tin không chính xác (Thực tế: 13 text, Yêu cầu: 14 text)."),
+                 s.Loi != null && s.Loi.StartsWith("Text thông tin cũ sai số dòng (có 13, cần 14)."),
                  true);
 
             var b11 = MauThongTin.ToList();
             b11[7] = "Đường bẻ 11: 50 x 2";
             var r11 = ThongTinTamParser.Doc(b11);
-            Kiem("Doc_DuongBe11: chi so 11 -> can 23 dong", r11.Loi != null && r11.Loi.Contains("Yêu cầu: 23 text"), true);
+            Kiem("Doc_DuongBe11: chi so 11 -> can 23 dong", r11.Loi != null && r11.Loi.Contains("cần 23"), true);
 
             Kiem("Doc_ConTrongGiuChuoi: GiaBaoGia", r.Tam.GiaBaoGia, "");
             Kiem("Doc_ConTrongGiuChuoi: UuDai", r.Tam.UuDai, "5.5");
@@ -62,7 +62,7 @@ namespace CsvTool.Tests
                  rh.Tam == null ? "" : string.Join(";", rh.Tam.DuongBe.Select(x => x.Dai + "x" + x.SoLuong)), "200x1;150x2");
 
             Kiem("Doc_Rong: bao khong co text", ThongTinTamParser.Doc(new List<string>()).Loi,
-                 "Không tìm thấy text thông tin trên layer KHUNG_IN trong khung.");
+                 "Không có text thông tin trong khung.");
 
             string mt = "{\\fArial|b0;Lỗ nhỏ: 4\\PLỗ lớn: 1}";
             Kiem("TachDong_Mtext: bo {\\f..; } va tach \\P",

@@ -148,27 +148,27 @@ namespace CsvTool.Core
                 kq.Add(new LoiQuet { Handle = d.HandleKhung, LaLoi = true, NoiDung = msg, ViTri = viTri.ToList() });
 
             if (d.SaiKakou.Count > 0)
-                Them("Có đối tượng không hợp lệ trên layer 0-KAKOU: " + string.Join(", ", d.SaiKakou.Select(x => x.Loai).Distinct()) +
-                     ". Chỉ chấp nhận LINE/ARC/CIRCLE/ELLIPSE/SPLINE/LWPOLYLINE/POLYLINE.", d.SaiKakou.Select(x => x.Hop));
+                Them("Layer 0-KAKOU có đối tượng lạ: " + string.Join(", ", d.SaiKakou.Select(x => x.Loai).Distinct()) +
+                     ". Xoá hoặc chuyển layer.", d.SaiKakou.Select(x => x.Hop));
             if (d.SaiFname.Count > 0)
-                Them("Có đối tượng không hợp lệ trên layer 2-F-NAME: " + string.Join(", ", d.SaiFname.Select(x => x.Loai).Distinct()) +
-                     ". Chỉ chấp nhận TEXT/MTEXT.", d.SaiFname.Select(x => x.Hop));
+                Them("Layer 2-F-NAME có đối tượng lạ: " + string.Join(", ", d.SaiFname.Select(x => x.Loai).Distinct()) +
+                     ". Chỉ dùng TEXT/MTEXT.", d.SaiFname.Select(x => x.Hop));
             if (d.Net.Count == 0)
             {
-                Them("Không tìm thấy đối tượng 0-KAKOU trong khung.", new List<(double, double, double, double)>());
+                Them("Khung chưa có nét cắt (layer 0-KAKOU).", new List<(double, double, double, double)>());
                 return kq;
             }
 
             var bang0 = d.Net.Where(n => n.Loai != "CIRCLE" && !n.Kin && KC(n.Dau, n.Cuoi) <= Eps && n.DoDai <= Eps).ToList();
             if (bang0.Count > 0)
-                Them("Có " + bang0.Count + " đối tượng có chiều dài = 0 (điểm đầu = điểm cuối). Xóa đi đối tượng này.", bang0.Select(HopNet));
+                Them("Có " + bang0.Count + " nét dài bằng 0. Xoá các nét này.", bang0.Select(HopNet));
             var net = d.Net.Except(bang0).ToList();
 
             var tu = DiemTu(net, tol);
-            if (tu.Count > 0) Them("Có đối tượng mở hoặc chồng chéo!!!", tu.Select(p => (p.X, p.Y, p.X, p.Y)));
+            if (tu.Count > 0) Them("Nét cắt bị hở hoặc chồng nhau. Nối lại cho kín.", tu.Select(p => (p.X, p.Y, p.X, p.Y)));
 
             var nhom = NhomVong(net, tol, out var ho, out var nhomHo);
-            if (ho.Count > 0 && tu.Count == 0) Them("Có biên dạng chưa khép kín", ho.Select(p => (p.X, p.Y, p.X, p.Y)));
+            if (ho.Count > 0 && tu.Count == 0) Them("Biên dạng chưa khép kín. Nối lại cho kín.", ho.Select(p => (p.X, p.Y, p.X, p.Y)));
 
             var vong = new List<Vong>();
             var hong = new List<NetCat>();
@@ -177,12 +177,12 @@ namespace CsvTool.Core
                 Vong v = TaoVong(g, tol);
                 if (v == null) hong.AddRange(g); else vong.Add(v);
             }
-            if (hong.Count > 0) Them("Biên dạng cắt giao nhau, vui lòng kiểm tra lại!", hong.Select(HopNet));
+            if (hong.Count > 0) Them("Biên dạng tự cắt nhau. Sửa lại nét cắt.", hong.Select(HopNet));
 
             Vong ngoai = vong.OrderByDescending(v => v.DienTich).FirstOrDefault();
             if (ngoai == null)
             {
-                if (kq.Count == 0) Them("Không xác định được biên dạng cắt!!!", new List<(double, double, double, double)>());
+                if (kq.Count == 0) Them("Không xác định được biên ngoài của tấm.", new List<(double, double, double, double)>());
                 return kq;
             }
             bool tinBienNgoai = hong.Concat(nhomHo.SelectMany(g => g)).All(n =>
@@ -197,7 +197,7 @@ namespace CsvTool.Core
                 var thua = new List<NetCat>();
                 foreach (Vong v in vong.Where(x => x != ngoai))
                     if (NamTrongVong(v, ngoai)) lo.Add(v); else thua.AddRange(v.Nguon);
-                if (thua.Count > 0) Them("Có nét vẽ thừa hoặc chi tiết thừa nằm ngoài biên dạng chính!!!", thua.Select(HopNet));
+                if (thua.Count > 0) Them("Có nét thừa hoặc lỗ cắt qua biên tấm.", thua.Select(HopNet));
             }
             else lo = vong;
 
@@ -205,7 +205,7 @@ namespace CsvTool.Core
             for (int i = 0; i < lo.Count; i++)
                 for (int j = i + 1; j < lo.Count; j++)
                     if (LanChong(lo[i], lo[j])) { chong.UnionWith(lo[i].Nguon); chong.UnionWith(lo[j].Nguon); }
-            if (chong.Count > 0) Them("Có lỗ trùng hoặc giao nhau trong biên dạng cắt!!!", chong.Select(HopNet));
+            if (chong.Count > 0) Them("Có lỗ trùng hoặc chồng nhau. Xoá bớt hoặc sửa lại.", chong.Select(HopNet));
 
             if (kq.Count > 0) return kq;
             double chuVi30 = Math.PI * 30.0;
@@ -494,7 +494,7 @@ namespace CsvTool.Core
                     }
                     else if (soDoan == 1)
                     {
-                        canhBao("Tấm " + ten + ": Có ký hiệu bẻ thường và nhấn 1 lần cùng nhóm - mâu thuẫn!");
+                        canhBao("Đường bẻ vừa có ký hiệu thường vừa có nhấn 1 lần.");
                         Cong(kq, g.Dai, 1);
                     }
                     else if (ghiChu.Count == soDoan)
@@ -511,14 +511,14 @@ namespace CsvTool.Core
                         int? nhap = hoiSoNhan?.Invoke(ten, soDoan);
                         if (nhap == null || nhap < 0 || nhap > soDoan)
                         {
-                            canhBao("Tấm " + ten + ": Số đoạn bẻ và số ký hiệu không khớp, chưa nhập số đường nhấn 1 lần nên tính là bẻ thường!");
+                            canhBao("Chưa nhập số đường nhấn 1 lần, đang tính là bẻ thường.");
                             nhap = 0;
                         }
                         Cong(kq, g.Dai, 2 * nhap.Value + (soDoan - nhap.Value));
                     }
                 }
-                if (thieuKyHieu) canhBao("Tấm " + ten + ": Có đường bẻ không tìm thấy ký hiệu, kiểm tra lại!");
-                if (itKyHieu) canhBao("Tấm " + ten + ": Có nhóm đường bẻ ít ký hiệu hơn số đoạn, kiểm tra lại!");
+                if (thieuKyHieu) canhBao("Đường bẻ thiếu ký hiệu.");
+                if (itKyHieu) canhBao("Đường bẻ có ít ký hiệu hơn số đoạn.");
             }
             return kq.OrderByDescending(x => x.Dai).ToList();
         }

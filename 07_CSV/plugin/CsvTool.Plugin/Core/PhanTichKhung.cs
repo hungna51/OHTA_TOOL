@@ -44,10 +44,10 @@ namespace CsvTool.Core
         public const string LopFname = "2-F-NAME";
         public const string LopThongTin = "KHUNG_IN";
 
-        private const string LoiKhongFname = "Không tìm thấy F-name!!!";
-        private const string LoiSoDim = "Số lượng dim tổng không đúng!!!";
+        private const string LoiKhongFname = "Không tìm thấy F-name.";
+        private const string LoiSoDim = "Sai số dim tổng (cần 2 dim, hoặc 1 dim phi).";
 
-        public const string LoiChuaCoThongTin = "Chưa có thông tin tấm — bấm Quét theo vùng / Quét toàn bản vẽ.";
+        public const string LoiChuaCoThongTin = "Chưa có thông tin tấm. Bấm Quét.";
 
         /// <summary>EXPORT kiểu lisp: F-name + dim + text thông tin bắt buộc; thiếu vát / pitchi là lỗi.</summary>
         public static (TamXuat Tam, string Loi) Chay(KhungTho k, string lopDim, int dimzin)
@@ -111,7 +111,7 @@ namespace CsvTool.Core
         /// <summary>Khung có text trên layer F-name (khung chú thích không có → không phải tấm).</summary>
         public static bool CoFname(KhungTho k) => k.Text.Any(t => CungLop(t.Lop, LopFname));
 
-        public const string LoiKhungChuThich = "Bỏ qua — khung có nhiều F-name (khung chú thích / bảng mẫu), không tính vào CSV.";
+        public const string LoiKhungChuThich = "Bỏ qua: khung chú thích, không tính vào CSV.";
 
         /// <summary>
         /// Khung chú thích của bản vẽ mẫu: có từ 2 dòng "N=" trên layer F-name (một tấm chỉ có 1 F-name).
@@ -143,9 +143,9 @@ namespace CsvTool.Core
         {
             string gc = (tt.LoaiGiaCong ?? "").ToUpperInvariant();
             if (gc.Contains("K") && tt.Vat <= 0)
-                return "Chi tiết có gia công vát (k) nhưng chưa nhập chiều dài vát!";
+                return "Có gia công vát (k), chưa nhập chiều dài vát.";
             if (gc.Contains("PITCHI") && (tt.PitchiSoLan <= 0 || tt.PitchiDai <= 0))
-                return "Chi tiết có gia công m(pitchi) nhưng chưa nhập Pitchi - Số lần hoặc Pitchi - Chiều dài (mm)!";
+                return "Có gia công pitchi, chưa nhập số lần hoặc chiều dài.";
             return null;
         }
 
@@ -159,18 +159,18 @@ namespace CsvTool.Core
             var fnMtext = k.Text.Where(t => CungLop(t.Lop, LopFname) && t.LaMtext).ToList();
             var fnText = k.Text.Where(t => CungLop(t.Lop, LopFname) && !t.LaMtext).ToList();
             if (fnMtext.Count > 0 && fnText.Count > 0)
-                return (null, "Khung in có các loại Fname không hợp lệ! Vui lòng chỉ giữ lại 1 kiểu (MTEXT hoặc TEXT) trong mỗi khung in.");
+                return (null, "F-name trộn TEXT và MTEXT. Chỉ giữ 1 kiểu.");
 
             string n = null, m = null, t = null, q = null;
             if (fnMtext.Count > 0)
             {
-                if (fnMtext.Count > 1) return (null, "Có nhiều hơn 1 Fname trong khung!!!");
+                if (fnMtext.Count > 1) return (null, "Khung có nhiều hơn 1 F-name.");
                 string c = ThongTinTamParser.BoBocMtext(fnMtext[0].NoiDung ?? "");
-                if (!new[] { "N=", "M=", "Q=", "T=", "Z=" }.Any(c.Contains)) return (null, "ERROR: " + LoiKhongFname);
+                if (!new[] { "N=", "M=", "Q=", "T=", "Z=" }.Any(c.Contains)) return (null, LoiKhongFname);
                 if (c.Contains("\r")) c = c.Replace("\r", ",").Replace("\n", "").Replace("\\P", "");
                 else if (c.Contains("\n")) c = c.Replace("\n", ",").Replace("\\P", "");
                 else if (c.Contains("\\P")) c = c.Replace("\\P", ",");
-                if (!new[] { "N=", "M=", "Q=", "T=" }.Any(c.Contains)) return (null, "F-name error(1)!!!");
+                if (!new[] { "N=", "M=", "Q=", "T=" }.Any(c.Contains)) return (null, "F-name không có N, M, T, Q.");
                 n = ExportA2b(c, "N=", ","); m = ExportA2b(c, "M=", ",");
                 t = ExportA2b(c, "T=", ","); q = ExportA2b(c, "Q=", ",");
             }
@@ -186,7 +186,7 @@ namespace CsvTool.Core
                 }
             }
             if (n == null || t == null || q == null || m == null) return (null, LoiKhongFname);
-            if (n == "" || m == "" || t == "" || q == "") return (null, "Lỗi Fname (2): Giá trị trường thông tin bị rỗng!");
+            if (n == "" || m == "" || t == "" || q == "") return (null, "F-name có trường bị trống.");
 
             var thang = k.Dim.Where(d => CungLop(d.Lop, lopDim) && (d.Co70 == 32 || d.Co70 == 160)).ToList();
             string gx, gy;
@@ -200,7 +200,7 @@ namespace CsvTool.Core
             else
             {
                 var phi = k.Dim.Where(d => CungLop(d.Lop, lopDim) && (d.Co70 == 163 || d.Co70 == 35 || d.Co70 == 3)).ToList();
-                if (phi.Count == 0) return (null, "Không tìm thấy dim tổng, kiểm tra lại dữ liệu!!!");
+                if (phi.Count == 0) return (null, "Không tìm thấy dim tổng.");
                 if (phi.Count > 1) return (null, LoiSoDim);
                 gx = gy = Rtos(phi[0].DoDai, phi[0].Dimdec, dimzin);
             }

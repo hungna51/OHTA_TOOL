@@ -43,42 +43,42 @@ namespace CsvTool.Tests
             var ho = ChuNhat(200, 100);
             ho[2] = Duong(200, 100, 5, 100);
             var rHo = ChayHinh(ho);
-            Kiem("Bien: net ho -> loi + 2 vi tri", LoiHinh(rHo) + "|" + rHo.Loi[0].ViTri.Count, "Có đối tượng mở hoặc chồng chéo!!!|2");
+            Kiem("Bien: net ho -> loi + 2 vi tri", LoiHinh(rHo) + "|" + rHo.Loi[0].ViTri.Count, "Nét cắt bị hở hoặc chồng nhau. Nối lại cho kín.|2");
             Kiem("Bien: khe <= dung sai van kin", LoiHinh(ChayHinh(new[] { Duong(0, 0, 100, 0), Duong(100.005, 0, 100, 50), Duong(100, 50, 0, 50), Duong(0, 50, 0, 0) })), "");
 
-            Kiem("Bien: khong co net", LoiHinh(ChayHinh(new NetCat[0])), "Không tìm thấy đối tượng 0-KAKOU trong khung.");
+            Kiem("Bien: khong co net", LoiHinh(ChayHinh(new NetCat[0])), "Khung chưa có nét cắt (layer 0-KAKOU).");
             var dai0 = ChuNhat(50, 50);
             dai0.Add(new NetCat { Loai = "ARC", DoDai = 0, Diem = { (10, 10), (10, 10) } });
-            Kiem("Bien: chieu dai 0", LoiHinh(ChayHinh(dai0)).StartsWith("Có 1 đối tượng có chiều dài = 0"), true);
+            Kiem("Bien: chieu dai 0", LoiHinh(ChayHinh(dai0)).StartsWith("Có 1 nét dài bằng 0"), true);
             Kiem("Bien: doi tuong la tren 0-KAKOU",
-                 LoiHinh(ChayHinh(ChuNhat(50, 50), d => d.SaiKakou.Add(("MTEXT", (1, 1, 2, 2))))).StartsWith("Có đối tượng không hợp lệ trên layer 0-KAKOU: MTEXT"), true);
+                 LoiHinh(ChayHinh(ChuNhat(50, 50), d => d.SaiKakou.Add(("MTEXT", (1, 1, 2, 2))))).StartsWith("Layer 0-KAKOU có đối tượng lạ: MTEXT"), true);
 
             Kiem("Bien: chi tiet thua ngoai bien", LoiHinh(ChayHinh(ChuNhat(100, 100).Concat(new[] { Tron(300, 50, 10) }))),
-                 "Có nét vẽ thừa hoặc chi tiết thừa nằm ngoài biên dạng chính!!!");
+                 "Có nét thừa hoặc lỗ cắt qua biên tấm.");
             Kiem("Bien: lo cat bien la thua", LoiHinh(ChayHinh(ChuNhat(100, 100).Concat(new[] { Tron(100, 50, 10) }))),
-                 "Có nét vẽ thừa hoặc chi tiết thừa nằm ngoài biên dạng chính!!!");
+                 "Có nét thừa hoặc lỗ cắt qua biên tấm.");
             Kiem("Bien: lo tiep xuc mep van hop le", LoiHinh(ChayHinh(ChuNhat(100, 100).Concat(new[] { Tron(10, 50, 10) }))), "");
 
-            const string chong = "Có lỗ trùng hoặc giao nhau trong biên dạng cắt!!!";
+            const string chong = "Có lỗ trùng hoặc chồng nhau. Xoá bớt hoặc sửa lại.";
             Kiem("Bien: 2 lo giao nhau", LoiHinh(ChayHinh(ChuNhat(100, 100).Concat(new[] { Tron(40, 50, 10), Tron(50, 50, 10) }))), chong);
             Kiem("Bien: 2 lo trung nhau", LoiHinh(ChayHinh(ChuNhat(100, 100).Concat(new[] { Tron(40, 50, 10), Tron(40, 50, 10) }))), chong);
             Kiem("Bien: lo nam trong lo", LoiHinh(ChayHinh(ChuNhat(100, 100).Concat(new[] { Tron(40, 50, 20), Tron(40, 50, 5) }))), chong);
             Kiem("Bien: 2 lo tiep xuc khong tinh giao", LoiHinh(ChayHinh(ChuNhat(100, 100).Concat(new[] { Tron(40, 50, 10), Tron(60, 50, 10) }))), "");
 
             Kiem("Bien: hinh so 8 tu cat", LoiHinh(ChayHinh(new[] { Duong(0, 0, 100, 100), Duong(100, 100, 100, 0), Duong(100, 0, 0, 100), Duong(0, 100, 0, 0) })),
-                 "Biên dạng cắt giao nhau, vui lòng kiểm tra lại!");
+                 "Biên dạng tự cắt nhau. Sửa lại nét cắt.");
 
             var nhieu = ChuNhat(100, 100).Concat(new[] { Tron(300, 50, 10), Tron(40, 50, 10), Tron(50, 50, 10), Duong(5, 5, 20, 5) }).ToList();
             var rNhieu = ChayHinh(nhieu, d => d.SaiKakou.Add(("MTEXT", (1, 1, 2, 2))));
-            Kiem("Du loi: 1 tam bao cung luc 4 loai", rNhieu.Loi.Count + "|" + rNhieu.Loi[0].NoiDung.Contains("0-KAKOU") + "|" + rNhieu.Loi[1].NoiDung.Contains("mở") + "|" +
-                 rNhieu.Loi[2].NoiDung.Contains("thừa") + "|" + rNhieu.Loi[3].NoiDung.Contains("giao nhau") + "|" + (rNhieu.Tam == null), "4|True|True|True|True|True");
+            Kiem("Du loi: 1 tam bao cung luc 4 loai", rNhieu.Loi.Count + "|" + rNhieu.Loi[0].NoiDung.Contains("0-KAKOU") + "|" + rNhieu.Loi[1].NoiDung.Contains("hở") + "|" +
+                 rNhieu.Loi[2].NoiDung.Contains("thừa") + "|" + rNhieu.Loi[3].NoiDung.Contains("chồng nhau") + "|" + (rNhieu.Tam == null), "4|True|True|True|True|True");
             var bienHo = ChuNhat(100, 100);
             bienHo[2] = Duong(100, 100, 5, 100);
             var rBienHo = ChayHinh(bienHo.Concat(new[] { Tron(30, 50, 10), Tron(70, 50, 10) }));
-            Kiem("Du loi: bien ngoai ho -> khong bao cac lo la thua", LoiHinh(rBienHo), "Có đối tượng mở hoặc chồng chéo!!!");
+            Kiem("Du loi: bien ngoai ho -> khong bao cac lo la thua", LoiHinh(rBienHo), "Nét cắt bị hở hoặc chồng nhau. Nối lại cho kín.");
             var loHo = ChuNhat(100, 100).Concat(new[] { Duong(30, 30, 40, 30), Tron(70, 50, 10) });
             Kiem("Du loi: net ho nho trong bien van kiem phan con lai", LoiHinh(ChayHinh(loHo.Concat(new[] { Tron(75, 50, 10) }))),
-                 "Có đối tượng mở hoặc chồng chéo!!! | Có lỗ trùng hoặc giao nhau trong biên dạng cắt!!!");
+                 "Nét cắt bị hở hoặc chồng nhau. Nối lại cho kín. | Có lỗ trùng hoặc chồng nhau. Xoá bớt hoặc sửa lại.");
 
             var bulge = LamPhang.Polyline(new[] { (0.0, 0.0, 1.0), (10.0, 0.0, 1.0) }, true);
             double rMax = bulge.Max(p => Math.Sqrt((p.X - 5) * (p.X - 5) + p.Y * p.Y));
@@ -111,7 +111,7 @@ namespace CsvTool.Tests
                 d.ChuQuanh.Add(new ChuHinh { Lop = "1-SUNPOU", NoiDung = "発押し", MinX = 45, MaxX = 55, MinY = 40, MaxY = 50 });
             });
             Kiem("Be: tron - co ky hieu x2, thieu ky hieu x1 + canh bao",
-                 tron.Tam.DuongBe[0].SoLuong + "|" + tron.CanhBao.Count + "|" + tron.CanhBao[0].NoiDung, "3|1|Tấm A-1: Có đường bẻ không tìm thấy ký hiệu, kiểm tra lại!");
+                 tron.Tam.DuongBe[0].SoLuong + "|" + tron.CanhBao.Count + "|" + tron.CanhBao[0].NoiDung, "3|1|Đường bẻ thiếu ký hiệu.");
 
             Kiem("GiaCong: thu tu m, pitchi, t, s, k",
                  PhanTichHinh.LoaiGiaCong(new[]

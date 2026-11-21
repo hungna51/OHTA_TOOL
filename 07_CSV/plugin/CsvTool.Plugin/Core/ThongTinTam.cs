@@ -19,7 +19,7 @@ namespace CsvTool.Core
     /// <summary>Chép đúng hành vi CSV--mtext-plain / CSV--pricing-text-lines / CSV--pricing-data-from-text.</summary>
     public static class ThongTinTamParser
     {
-        public const string LoiKhongCoText = "Không tìm thấy text thông tin trên layer KHUNG_IN trong khung.";
+        public const string LoiKhongCoText = "Không có text thông tin trong khung.";
 
         private static readonly Regex EscapeU = new Regex(@"\\U\+([0-9A-Fa-f]{4})");
 
@@ -94,12 +94,7 @@ namespace CsvTool.Core
 
             int canCo = 12 + (coM ? maxBe : 0);
             if (tatCaDong.Count != canCo)
-                return (null, "Số lượng text thông tin không chính xác (Thực tế: " + tatCaDong.Count +
-                              " text, Yêu cầu: " + canCo + " text).\n" +
-                              "Tấm này có gia công m: " + (coM ? "Có" : "Không") +
-                              ", số loại đường bẻ: " + maxBe + ".\n" +
-                              "Vui lòng kiểm tra xem có bị xuất trùng đè lên nhau không!\n" +
-                              "Nếu text này do phiên bản cũ tạo ra, hãy quét lại khung này (Quét theo vùng).");
+                return (null, "Text thông tin cũ sai số dòng (có " + tatCaDong.Count + ", cần " + canCo + "). Quét lại tấm này.");
             return (t, null);
         }
 
