@@ -36,8 +36,8 @@ namespace CsvTool.ViewModels
         public string LoNho => Tam?.Tt.LoNho.ToString();
         public string LoLon => Tam?.Tt.LoLon.ToString();
         // số đường × chiều dài, như bảng giấy của xưởng
-        public string DuongBe => Tam == null ? "" : string.Join("     ", Tam.Tt.DuongBe.Select(b => b.SoLuong + " × " + b.Dai));
-        public bool CoDuongBe => Tam != null && Tam.Tt.DuongBe.Count > 0;
+        public string DuongBe => Tam == null ? "" : Tam.Tt.DuongBe.Count == 0 ? "Không có"
+            : string.Join("     ", Tam.Tt.DuongBe.Select(b => b.SoLuong + " × " + b.Dai));
 
         private bool _moRong;
         public bool MoRong { get => _moRong; set { _moRong = value; Bao(nameof(MoRong)); } }

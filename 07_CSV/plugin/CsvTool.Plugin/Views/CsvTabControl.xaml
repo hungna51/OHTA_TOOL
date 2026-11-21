@@ -248,7 +248,7 @@
                                                         </Grid>
                                                         <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="4" Text="{Binding Vat}"/>
                                                     </Grid>
-                                                    <StackPanel Visibility="{Binding CoDuongBe, Converter={StaticResource HienKhi}}">
+                                                    <StackPanel>
                                                         <TextBlock Style="{StaticResource Nhan}" Text="Đường bẻ: số đường × chiều dài" TextAlignment="Center"/>
                                                         <TextBlock Text="{Binding DuongBe}" Background="#FFFFFF" Padding="6,3" Margin="0,0,1,0"
                                                                    TextAlignment="Center" TextWrapping="Wrap"/>
