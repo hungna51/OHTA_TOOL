@@ -174,17 +174,17 @@
                     <ItemsControl ItemsSource="{Binding DongHien}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <!-- 1 the tam: ten | 3 tang thong so | gia tien. Nen xam + khe 1px = vien o -->
+                                <!-- 1 the tam: hang tren ten + gia tien, thong so full ngang (palette hep). Nen xam + khe 1px = vien o -->
                                 <Border BorderBrush="#90A4AE" BorderThickness="1" CornerRadius="4" Margin="0,0,0,6"
                                         Background="#CFD8DC" PreviewMouseLeftButtonDown="TheBam">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="150"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="130"/>
                                         </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
 
-                                        <DockPanel x:Name="OTen" Background="#E2F0D9" Margin="0,0,1,0">
+                                        <DockPanel x:Name="OTen" Background="#E2F0D9" Margin="0,0,1,1">
                                             <TextBlock x:Name="Mui" DockPanel.Dock="Left" Text="▸" Width="18" Padding="5,0,0,0"
                                                        VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonUp="MuiBam"
                                                        ToolTip="Mở / thu gọn tấm này"/>
@@ -192,22 +192,28 @@
                                                      TextWrapping="Wrap" HorizontalContentAlignment="Left" VerticalAlignment="Center"/>
                                         </DockPanel>
 
-                                        <StackPanel Grid.Column="1">
+                                        <DockPanel Grid.Column="1" Background="#FFFFFF" Margin="0,0,0,1">
+                                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource Nhan}" Margin="0,0,1,0" Padding="5,4,5,0" Text="Giá tiền"/>
+                                            <TextBox Style="{StaticResource O}" Margin="0" Text="{Binding GiaTien}" Foreground="#1565C0"
+                                                     VerticalAlignment="Center" ToolTip="Giá báo giá (lưu ở data CSV)"/>
+                                        </DockPanel>
+
+                                        <StackPanel Grid.Row="1" Grid.ColumnSpan="2">
                                             <TextBlock x:Name="LoiChu" Text="{Binding Loi}" Foreground="#C62828" TextWrapping="Wrap" Padding="6,4"
                                                        Background="#FDECEA" Margin="0,0,1,1"
                                                        Visibility="{Binding CoLoi, Converter={StaticResource HienKhi}}"/>
                                             <StackPanel Visibility="{Binding SuaDuoc, Converter={StaticResource HienKhi}}">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="36"/><ColumnDefinition Width="64"/><ColumnDefinition Width="44"/>
-                                                        <ColumnDefinition Width="1.4*"/><ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="0.7*"/><ColumnDefinition Width="1.15*"/><ColumnDefinition Width="0.7*"/>
+                                                        <ColumnDefinition Width="1.65*"/><ColumnDefinition Width="1.3*"/>
                                                     </Grid.ColumnDefinitions>
                                                     <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
                                                     <TextBlock Style="{StaticResource Nhan}" Text="Q"/>
                                                     <TextBlock Style="{StaticResource Nhan}" Grid.Column="1" Text="M"/>
                                                     <TextBlock Style="{StaticResource Nhan}" Grid.Column="2" Text="T"/>
                                                     <TextBlock Style="{StaticResource Nhan}" Grid.Column="3" Text="X × Y"/>
-                                                    <TextBlock Style="{StaticResource Nhan}" Grid.Column="4" Text="Loại gia công"/>
+                                                    <TextBlock Style="{StaticResource Nhan}" Grid.Column="4" Text="Gia công" ToolTip="Loại gia công"/>
                                                     <TextBox Style="{StaticResource O}" Grid.Row="1" Text="{Binding Q}"/>
                                                     <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="1" Text="{Binding M}"/>
                                                     <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="2" Text="{Binding T}"/>
@@ -217,15 +223,15 @@
                                                 <StackPanel x:Name="ChiTiet" Visibility="Collapsed">
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="48"/><ColumnDefinition Width="48"/><ColumnDefinition Width="80"/>
-                                                            <ColumnDefinition Width="1.4*"/><ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="0.85*"/><ColumnDefinition Width="0.85*"/><ColumnDefinition Width="1.25*"/>
+                                                            <ColumnDefinition Width="1.55*"/><ColumnDefinition Width="0.9*"/>
                                                         </Grid.ColumnDefinitions>
                                                         <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
                                                         <TextBlock Style="{StaticResource Nhan}" Text="Lỗ nhỏ"/>
                                                         <TextBlock Style="{StaticResource Nhan}" Grid.Column="1" Text="Lỗ lớn"/>
                                                         <TextBlock Style="{StaticResource Nhan}" Grid.Column="2" Text="Tapu &amp; sara"/>
-                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="3" Text="Pitchi số lần × dài"/>
-                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="4" Text="Chiều dài vát"/>
+                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="3" Text="Pitchi lần × dài" ToolTip="Pitchi: số lần × chiều dài"/>
+                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="4" Text="Dài vát" ToolTip="Chiều dài vát"/>
                                                         <TextBox Style="{StaticResource O}" Grid.Row="1" Text="{Binding LoNho, Mode=OneWay}" IsReadOnly="True"/>
                                                         <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="1" Text="{Binding LoLon, Mode=OneWay}" IsReadOnly="True"/>
                                                         <Grid Grid.Row="1" Grid.Column="2" Background="#FFFFFF" Margin="0,0,1,1">
@@ -250,12 +256,6 @@
                                                 </StackPanel>
                                             </StackPanel>
                                         </StackPanel>
-
-                                        <DockPanel Grid.Column="2" Background="#FFFFFF">
-                                            <TextBlock DockPanel.Dock="Top" Style="{StaticResource Nhan}" Margin="0,0,0,1" Text="Giá tiền"/>
-                                            <TextBox Style="{StaticResource O}" Margin="0" Text="{Binding GiaTien}" Foreground="#1565C0"
-                                                     VerticalAlignment="Center" ToolTip="Giá báo giá (lưu ở data CSV)"/>
-                                        </DockPanel>
                                     </Grid>
                                 </Border>
                                 <DataTemplate.Triggers>
