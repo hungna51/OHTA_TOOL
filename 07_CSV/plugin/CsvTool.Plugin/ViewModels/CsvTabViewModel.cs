@@ -76,10 +76,12 @@ namespace CsvTool.ViewModels
             get
             {
                 int thieu = DsGiaVl.Count(d => d.Thieu);
-                return thieu > 0 ? thieu + " thiếu" : DsGiaVl.Count == 0 || _bangGia == null ? "Chưa tính" : "Đủ giá";
+                int canBoSung = DsGiaVl.Count(d => d.ChuaCoDb);
+                return thieu > 0 ? thieu + " thiếu" : canBoSung > 0 ? canBoSung + " cần bổ sung"
+                    : DsGiaVl.Count == 0 || _bangGia == null ? "Chưa tính" : "Đủ giá";
             }
         }
-        public bool TabGiaDo => DsGiaVl.Any(d => d.Thieu);
+        public bool TabGiaDo => DsGiaVl.Any(d => d.ChuaCoDb);
         private const string KhoaLoiQuet = "CSVTOOL_LOI_QUET";
         private Document _docDanhSach;
 
@@ -357,7 +359,11 @@ namespace CsvTool.ViewModels
         {
             DungGiaVl();
             if (TinhGiaBat && !string.IsNullOrEmpty(CongTy)) TinhLaiSauThietLap();
-            else TrangThai = "Đã lưu giá tạm. Tích Tính giá và chọn công ty để tính tiền.";
+            else
+            {
+                GomLoi();
+                TrangThai = "Đã lưu giá tạm. Tích Tính giá và chọn công ty để tính tiền.";
+            }
         }
 
         internal void DatGiaVl(DongGiaVl d, double gia)
@@ -378,10 +384,9 @@ namespace CsvTool.ViewModels
             SauGiaVl();
         }
 
-        /// <summary>Giá gia công: chưa có giá VL thì chỉ giữ trên dòng, có rồi thì lưu và tính lại.</summary>
+        /// <summary>Sửa thông số của dòng đã có giá tạm: lưu và tính lại.</summary>
         internal bool SuaPhuGiaVl(DongGiaVl d, Action doi, Action hoan)
         {
-            if (GiaTamCua(d.VatLieu, d.DoDay) == null) { doi(); return true; }
             if (!GhiGiaVl(doi, hoan)) return false;
             SauGiaVl();
             return true;
@@ -726,6 +731,12 @@ namespace CsvTool.ViewModels
         private void GomLoi()
         {
             DsLoi.Clear();
+            foreach (DongGiaVl v in DsGiaVl.Where(x => x.ChuaCoDb))
+            {
+                DongTam dau = _tatCa.FirstOrDefault(x => x.Tam != null && !x.BoQua && x.Tam.M == v.VatLieu
+                    && double.TryParse((x.Tam.T ?? "").Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double day) && day == v.DoDay);
+                if (dau != null) DsLoi.Add(new DongLoi(dau, "Chưa có trong database (" + v.SoTam + " tấm). Cần bổ sung.", false, null, true, v.Ten));
+            }
             foreach (DongTam d in _tatCa.Where(x => !x.BoQua))
             {
                 _loiKhung.TryGetValue(d.Khung.Handle, out var ds);

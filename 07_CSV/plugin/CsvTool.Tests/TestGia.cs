@@ -123,10 +123,13 @@ namespace CsvTool.Tests
             Kiem("GiuSuaTay: tam khong sua lay theo ban ve", ttKhac.CheDoTinh + "|" + ttKhac.DuongBe[0].Item1, "0|900");
 
             var goiY = GiaVlDon.GoiY(b, "ZAM", 3);
-            Kiem("GiaVl: goi y theo SS400 gan nhat, chua co gia VL", goiY.GiaCat + "|" + goiY.GiaUon + "|" + goiY.DonGia, "6|700|0");
+            Kiem("GiaVl: khong co trong bang -> de trong, khong muon vat lieu khac",
+                 double.IsNaN(goiY.DonGia) && double.IsNaN(goiY.GiaCat) && double.IsNaN(goiY.GiaUon) && double.IsNaN(goiY.GiaMoLo) && double.IsNaN(goiY.GiaTappu) && double.IsNaN(goiY.GiaVat) && double.IsNaN(goiY.TyTrong), true);
+            Kiem("GiaVl: thieu thong so -> chua du", GiaVlDon.Du(goiY), false);
             Kiem("GiaVl: dong da co trong bang lay dung dong", GiaVlDon.GoiY(b, "SUS304", 9).GiaCat, 20.0);
             var vl = new GiaVlDon();
-            goiY.DonGia = 200;
+            goiY = new DongBangGia { VatLieu = "ZAM", DoDay = 3, DonGia = 200, GiaCat = 6, GiaUon = 700, GiaMoLo = 30, GiaTappu = 120, GiaVat = 1500, TyTrong = 7.85 };
+            Kiem("GiaVl: du 7 thong so", GiaVlDon.Du(goiY), true);
             vl.Dat(goiY);
             var tamZam = new TamXuat { N = "Z", M = "ZAM", T = "3.0", Q = "1", X = "100", Y = "100", Tt = new ThongTinTam { CheDoTinh = "0" } };
             var dZam = new GiaDon { CongTy = "TH" };
@@ -166,6 +169,8 @@ namespace CsvTool.Tests
                 Kiem("GiaVl: file co BOM", File.ReadAllBytes(fVl)[0], (byte)0xEF);
                 File.WriteAllText(fVl, GiaVlDon.TieuDe + "\r\nZAM,abc\r\n");
                 KiemNemBatKy("GiaVl: file hong -> bao loi, khong coi la trong", () => GiaVlDon.DocFile(fVl));
+                File.WriteAllText(fVl, GiaVlDon.TieuDe + "\r\nZAM,2.3,1220,NaN,400,25,150,1800,7.85\r\n");
+                KiemNemBatKy("GiaVl: file thieu thong so -> bao loi", () => GiaVlDon.DocFile(fVl));
                 File.WriteAllText(f, "{hong");
                 KiemNemBatKy("GiaDon: file hong -> bao loi, khong coi la trong", () => GiaDon.DocFile(f));
             }

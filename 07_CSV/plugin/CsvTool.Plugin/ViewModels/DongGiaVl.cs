@@ -9,7 +9,7 @@ namespace CsvTool.ViewModels
     public sealed class DongGiaVl : INotifyPropertyChanged
     {
         private readonly CsvTabViewModel _vm;
-        private bool _daSuaPhu;   // đã sửa giá gia công nhưng chưa nhập giá VL: không đè bằng gợi ý
+        private bool _daSuaPhu;   // đang nhập dở: chưa đủ thông số, không đè bằng dữ liệu bảng giá
 
         public string VatLieu { get; }
         public double DoDay { get; }
@@ -28,7 +28,9 @@ namespace CsvTool.ViewModels
         public bool SuaDuoc => true;
         public string Ten => VatLieu + " " + DoDay.ToString("0.0#####", CultureInfo.InvariantCulture);
         public bool Thieu => _vm.DaCoBangGia && Tam == null && Bang == null;
-        /// <summary>Chỉ cho nhập khi đã có bảng giá, để giá gia công gợi ý không bị bằng 0.</summary>
+        /// <summary>Không có trong database (kể cả đã nhập giá tạm): phải báo để bổ sung.</summary>
+        public bool ChuaCoDb => _vm.DaCoBangGia && Bang == null;
+        /// <summary>Chỉ cho nhập khi đã đọc bảng giá, để biết chắc vật liệu có trong database hay không.</summary>
         public bool HienNhap => _vm.DaCoBangGia && (Tam != null || Bang == null || Bang.DonGia == 0);
         public bool HienGiaBang => !HienNhap;
         public string NhanGiaBang
@@ -39,21 +41,31 @@ namespace CsvTool.ViewModels
                 return g > 0 ? "@" + g.Value.ToString("#,0.##", CultureInfo.InvariantCulture) : "Chưa có";
             }
         }
-        public string Nguon => Tam != null ? "Giá tạm của đơn"
+        public string Nguon => ChuaCoDb ? (Tam != null ? "Giá tạm. Cần bổ sung vào database." : "Chưa có trong database. Cần bổ sung.")
+            : Tam != null ? "Giá tạm của đơn"
             : !_vm.DaCoBangGia ? "Chưa đọc bảng giá. Tích Tính giá rồi quét."
-            : Bang == null ? "Chưa có giá"
             : Bang.DonGia == 0 ? "Bảng giá = 0, nhập nếu cần" : "Bảng giá";
 
         public string GiaVL
         {
-            get => Tam == null ? "" : SoHien(Tam.DonGia);
+            get => SoHien(Nhap.DonGia);
             set
             {
                 string s = (value ?? "").Trim();
                 if (s == GiaVL) return;
-                if (s == "") _vm.XoaGiaVl(this);
-                else if (TinhGia.SoTien(s, out double d) && d > 0) _vm.DatGiaVl(this, d);
-                else _vm.BaoLoi("Giá vật liệu phải là số lớn hơn 0.");
+                if (s == "")
+                {
+                    if (Tam != null) _vm.XoaGiaVl(this);
+                    else Nhap.DonGia = double.NaN;
+                }
+                else if (!TinhGia.SoTien(s, out double d) || d <= 0) _vm.BaoLoi("Giá vật liệu phải là số lớn hơn 0.");
+                else if (Tam != null) _vm.DatGiaVl(this, d);
+                else
+                {
+                    Nhap.DonGia = d;
+                    _daSuaPhu = true;
+                    LuuNeuDu();
+                }
                 Bao(null);
             }
         }
@@ -65,13 +77,24 @@ namespace CsvTool.ViewModels
         public string GiaVat { get => SoHien(Nhap.GiaVat); set => SuaPhu(value, Nhap.GiaVat, x => Nhap.GiaVat = x); }
         public string TyTrong { get => SoHien(Nhap.TyTrong); set => SuaPhu(value, Nhap.TyTrong, x => Nhap.TyTrong = x, true); }
 
-        private static string SoHien(double d) => d.ToString("0.######", CultureInfo.InvariantCulture);
+        private static string SoHien(double d) => double.IsNaN(d) ? "" : d.ToString("0.######", CultureInfo.InvariantCulture);
+
+        private void LuuNeuDu()
+        {
+            if (GiaVlDon.Du(Nhap)) _vm.DatGiaVl(this, Nhap.DonGia);
+            else _vm.BaoLoi("Nhập đủ giá VL, cắt, uốn, mở lỗ, Tapu, vát và tỷ trọng để tính tiền.");
+        }
 
         private void SuaPhu(string giaTri, double cu, Action<double> gan, bool phaiDuong = false)
         {
-            if (TinhGia.SoTien(giaTri, out double d) && (phaiDuong ? d > 0 : d >= 0))
+            if ((giaTri ?? "").Trim() == "" && Tam == null) { gan(double.NaN); _daSuaPhu = true; }
+            else if (TinhGia.SoTien(giaTri, out double d) && (phaiDuong ? d > 0 : d >= 0))
             {
-                if (d != cu && _vm.SuaPhuGiaVl(this, () => gan(d), () => gan(cu))) _daSuaPhu = true;
+                if (d != cu)
+                {
+                    if (Tam != null) _vm.SuaPhuGiaVl(this, () => gan(d), () => gan(cu));
+                    else { gan(d); _daSuaPhu = true; LuuNeuDu(); }
+                }
             }
             else _vm.BaoLoi(phaiDuong ? "Tỷ trọng phải là số lớn hơn 0." : "Giá gia công phải là số từ 0 trở lên.");
             Bao(null);

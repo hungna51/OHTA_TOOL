@@ -588,7 +588,7 @@
                                                     <TextBlock Grid.Column="2" Text="{Binding NhanGiaBang}" TextAlignment="Right" VerticalAlignment="Center" Foreground="#1565C0"
                                                                Visibility="{Binding HienGiaBang, Converter={StaticResource HienKhi}}"/>
                                                 </Grid>
-                                                <!-- gia gia cong: chi hien voi vat lieu nhap tay -->
+                                                <!-- thong so gia cong: khong co trong database thi de trong, nguoi dung tu nhap -->
                                                 <Grid Margin="10,0,10,6" Visibility="{Binding HienNhap, Converter={StaticResource HienKhi}}">
                                                     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
                                                     <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
@@ -608,6 +608,10 @@
                                             </StackPanel>
                                         </Border>
                                         <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding ChuaCoDb}" Value="True">
+                                                <Setter TargetName="DongVl" Property="Background" Value="#FFF8E1"/>
+                                                <Setter TargetName="NguonVl" Property="Foreground" Value="#B45309"/>
+                                            </DataTrigger>
                                             <DataTrigger Binding="{Binding Thieu}" Value="True">
                                                 <Setter TargetName="DongVl" Property="Background" Value="#FDECEA"/>
                                                 <Setter TargetName="NguonVl" Property="Foreground" Value="#C62828"/>

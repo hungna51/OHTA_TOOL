@@ -10,7 +10,8 @@ namespace CsvTool.ViewModels
     {
         public DongTam Dong { get; }
         public LoiQuet Goc { get; }
-        public string Ten => Dong.N;
+        public string Ten => _ten ?? Dong.N;
+        private readonly string _ten;
         public string NoiDung { get; }
         public bool LaLoi { get; }
         public int SoViTri => Goc?.ViTri.Count ?? 0;
@@ -19,9 +20,9 @@ namespace CsvTool.ViewModels
         /// <summary>Cảnh báo thiếu giá: dòng có nút Nhập giá sang tab Giá VL.</summary>
         public bool LaThieuGia { get; }
 
-        public DongLoi(DongTam dong, string noiDung, bool laLoi, LoiQuet goc, bool laThieuGia = false)
+        public DongLoi(DongTam dong, string noiDung, bool laLoi, LoiQuet goc, bool laThieuGia = false, string ten = null)
         {
-            Dong = dong; NoiDung = noiDung; LaLoi = laLoi; Goc = goc; LaThieuGia = laThieuGia;
+            Dong = dong; NoiDung = noiDung; LaLoi = laLoi; Goc = goc; LaThieuGia = laThieuGia; _ten = ten;
         }
 
         public string NhanViTri => SoViTri == 0 ? "Xem khung" : "Vị trí " + (_dangXem < 0 ? 1 : _dangXem + 1) + "/" + SoViTri;

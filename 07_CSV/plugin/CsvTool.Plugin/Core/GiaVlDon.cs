@@ -32,19 +32,25 @@ namespace CsvTool.Core
             HeSoGiaCong = b.HeSoGiaCong, PitchiTrongLuong = b.PitchiTrongLuong, PitchiChieuDai = b.PitchiChieuDai, HeSoCuon = b.HeSoCuon,
         };
 
-        /// <summary>Giá gia công gợi ý: đúng dòng trong bảng, không có thì SS400 có độ dày gần nhất, không có SS400 thì dòng gần nhất.</summary>
+        /// <summary>
+        /// Dòng để nhập: chỉ lấy thông số của đúng vật liệu + độ dày trong bảng giá. Không có thì để trống (NaN),
+        /// không mượn của vật liệu khác vì sẽ ra giá sai mà không ai biết.
+        /// </summary>
         public static DongBangGia GoiY(BangGia b, string vatLieu, double doDay)
         {
-            var ds = b?.Dong ?? new List<DongBangGia>();
-            DongBangGia g = ds.FirstOrDefault(x => x.VatLieu == vatLieu && x.DoDay == doDay)
-                ?? ds.Where(x => x.VatLieu == "SS400").OrderBy(x => Math.Abs(x.DoDay - doDay)).FirstOrDefault()
-                ?? ds.OrderBy(x => Math.Abs(x.DoDay - doDay)).FirstOrDefault();
+            DongBangGia g = b?.Dong.FirstOrDefault(x => x.VatLieu == vatLieu && x.DoDay == doDay);
             return new DongBangGia
             {
-                VatLieu = vatLieu, DoDay = doDay, GiaCat = g?.GiaCat ?? 0, GiaUon = g?.GiaUon ?? 0, GiaMoLo = g?.GiaMoLo ?? 0,
-                GiaTappu = g?.GiaTappu ?? 0, GiaVat = g?.GiaVat ?? 0, TyTrong = g != null && g.TyTrong > 0 ? g.TyTrong : 7.85,
+                VatLieu = vatLieu, DoDay = doDay, DonGia = double.NaN, GiaCat = g?.GiaCat ?? double.NaN, GiaUon = g?.GiaUon ?? double.NaN,
+                GiaMoLo = g?.GiaMoLo ?? double.NaN, GiaTappu = g?.GiaTappu ?? double.NaN, GiaVat = g?.GiaVat ?? double.NaN, TyTrong = g?.TyTrong ?? double.NaN,
             };
         }
+
+        /// <summary>Đủ cả 7 thông số thì mới được lưu và dùng để tính tiền.</summary>
+        public static bool Du(DongBangGia d) =>
+            d.DonGia > 0 && d.TyTrong > 0 && d.GiaCat >= 0 && d.GiaUon >= 0 && d.GiaMoLo >= 0 && d.GiaTappu >= 0 && d.GiaVat >= 0
+            && !double.IsInfinity(d.DonGia) && !double.IsInfinity(d.TyTrong) && !double.IsInfinity(d.GiaCat) && !double.IsInfinity(d.GiaUon)
+            && !double.IsInfinity(d.GiaMoLo) && !double.IsInfinity(d.GiaTappu) && !double.IsInfinity(d.GiaVat);
 
         /// <summary>Các cặp vật liệu + độ dày trong đơn và số dòng tấm của mỗi cặp. Độ dày không phải số thì bỏ qua.</summary>
         public static List<(string VatLieu, double DoDay, int SoTam)> DsVatLieu(IEnumerable<TamXuat> ds) =>
@@ -71,10 +77,12 @@ namespace CsvTool.Core
                 List<string> o = CsvXuat.TachO(dong);
                 if (o.Count < 9 || o[0] == "") throw new FormatException("Dòng giá vật liệu sai cột: " + dong);
                 double D(int i) => double.Parse(o[i], NumberStyles.Float, CultureInfo.InvariantCulture);
-                kq.Dat(new DongBangGia
+                var g = new DongBangGia
                 {
                     VatLieu = o[0], DoDay = D(1), DonGia = D(2), GiaCat = D(3), GiaUon = D(4), GiaMoLo = D(5), GiaTappu = D(6), GiaVat = D(7), TyTrong = D(8),
-                });
+                };
+                if (!Du(g)) throw new FormatException("Dòng giá vật liệu thiếu thông số: " + dong);
+                kq.Dat(g);
             }
             return kq;
         }
