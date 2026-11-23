@@ -139,6 +139,19 @@ namespace CsvTool.Tests
             var vl2 = new GiaVlDon(); vl2.Dat(ghiDe);
             Kiem("GiaVl: gia tam uu tien hon bang gia", vl2.Gop(b).Dong.First(x => x.VatLieu == "SS400" && x.DoDay == 6).DonGia, 999.0);
             Kiem("GiaVl: bang goc khong bi doi", b.Dong.First(x => x.VatLieu == "SS400" && x.DoDay == 6).DonGia, 140.0);
+            TamXuat Tam12(string n, string cheDo) => new TamXuat { N = n, M = "SS400", T = "12.0", Q = "1", X = "100", Y = "100", Tt = new ThongTinTam { CheDoTinh = cheDo } };
+            Kiem("Gia 0: che do thuong -> bao thieu", TinhGia.ApDung(new[] { Tam12("A", "0") }, new GiaDon { CongTy = "TH" }, b)["A"], "Chưa có giá: SS400 dày 12.");
+            Kiem("Gia 0: VL khach cap -> bao thieu", TinhGia.ApDung(new[] { Tam12("A", "2") }, new GiaDon { CongTy = "TH" }, b).ContainsKey("A"), true);
+            var tam0Gc = Tam12("A", "1");
+            Kiem("Gia 0: chi gia cong -> van tinh", TinhGia.ApDung(new[] { tam0Gc }, new GiaDon { CongTy = "TH" }, b).Count + "|" + (tam0Gc.Tt.GiaBaoGia != ""), "0|True");
+            var tam0Kg = Tam12("A", "0");
+            Kiem("Gia 0: cong ty theo kg -> van tinh", TinhGia.ApDung(new[] { tam0Kg }, new GiaDon { CongTy = "DB1" }, b).Count + "|" + (tam0Kg.Tt.GiaBaoGia != ""), "0|True");
+            Kiem("Gia 0: cong ty so voi gia thuong -> bao thieu", TinhGia.ApDung(new[] { Tam12("A", "0") }, new GiaDon { CongTy = "DB2" }, b).ContainsKey("A"), true);
+            var vl12 = new GiaVlDon();
+            var dong12 = GiaVlDon.GoiY(b, "SS400", 12); dong12.DonGia = 160; vl12.Dat(dong12);
+            var tam0Tam = Tam12("A", "0");
+            Kiem("Gia 0: nhap gia tam -> tinh duoc", TinhGia.ApDung(new[] { tam0Tam }, new GiaDon { CongTy = "TH" }, vl12.Gop(b)).Count + "|" + (tam0Tam.Tt.GiaBaoGia != ""), "0|True");
+
             var dsVl = GiaVlDon.DsVatLieu(new[] { tamZam, tamNho, new TamXuat { N = "H", M = "SS400", T = "6", Q = "1", Tt = new ThongTinTam() }, new TamXuat { N = "L", M = "SS400", T = "x", Q = "1", Tt = new ThongTinTam() } });
             Kiem("GiaVl: gom theo vat lieu + do day", string.Join(";", dsVl.Select(x => x.VatLieu + "/" + x.DoDay + "/" + x.SoTam)), "SS400/6/2;ZAM/3/1");
 

@@ -27,7 +27,7 @@ namespace CsvTool.ViewModels
 
         public bool SuaDuoc => true;
         public string Ten => VatLieu + " " + DoDay.ToString("0.0#####", CultureInfo.InvariantCulture);
-        public bool Thieu => _vm.DaCoBangGia && Tam == null && Bang == null;
+        public bool Thieu => _vm.DaCoBangGia && Tam == null && (Bang == null || _vm.VlThieuGia(VatLieu, DoDay));
         /// <summary>Không có trong database (kể cả đã nhập giá tạm): phải báo để bổ sung.</summary>
         public bool ChuaCoDb => _vm.DaCoBangGia && Bang == null;
         /// <summary>Chỉ cho nhập khi đã đọc bảng giá, để biết chắc vật liệu có trong database hay không.</summary>
@@ -44,6 +44,7 @@ namespace CsvTool.ViewModels
         public string Nguon => ChuaCoDb ? (Tam != null ? "Giá tạm. Cần bổ sung vào database." : "Chưa có trong database. Cần bổ sung.")
             : Tam != null ? "Giá tạm của đơn"
             : !_vm.DaCoBangGia ? "Chưa đọc bảng giá. Tích Tính giá rồi quét."
+            : Thieu ? "Giá trong database = 0. Cần nhập giá."
             : Bang.DonGia == 0 ? "Bảng giá = 0, nhập nếu cần" : "Bảng giá";
 
         public string GiaVL

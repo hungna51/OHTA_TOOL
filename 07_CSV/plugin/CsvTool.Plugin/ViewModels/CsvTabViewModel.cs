@@ -81,7 +81,7 @@ namespace CsvTool.ViewModels
                     : DsGiaVl.Count == 0 || _bangGia == null ? "Chưa tính" : "Đủ giá";
             }
         }
-        public bool TabGiaDo => DsGiaVl.Any(d => d.ChuaCoDb);
+        public bool TabGiaDo => DsGiaVl.Any(d => d.Thieu || d.ChuaCoDb);
         private const string KhoaLoiQuet = "CSVTOOL_LOI_QUET";
         private Document _docDanhSach;
 
@@ -317,6 +317,8 @@ namespace CsvTool.ViewModels
 
         private GiaVlDon _giaVl;
 
+        private HashSet<(string, double)> _vlThieu = new HashSet<(string, double)>();
+        internal bool VlThieuGia(string vl, double day) => _vlThieu.Contains((vl, day));
         internal bool DaCoBangGia => _bangGia != null;
         internal BangGia BangGoc => _bangGia;
         private BangGia BangDung => _giaVl == null ? _bangGia : _giaVl.Gop(_bangGia);
@@ -608,6 +610,10 @@ namespace CsvTool.ViewModels
                 d.CanhBaoGia = d.Tam != null && canhBao.TryGetValue(d.Tam.N, out string s) ? s : null;
                 d.BaoGia();
             }
+            _vlThieu = new HashSet<(string, double)>(_tatCa.Where(d => d.Tam != null && d.CanhBaoGia?.StartsWith("Chưa có giá") == true)
+                .Select(d => (d.Tam.M, double.TryParse((d.Tam.T ?? "").Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double day) ? day : -1)));
+            foreach (DongGiaVl r in DsGiaVl) r.CapNhat();
+            BaoNhanTab();
         }
 
         private async Task<BangGia> DocBangGiaNen(string tienTo)

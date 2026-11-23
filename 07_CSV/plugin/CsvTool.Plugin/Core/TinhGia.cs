@@ -87,7 +87,7 @@ namespace CsvTool.Core
             if (string.IsNullOrEmpty(v.VatLieu) || v.DoDay <= 0 || v.X <= 0 || v.Y <= 0 || v.SoLuong <= 0)
                 return (null, "Thiếu vật liệu, độ dày, kích thước hoặc số lượng.");
             DongBangGia g = b.Dong.FirstOrDefault(x => x.VatLieu == v.VatLieu && x.DoDay == v.DoDay);
-            if (g == null) return (null, "Chưa có giá: " + v.VatLieu + " dày " + v.DoDay.ToString(CultureInfo.InvariantCulture) + ".");
+            if (g == null) return (null, LoiChuaCoGia(v));
 
             string hoa = v.VatLieu.ToUpperInvariant();
             bool coSus = hoa.Contains("SUS");
@@ -145,6 +145,21 @@ namespace CsvTool.Core
             return (kq, null);
         }
 
+        private static string LoiChuaCoGia(DauVaoGia v) => "Chưa có giá: " + v.VatLieu + " dày " + v.DoDay.ToString(CultureInfo.InvariantCulture) + ".";
+
+        /// <summary>
+        /// Bảng giá = 0 mà tấm cần tiền vật liệu → báo thiếu, để không ra báo giá thấp mà không ai biết.
+        /// Không cần giá VL: chế độ chỉ gia công, công ty tính theo kg không so với giá thường.
+        /// </summary>
+        private static string LoiGiaVlBang0(DauVaoGia v, BangGia b)
+        {
+            DongBangGia g = b.Dong.FirstOrDefault(x => x.VatLieu == v.VatLieu && x.DoDay == v.DoDay);
+            if (g == null || g.DonGia > 0 || v.DonGiaDatNgoai > 0 || v.CheDoTinh == 1) return null;
+            bool coSus = (v.VatLieu ?? "").ToUpperInvariant().Contains("SUS");
+            if (v.CheDoTinh == 0 && !coSus && b.DacBiet.TryGetValue(v.CongTy ?? "", out CongTyDacBiet db) && !db.SoSanhGiaThuong) return null;
+            return LoiChuaCoGia(v);
+        }
+
         private static bool So(string s, out double d) =>
             double.TryParse((s ?? "").Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out d);
 
@@ -181,6 +196,7 @@ namespace CsvTool.Core
                 var (v, loi) = TaoDauVao(t, g, don.CongTy);
                 KetQuaGia kq = null;
                 if (v != null) v.LamTron250 = don.Tron250(g);
+                if (loi == null) loi = LoiGiaVlBang0(v, b);
                 if (loi == null) (kq, loi) = Tinh(v, b);
                 if (kq == null)
                 {
