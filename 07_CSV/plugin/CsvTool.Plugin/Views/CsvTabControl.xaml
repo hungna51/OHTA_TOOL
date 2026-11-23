@@ -352,7 +352,7 @@
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="130"/>
+                                            <ColumnDefinition Width="150"/>
                                         </Grid.ColumnDefinitions>
                                         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
 
@@ -364,25 +364,51 @@
                                                      TextWrapping="Wrap" HorizontalContentAlignment="Left" VerticalAlignment="Center"/>
                                         </DockPanel>
 
-                                        <DockPanel Grid.Column="1" Background="#FFFFFF" Margin="0,0,0,1">
-                                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource Nhan}" Margin="0,0,1,0" Padding="5,4,5,0" Text="Giá tiền"/>
-                                            <Button DockPanel.Dock="Right" Content="↺" Width="18" Cursor="Hand" BorderThickness="0" Background="Transparent"
-                                                    Foreground="#E65100" Click="GiaTuDongBam" ToolTip="Giá sửa tay. Bấm để quay về giá tự tính"
-                                                    Visibility="{Binding LaGiaTay, Converter={StaticResource HienKhi}}"/>
-                                            <TextBlock DockPanel.Dock="Left" Text="@" Padding="5,0,0,0" VerticalAlignment="Center"
-                                                       Foreground="{Binding Foreground, ElementName=OGia}" ToolTip="Đơn giá 1 tấm"/>
-                                            <TextBox x:Name="OGia" Margin="0" Text="{Binding GiaTien}" VerticalAlignment="Center" HorizontalContentAlignment="Left" ToolTip="Đơn giá 1 tấm (lưu ở data CSV)">
-                                                <TextBox.Style>
-                                                    <Style TargetType="TextBox" BasedOn="{StaticResource O}">
-                                                        <Setter Property="Foreground" Value="#1565C0"/>
+                                        <!-- o gia noi bat: vang = gia tu tinh, cam = gia sua tay -->
+                                        <DockPanel Grid.Column="1" Margin="0,0,0,1">
+                                            <DockPanel.Style>
+                                                <Style TargetType="DockPanel">
+                                                    <Setter Property="Background" Value="#FFF3C4"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding LaGiaTay}" Value="True">
+                                                            <Setter Property="Background" Value="#FFE0B2"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </DockPanel.Style>
+                                            <Border DockPanel.Dock="Left" Width="3">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="#2E7D32"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding LaGiaTay}" Value="True">
-                                                                <Setter Property="Foreground" Value="#E65100"/>
+                                                                <Setter Property="Background" Value="#E65100"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                            </Border>
+                                            <Button DockPanel.Dock="Right" Content="↺" Width="18" Cursor="Hand" BorderThickness="0" Background="Transparent"
+                                                    Foreground="#BF360C" Click="GiaTuDongBam" ToolTip="Giá sửa tay. Bấm để quay về giá tự tính"
+                                                    Visibility="{Binding LaGiaTay, Converter={StaticResource HienKhi}}"/>
+                                            <TextBox x:Name="OGia" DockPanel.Dock="Right" Margin="0,0,3,0" MinWidth="34" Text="{Binding GiaTien}" VerticalAlignment="Center"
+                                                     HorizontalContentAlignment="Right" FontSize="14" FontWeight="SemiBold" Background="Transparent"
+                                                     ToolTip="Đơn giá 1 tấm (lưu ở data CSV)">
+                                                <TextBox.Style>
+                                                    <Style TargetType="TextBox" BasedOn="{StaticResource O}">
+                                                        <Setter Property="Foreground" Value="#1B5E20"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding LaGiaTay}" Value="True">
+                                                                <Setter Property="Foreground" Value="#BF360C"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBox.Style>
                                             </TextBox>
+                                            <TextBlock DockPanel.Dock="Right" Text="@" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                       Foreground="{Binding Foreground, ElementName=OGia}" ToolTip="Đơn giá 1 tấm"/>
+                                            <TextBlock Text="{Binding NhanGia}" FontSize="11" Padding="5,0,3,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                       Foreground="{Binding Foreground, ElementName=OGia}"/>
                                         </DockPanel>
 
                                         <StackPanel Grid.Row="1" Grid.ColumnSpan="2">
@@ -598,7 +624,7 @@
                                                     <TextBox Grid.Column="2" Style="{StaticResource OVien}" Margin="6,0,0,0" Text="{Binding GiaVL}" TextAlignment="Right"
                                                              ToolTip="Giá tạm của đơn. Xoá trống để bỏ giá tạm"
                                                              Visibility="{Binding HienNhap, Converter={StaticResource HienKhi}}"/>
-                                                    <TextBlock Grid.Column="2" Text="{Binding NhanGiaBang}" TextAlignment="Right" VerticalAlignment="Center" Foreground="#1565C0"
+                                                    <TextBlock Grid.Column="2" Text="{Binding NhanGiaBang}" TextAlignment="Right" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#1B5E20"
                                                                Visibility="{Binding HienGiaBang, Converter={StaticResource HienKhi}}"/>
                                                 </Grid>
                                             </StackPanel>
@@ -625,7 +651,7 @@
         <!-- Thanh duoi: tong don · trang thai · 2 file (CSV tu cap nhat) -->
         <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#E1E4E8" BorderThickness="0,1,0,0" Padding="10,8,10,10">
             <StackPanel>
-                <TextBlock Text="{Binding NhanTongTien}" ToolTip="{Binding NhanTongTien}" FontWeight="SemiBold" Margin="0,0,0,5" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding NhanTongTien}" ToolTip="{Binding NhanTongTien}" FontWeight="SemiBold" Foreground="#1B5E20" Margin="0,0,0,5" TextTrimming="CharacterEllipsis"/>
                 <TextBlock Text="{Binding TrangThai}" TextWrapping="Wrap" Foreground="#52606D"/>
                 <Grid Margin="0,7,0,0">
                     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>

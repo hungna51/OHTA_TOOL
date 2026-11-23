@@ -242,6 +242,7 @@ namespace CsvTool.ViewModels
         /// <summary>Lý do chưa tính được giá; hiện ở danh sách cảnh báo, không chặn Xuất CSV.</summary>
         public string CanhBaoGia { get; set; }
         public bool LaGiaTay => Tam != null && !string.IsNullOrEmpty(Tam.Tt.GiaBaoGia) && _vm.XemGia(Tam.N)?.TuDong != true;
+        public string NhanGia => LaGiaTay ? "Giá sửa tay" : "Giá tiền";
         public string[] DsLoaiPitchi => TinhGia.DsLoaiPitchi;
         public string LoaiPitchi
         {
@@ -283,7 +284,7 @@ namespace CsvTool.ViewModels
             Bao(null);
         }
 
-        public void BaoGia() { Bao(nameof(GiaTien)); Bao(nameof(LaGiaTay)); Bao(nameof(LamTron250)); Bao(nameof(CheDoChon)); Bao(nameof(TienVl)); Bao(nameof(LaVlTay)); Bao(nameof(ChoSuaTienVl)); Bao(nameof(GhiChuGia)); Bao(nameof(CoGhiChuGia)); }
+        public void BaoGia() { Bao(nameof(GiaTien)); Bao(nameof(LaGiaTay)); Bao(nameof(NhanGia)); Bao(nameof(LamTron250)); Bao(nameof(CheDoChon)); Bao(nameof(TienVl)); Bao(nameof(LaVlTay)); Bao(nameof(ChoSuaTienVl)); Bao(nameof(GhiChuGia)); Bao(nameof(CoGhiChuGia)); }
 
         public string MaMage => Tam == null ? "" : CsvXuat.MaMage(Tam.Tt.LoaiGiaCong);
 
