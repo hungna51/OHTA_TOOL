@@ -626,6 +626,37 @@ namespace CsvTool.Core
             return tong;
         }
 
+        private static readonly Regex RxPhi = new Regex(@"(?:[φΦ∅Øø]|%%[Cc])\s*(\d+(?:\.\d+)?)", RegexOptions.Compiled);
+        private static readonly Regex RxNuaTron = new Regex("半円|半周|半割", RegexOptions.Compiled);
+        private static readonly Regex RxCaTron = new Regex("円筒|全周|丸筒|パイプ", RegexOptions.Compiled);
+        private const double DungSaiCuon = 2.0;   // mm: bản vẽ làm tròn độ dày khi khai triển (φ730, t3.2 → 1141.97)
+
+        /// <summary>
+        /// Ghi chú cuộn thường nằm ngoài khung ("流入φ730半円"), nên chỉ nhận khi chiều dài tấm khớp
+        /// chu vi theo đường kính ghi: nửa vòng → r1, cả vòng → r2. Không khớp → null.
+        /// </summary>
+        public static string LoaiCuonTuGhiChu(IEnumerable<string> chu, double x, double y, double doDay)
+        {
+            string kq = null;
+            foreach (string c in chu)
+                foreach (string dong in ChuanChu((c ?? "").Replace("\\P", "\n")).Split('\n'))
+                {
+                    bool nua = RxNuaTron.IsMatch(dong);
+                    if (!nua && !RxCaTron.IsMatch(dong)) continue;
+                    foreach (Match m in RxPhi.Matches(dong))
+                    {
+                        if (!double.TryParse(m.Groups[1].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double phi)) continue;
+                        // đường kính ghi có thể là ngoài (trừ t) hoặc trong (cộng t)
+                        bool khop = new[] { phi - doDay, phi + doDay }.Select(d => Math.PI * d / (nua ? 2 : 1))
+                                        .Any(l => Math.Abs(x - l) <= DungSaiCuon || Math.Abs(y - l) <= DungSaiCuon);
+                        if (!khop) continue;
+                        if (!nua) return "r2";
+                        kq = "r1";
+                    }
+                }
+            return kq;
+        }
+
         private static int? SoLoGhi(string dong)
         {
             Match m = RxTich.Match(dong);

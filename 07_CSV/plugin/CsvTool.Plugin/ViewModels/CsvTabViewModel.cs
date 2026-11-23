@@ -419,7 +419,8 @@ namespace CsvTool.ViewModels
                     loiMoi.Add(new LoiQuet { Handle = d.HandleKhung, LaLoi = true, NoiDung = "Không phân tích được: " + ex.Message });
                 }
             }
-            bool daQuet = SauQuet(doc, daChon, dimzin, quet, loiMoi);
+            var chuBanVe = hinh.FirstOrDefault()?.ChuQuanh.Select(c => c.NoiDung).ToList() ?? new List<string>();
+            bool daQuet = SauQuet(doc, daChon, dimzin, quet, loiMoi, chuBanVe);
             CapNhatSoKhung(doc);
             BaoThietLap();
             if (_tatCa.Count > 0) TabDangChon = 1;
@@ -435,7 +436,7 @@ namespace CsvTool.ViewModels
         /// Danh sách mới chỉ gồm các khung vừa quét (khung quét nhầm, tấm thừa của lượt trước biến mất).
         /// Thông tin tấm lấy từ kết quả vừa phân tích, số đã nhập lấy từ data CSV. Không tạo / xoá gì trên bản vẽ.
         /// </summary>
-        private bool SauQuet(Document doc, List<KhungTho> khung, int dimzin, Dictionary<long, ThongTinTam> quet, List<LoiQuet> loiMoi)
+        private bool SauQuet(Document doc, List<KhungTho> khung, int dimzin, Dictionary<long, ThongTinTam> quet, List<LoiQuet> loiMoi, List<string> chuBanVe)
         {
             _docDanhSach = _docThietLap = doc;
             if (Convert.ToInt32(CadApplication.GetSystemVariable("DWGTITLED")) != 1)
@@ -480,6 +481,7 @@ namespace CsvTool.ViewModels
                 {
                     cu.TryGetValue(r.Tam.N, out ThongTinTam daCo);
                     _giaDon?.GiuSuaTay(r.Tam.N, r.Tam.Tt, daCo);
+                    if (quet.ContainsKey(k.Handle)) PhanTichKhung.ThemCuonTuGhiChu(r.Tam, chuBanVe);
                     tot.Add((r.Tam, k, r.Loi));
                     continue;
                 }

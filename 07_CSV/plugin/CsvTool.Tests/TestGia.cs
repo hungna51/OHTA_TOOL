@@ -193,6 +193,23 @@ namespace CsvTool.Tests
             Kiem("CongTy: tag dac biet", dsCt.First(x => x.Ten == "OTK BANDO").NhanTamDon + "|" + dsCt.First(x => x.Ten == "OTK BANDO").NhanTamBe + "|" + dsCt.First(x => x.Ten == "OTK BANDO").UuDai, "Tấm đơn: ¥230/kg|Tấm bẻ: ¥280/kg|True");
             Kiem("CongTy: ban sao cu chua co ten Nhat", CongTyTim.Ds(new BangGia { TenNhat = null, CongTyUuDai = { ["A"] = false } })[0].TiengNhat, "");
 
+            var ghiChuCuon = new[] { "流入φ730半円、540x270", "開口φ600半円", "PL3.2-曲げ*275-1" };
+            Kiem("Cuon: mau that 131190 phi730", PhanTichHinh.LoaiCuonTuGhiChu(ghiChuCuon, 1141.97, 265, 3.2), "r1");
+            Kiem("Cuon: mau that 131190 phi600", PhanTichHinh.LoaiCuonTuGhiChu(ghiChuCuon, 937.77, 275, 3.2), "r1");
+            Kiem("Cuon: chieu dai khong khop", PhanTichHinh.LoaiCuonTuGhiChu(ghiChuCuon, 1000, 265, 3.2), null);
+            Kiem("Cuon: lo phi khong co chu ban nguyet", PhanTichHinh.LoaiCuonTuGhiChu(new[] { "4-φ730" }, 1141.97, 265, 3.2), null);
+            Kiem("Cuon: ca vong = r2", PhanTichHinh.LoaiCuonTuGhiChu(new[] { "φ300 円筒" }, 932.5, 200, 3), "r2");
+            Kiem("Cuon: kiem ca canh Y", PhanTichHinh.LoaiCuonTuGhiChu(ghiChuCuon, 265, 1141.97, 3.2), "r1");
+            var tamCuon = new TamXuat { N = "C", M = "SS400", T = "3.2", Q = "1", X = "1141.97", Y = "265", Tt = new ThongTinTam { LoaiGiaCong = "m" } };
+            PhanTichKhung.ThemCuonTuGhiChu(tamCuon, ghiChuCuon);
+            Kiem("Cuon: them r1 vao gia cong, gia cuon nua hinh", tamCuon.Tt.LoaiGiaCong + "|" + TinhGia.DonGiaCuonCua(tamCuon, null), "m, r1|6000");
+            PhanTichKhung.ThemCuonTuGhiChu(tamCuon, ghiChuCuon);
+            Kiem("Cuon: khong them trung", tamCuon.Tt.LoaiGiaCong, "m, r1");
+            var kCuon = new KhungTho { Handle = 0x77, Text = KhungMau(text: new[] { Fn("N=A-1\\PM=SS400\\PT=3.2\\PQ=2") }).Text, Dim = KhungMau().Dim };
+            var gopCuon = PhanTichKhung.Ghep(kCuon, "1-XY", 8, new Dictionary<string, ThongTinTam> { ["A-1"] = new ThongTinTam { LoaiGiaCong = "m, r2" } },
+                new Dictionary<long, ThongTinTam> { [0x77] = new ThongTinTam { LoaiGiaCong = "m" } });
+            Kiem("Cuon: r2 ghi tay duoc giu khi quet lai", gopCuon.Tam?.Tt.LoaiGiaCong, "m, r2");
+
             int Sara1(string x) => PhanTichHinh.DemSara(new[] { x });
             Kiem("Sara: mau that 2x2-phi8 = 4", Sara1("{\\W1;2x2-∅8孔皿モミ}"), 4);
             Kiem("Sara: 4-phi8 hiragana", Sara1("4-φ8皿もみ"), 4);

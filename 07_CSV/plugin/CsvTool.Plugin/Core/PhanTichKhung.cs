@@ -70,6 +70,9 @@ namespace CsvTool.Core
         private static ThongTinTam GiuGiaTriNhapTay(ThongTinTam moi, ThongTinTam cu)
         {
             if (cu == null) return moi;
+            // r1 / r2 là loại cuộn người dùng đã ghi, không đo được từ hình
+            string cuonCu = CsvXuat.LoaiCuon(cu.LoaiGiaCong);
+            if (cuonCu != "0" && CsvXuat.LoaiCuon(moi.LoaiGiaCong) == "0") ThemLoai(moi, "r" + cuonCu);
             moi.PitchiSoLan = cu.PitchiSoLan;
             moi.PitchiDai = cu.PitchiDai;
             moi.GiaBaoGia = cu.GiaBaoGia;
@@ -85,6 +88,20 @@ namespace CsvTool.Core
                 if (moi.Tappu == 0) moi.Tappu = cu.Tappu;
             }
             return moi;
+        }
+
+        private static void ThemLoai(ThongTinTam tt, string loai) =>
+            tt.LoaiGiaCong = string.IsNullOrEmpty(tt.LoaiGiaCong) ? loai : tt.LoaiGiaCong + ", " + loai;
+
+        /// <summary>Tấm vừa quét chưa có r1 / r2: thêm nếu chiều dài khớp một ghi chú ống / nửa ống trên bản vẽ.</summary>
+        public static void ThemCuonTuGhiChu(TamXuat t, IEnumerable<string> chuBanVe)
+        {
+            if (CsvXuat.LoaiCuon(t.Tt.LoaiGiaCong) != "0") return;
+            var so = CultureInfo.InvariantCulture;
+            if (!double.TryParse(t.X, NumberStyles.Float, so, out double x) || !double.TryParse(t.Y, NumberStyles.Float, so, out double y) ||
+                !double.TryParse((t.T ?? "").Trim(), NumberStyles.Float, so, out double day)) return;
+            string r = PhanTichHinh.LoaiCuonTuGhiChu(chuBanVe, x, y, day);
+            if (r != null) ThemLoai(t.Tt, r);
         }
 
         /// <summary>Tên N để hiện ở danh sách lỗi, kể cả khi F-name chưa đủ trường; không có → null.</summary>
