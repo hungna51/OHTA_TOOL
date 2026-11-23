@@ -21,7 +21,7 @@ namespace CsvTool.Core
     public sealed class NetBe { public double X1, Y1, X2, Y2; }
 
     /// <summary>Cung hoặc đường tròn (Goc = 360) ngoài layer cắt, nằm trọn trong khung.</summary>
-    public sealed class CungHinh { public double CX, CY, R, Goc; }
+    public sealed class CungHinh { public double CX, CY, R, Goc, X1, Y1, X2, Y2; }
 
     public sealed class ChuHinh { public string Lop, NoiDung; public double MinX, MinY, MaxX, MaxY; }
 
@@ -50,6 +50,7 @@ namespace CsvTool.Core
         public List<string> ChuDanTrong = new List<string>();       // chữ của leader có mũi tên chỉ vào khung
         public List<string> ChuDim = new List<string>();            // chữ ghi đè của DIMENSION trong khung
         public List<CungHinh> CungMatCat = new List<CungHinh>();    // cung ngoài 0-KAKOU, để nhận mặt cắt tấm cuộn
+        public List<NetBe> DoanMatCat = new List<NetBe>();          // đoạn thẳng ngoài 0-KAKOU, phần thẳng nối tiếp cung cuộn
     }
 
     public sealed class KetQuaHinh
@@ -634,9 +635,10 @@ namespace CsvTool.Core
 
         /// <summary>
         /// Nhận cuộn chỉ bằng hình: mặt cắt là 2 cung đồng tâm, cùng góc, cách nhau đúng độ dày,
-        /// và chiều dài cung giữa bằng X hoặc Y của tấm. Cả vòng → r2, một phần vòng → r1, không có → null.
+        /// và chiều dài cung giữa (cộng phần thẳng nối tiếp nếu có) bằng X hoặc Y của tấm.
+        /// Cả vòng → r2, một phần vòng → r1, không có → null.
         /// </summary>
-        public static string LoaiCuonTuHinh(IReadOnlyList<CungHinh> cung, double x, double y, double doDay)
+        public static string LoaiCuonTuHinh(IReadOnlyList<CungHinh> cung, double x, double y, double doDay, IReadOnlyList<NetBe> doan = null)
         {
             string kq = null;
             foreach (CungHinh a in cung)
@@ -645,11 +647,40 @@ namespace CsvTool.Core
                     if (a.R <= b.R || Math.Abs(a.R - b.R - doDay) > DungSaiDay || Math.Abs(a.Goc - b.Goc) > DungSaiGoc) continue;
                     if (Math.Abs(a.CX - b.CX) > DungSaiTam || Math.Abs(a.CY - b.CY) > DungSaiTam) continue;
                     double dai = a.Goc * Math.PI / 180 * (a.R + b.R) / 2;
-                    if (Math.Abs(x - dai) > DungSaiCuon && Math.Abs(y - dai) > DungSaiCuon) continue;
+                    // shortcut: R < 10t coi là góc bẻ (130581-4-1: R9, t6), gặp tấm cuộn bán kính nhỏ thì hạ ngưỡng
+                    double coThang = a.Goc >= 359 || doan == null || a.R < 10 * doDay ? dai : dai + PhanThang(a, b, doan);
+                    if (!new[] { dai, coThang }.Any(l => Math.Abs(x - l) <= DungSaiCuon || Math.Abs(y - l) <= DungSaiCuon)) continue;
                     if (a.Goc >= 359) return "r2";
                     kq = "r1";
                 }
             return kq;
+        }
+
+        /// <summary>Tổng phần thẳng ở 2 đầu cung: mỗi đầu cần 1 đoạn tiếp tuyến ở cả cung ngoài và cung trong, dài bằng nhau.</summary>
+        private static double PhanThang(CungHinh a, CungHinh b, IReadOnlyList<NetBe> doan)
+        {
+            double tong = 0;
+            foreach (var (px, py) in new[] { (a.X1, a.Y1), (a.X2, a.Y2) })
+            {
+                bool dau1 = Math.Abs(b.X1 - px) + Math.Abs(b.Y1 - py) <= Math.Abs(b.X2 - px) + Math.Abs(b.Y2 - py);
+                double la = DoanTiepTuyen(a, px, py, doan), lb = DoanTiepTuyen(b, dau1 ? b.X1 : b.X2, dau1 ? b.Y1 : b.Y2, doan);
+                if (la > 0 && lb > 0 && Math.Abs(la - lb) <= DungSaiCuon) tong += (la + lb) / 2;
+            }
+            return tong;
+        }
+
+        private static double DoanTiepTuyen(CungHinh c, double px, double py, IReadOnlyList<NetBe> doan)
+        {
+            double dai = 0;
+            foreach (NetBe d in doan)
+            {
+                bool cham1 = Math.Abs(d.X1 - px) <= DungSaiTam && Math.Abs(d.Y1 - py) <= DungSaiTam;
+                if (!cham1 && (Math.Abs(d.X2 - px) > DungSaiTam || Math.Abs(d.Y2 - py) > DungSaiTam)) continue;
+                double dx = d.X2 - d.X1, dy = d.Y2 - d.Y1, l = Math.Sqrt(dx * dx + dy * dy);
+                // tiếp tuyến thì vuông góc bán kính; nắp cuối dày t nằm theo bán kính nên bị loại
+                if (l > dai && Math.Abs(dx * (px - c.CX) + dy * (py - c.CY)) <= 0.05 * l * c.R) dai = l;
+            }
+            return dai;
         }
 
         private static int? SoLoGhi(string dong)

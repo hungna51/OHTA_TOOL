@@ -205,6 +205,22 @@ namespace CsvTool.Tests
             Kiem("Cuon: khong dong tam", PhanTichHinh.LoaiCuonTuHinh(lechTam, 1141.97, 265, 3.2), null);
             var lechGoc = MatCat(365, 3.2, 180); lechGoc[1].Goc = 90;
             Kiem("Cuon: khac goc", PhanTichHinh.LoaiCuonTuHinh(lechGoc, 1141.97, 265, 3.2), null);
+            // cung 90° tâm (0,0), đuôi thẳng 50 tiếp tuyến tại đầu (R,0): dài giữa = 90°·R + 50
+            var cungDuoi = new List<CungHinh> {
+                new CungHinh { R = 100, Goc = 90, X1 = 100, Y1 = 0, X2 = 0, Y2 = 100 },
+                new CungHinh { R = 96.8, Goc = 90, X1 = 96.8, Y1 = 0, X2 = 0, Y2 = 96.8 } };
+            var duoi = new List<NetBe> { new NetBe { X1 = 100, Y1 = 0, X2 = 100, Y2 = -50 }, new NetBe { X1 = 96.8, Y1 = 0, X2 = 96.8, Y2 = -50 } };
+            double daiDuoi = Math.PI / 2 * 98.4 + 50;
+            Kiem("Cuon: cung + phan thang", PhanTichHinh.LoaiCuonTuHinh(cungDuoi, daiDuoi, 20, 3.2, duoi), "r1");
+            Kiem("Cuon: thieu phan thang thi khong khop", PhanTichHinh.LoaiCuonTuHinh(cungDuoi, daiDuoi, 20, 3.2), null);
+            Kiem("Cuon: chi 1 net thang khong tinh", PhanTichHinh.LoaiCuonTuHinh(cungDuoi, daiDuoi, 20, 3.2, duoi.Take(1).ToList()), null);
+            var napCuoi = new List<NetBe> { new NetBe { X1 = 100, Y1 = 0, X2 = 50, Y2 = 0 }, new NetBe { X1 = 96.8, Y1 = 0, X2 = 46.8, Y2 = 0 } };
+            Kiem("Cuon: doan theo ban kinh khong phai phan thang", PhanTichHinh.LoaiCuonTuHinh(cungDuoi, daiDuoi, 20, 3.2, napCuoi), null);
+            var gocBe = new List<CungHinh> {
+                new CungHinh { R = 9, Goc = 90, X1 = 9, Y1 = 0, X2 = 0, Y2 = 9 },
+                new CungHinh { R = 3, Goc = 90, X1 = 3, Y1 = 0, X2 = 0, Y2 = 3 } };
+            var canhBe = new List<NetBe> { new NetBe { X1 = 9, Y1 = 0, X2 = 9, Y2 = -61 }, new NetBe { X1 = 3, Y1 = 0, X2 = 3, Y2 = -61 } };
+            Kiem("Cuon: goc be ban kinh nho khong phai cuon", PhanTichHinh.LoaiCuonTuHinh(gocBe, Math.PI / 2 * 6 + 61, 75, 6, canhBe), null);
             var tamCuon = new TamXuat { N = "C", M = "SS400", T = "3.2", Q = "1", X = "1141.97", Y = "265", Tt = new ThongTinTam { LoaiGiaCong = "m" } };
             PhanTichKhung.ThemCuonTuHinh(tamCuon, MatCat(365, 3.2, 180));
             Kiem("Cuon: them r1 vao gia cong, gia cuon nua hinh", tamCuon.Tt.LoaiGiaCong + "|" + TinhGia.DonGiaCuonCua(tamCuon, null), "m, r1|6000");

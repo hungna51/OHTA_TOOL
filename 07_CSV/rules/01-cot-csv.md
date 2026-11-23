@@ -32,7 +32,7 @@ Kết quả quét của khung → `data\<đơn>-data.csv` theo tên N → không
 
 ## Kiểm lỗi từng khung
 1. F-name: trộn MTEXT + TEXT · nhiều hơn 1 MTEXT · không thấy · TEXT dưới 4 dòng (lisp bỏ qua) · trường N/M/T/Q rỗng.
-2. Dim tổng (layer dim, cờ 70): dim thẳng `32/160` phải đúng 2; không có thì dim phi `3/35/163` phải đúng 1 (X = Y).
+2. Dim tổng (layer dim, cờ 70): dim thẳng `32/160` phải đúng 2; không có thì lấy nếu có đúng 2 dim Aligned `33/161`; không có nữa thì dim phi `3/35/163` phải đúng 1 (X = Y).
 3. Biên dạng: xem `PhanTichHinh`, báo đủ mọi lỗi của tấm. Gồm **nét trắng sai layer**: curve trong khung, màu trắng (ACI 7, RGB 255, ByBlock, hoặc ByLayer với layer trắng), không ở `0-KAKOU` / `2-F-NAME` / layer khung.
 4. Có `k` mà vát ≤ 0 · có `pitchi` mà Pitchi số lần hoặc chiều dài ≤ 0.
 5. Sau khi gom mọi khung: N trùng → không ghi.

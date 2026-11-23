@@ -97,6 +97,7 @@ namespace CsvTool.CadServices
                                (e.Color.IsByLayer ? lopTrang.Contains(e.Layer) : LaTrang(e.Color));
             NetCat net = null;
             List<CungHinh> cung = laKakou || Cung(e.Layer, c.LopKhungDung) ? null : CungCua(e);
+            List<NetBe> doanMc = laKakou || Cung(e.Layer, c.LopKhungDung) ? null : DoanCua(e);
             NetBe be = laBe ? new NetBe { X1 = ((Line)e).StartPoint.X, Y1 = ((Line)e).StartPoint.Y, X2 = ((Line)e).EndPoint.X, Y2 = ((Line)e).EndPoint.Y } : null;
 
             for (int i = 0; i < khung.Count; i++)
@@ -111,6 +112,7 @@ namespace CsvTool.CadServices
                 if (!Trong(hop, k)) continue;
                 if (chu != null) d.ChuTrongKhung.Add(chu);
                 if (cung != null) d.CungMatCat.AddRange(cung);
+                if (doanMc != null) d.DoanMatCat.AddRange(doanMc);
                 if (laTapu) d.SoHatch++;
                 if (laFname && chu == null) d.SaiFname.Add((loai, hopGon));
                 if (trangSaiLop) d.NetTrangSaiLop.Add((e.Layer, hopGon));
@@ -130,7 +132,8 @@ namespace CsvTool.CadServices
             if (e is Arc a)
             {
                 double goc = (a.EndAngle - a.StartAngle) * 180 / Math.PI;
-                kq.Add(new CungHinh { CX = a.Center.X, CY = a.Center.Y, R = a.Radius, Goc = goc <= 0 ? goc + 360 : goc });
+                kq.Add(new CungHinh { CX = a.Center.X, CY = a.Center.Y, R = a.Radius, Goc = goc <= 0 ? goc + 360 : goc,
+                    X1 = a.StartPoint.X, Y1 = a.StartPoint.Y, X2 = a.EndPoint.X, Y2 = a.EndPoint.Y });
             }
             else if (e is Circle t) kq.Add(new CungHinh { CX = t.Center.X, CY = t.Center.Y, R = t.Radius, Goc = 360 });
             else if (e is Polyline p)
@@ -139,7 +142,24 @@ namespace CsvTool.CadServices
                     double bulge = p.GetBulgeAt(i);
                     if (Math.Abs(bulge) < 1e-9) continue;
                     var g = p.GetArcSegment2dAt(i);
-                    kq.Add(new CungHinh { CX = g.Center.X, CY = g.Center.Y, R = g.Radius, Goc = 4 * Math.Atan(Math.Abs(bulge)) * 180 / Math.PI });
+                    var d1 = p.GetPoint2dAt(i); var d2 = p.GetPoint2dAt((i + 1) % p.NumberOfVertices);
+                    kq.Add(new CungHinh { CX = g.Center.X, CY = g.Center.Y, R = g.Radius, Goc = 4 * Math.Atan(Math.Abs(bulge)) * 180 / Math.PI,
+                        X1 = d1.X, Y1 = d1.Y, X2 = d2.X, Y2 = d2.Y });
+                }
+            return kq;
+        }
+
+        /// <summary>Đoạn thẳng và cạnh thẳng của polyline, để cộng phần thẳng nối tiếp cung cuộn.</summary>
+        private static List<NetBe> DoanCua(Entity e)
+        {
+            var kq = new List<NetBe>();
+            if (e is Line l) kq.Add(new NetBe { X1 = l.StartPoint.X, Y1 = l.StartPoint.Y, X2 = l.EndPoint.X, Y2 = l.EndPoint.Y });
+            else if (e is Polyline p)
+                for (int i = 0; i < (p.Closed ? p.NumberOfVertices : p.NumberOfVertices - 1); i++)
+                {
+                    if (Math.Abs(p.GetBulgeAt(i)) >= 1e-9) continue;
+                    var d1 = p.GetPoint2dAt(i); var d2 = p.GetPoint2dAt((i + 1) % p.NumberOfVertices);
+                    kq.Add(new NetBe { X1 = d1.X, Y1 = d1.Y, X2 = d2.X, Y2 = d2.Y });
                 }
             return kq;
         }

@@ -8,7 +8,7 @@ namespace CsvTool.Core
     /// <summary>TEXT/MTEXT thô nằm trọn trong khung. NoiDung = chuỗi thô (MText.Contents / DXF 3+1).</summary>
     public sealed class TextTho { public string Lop, NoiDung; public bool LaMtext; }
 
-    /// <summary>DIMENSION thô: Co70 = mã DXF 70 (32/160 = dim thẳng, 3/35/163 = dim phi), DoDai = mã 42.</summary>
+    /// <summary>DIMENSION thô: Co70 = mã DXF 70 (32/160 = dim thẳng, 33/161 = dim Aligned, 3/35/163 = dim phi), DoDai = mã 42.</summary>
     public sealed class DimTho { public string Lop; public int Co70; public double DoDai; public int Dimdec; }
 
     /// <summary>Một khung tấm cùng mọi TEXT/MTEXT/DIMENSION nằm trọn trong nó (theo thứ tự CAD trả về).</summary>
@@ -94,13 +94,13 @@ namespace CsvTool.Core
             tt.LoaiGiaCong = string.IsNullOrEmpty(tt.LoaiGiaCong) ? loai : tt.LoaiGiaCong + ", " + loai;
 
         /// <summary>Tấm vừa quét chưa có r1 / r2: thêm nếu trong khung có mặt cắt cuộn khớp kích thước tấm.</summary>
-        public static void ThemCuonTuHinh(TamXuat t, IReadOnlyList<CungHinh> cung)
+        public static void ThemCuonTuHinh(TamXuat t, IReadOnlyList<CungHinh> cung, IReadOnlyList<NetBe> doan = null)
         {
             if (CsvXuat.LoaiCuon(t.Tt.LoaiGiaCong) != "0") return;
             var so = CultureInfo.InvariantCulture;
             if (!double.TryParse(t.X, NumberStyles.Float, so, out double x) || !double.TryParse(t.Y, NumberStyles.Float, so, out double y) ||
                 !double.TryParse((t.T ?? "").Trim(), NumberStyles.Float, so, out double day)) return;
-            string r = PhanTichHinh.LoaiCuonTuHinh(cung, x, y, day);
+            string r = PhanTichHinh.LoaiCuonTuHinh(cung, x, y, day, doan);
             if (r != null) ThemLoai(t.Tt, r);
         }
 
@@ -179,6 +179,11 @@ namespace CsvTool.Core
             if (n == "" || m == "" || t == "" || q == "") return (null, "F-name có trường bị trống.");
 
             var thang = k.Dim.Where(d => CungLop(d.Lop, lopDim) && (d.Co70 == 32 || d.Co70 == 160)).ToList();
+            if (thang.Count == 0)   // bản vẽ chỉ dùng dim Aligned: đúng 2 cái mới là X, Y, để không lấn nhánh dim phi
+            {
+                var canh = k.Dim.Where(d => CungLop(d.Lop, lopDim) && (d.Co70 == 33 || d.Co70 == 161)).ToList();
+                if (canh.Count == 2) thang = canh;
+            }
             string gx, gy;
             if (thang.Count > 0)
             {

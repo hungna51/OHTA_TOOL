@@ -37,6 +37,13 @@ namespace CsvTool.Tests
             var dao = PhanTichKhung.DocFnameDim(KhungMau(dim: new[] { Dim(160, 200), Dim(32, 300) }), "1-XY", 8);
             Kiem("HaiDimThang dao: X >= Y", dao.Tam == null ? "" : dao.Tam.X + "x" + dao.Tam.Y, "300x200");
 
+            var canh = PhanTichKhung.DocFnameDim(KhungMau(dim: new[] { Dim(33, 20), Dim(33, 1015.26, 2) }), "1-XY", 8);
+            Kiem("HaiDimAligned: X Y", canh.Tam == null ? canh.Loi : canh.Tam.X + "x" + canh.Tam.Y, "1015.26x20");
+            var uuTien = PhanTichKhung.DocFnameDim(KhungMau(dim: new[] { Dim(32, 300), Dim(32, 200), Dim(33, 50) }), "1-XY", 8);
+            Kiem("Dim thang uu tien hon Aligned", uuTien.Tam == null ? uuTien.Loi : uuTien.Tam.X + "x" + uuTien.Tam.Y, "300x200");
+            var phiCanh = PhanTichKhung.DocFnameDim(KhungMau(dim: new[] { Dim(3, 90), Dim(33, 50) }), "1-XY", 8);
+            Kiem("Dim phi khong bi 1 Aligned lan", phiCanh.Tam == null ? phiCanh.Loi : phiCanh.Tam.X + "x" + phiCanh.Tam.Y, "90x90");
+
             Kiem("KhongFname", Loi(KhungMau(text: new TextTho[0])), "Không tìm thấy F-name.");
             Kiem("HaiMtextFname", Loi(KhungMau(text: new[] { Fn("N=A\\PM=B\\PT=1\\PQ=1"), Fn("N=C\\PM=B\\PT=1\\PQ=1") })),
                  "Khung có nhiều hơn 1 F-name.");
