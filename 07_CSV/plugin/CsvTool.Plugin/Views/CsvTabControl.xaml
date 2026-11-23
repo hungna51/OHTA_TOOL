@@ -498,6 +498,8 @@
                                                     </Grid>
                                                 </StackPanel>
                                             </StackPanel>
+                                            <TextBlock Text="{Binding GhiChuGia}" FontSize="10.5" Foreground="#B45309" Background="#FFF8E1" Padding="6,2"
+                                                       Margin="0,0,1,1" TextWrapping="Wrap" Visibility="{Binding CoGhiChuGia, Converter={StaticResource HienKhi}}"/>
                                         </StackPanel>
                                     </Grid>
                                 </Border>

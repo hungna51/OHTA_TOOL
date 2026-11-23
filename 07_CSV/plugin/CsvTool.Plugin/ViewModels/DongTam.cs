@@ -170,6 +170,10 @@ namespace CsvTool.ViewModels
         // ── Tiền vật liệu 1 tấm: hiện số đang tính, gõ số khác thì giá = số đó + cắt + gia công ──
         public bool LaVlTay => Tam != null && !string.IsNullOrWhiteSpace(Tam.Tt.TienVatLieu) && CheDoChon != 1;
         public bool ChoSuaTienVl => Tam != null && CheDoChon != 1;
+        /// <summary>Dòng nhắc dưới thẻ: giá của tấm này có số do người dùng tự nhập.</summary>
+        public string GhiChuGia => LaGiaTay ? (LaVlTay ? "Giá tấm sửa tay. Giá VL nhập tay không được tính." : "Giá tấm sửa tay.")
+            : LaVlTay ? "Giá VL nhập tay." : null;
+        public bool CoGhiChuGia => GhiChuGia != null;
         public string TienVl
         {
             get
@@ -279,7 +283,7 @@ namespace CsvTool.ViewModels
             Bao(null);
         }
 
-        public void BaoGia() { Bao(nameof(GiaTien)); Bao(nameof(LaGiaTay)); Bao(nameof(LamTron250)); Bao(nameof(CheDoChon)); Bao(nameof(TienVl)); Bao(nameof(LaVlTay)); Bao(nameof(ChoSuaTienVl)); }
+        public void BaoGia() { Bao(nameof(GiaTien)); Bao(nameof(LaGiaTay)); Bao(nameof(LamTron250)); Bao(nameof(CheDoChon)); Bao(nameof(TienVl)); Bao(nameof(LaVlTay)); Bao(nameof(ChoSuaTienVl)); Bao(nameof(GhiChuGia)); Bao(nameof(CoGhiChuGia)); }
 
         public string MaMage => Tam == null ? "" : CsvXuat.MaMage(Tam.Tt.LoaiGiaCong);
 
