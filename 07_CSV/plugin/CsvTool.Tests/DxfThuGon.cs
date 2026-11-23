@@ -127,6 +127,13 @@ namespace CsvTool.Tests
                         d.ChuTrongKhung.Add(c);
                         if (Cung(e.Lop, PhanTichKhung.LopFname)) d.ChuFname.Add(c);
                     }
+                    else if ((e.Loai == "ARC" || e.Loai == "CIRCLE") && !Cung(e.Lop, "0-KAKOU") && !Cung(e.Lop, "Khung_IN"))
+                    {
+                        double a0 = e.Loai == "ARC" ? e.So(50) : 0, goc = e.Loai == "ARC" ? e.So(51) - e.So(50) : 360;
+                        if (goc <= 0) goc += 360;
+                        if (LamPhang.Cung(e.So(10), e.So(20), e.So(40), a0 * Math.PI / 180, goc * Math.PI / 180).All(p => Trong(p.Item1, p.Item2)))
+                            d.CungMatCat.Add(new CungHinh { CX = e.So(10), CY = e.So(20), R = e.So(40), Goc = goc });
+                    }
                     else if (e.Loai == "DIMENSION" && !string.IsNullOrEmpty(e.Lay(1)) && Trong(e.So(11), e.So(21))) d.ChuDim.Add(e.Lay(1));
                     else if (e.Loai == "HATCH" && Cung(e.Lop, lopTapu) && Trong(e.So(10), e.So(20))) d.SoHatch++;
                     else if (Cung(e.Lop, "0-KAKOU")) DocNet(e, d, Trong, netLop);

@@ -193,17 +193,22 @@ namespace CsvTool.Tests
             Kiem("CongTy: tag dac biet", dsCt.First(x => x.Ten == "OTK BANDO").NhanTamDon + "|" + dsCt.First(x => x.Ten == "OTK BANDO").NhanTamBe + "|" + dsCt.First(x => x.Ten == "OTK BANDO").UuDai, "Tấm đơn: ¥230/kg|Tấm bẻ: ¥280/kg|True");
             Kiem("CongTy: ban sao cu chua co ten Nhat", CongTyTim.Ds(new BangGia { TenNhat = null, CongTyUuDai = { ["A"] = false } })[0].TiengNhat, "");
 
-            var ghiChuCuon = new[] { "流入φ730半円、540x270", "開口φ600半円", "PL3.2-曲げ*275-1" };
-            Kiem("Cuon: mau that 131190 phi730", PhanTichHinh.LoaiCuonTuGhiChu(ghiChuCuon, 1141.97, 265, 3.2), "r1");
-            Kiem("Cuon: mau that 131190 phi600", PhanTichHinh.LoaiCuonTuGhiChu(ghiChuCuon, 937.77, 275, 3.2), "r1");
-            Kiem("Cuon: chieu dai khong khop", PhanTichHinh.LoaiCuonTuGhiChu(ghiChuCuon, 1000, 265, 3.2), null);
-            Kiem("Cuon: lo phi khong co chu ban nguyet", PhanTichHinh.LoaiCuonTuGhiChu(new[] { "4-φ730" }, 1141.97, 265, 3.2), null);
-            Kiem("Cuon: ca vong = r2", PhanTichHinh.LoaiCuonTuGhiChu(new[] { "φ300 円筒" }, 932.5, 200, 3), "r2");
-            Kiem("Cuon: kiem ca canh Y", PhanTichHinh.LoaiCuonTuGhiChu(ghiChuCuon, 265, 1141.97, 3.2), "r1");
+            List<CungHinh> MatCat(double r, double t, double goc) => new List<CungHinh> { new CungHinh { CX = 5, CY = 7, R = r, Goc = goc }, new CungHinh { CX = 5, CY = 7, R = r - t, Goc = goc } };
+            Kiem("Cuon: mau that 131190 R365", PhanTichHinh.LoaiCuonTuHinh(MatCat(365, 3.2, 180), 1141.97, 265, 3.2), "r1");
+            Kiem("Cuon: mau that 131190 R300", PhanTichHinh.LoaiCuonTuHinh(MatCat(300, 3.2, 180), 937.77, 275, 3.2), "r1");
+            Kiem("Cuon: kiem ca canh Y", PhanTichHinh.LoaiCuonTuHinh(MatCat(365, 3.2, 180), 265, 1141.97, 3.2), "r1");
+            Kiem("Cuon: ca vong = r2", PhanTichHinh.LoaiCuonTuHinh(MatCat(95, 2.3, 360), 589.36, 100, 2.3), "r2");
+            Kiem("Cuon: chieu dai khong khop", PhanTichHinh.LoaiCuonTuHinh(MatCat(365, 3.2, 180), 1000, 265, 3.2), null);
+            Kiem("Cuon: khoang cach khac do day", PhanTichHinh.LoaiCuonTuHinh(MatCat(365, 5, 180), 1141.97, 265, 3.2), null);
+            Kiem("Cuon: mot cung don khong tinh", PhanTichHinh.LoaiCuonTuHinh(new List<CungHinh> { new CungHinh { R = 363.5, Goc = 180 } }, 1141.97, 265, 3.2), null);
+            var lechTam = MatCat(365, 3.2, 180); lechTam[1].CX += 10;
+            Kiem("Cuon: khong dong tam", PhanTichHinh.LoaiCuonTuHinh(lechTam, 1141.97, 265, 3.2), null);
+            var lechGoc = MatCat(365, 3.2, 180); lechGoc[1].Goc = 90;
+            Kiem("Cuon: khac goc", PhanTichHinh.LoaiCuonTuHinh(lechGoc, 1141.97, 265, 3.2), null);
             var tamCuon = new TamXuat { N = "C", M = "SS400", T = "3.2", Q = "1", X = "1141.97", Y = "265", Tt = new ThongTinTam { LoaiGiaCong = "m" } };
-            PhanTichKhung.ThemCuonTuGhiChu(tamCuon, ghiChuCuon);
+            PhanTichKhung.ThemCuonTuHinh(tamCuon, MatCat(365, 3.2, 180));
             Kiem("Cuon: them r1 vao gia cong, gia cuon nua hinh", tamCuon.Tt.LoaiGiaCong + "|" + TinhGia.DonGiaCuonCua(tamCuon, null), "m, r1|6000");
-            PhanTichKhung.ThemCuonTuGhiChu(tamCuon, ghiChuCuon);
+            PhanTichKhung.ThemCuonTuHinh(tamCuon, MatCat(365, 3.2, 180));
             Kiem("Cuon: khong them trung", tamCuon.Tt.LoaiGiaCong, "m, r1");
             var kCuon = new KhungTho { Handle = 0x77, Text = KhungMau(text: new[] { Fn("N=A-1\\PM=SS400\\PT=3.2\\PQ=2") }).Text, Dim = KhungMau().Dim };
             var gopCuon = PhanTichKhung.Ghep(kCuon, "1-XY", 8, new Dictionary<string, ThongTinTam> { ["A-1"] = new ThongTinTam { LoaiGiaCong = "m, r2" } },

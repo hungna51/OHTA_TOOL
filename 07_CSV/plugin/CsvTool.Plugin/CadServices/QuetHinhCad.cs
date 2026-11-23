@@ -96,6 +96,7 @@ namespace CsvTool.CadServices
             bool trangSaiLop = !laKakou && !laFname && !Cung(e.Layer, c.LopKhungDung) && e is Curve && LoaiNet.Contains(loai) &&
                                (e.Color.IsByLayer ? lopTrang.Contains(e.Layer) : LaTrang(e.Color));
             NetCat net = null;
+            List<CungHinh> cung = laKakou || Cung(e.Layer, c.LopKhungDung) ? null : CungCua(e);
             NetBe be = laBe ? new NetBe { X1 = ((Line)e).StartPoint.X, Y1 = ((Line)e).StartPoint.Y, X2 = ((Line)e).EndPoint.X, Y2 = ((Line)e).EndPoint.Y } : null;
 
             for (int i = 0; i < khung.Count; i++)
@@ -109,6 +110,7 @@ namespace CsvTool.CadServices
                     dm.TextPosition.Y >= k.MinY && dm.TextPosition.Y <= k.MaxY) d.ChuDim.Add(dm.DimensionText);
                 if (!Trong(hop, k)) continue;
                 if (chu != null) d.ChuTrongKhung.Add(chu);
+                if (cung != null) d.CungMatCat.AddRange(cung);
                 if (laTapu) d.SoHatch++;
                 if (laFname && chu == null) d.SaiFname.Add((loai, hopGon));
                 if (trangSaiLop) d.NetTrangSaiLop.Add((e.Layer, hopGon));
@@ -119,6 +121,27 @@ namespace CsvTool.CadServices
                 if (net == null) net = LamNet((Curve)e, loai, c.BuocSpline);
                 d.Net.Add(net);
             }
+        }
+
+        /// <summary>Cung, đường tròn và đoạn cong của polyline, để nhận mặt cắt tấm cuộn.</summary>
+        private static List<CungHinh> CungCua(Entity e)
+        {
+            var kq = new List<CungHinh>();
+            if (e is Arc a)
+            {
+                double goc = (a.EndAngle - a.StartAngle) * 180 / Math.PI;
+                kq.Add(new CungHinh { CX = a.Center.X, CY = a.Center.Y, R = a.Radius, Goc = goc <= 0 ? goc + 360 : goc });
+            }
+            else if (e is Circle t) kq.Add(new CungHinh { CX = t.Center.X, CY = t.Center.Y, R = t.Radius, Goc = 360 });
+            else if (e is Polyline p)
+                for (int i = 0; i < (p.Closed ? p.NumberOfVertices : p.NumberOfVertices - 1); i++)
+                {
+                    double bulge = p.GetBulgeAt(i);
+                    if (Math.Abs(bulge) < 1e-9) continue;
+                    var g = p.GetArcSegment2dAt(i);
+                    kq.Add(new CungHinh { CX = g.Center.X, CY = g.Center.Y, R = g.Radius, Goc = 4 * Math.Atan(Math.Abs(bulge)) * 180 / Math.PI });
+                }
+            return kq;
         }
 
         // ByBlock trong model space hiện màu trắng như ACI 7

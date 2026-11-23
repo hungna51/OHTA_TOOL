@@ -20,6 +20,9 @@ namespace CsvTool.Core
 
     public sealed class NetBe { public double X1, Y1, X2, Y2; }
 
+    /// <summary>Cung hoặc đường tròn (Goc = 360) ngoài layer cắt, nằm trọn trong khung.</summary>
+    public sealed class CungHinh { public double CX, CY, R, Goc; }
+
     public sealed class ChuHinh { public string Lop, NoiDung; public double MinX, MinY, MaxX, MaxY; }
 
     /// <summary>LEADER / MULTILEADER: chữ và các đầu mũi tên.</summary>
@@ -46,6 +49,7 @@ namespace CsvTool.Core
         public List<GhiChuDan> Dan = new List<GhiChuDan>();
         public List<string> ChuDanTrong = new List<string>();       // chữ của leader có mũi tên chỉ vào khung
         public List<string> ChuDim = new List<string>();            // chữ ghi đè của DIMENSION trong khung
+        public List<CungHinh> CungMatCat = new List<CungHinh>();    // cung ngoài 0-KAKOU, để nhận mặt cắt tấm cuộn
     }
 
     public sealed class KetQuaHinh
@@ -626,33 +630,24 @@ namespace CsvTool.Core
             return tong;
         }
 
-        private static readonly Regex RxPhi = new Regex(@"(?:[φΦ∅Øø]|%%[Cc])\s*(\d+(?:\.\d+)?)", RegexOptions.Compiled);
-        private static readonly Regex RxNuaTron = new Regex("半円|半周|半割", RegexOptions.Compiled);
-        private static readonly Regex RxCaTron = new Regex("円筒|全周|丸筒|パイプ", RegexOptions.Compiled);
-        private const double DungSaiCuon = 2.0;   // mm: bản vẽ làm tròn độ dày khi khai triển (φ730, t3.2 → 1141.97)
+        private const double DungSaiTam = 0.5, DungSaiDay = 0.2, DungSaiGoc = 1, DungSaiCuon = 2;
 
         /// <summary>
-        /// Ghi chú cuộn thường nằm ngoài khung ("流入φ730半円"), nên chỉ nhận khi chiều dài tấm khớp
-        /// chu vi theo đường kính ghi: nửa vòng → r1, cả vòng → r2. Không khớp → null.
+        /// Nhận cuộn chỉ bằng hình: mặt cắt là 2 cung đồng tâm, cùng góc, cách nhau đúng độ dày,
+        /// và chiều dài cung giữa bằng X hoặc Y của tấm. Cả vòng → r2, một phần vòng → r1, không có → null.
         /// </summary>
-        public static string LoaiCuonTuGhiChu(IEnumerable<string> chu, double x, double y, double doDay)
+        public static string LoaiCuonTuHinh(IReadOnlyList<CungHinh> cung, double x, double y, double doDay)
         {
             string kq = null;
-            foreach (string c in chu)
-                foreach (string dong in ChuanChu((c ?? "").Replace("\\P", "\n")).Split('\n'))
+            foreach (CungHinh a in cung)
+                foreach (CungHinh b in cung)
                 {
-                    bool nua = RxNuaTron.IsMatch(dong);
-                    if (!nua && !RxCaTron.IsMatch(dong)) continue;
-                    foreach (Match m in RxPhi.Matches(dong))
-                    {
-                        if (!double.TryParse(m.Groups[1].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double phi)) continue;
-                        // đường kính ghi có thể là ngoài (trừ t) hoặc trong (cộng t)
-                        bool khop = new[] { phi - doDay, phi + doDay }.Select(d => Math.PI * d / (nua ? 2 : 1))
-                                        .Any(l => Math.Abs(x - l) <= DungSaiCuon || Math.Abs(y - l) <= DungSaiCuon);
-                        if (!khop) continue;
-                        if (!nua) return "r2";
-                        kq = "r1";
-                    }
+                    if (a.R <= b.R || Math.Abs(a.R - b.R - doDay) > DungSaiDay || Math.Abs(a.Goc - b.Goc) > DungSaiGoc) continue;
+                    if (Math.Abs(a.CX - b.CX) > DungSaiTam || Math.Abs(a.CY - b.CY) > DungSaiTam) continue;
+                    double dai = a.Goc * Math.PI / 180 * (a.R + b.R) / 2;
+                    if (Math.Abs(x - dai) > DungSaiCuon && Math.Abs(y - dai) > DungSaiCuon) continue;
+                    if (a.Goc >= 359) return "r2";
+                    kq = "r1";
                 }
             return kq;
         }

@@ -93,14 +93,14 @@ namespace CsvTool.Core
         private static void ThemLoai(ThongTinTam tt, string loai) =>
             tt.LoaiGiaCong = string.IsNullOrEmpty(tt.LoaiGiaCong) ? loai : tt.LoaiGiaCong + ", " + loai;
 
-        /// <summary>Tấm vừa quét chưa có r1 / r2: thêm nếu chiều dài khớp một ghi chú ống / nửa ống trên bản vẽ.</summary>
-        public static void ThemCuonTuGhiChu(TamXuat t, IEnumerable<string> chuBanVe)
+        /// <summary>Tấm vừa quét chưa có r1 / r2: thêm nếu trong khung có mặt cắt cuộn khớp kích thước tấm.</summary>
+        public static void ThemCuonTuHinh(TamXuat t, IReadOnlyList<CungHinh> cung)
         {
             if (CsvXuat.LoaiCuon(t.Tt.LoaiGiaCong) != "0") return;
             var so = CultureInfo.InvariantCulture;
             if (!double.TryParse(t.X, NumberStyles.Float, so, out double x) || !double.TryParse(t.Y, NumberStyles.Float, so, out double y) ||
                 !double.TryParse((t.T ?? "").Trim(), NumberStyles.Float, so, out double day)) return;
-            string r = PhanTichHinh.LoaiCuonTuGhiChu(chuBanVe, x, y, day);
+            string r = PhanTichHinh.LoaiCuonTuHinh(cung, x, y, day);
             if (r != null) ThemLoai(t.Tt, r);
         }
 
