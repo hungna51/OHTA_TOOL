@@ -40,7 +40,9 @@ namespace CsvTool.Core
         /// <summary>Quét lại: giữ đường bẻ và chế độ tính người dùng đã sửa riêng cho tấm.</summary>
         public void GiuSuaTay(string ten, ThongTinTam moi, ThongTinTam cu)
         {
-            if (cu == null || moi == cu || !Tam.TryGetValue(ten, out GiaTam g)) return;
+            if (moi == cu || !Tam.TryGetValue(ten, out GiaTam g)) return;
+            // tấm đã rời danh sách rồi quét lại: không còn số sửa tay để giữ, bỏ dấu cũ
+            if (cu == null) { g.SuaBe = false; g.CheDoRieng = false; return; }
             if (g.SuaBe) moi.DuongBe = cu.DuongBe;
             if (g.CheDoRieng) moi.CheDoTinh = cu.CheDoTinh;
         }

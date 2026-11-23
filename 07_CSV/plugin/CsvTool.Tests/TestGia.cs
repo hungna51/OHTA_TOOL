@@ -122,6 +122,10 @@ namespace CsvTool.Tests
             dSua.GiuSuaTay("KHAC", ttKhac, ttCu);
             Kiem("GiuSuaTay: tam khong sua lay theo ban ve", ttKhac.CheDoTinh + "|" + ttKhac.DuongBe[0].Item1, "0|900");
 
+            var ttQuetLai = new ThongTinTam { CheDoTinh = "0", DuongBe = new List<(int, int)> { (900, 1) } };
+            dSua.GiuSuaTay("S", ttQuetLai, null);
+            Kiem("GiuSuaTay: tam da roi danh sach -> bo dau sua tay", dSua.Tam["S"].SuaBe + "|" + dSua.Tam["S"].CheDoRieng + "|" + ttQuetLai.DuongBe[0].Item1, "False|False|900");
+
             var goiY = GiaVlDon.GoiY(b, "ZAM", 3);
             Kiem("GiaVl: khong co trong bang -> de trong, khong muon vat lieu khac",
                  double.IsNaN(goiY.DonGia) && double.IsNaN(goiY.GiaCat) && double.IsNaN(goiY.GiaUon) && double.IsNaN(goiY.GiaMoLo) && double.IsNaN(goiY.GiaTappu) && double.IsNaN(goiY.GiaVat) && double.IsNaN(goiY.TyTrong), true);

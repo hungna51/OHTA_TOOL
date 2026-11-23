@@ -112,6 +112,7 @@ namespace CsvTool.Core
         public static string DuongData(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, "data", maDon + "-data.csv");
         public static string DuongGia(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, "data", maDon + "-gia.json");
         public static string DuongGiaVl(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, "data", maDon + "-giavl.csv");
+        public static string DuongDataTruocQuet(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, "data", maDon + "-data.truoc-quet.csv");
 
         /// <summary>File đầu tiên đang bị chương trình khác giữ (Excel...); không có → null. File chưa tồn tại không tính.</summary>
         public static string TepDangMo(params string[] tep)

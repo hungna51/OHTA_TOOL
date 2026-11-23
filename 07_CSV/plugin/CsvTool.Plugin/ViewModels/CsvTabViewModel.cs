@@ -399,9 +399,15 @@ namespace CsvTool.ViewModels
         {
             List<Autodesk_ObjectId> ids = toanBanVe ? QuetKhungCad.TatCaKhung(doc, CaiDat.LopKhungDung) : QuetKhungCad.ChonVung(doc, CaiDat.LopKhungDung);
             if (ids == null) { TrangThai = "Đã huỷ quét."; return; }
+            var (daChon, dimzin) = QuetKhungCad.Quet(doc, ids);
+            // chọn nhầm vùng trống không được xoá danh sách và file data đang có
+            if (!daChon.Any(k => PhanTichKhung.CoFname(k) && !PhanTichKhung.LaKhungChuThich(k)))
+            {
+                TrangThai = "Vùng chọn không có khung tấm. Giữ nguyên danh sách.";
+                return;
+            }
             _bangGia = null;   // không tính lại bằng bảng giá cũ: có tích thì đọc mới, bỏ tích thì giữ nguyên giá
 
-            var (daChon, _) = QuetKhungCad.Quet(doc, ids);
             var hinh = QuetHinhCad.Doc(doc, daChon.Where(k => PhanTichKhung.SoDongN(k) == 1).ToList(), CaiDat);
             var quet = new Dictionary<long, ThongTinTam>();
             var loiMoi = new List<LoiQuet>();
@@ -419,7 +425,7 @@ namespace CsvTool.ViewModels
                     loiMoi.Add(new LoiQuet { Handle = d.HandleKhung, LaLoi = true, NoiDung = "Không phân tích được: " + ex.Message });
                 }
             }
-            bool daQuet = SauQuet(doc, quet, loiMoi);
+            bool daQuet = SauQuet(doc, daChon, dimzin, quet, loiMoi);
             CapNhatSoKhung(doc);
             BaoThietLap();
             if (_tatCa.Count > 0) TabDangChon = 1;
@@ -432,10 +438,10 @@ namespace CsvTool.ViewModels
         }
 
         /// <summary>
-        /// Đọc mọi khung có F-name trên bản vẽ; thông tin tấm lấy từ kết quả vừa phân tích
-        /// hoặc từ data CSV, rồi lưu data CSV. Không tạo / xoá gì trên bản vẽ.
+        /// Danh sách mới chỉ gồm các khung vừa quét (khung quét nhầm, tấm thừa của lượt trước biến mất).
+        /// Thông tin tấm lấy từ kết quả vừa phân tích, số đã nhập lấy từ data CSV. Không tạo / xoá gì trên bản vẽ.
         /// </summary>
-        private bool SauQuet(Document doc, Dictionary<long, ThongTinTam> quet, List<LoiQuet> loiMoi)
+        private bool SauQuet(Document doc, List<KhungTho> khung, int dimzin, Dictionary<long, ThongTinTam> quet, List<LoiQuet> loiMoi)
         {
             _docDanhSach = _docThietLap = doc;
             if (Convert.ToInt32(CadApplication.GetSystemVariable("DWGTITLED")) != 1)
@@ -461,14 +467,11 @@ namespace CsvTool.ViewModels
             catch (Exception) { _giaVl = null; loiGia += " File " + _maDon + "-giavl.csv bị hỏng, chưa dùng được giá tạm."; }
             CapNhatDsCongTy();
 
-            // quét theo vùng: khung ngoài vùng giữ lỗi của lượt trước, khung vừa quét thay bằng kết quả mới
-            var loiKhung = doc.UserData[KhoaLoiQuet] as Dictionary<long, List<LoiQuet>> ?? new Dictionary<long, List<LoiQuet>>();
-            doc.UserData[KhoaLoiQuet] = loiKhung;
-            foreach (long h in quet.Keys.Concat(loiMoi.Select(l => l.Handle)).ToList()) loiKhung.Remove(h);
+            var loiKhung = new Dictionary<long, List<LoiQuet>>();
             foreach (var g in loiMoi.GroupBy(l => l.Handle)) loiKhung[g.Key] = g.ToList();
+            doc.UserData[KhoaLoiQuet] = loiKhung;
             _loiKhung = loiKhung;
 
-            var (khung, dimzin) = QuetKhungCad.Quet(doc, QuetKhungCad.TatCaKhung(doc, CaiDat.LopKhungDung));
             var tot = new List<(TamXuat Tam, KhungTho Khung, string CanhBao)>();
             var loi = new List<DongTam>();
             foreach (KhungTho k in khung.Where(PhanTichKhung.CoFname))
@@ -508,10 +511,23 @@ namespace CsvTool.ViewModels
                 TrangThai = "Tên tấm trùng \"" + trung + "\". Sửa N rồi quét lại.";
                 return false;
             }
+            if (tot.Count == 0)
+            {
+                TrangThai = "Không có tấm đọc được. Giữ nguyên file data.";
+                return false;
+            }
+            var conLai = new HashSet<string>(tot.Select(x => x.Tam.N));
+            int boRa = cu.Keys.Count(n => !conLai.Contains(n));
+            if (boRa > 0)   // file data sắp mất các dòng này: giữ 1 bản để lấy lại số đã nhập nếu quét nhầm
+            {
+                try { File.Copy(fData, CsvXuat.DuongDataTruocQuet(_thuMuc, _maDon), true); }
+                catch (Exception ex) { TrangThai = "Không sao lưu được file data, chưa ghi: " + ex.Message; return false; }
+            }
             if (!LuuData()) return false;   // LuuData đã báo lỗi; đóng file rồi quét lại
             LuuGia();
             File35 = fData;
-            TrangThai = "Quét " + _tatCa.Count(d => !d.BoQua) + " tấm, " + _tatCa.Count(d => d.CoLoi && !d.BoQua) + " lỗi · đã lưu data CSV." + loiGia;
+            TrangThai = "Quét " + _tatCa.Count(d => !d.BoQua) + " tấm, " + _tatCa.Count(d => d.CoLoi && !d.BoQua) + " lỗi · đã lưu data CSV." +
+                        (boRa > 0 ? " Bỏ " + boRa + " tấm không còn trong lượt quét." : "") + loiGia;
             return true;
         }
 
