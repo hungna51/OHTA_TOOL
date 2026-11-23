@@ -76,8 +76,9 @@ namespace CsvTool.Core
             moi.TienVatLieu = cu.TienVatLieu;
             moi.UuDai = cu.UuDai;
             if (moi.Vat == 0) moi.Vat = cu.Vat;
-            // lisp chỉ đếm tổng Tapu + Sara: tổng không đổi thì giữ cách chia người dùng đã sửa
-            if (cu.Tappu + cu.Sara == moi.Tappu) { moi.Tappu = cu.Tappu; moi.Sara = cu.Sara; }
+            // tổng Tapu + Sara không đổi thì giữ cách chia người dùng đã sửa
+            if (cu.Tappu + cu.Sara == moi.Tappu + moi.Sara) { moi.Tappu = cu.Tappu; moi.Sara = cu.Sara; }
+            else if (moi.Sara == 0) moi.Sara = cu.Sara;   // bản vẽ không có ghi chú Sara: giữ số đã nhập
             return moi;
         }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace CsvTool.Core
@@ -43,6 +44,7 @@ namespace CsvTool.Core
         public List<ChuHinh> ChuFname = new List<ChuHinh>();        // F-name chạm khung
         public List<ChuHinh> ChuQuanh = new List<ChuHinh>();        // ký hiệu bẻ có thể nằm ngoài khung
         public List<GhiChuDan> Dan = new List<GhiChuDan>();
+        public List<string> ChuDanTrong = new List<string>();       // chữ của leader có mũi tên chỉ vào khung
     }
 
     public sealed class KetQuaHinh
@@ -107,7 +109,7 @@ namespace CsvTool.Core
 
         private const string Poshi = "\u767A\u62BC\u3057", Shimame = "\u30B7\u30DE\u76EE", Hikishiro = "\u5F15\u4EE3";
         private const string MageKakudo = "\u66F2\u3052\u89D2\u5EA6", Tappu = "\u30BF\u30C3\u30D7";
-        private const string Saramomi = "\u76BF\u3082\u307F", Kaisaki = "\u958B\u5148\u65BD\u5DE5\u7BC4\u56F2";
+        private const string Kaisaki = "\u958B\u5148\u65BD\u5DE5\u7BC4\u56F2";
 
         private static readonly Regex MaU = new Regex(@"\\U\+([0-9A-Fa-f]{4})", RegexOptions.Compiled);
 
@@ -119,9 +121,14 @@ namespace CsvTool.Core
             if (kq.Loi.Count > 0) return kq;
             string fname = string.Concat(d.ChuFname.Select(c => "," + c.NoiDung));
             var be = DuongBe(d, fname, hoiSoNhan, s => kq.CanhBao.Add(new LoiQuet { Handle = d.HandleKhung, NoiDung = s }));
+            var chuTrong = d.ChuTrongKhung.Select(c => c.NoiDung).ToList();
+            // chữ của LEADER cũng là 1 đối tượng trong khung: không đếm 2 lần
+            int sara = DemSara(chuTrong.Concat(d.ChuDanTrong.Where(x => !chuTrong.Contains(x))));
+            string gc = LoaiGiaCong(d.ChuTrongKhung, be.Count > 0);
+            if (sara > 0 && !gc.Split(new[] { ", " }, StringSplitOptions.None).Contains("s")) gc = gc == "" ? "s" : gc + ", s";
             var tt = new ThongTinTam
             {
-                LoNho = nho, LoLon = lon, Tappu = d.SoHatch, LoaiGiaCong = LoaiGiaCong(d.ChuTrongKhung, be.Count > 0),
+                LoNho = nho, LoLon = lon, Tappu = d.SoHatch, Sara = sara, LoaiGiaCong = gc,
                 CheDoTinh = cheDoTinh.ToString(System.Globalization.CultureInfo.InvariantCulture),
             };
             tt.DuongBe.AddRange(be);
@@ -577,6 +584,35 @@ namespace CsvTool.Core
         private static bool CoPoshi(string s) => GiaiMa(s).Contains(Poshi) || (s ?? "").Contains("\\U+767A");
         private static bool CoShimame(string s) => GiaiMa(s).Contains(Shimame) || (s ?? "").Contains("\\U+30B7");
 
+        // Bản vẽ thật ghi "2x2-∅8孔皿モミ"; "皿小ネジ" là tên vít, không phải gia công
+        private static readonly Regex RxSara = new Regex("\u76BF\\s*(\u30E2\u30DF|\u3082\u307F|\u63C9|\u52A0\u5DE5|\u53D6|\u30B6\u30B0\u30EA|\u3056\u3050\u308A)|\u30B5\u30E9\\s*(\u30E2\u30DF|\u3082\u307F|\u63C9|\u52A0\u5DE5|\u53D6)|\u3055\u3089\u3082\u307F", RegexOptions.Compiled);
+        private static readonly Regex RxMaMtext = new Regex(@"\\[A-OQ-Za-z][^;\\]*;|[{}]", RegexOptions.Compiled);
+        private static readonly Regex RxTich = new Regex(@"^\s*(\d+)\s*[xX×*]\s*(\d+)\s*[-‐−–ー]", RegexOptions.Compiled);
+        private static readonly Regex RxDauSo = new Regex(@"^\s*(\d+)\s*(?:[-‐−–ー]|[xX×*]\s*[∅φΦØøMm])", RegexOptions.Compiled);
+        private static readonly Regex RxChoSo = new Regex("(\\d+)\\s*(?:\u7B87\u6240|\u30F6\u6240|\u304B\u6240|\u30AB\u6240|\u30B1\u6240|\u500B\u6240)", RegexOptions.Compiled);
+
+        // bỏ mã định dạng MTEXT, đưa chữ nửa độ rộng (ｻﾗﾓﾐ) về chữ thường
+        private static string ChuanChu(string s) => RxMaMtext.Replace(GiaiMa(s), "").Normalize(NormalizationForm.FormKC);
+
+        /// <summary>Tổng số lỗ Sara theo ghi chú: "2x2-∅8孔皿モミ" = 4, "4-φ8皿もみ" = 4, "皿モミ 3箇所" = 3, không ghi số = 1.</summary>
+        public static int DemSara(IEnumerable<string> chu)
+        {
+            int tong = 0;
+            foreach (string c in chu)
+                foreach (string dong in ChuanChu((c ?? "").Replace("\\P", "\n")).Split('\n'))
+                    if (RxSara.IsMatch(dong)) tong += SoLoGhi(dong);
+            return tong;
+        }
+
+        private static int SoLoGhi(string dong)
+        {
+            Match m = RxTich.Match(dong);
+            if (m.Success && int.TryParse(m.Groups[1].Value, out int a) && int.TryParse(m.Groups[2].Value, out int b) && a > 0 && b > 0 && a <= 1000 && b <= 1000) return a * b;
+            m = RxDauSo.Match(dong);
+            if (!m.Success) m = RxChoSo.Match(dong);
+            return m.Success && int.TryParse(m.Groups[1].Value, out int n) && n > 0 ? n : 1;
+        }
+
         /// <summary>CSV--scan-machining-texts: đọc mọi chữ trong khung ra "m, m(pitchi), t, s, k".</summary>
         public static string LoaiGiaCong(IEnumerable<ChuHinh> chu, bool coDuongBe)
         {
@@ -589,7 +625,7 @@ namespace CsvTool.Core
                     (CoShimame(c.NoiDung) && v.Contains(Hikishiro))) m = true;
                 if (v.Contains(MageKakudo)) pitchi = true;
                 if (v.Contains(Tappu)) t = true;
-                if (v.Contains(Saramomi)) s = true;
+                if (RxSara.IsMatch(ChuanChu(c.NoiDung))) s = true;
                 if (v.Contains(Kaisaki)) k = true;
             }
             var kq = new List<string>();

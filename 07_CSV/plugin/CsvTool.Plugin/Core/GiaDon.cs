@@ -17,6 +17,7 @@ namespace CsvTool.Core
         [DataMember] public bool TatTron250;      // tắt riêng tấm này khi cả đơn đang bật làm tròn 250
         [DataMember] public bool SuaBe;           // đường bẻ sửa tay: quét lại không đè
         [DataMember] public bool CheDoRieng;      // chế độ tính chọn riêng: quét lại, đổi chế độ đơn không đè
+        [DataMember] public bool SuaSara;         // số lỗ Sara sửa tay: quét lại không đè
         public double TienVlHienTai;              // tiền vật liệu 1 tấm của lần tính gần nhất, chỉ để hiện, không lưu
     }
 
@@ -43,9 +44,10 @@ namespace CsvTool.Core
         {
             if (moi == cu || !Tam.TryGetValue(ten, out GiaTam g)) return;
             // tấm đã rời danh sách rồi quét lại: không còn số sửa tay để giữ, bỏ dấu cũ
-            if (cu == null) { g.SuaBe = false; g.CheDoRieng = false; return; }
+            if (cu == null) { g.SuaBe = false; g.CheDoRieng = false; g.SuaSara = false; return; }
             if (g.SuaBe) moi.DuongBe = cu.DuongBe;
             if (g.CheDoRieng) moi.CheDoTinh = cu.CheDoTinh;
+            if (g.SuaSara) moi.Sara = cu.Sara;
         }
 
         public void DoiTen(string cu, string moi)

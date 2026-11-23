@@ -171,6 +171,31 @@ namespace CsvTool.Tests
             var dsVl = GiaVlDon.DsVatLieu(new[] { tamZam, tamNho, new TamXuat { N = "H", M = "SS400", T = "6", Q = "1", Tt = new ThongTinTam() }, new TamXuat { N = "L", M = "SS400", T = "x", Q = "1", Tt = new ThongTinTam() } });
             Kiem("GiaVl: gom theo vat lieu + do day", string.Join(";", dsVl.Select(x => x.VatLieu + "/" + x.DoDay + "/" + x.SoTam)), "SS400/6/2;ZAM/3/1");
 
+            int Sara1(string x) => PhanTichHinh.DemSara(new[] { x });
+            Kiem("Sara: mau that 2x2-phi8 = 4", Sara1("{\\W1;2x2-∅8孔皿モミ}"), 4);
+            Kiem("Sara: 4-phi8 hiragana", Sara1("4-φ8皿もみ"), 4);
+            Kiem("Sara: nua do rong", Sara1("6-ｻﾗﾓﾐ"), 6);
+            Kiem("Sara: 4xphi8", Sara1("4xφ8 皿モミ"), 4);
+            Kiem("Sara: 3 cho", Sara1("∅8孔皿モミ 3箇所"), 3);
+            Kiem("Sara: khong ghi so = 1", Sara1("∅8孔皿モミ"), 1);
+            Kiem("Sara: dang ma U+", Sara1("2-\\U+76BF\\U+30E2\\U+30DF"), 2);
+            Kiem("Sara: nhieu dong", Sara1("2-M5タップ\\P3-∅6皿加工"), 3);
+            Kiem("Sara: ten vit khong tinh", Sara1("皿小ネジ"), 0);
+            Kiem("Sara: tap khong tinh", Sara1("4-M5タップ"), 0);
+            Kiem("Sara: loai gia cong co s", PhanTichHinh.LoaiGiaCong(new[] { new ChuHinh { NoiDung = "2x2-∅8孔皿モミ" } }, false), "s");
+            var hinhSara = new DuLieuHinh { HandleKhung = 1 };
+            hinhSara.Net.Add(new NetCat { Handle = 1, Loai = "LWPOLYLINE", Kin = true, DoDai = 400, Diem = new List<(double X, double Y)> { (0, 0), (100, 0), (100, 100), (0, 100), (0, 0) } });
+            hinhSara.ChuTrongKhung.Add(new ChuHinh { Lop = "1-SUNPOU", NoiDung = "2x2-∅8孔皿モミ" });
+            hinhSara.ChuDanTrong.Add("2x2-∅8孔皿モミ");   // leader của chính ghi chú trên
+            hinhSara.ChuDanTrong.Add("2-∅6皿もみ");
+            var kqSara = PhanTichHinh.Chay(hinhSara, 0.05, 0, (a, c) => null);
+            Kiem("Sara: quet ra so lo + loai s, leader khong dem trung", kqSara.Tam == null ? "loi" : kqSara.Tam.Sara + "|" + kqSara.Tam.LoaiGiaCong, "6|s");
+            var ttCuSara = new ThongTinTam { Sara = 3 };
+            var dSuaSara = new GiaDon(); dSuaSara.Lay("S").SuaSara = true;
+            var ttMoiSara = new ThongTinTam { Sara = 4 };
+            dSuaSara.GiuSuaTay("S", ttMoiSara, ttCuSara);
+            Kiem("Sara: so sua tay duoc giu khi quet lai", ttMoiSara.Sara, 3);
+
             string thu = Path.Combine(Path.GetTempPath(), "csvtool_gia_" + Guid.NewGuid().ToString("N"));
             try
             {

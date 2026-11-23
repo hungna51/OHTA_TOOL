@@ -289,7 +289,11 @@ namespace CsvTool.ViewModels
 
         // thông tin tấm → data CSV (không còn text trên bản vẽ)
         public string Tappu { get => Tam?.Tt.Tappu.ToString(); set => SuaSo(value, Tam?.Tt.Tappu, v => Tam.Tt.Tappu = v); }
-        public string Sara { get => Tam?.Tt.Sara.ToString(); set => SuaSo(value, Tam?.Tt.Sara, v => Tam.Tt.Sara = v); }
+        public string Sara
+        {
+            get => Tam?.Tt.Sara.ToString();
+            set => SuaSo(value, Tam?.Tt.Sara, v => { Tam.Tt.Sara = v; GiaTam g = _vm.GiaCua(Tam.N); if (g != null) g.SuaSara = true; });
+        }
         public string PitchiSoLan { get => Tam?.Tt.PitchiSoLan.ToString(); set => SuaSo(value, Tam?.Tt.PitchiSoLan, v => Tam.Tt.PitchiSoLan = v); }
         public string PitchiDai { get => Tam?.Tt.PitchiDai.ToString(); set => SuaSo(value, Tam?.Tt.PitchiDai, v => Tam.Tt.PitchiDai = v); }
         public string Vat { get => Tam?.Tt.Vat.ToString(); set => SuaSo(value, Tam?.Tt.Vat, v => Tam.Tt.Vat = v); }

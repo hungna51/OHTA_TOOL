@@ -61,6 +61,12 @@ namespace CsvTool.CadServices
                     try { hop = e.GeometricExtents; } catch { continue; }
                     PhanVaoKhung(e, id.ObjectClass.DxfName, hop, khung, ds, chuQuanh, netLop, lopTrang, c);
                 }
+                for (int i = 0; i < khung.Count; i++)
+                {
+                    KhungTho k = khung[i];
+                    ds[i].ChuDanTrong.AddRange(dan.Where(g => !string.IsNullOrEmpty(g.NoiDung) &&
+                        g.Mui.Any(m => m.X >= k.MinX && m.X <= k.MaxX && m.Y >= k.MinY && m.Y <= k.MaxY)).Select(g => g.NoiDung));
+                }
                 tr.Commit();
             }
             return ds;
