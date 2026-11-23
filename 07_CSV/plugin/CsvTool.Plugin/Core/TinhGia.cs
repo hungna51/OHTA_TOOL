@@ -180,6 +180,7 @@ namespace CsvTool.Core
                 if (!string.IsNullOrEmpty(t.Tt.GiaBaoGia) && !g.TuDong) continue;
                 var (v, loi) = TaoDauVao(t, g, don.CongTy);
                 KetQuaGia kq = null;
+                if (v != null) v.LamTron250 = don.Tron250(g);
                 if (loi == null) (kq, loi) = Tinh(v, b);
                 if (kq == null)
                 {

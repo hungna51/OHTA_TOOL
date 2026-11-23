@@ -34,7 +34,7 @@ namespace CsvTool.ViewModels
     }
 
     /// <summary>
-    /// Tab CSV. Lệnh CSV và nút Quét... mở dialog thiết lập (CSVTHIETLAP), phân tích hình học bằng C#: thông tin tấm lưu ở
+    /// Tab CSV gồm 4 tab con. Lệnh CSV mở tab Thông tin chung (CSVTHIETLAP), 2 nút quét phân tích hình học bằng C#: thông tin tấm lưu ở
     /// data\&lt;đơn&gt;-data.csv (không để text trên bản vẽ). Sửa ô: N/Q/M/T ghi F-name, còn lại ghi data CSV.
     /// File cuối &lt;đơn&gt;.csv tự cập nhật sau khi quét và sau mỗi thay đổi trên tab.
     /// </summary>
@@ -52,12 +52,39 @@ namespace CsvTool.ViewModels
         private List<DongTam> _tatCa = new List<DongTam>();
         /// <summary>Danh sách tổng hợp lỗi + cảnh báo của bản vẽ đang quét.</summary>
         public ObservableCollection<DongLoi> DsLoi { get; } = new ObservableCollection<DongLoi>();
-        public bool CoDsLoi => DsLoi.Count > 0;
-        public string NhanDsLoi => "Lỗi và cảnh báo (" + DsLoi.Count(l => l.LaLoi) + " lỗi, " + DsLoi.Count(l => !l.LaLoi) + " cảnh báo)";
+        public bool KhongCoLoi => DsLoi.Count == 0;
+        /// <summary>Giá vật liệu trong đơn, mỗi cặp vật liệu + độ dày 1 dòng.</summary>
+        public ObservableCollection<DongGiaVl> DsGiaVl { get; } = new ObservableCollection<DongGiaVl>();
+        public static readonly string[] DsCheDoTinh = { "Thường", "Chỉ gia công", "VL khách cấp" };
+
+        private int _tabDangChon;
+        public int TabDangChon { get => _tabDangChon; set { _tabDangChon = value; Bao(); } }
+
+        public string NhanTabChung => CoDanhSach ? "Đã quét" : "Chưa quét";
+        public string NhanTabTam => _tatCa.Count(d => !d.BoQua) + " tấm";
+        public string NhanTabLoi
+        {
+            get
+            {
+                int loi = DsLoi.Count(l => l.LaLoi), cb = DsLoi.Count - loi;
+                return loi > 0 ? loi + " lỗi" : cb > 0 ? cb + " cảnh báo" : "Không có";
+            }
+        }
+        public bool TabLoiDo => DsLoi.Count > 0;
+        public string NhanTabGia
+        {
+            get
+            {
+                int thieu = DsGiaVl.Count(d => d.Thieu);
+                return thieu > 0 ? thieu + " thiếu" : DsGiaVl.Count == 0 || _bangGia == null ? "Chưa tính" : "Đủ giá";
+            }
+        }
+        public bool TabGiaDo => DsGiaVl.Any(d => d.Thieu);
         private const string KhoaLoiQuet = "CSVTOOL_LOI_QUET";
         private Document _docDanhSach;
 
-        public ICommand QuetCmd { get; }
+        public ICommand QuetVungCmd { get; }
+        public ICommand QuetToanCmd { get; }
         public ICommand CaiDatCmd { get; }
         public ICommand ChiTietCmd { get; }
 
@@ -84,7 +111,8 @@ namespace CsvTool.ViewModels
             catch { AccentBrush = Brushes.SeaGreen; }
             try { CaiDat = CaiDatRegistry.Doc(); } catch { CaiDat = new CaiDatCsv(); }
 
-            QuetCmd = new Lenh(GoiThietLap);
+            QuetVungCmd = new Lenh(() => GoiQuet(false));
+            QuetToanCmd = new Lenh(() => GoiQuet(true));
             CaiDatCmd = new Lenh(MoCaiDat);
             ChiTietCmd = new Lenh(() => ChiTiet = !ChiTiet);
             MoFile10Cmd = new Lenh(() => Mo(File10));
@@ -92,55 +120,271 @@ namespace CsvTool.ViewModels
 
             HienTai = this;
             try { CadApplication.DocumentManager.DocumentActivated += (s, e) => DoiBanVe(e.Document); } catch { }
+            try { if (CadApplication.DocumentManager.MdiActiveDocument != null) NapThietLap(CadApplication.DocumentManager.MdiActiveDocument); } catch { }
         }
 
         // ── Quét: chọn khung → PhanTichHinh → SauQuet ─────────────────
 
         private string _thuMuc, _maDon;
 
-        /// <summary>Nút Quét...: chạy trong ngữ cảnh lệnh để sau dialog còn kéo chọn vùng được.</summary>
-        private void GoiThietLap()
+        private Document _docThietLap;
+        private int _cheDo;
+        private int? _soKhung;
+
+        /// <summary>2 nút quét: chạy trong ngữ cảnh lệnh để còn kéo chọn vùng được.</summary>
+        private void GoiQuet(bool toan)
         {
+            LoiThietLap = KiemTruocQuet();
+            if (LoiThietLap != null) return;
             try
             {
                 Document doc = CadApplication.DocumentManager.MdiActiveDocument;
                 if (doc == null) return;
                 // không huỷ khi rảnh: ^C sẽ xoá khung người dùng đã chọn sẵn
                 string huy = Convert.ToInt32(CadApplication.GetSystemVariable("CMDACTIVE")) == 0 ? "" : "\x03\x03";
-                doc.SendStringToExecute(huy + "CSVTHIETLAP\n", true, false, true);
+                doc.SendStringToExecute(huy + (toan ? "CSVQUETTOAN\n" : "CSVQUETVUNG\n"), true, false, true);
             }
-            catch (Exception ex) { TrangThai = "Không mở được thiết lập quét: " + ex.Message; }
+            catch (Exception ex) { LoiThietLap = "Không chạy được lệnh quét: " + ex.Message; }
         }
 
-        /// <summary>Lệnh CSVTHIETLAP: hiện dialog, nhớ lựa chọn theo đơn, bấm nút quét là chạy.</summary>
+        private string KiemTruocQuet()
+        {
+            if (_thuMuc != null)
+            {
+                string f = CsvXuat.TepDangMo(CsvXuat.DuongCuoi(_thuMuc, _maDon), CsvXuat.DuongData(_thuMuc, _maDon), CsvXuat.DuongGiaVl(_thuMuc, _maDon));
+                if (f != null) return Path.GetFileName(f) + " đang mở. Đóng file rồi bấm quét.";
+            }
+            return _giaDon != null && TinhGiaBat && string.IsNullOrEmpty(CongTy) ? "Chọn công ty, hoặc bỏ tích Tính giá." : null;
+        }
+
+        /// <summary>Lệnh CSV: mở tab Thông tin chung, không đụng vào danh sách đã quét.</summary>
         public void MoThietLap(Document doc)
         {
             CloudLoiTam.Xoa();
-            GiaDon don = null;
-            string fGia = null;
-            Func<string> tepDangMo = () => null;
+            NapThietLap(doc);
+            CapNhatSoKhung(doc);
+            TabDangChon = 0;
+        }
+
+        /// <summary>Lệnh của 2 nút quét.</summary>
+        public void QuetTuLenh(Document doc, bool toan)
+        {
+            CloudLoiTam.Xoa();
+            NapThietLap(doc);
+            LoiThietLap = KiemTruocQuet();
+            if (LoiThietLap != null) { TabDangChon = 0; return; }
+            CaiDat.CheDoTinh = _cheDo;
+            Luu();
+            QuetCad(doc, toan, TinhGiaBat, CongTy);
+        }
+
+        /// <summary>Đọc thiết lập đã lưu theo đơn của bản vẽ. Chưa quét thì chỉ ghi gia.json, không ghi data CSV.</summary>
+        private void NapThietLap(Document doc)
+        {
+            if (doc == _docThietLap && _giaDon != null) { CapNhatDsCongTy(); return; }
+            _docThietLap = doc;
+            _thuMuc = _maDon = null;
+            _giaDon = null;
+            _giaVl = null;
+            _soKhung = null;
+            File10 = File35 = null;
+            LoiThietLap = null;
             if (Convert.ToInt32(CadApplication.GetSystemVariable("DWGTITLED")) == 1)
             {
-                string thu = Convert.ToString(CadApplication.GetSystemVariable("DWGPREFIX"));
-                string ma = MaDon.TuTenFile(Convert.ToString(CadApplication.GetSystemVariable("DWGNAME")));
-                tepDangMo = () => CsvXuat.TepDangMo(CsvXuat.DuongCuoi(thu, ma), CsvXuat.DuongData(thu, ma));
-                fGia = CsvXuat.DuongGia(thu, ma);
-                try { don = GiaDon.DocFile(fGia); } catch (Exception) { }   // file hỏng: SauQuet sẽ báo, không ghi đè
+                _thuMuc = Convert.ToString(CadApplication.GetSystemVariable("DWGPREFIX"));
+                _maDon = MaDon.TuTenFile(Convert.ToString(CadApplication.GetSystemVariable("DWGNAME")));
+                string fCuoi = CsvXuat.DuongCuoi(_thuMuc, _maDon), fData = CsvXuat.DuongData(_thuMuc, _maDon);
+                File10 = File.Exists(fCuoi) ? fCuoi : null;
+                File35 = File.Exists(fData) ? fData : null;
+                try { _giaDon = GiaDon.DocFile(CsvXuat.DuongGia(_thuMuc, _maDon)); }
+                catch (Exception) { LoiThietLap = "File " + _maDon + "-gia.json bị hỏng, chưa tính giá được."; }
+                try { _giaVl = GiaVlDon.DocFile(CsvXuat.DuongGiaVl(_thuMuc, _maDon)); }
+                catch (Exception) { LoiThietLap = "File " + _maDon + "-giavl.csv bị hỏng, chưa nhập được giá tạm."; }
             }
-            var w = new Views.CsvThietLapQuetWindow(Path.GetFileNameWithoutExtension(doc.Name), QuetKhungCad.TatCaKhung(doc, CaiDat.LopKhungDung).Count,
-                NguonGiaCoDem.DsCongTyDem(), don?.CongTy, !(don?.KhongTinhSauQuet ?? false), don?.CheDoTinh ?? CaiDat.CheDoTinh, AccentBrush, tepDangMo);
-            if (CadApplication.ShowModalWindow(w) != true) { TrangThai = "Đã huỷ quét."; return; }
+            _cheDo = _giaDon?.CheDoTinh ?? CaiDat.CheDoTinh;
+            NhanBanVe = "Bản vẽ " + Path.GetFileNameWithoutExtension(doc.Name);
+            CapNhatDsCongTy();
+            DungGiaVl();
+            BaoThietLap();
+        }
 
-            CaiDat.CheDoTinh = w.CheDo;
-            Luu();
-            if (don != null)
+        private void CapNhatSoKhung(Document doc)
+        {
+            try { _soKhung = QuetKhungCad.TatCaKhung(doc, CaiDat.LopKhungDung).Count; }
+            catch (Exception) { _soKhung = null; }
+            Bao(nameof(NhanKhung));
+        }
+
+        // ── Tab Thông tin chung ───────────────────────────────────────
+
+        private bool CoDanhSach => _docDanhSach != null && _tatCa.Any(d => d.Tam != null);
+
+        public string NhanBanVe { get; private set; } = "Chưa có bản vẽ";
+        public string NhanKhung => (_soKhung == null ? "" : _soKhung + " khung tấm · ") + (_maDon == null ? "Bản vẽ chưa lưu" : "đơn " + _maDon);
+
+        private string _loiThietLap;
+        public string LoiThietLap { get => _loiThietLap; private set { _loiThietLap = value; Bao(); Bao(nameof(CoLoiThietLap)); } }
+        public bool CoLoiThietLap => _loiThietLap != null;
+
+        public bool TinhGiaBat
+        {
+            get => _giaDon?.KhongTinhSauQuet != true;
+            set
             {
-                don.KhongTinhSauQuet = !w.TinhGia;
-                don.CheDoTinh = w.CheDo;
-                if (w.TinhGia) don.CongTy = w.CongTy;
-                try { don.GhiFile(fGia); } catch (Exception ex) { TrangThai = "Không lưu được thiết lập: " + ex.Message; }
+                if (value == TinhGiaBat) return;
+                SuaThietLap(() =>
+                {
+                    _giaDon.KhongTinhSauQuet = !value;
+                    if (!value) { _bangGia = null; DungGiaVl(); }   // bỏ tích: giữ nguyên giá đang có
+                });
             }
-            QuetCad(doc, w.ToanBanVe, w.TinhGia, w.CongTy);
+        }
+
+        public bool LamTron250Don
+        {
+            get => _giaDon?.LamTron250 == true;
+            set { if (value != LamTron250Don) SuaThietLap(() => _giaDon.LamTron250 = value); }
+        }
+
+        internal bool Tron250Cua(string ten) => _giaDon != null && _giaDon.Tron250(XemGia(ten));
+
+        public bool CheDo0 { get => _cheDo == 0; set { if (value) DoiCheDo(0); } }
+        public bool CheDo1 { get => _cheDo == 1; set { if (value) DoiCheDo(1); } }
+        public bool CheDo2 { get => _cheDo == 2; set { if (value) DoiCheDo(2); } }
+        public string MoTaCheDo => _cheDo == 2 ? "Vật liệu do khách cấp, tính 15% tiền vật liệu."
+                                 : _cheDo == 1 ? "Chỉ tính tiền gia công." : "Tính đủ vật liệu, cắt và gia công.";
+
+        /// <summary>Chế độ của đơn áp cho mọi tấm, trừ tấm đã chọn riêng trên thẻ.</summary>
+        private void DoiCheDo(int m)
+        {
+            if (m == _cheDo) return;
+            SuaThietLap(() =>
+            {
+                _cheDo = m;
+                _giaDon.CheDoTinh = m;
+                CaiDat.CheDoTinh = m;
+                Luu();
+                foreach (DongTam d in _tatCa.Where(x => x.Tam != null && XemGia(x.Tam.N)?.CheDoRieng != true))
+                    d.Tam.Tt.CheDoTinh = m.ToString(CultureInfo.InvariantCulture);
+            });
+        }
+
+        private void SuaThietLap(Action doi)
+        {
+            if (_giaDon == null) { LoiThietLap = "Chưa đọc được thiết lập của đơn."; BaoTre(); return; }
+            if (CoDanhSach && !ChoPhepSua()) { BaoTre(); return; }
+            doi();
+            LuuGia();
+            LoiThietLap = null;
+            foreach (DongTam d in _tatCa) d.BaoGia();
+            TinhLaiSauThietLap();
+            BaoThietLap();
+        }
+
+        private void TinhLaiSauThietLap()
+        {
+            if (!CoDanhSach) return;
+            if (TinhGiaBat && !string.IsNullOrEmpty(CongTy))
+            {
+                if (_bangGia != null) ApDungVaLuu(_bangGia, "");
+                else TinhGiaSauQuet("");
+            }
+            else
+            {
+                DanhGiaLai();
+                if (LuuData()) SauThayDoi();
+            }
+        }
+
+        // trả ô về giá trị cũ sau khi binding xong (RadioButton, CheckBox không nhận nếu trả ngay)
+        private void BaoTre() => System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(BaoThietLap));
+
+        private void BaoThietLap()
+        {
+            foreach (string t in new[] { nameof(TinhGiaBat), nameof(CongTy), nameof(CoGiaDon), nameof(CheDo0), nameof(CheDo1), nameof(CheDo2),
+                                         nameof(MoTaCheDo), nameof(LamTron250Don), nameof(NhanBanVe), nameof(NhanKhung) }) Bao(t);
+            BaoNhanTab();
+        }
+
+        private void BaoNhanTab()
+        {
+            foreach (string t in new[] { nameof(NhanTabChung), nameof(NhanTabTam), nameof(NhanTabLoi), nameof(TabLoiDo), nameof(NhanTabGia), nameof(TabGiaDo), nameof(KhongCoLoi) }) Bao(t);
+        }
+
+        // ── Tab Giá VL: giá tạm lưu ở data\<đơn>-giavl.csv ─────────────
+
+        private GiaVlDon _giaVl;
+
+        internal bool DaCoBangGia => _bangGia != null;
+        internal BangGia BangGoc => _bangGia;
+        private BangGia BangDung => _giaVl == null ? _bangGia : _giaVl.Gop(_bangGia);
+        internal DongBangGia GiaTamCua(string vl, double day) => _giaVl?.Tim(vl, day);
+        internal DongBangGia GiaBangCua(string vl, double day) => _bangGia?.Dong.FirstOrDefault(x => x.VatLieu == vl && x.DoDay == day);
+
+        /// <summary>Giữ nguyên các dòng khi vật liệu không đổi, để nhập giá xong con trỏ không bị mất.</summary>
+        private void DungGiaVl()
+        {
+            var ds = CoDanhSach ? GiaVlDon.DsVatLieu(_tatCa.Where(d => d.Tam != null && !d.BoQua).Select(d => d.Tam))
+                                : new List<(string VatLieu, double DoDay, int SoTam)>();
+            bool giong = DsGiaVl.Count == ds.Count && ds.All(x => DsGiaVl.Any(r => r.VatLieu == x.VatLieu && r.DoDay == x.DoDay));
+            if (!giong)
+            {
+                DsGiaVl.Clear();
+                foreach (var x in ds.OrderBy(x => _bangGia != null && GiaTamCua(x.VatLieu, x.DoDay) == null && GiaBangCua(x.VatLieu, x.DoDay) == null ? 0 : 1))
+                    DsGiaVl.Add(new DongGiaVl(this, x.VatLieu, x.DoDay, x.SoTam));
+            }
+            foreach (DongGiaVl r in DsGiaVl)
+            {
+                r.SoTam = ds.First(x => x.VatLieu == r.VatLieu && x.DoDay == r.DoDay).SoTam;
+                r.CapNhat();
+            }
+            BaoNhanTab();
+        }
+
+        /// <summary>Đổi giá tạm rồi ghi file; không ghi được thì trả lại như cũ.</summary>
+        private bool GhiGiaVl(Action doi, Action hoan)
+        {
+            if (_giaVl == null || _thuMuc == null) { BaoLoi("Chưa đọc được file giá vật liệu của đơn."); return false; }
+            if (!ChoPhepSua()) return false;
+            doi();
+            try { _giaVl.GhiFile(CsvXuat.DuongGiaVl(_thuMuc, _maDon)); return true; }
+            catch (IOException) { hoan(); BaoLoi(_maDon + "-giavl.csv đang mở. Đóng file rồi sửa lại."); }
+            catch (Exception ex) { hoan(); BaoLoi("Không ghi được giá vật liệu: " + ex.Message); }
+            return false;
+        }
+
+        private void SauGiaVl()
+        {
+            DungGiaVl();
+            if (TinhGiaBat && !string.IsNullOrEmpty(CongTy)) TinhLaiSauThietLap();
+            else TrangThai = "Đã lưu giá tạm. Tích Tính giá và chọn công ty để tính tiền.";
+        }
+
+        internal void DatGiaVl(DongGiaVl d, double gia)
+        {
+            double cu = d.Nhap.DonGia;
+            bool coCu = GiaTamCua(d.VatLieu, d.DoDay) != null;
+            DongBangGia n = d.Nhap;
+            if (!GhiGiaVl(() => { n.DonGia = gia; _giaVl.Dat(n); },
+                          () => { n.DonGia = cu; if (!coCu) _giaVl.Xoa(d.VatLieu, d.DoDay); })) return;
+            SauGiaVl();
+        }
+
+        internal void XoaGiaVl(DongGiaVl d)
+        {
+            DongBangGia n = GiaTamCua(d.VatLieu, d.DoDay);
+            if (n == null || !GhiGiaVl(() => _giaVl.Xoa(d.VatLieu, d.DoDay), () => _giaVl.Dat(n))) return;
+            d.BoGiaTam();
+            SauGiaVl();
+        }
+
+        /// <summary>Giá gia công: chưa có giá VL thì chỉ giữ trên dòng, có rồi thì lưu và tính lại.</summary>
+        internal bool SuaPhuGiaVl(DongGiaVl d, Action doi, Action hoan)
+        {
+            if (GiaTamCua(d.VatLieu, d.DoDay) == null) { doi(); return true; }
+            if (!GhiGiaVl(doi, hoan)) return false;
+            SauGiaVl();
+            return true;
         }
 
         /// <summary>Phân tích hình học các khung, một khung lỗi không làm dừng lượt quét; xong thì tính giá nếu đã chọn.</summary>
@@ -169,6 +413,9 @@ namespace CsvTool.ViewModels
                 }
             }
             bool daQuet = SauQuet(doc, quet, loiMoi);
+            CapNhatSoKhung(doc);
+            BaoThietLap();
+            if (_tatCa.Count > 0) TabDangChon = 1;
             if (daQuet && tinhGia && _giaDon != null)
             {
                 _giaDon.CongTy = congTy;
@@ -183,7 +430,7 @@ namespace CsvTool.ViewModels
         /// </summary>
         private bool SauQuet(Document doc, Dictionary<long, ThongTinTam> quet, List<LoiQuet> loiMoi)
         {
-            _docDanhSach = doc;
+            _docDanhSach = _docThietLap = doc;
             if (Convert.ToInt32(CadApplication.GetSystemVariable("DWGTITLED")) != 1)
             {
                 _thuMuc = null;
@@ -203,6 +450,8 @@ namespace CsvTool.ViewModels
             string loiGia = null;
             try { _giaDon = GiaDon.DocFile(CsvXuat.DuongGia(_thuMuc, _maDon)); }
             catch (Exception) { _giaDon = null; loiGia = " File " + _maDon + "-gia.json bị hỏng, chưa tính giá được."; }
+            try { _giaVl = GiaVlDon.DocFile(CsvXuat.DuongGiaVl(_thuMuc, _maDon)); }
+            catch (Exception) { _giaVl = null; loiGia += " File " + _maDon + "-giavl.csv bị hỏng, chưa dùng được giá tạm."; }
             CapNhatDsCongTy();
 
             // quét theo vùng: khung ngoài vùng giữ lỗi của lượt trước, khung vừa quét thay bằng kết quả mới
@@ -223,7 +472,13 @@ namespace CsvTool.ViewModels
                     continue;
                 }
                 var r = PhanTichKhung.Ghep(k, CaiDat.LopDimDung, dimzin, cu, quet);
-                if (r.Tam != null) { tot.Add((r.Tam, k, r.Loi)); continue; }
+                if (r.Tam != null)
+                {
+                    cu.TryGetValue(r.Tam.N, out ThongTinTam daCo);
+                    _giaDon?.GiuSuaTay(r.Tam.N, r.Tam.Tt, daCo);
+                    tot.Add((r.Tam, k, r.Loi));
+                    continue;
+                }
                 string loiHinh = LoiHinhCua(k.Handle);
                 string khac = loiHinh != null && r.Loi == PhanTichKhung.LoiChuaCoThongTin ? null : r.Loi;
                 loi.Add(new DongTam(this, k, null, NoiLoi(loiHinh, khac)) { LoiQuet = loiHinh, LoiKhac = khac });
@@ -234,6 +489,8 @@ namespace CsvTool.ViewModels
                                       { LoiQuet = LoiHinhCua(t.HandleKhung) }))
                         .ToList();
             foreach (DongTam d in _tatCa) d.MoRong = _chiTiet;
+            DsGiaVl.Clear();   // giá tạm vừa đọc lại từ file: không giữ dòng trỏ vào dữ liệu cũ
+            DungGiaVl();
             TinhLaiNeuCo();   // số đo có thể đã đổi: giá tự động không được giữ giá trị cũ
             DanhGiaLai();
             Loc();
@@ -272,20 +529,33 @@ namespace CsvTool.ViewModels
         public List<string> DsCongTy { get; private set; } = new List<string>();
         public bool CoGiaDon => _giaDon != null;
 
-        /// <summary>Đổi công ty ở thanh dưới: tính lại giá tự động, giá sửa tay giữ nguyên.</summary>
+        /// <summary>Đổi công ty: đã quét thì tính lại giá tự động, giá sửa tay giữ nguyên.</summary>
         public string CongTy
         {
             get => _giaDon?.CongTy;
-            // ComboBox đẩy null khi đổi danh sách: không được coi là người dùng chọn
-            set { if (!string.IsNullOrEmpty(value) && _giaDon != null && value != _giaDon.CongTy) DoiCongTy(value); }
+            set
+            {
+                string v = (value ?? "").Trim();
+                if (_giaDon == null || v == _giaDon.CongTy) return;
+                if (CoDanhSach && TinhGiaBat)
+                {
+                    if (v != "") DoiCongTy(v); else BaoTre();
+                    return;
+                }
+                if (CoDanhSach && !ChoPhepSua()) { BaoTre(); return; }
+                _giaDon.CongTy = v;
+                LuuGia();
+                LoiThietLap = null;
+                CapNhatDsCongTy();
+            }
         }
 
         private void CapNhatDsCongTy()
         {
             List<string> ds = _bangGia != null ? _bangGia.CongTyUuDai.Keys.OrderBy(x => x).ToList() : NguonGiaCoDem.DsCongTyDem();
             if (!string.IsNullOrEmpty(CongTy) && !ds.Contains(CongTy)) ds.Insert(0, CongTy);
-            DsCongTy = ds;
-            Bao(nameof(DsCongTy)); Bao(nameof(CoGiaDon)); Bao(nameof(CongTy));
+            if (!ds.SequenceEqual(DsCongTy)) { DsCongTy = ds; Bao(nameof(DsCongTy)); }
+            Bao(nameof(CoGiaDon)); Bao(nameof(CongTy));
         }
 
         private async void DoiCongTy(string moi)
@@ -327,7 +597,7 @@ namespace CsvTool.ViewModels
 
         private void ApDungGia()
         {
-            var canhBao = TinhGia.ApDung(_tatCa.Where(d => d.Tam != null && !d.BoQua).Select(d => d.Tam), _giaDon, _bangGia);
+            var canhBao = TinhGia.ApDung(_tatCa.Where(d => d.Tam != null && !d.BoQua).Select(d => d.Tam), _giaDon, BangDung);
             foreach (DongTam d in _tatCa)
             {
                 d.CanhBaoGia = d.Tam != null && canhBao.TryGetValue(d.Tam.N, out string s) ? s : null;
@@ -353,6 +623,7 @@ namespace CsvTool.ViewModels
         private void ApDungVaLuu(BangGia b, string tienTo)
         {
             _bangGia = b;
+            DungGiaVl();
             ApDungGia();
             DanhGiaLai();
             if (!LuuData()) return;
@@ -393,14 +664,14 @@ namespace CsvTool.ViewModels
             BangGia b = await DocBangGiaNen(tienTo);
             if (_giaDon != don) return;
             if (b != null) ApDungVaLuu(b, tienTo);
-            else XuatTuDong(TrangThai + " ");   // không đọc được giá vẫn cập nhật thông số, giữ giá đang có
+            else if (LuuData()) XuatTuDong(TrangThai + " ");   // không đọc được giá vẫn cập nhật thông số, giữ giá đang có
         }
 
         /// <summary>Nút ↺ trên ô giá: bỏ giá sửa tay, quay về giá tự tính.</summary>
         internal void VeGiaTuDong(DongTam d)
         {
             if (!ChoPhepSua()) return;
-            if (_bangGia == null || _giaDon == null || _giaDon.CongTy == "") { TrangThai = "Chưa có bảng giá. Bấm Quét... và tích Tính giá."; return; }
+            if (_bangGia == null || _giaDon == null || _giaDon.CongTy == "") { TrangThai = "Chưa có bảng giá. Tích Tính giá ở tab Thông tin chung rồi quét."; return; }
             GiaCua(d.Tam.N).TuDong = true;
             ApDungGia();
             DanhGiaLai();
@@ -463,9 +734,10 @@ namespace CsvTool.ViewModels
                 if (d.LoiKhac != null) DsLoi.Add(new DongLoi(d, d.LoiKhac, true, null));
                 foreach (LoiQuet w in ds?.Where(l => !l.LaLoi) ?? Enumerable.Empty<LoiQuet>())
                     DsLoi.Add(new DongLoi(d, w.NoiDung, false, w));
-                if (d.CanhBaoGia != null) DsLoi.Add(new DongLoi(d, d.CanhBaoGia, false, null));
+                if (d.CanhBaoGia != null) DsLoi.Add(new DongLoi(d, d.CanhBaoGia, false, null, d.CanhBaoGia.StartsWith("Chưa có giá")));
             }
-            Bao(nameof(CoDsLoi)); Bao(nameof(NhanDsLoi)); Bao(nameof(NhanTongTien));
+            Bao(nameof(NhanTongTien));
+            BaoNhanTab();
         }
 
         /// <summary>Bấm dòng lỗi: zoom sát vị trí kế tiếp, cloud vẫn hiện ở mọi lỗi của tấm; lỗi không có vị trí thì zoom cả khung.</summary>
@@ -503,16 +775,18 @@ namespace CsvTool.ViewModels
 
         private void DoiBanVe(Document doc)
         {
-            if (doc == _docDanhSach) return;   // kích hoạt lại đúng bản vẽ: giữ cloud
+            if (doc == null || doc == _docThietLap) return;   // kích hoạt lại đúng bản vẽ: giữ danh sách và cloud
             CloudLoiTam.Xoa();
             _tatCa.Clear();
-            _thuMuc = null;
-            _giaDon = null;
-            File10 = File35 = null;
-            CapNhatDsCongTy();
+            _docDanhSach = null;
+            _bangGia = null;
+            DsGiaVl.Clear();
             GomLoi();
             Loc();
-            TrangThai = "Đổi bản vẽ — bấm Quét để xem danh sách tấm.";
+            try { NapThietLap(doc); }
+            catch (Exception ex) { _docThietLap = null; LoiThietLap = "Không đọc được thiết lập của bản vẽ: " + ex.Message; }
+            TabDangChon = 0;
+            TrangThai = "Đổi bản vẽ. Thiết lập rồi bấm quét.";
         }
 
         // ── Sửa ô ─────────────────────────────────────────────────────
@@ -538,7 +812,7 @@ namespace CsvTool.ViewModels
         internal bool ChoPhepSua()
         {
             if (_thuMuc == null) return true;
-            string f = CsvXuat.TepDangMo(CsvXuat.DuongCuoi(_thuMuc, _maDon), CsvXuat.DuongData(_thuMuc, _maDon));
+            string f = CsvXuat.TepDangMo(CsvXuat.DuongCuoi(_thuMuc, _maDon), CsvXuat.DuongData(_thuMuc, _maDon), CsvXuat.DuongGiaVl(_thuMuc, _maDon));
             if (f == null) return true;
             TrangThai = Path.GetFileName(f) + " đang mở. Đóng file rồi sửa lại.";
             return false;

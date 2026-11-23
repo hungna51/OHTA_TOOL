@@ -8,6 +8,7 @@
              SnapsToDevicePixels="True">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="HienKhi"/>
+        <SolidColorBrush x:Key="Mau" Color="#1E7F4F"/>
 
         <Style x:Key="Nut" TargetType="Button">
             <Setter Property="Foreground" Value="#FFFFFF"/>
@@ -67,6 +68,85 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="Seg" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource Mau}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd" Background="Transparent" BorderBrush="{DynamicResource Mau}" Padding="2,6"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#ECEFF1"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Mau}"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 4 tab chia deu chieu ngang palette -->
+        <Style TargetType="TabItem">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="Bd" Background="#ECEFF1" BorderBrush="#CFD8DC" BorderThickness="0,0,0,2" Padding="2,5">
+                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#F5F7FA"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FFFFFF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Mau}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="TenTab" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#323F4B"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style x:Key="DemTab" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10.5"/>
+            <Setter Property="Foreground" Value="#607D8B"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="Foreground" Value="#C62828"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <!-- o co vien cho dong duong be va gia VL -->
+        <Style x:Key="OVien" TargetType="TextBox" BasedOn="{StaticResource O}">
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#B0BEC5"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="Height" Value="24"/>
+        </Style>
+        <Style x:Key="TieuMuc" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#1F4E79"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
         <Style x:Key="Nhan" TargetType="TextBlock">
             <Setter Property="Background" Value="#DDEBF7"/>
             <Setter Property="Foreground" Value="#1F4E79"/>
@@ -80,8 +160,8 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>   <!-- header -->
-            <RowDefinition Height="*"/>      <!-- danh sach tam -->
-            <RowDefinition Height="Auto"/>   <!-- nut + che do tinh + trang thai -->
+            <RowDefinition Height="*"/>      <!-- 4 tab -->
+            <RowDefinition Height="Auto"/>   <!-- tong don + trang thai + 2 file -->
         </Grid.RowDefinitions>
 
         <!-- Header: cung kieu tab AI / Guro, nut cai dat nen trang banh rang to mau tab -->
@@ -123,7 +203,95 @@
         </Border>
 
         <Border Grid.Row="1" Style="{StaticResource The}" Padding="0">
-            <DockPanel>
+            <TabControl SelectedIndex="{Binding TabDangChon}" BorderThickness="0" Padding="0" Background="Transparent">
+                <TabControl.Template>
+                    <ControlTemplate TargetType="TabControl">
+                        <DockPanel>
+                            <UniformGrid DockPanel.Dock="Top" Rows="1" IsItemsHost="True"/>
+                            <ContentPresenter x:Name="PART_SelectedContentHost" ContentSource="SelectedContent"/>
+                        </DockPanel>
+                    </ControlTemplate>
+                </TabControl.Template>
+
+                <!-- Thong tin chung: thay dialog thiet lap quet -->
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource TenTab}" Text="Thông tin chung"/>
+                            <TextBlock Style="{StaticResource DemTab}" Text="{Binding NhanTabChung}"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <ScrollViewer x:Name="CuonChung" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="12,10">
+                            <TextBlock Text="{Binding NhanBanVe}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding NhanKhung}" FontSize="11" Foreground="#607D8B" Margin="0,1,0,10" TextTrimming="CharacterEllipsis"/>
+                            <Border Height="1" Background="#E1E4E8" Margin="0,0,0,10"/>
+                            <CheckBox Content="Tính giá sau khi quét" FontWeight="SemiBold" Margin="0,0,0,9"
+                                      IsChecked="{Binding TinhGiaBat}" IsEnabled="{Binding CoGiaDon}"/>
+                            <Grid IsEnabled="{Binding TinhGiaBat}">
+                                <Grid.Style>
+                                    <Style TargetType="Grid">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter Property="Opacity" Value="0.45"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Grid.Style>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="76"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="Công ty" VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1" IsEditable="True" IsTextSearchEnabled="True" Padding="6,3" IsEnabled="{Binding CoGiaDon}"
+                                          ItemsSource="{Binding DsCongTy}" Text="{Binding CongTy, UpdateSourceTrigger=Explicit}"
+                                          DropDownClosed="CongTyDong" LostKeyboardFocus="CongTyRoi" KeyUp="CongTyPhim" PreviewMouseWheel="ComboKhongLan"
+                                          ToolTip="Công ty tính giá. Đổi sau khi quét là tính lại giá tự động"/>
+                                <TextBlock Grid.Row="2" Text="Chế độ tính" VerticalAlignment="Center"/>
+                                <Border Grid.Row="2" Grid.Column="1" BorderBrush="{DynamicResource Mau}" BorderThickness="1" CornerRadius="5">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                        <RadioButton Style="{StaticResource Seg}" GroupName="CheDoDon" Content="Thường" IsChecked="{Binding CheDo0}" BorderThickness="0">
+                                            <RadioButton.Tag><CornerRadius>4,0,0,4</CornerRadius></RadioButton.Tag>
+                                        </RadioButton>
+                                        <RadioButton Grid.Column="1" Style="{StaticResource Seg}" GroupName="CheDoDon" Content="Gia công" IsChecked="{Binding CheDo1}" BorderThickness="1,0,0,0">
+                                            <RadioButton.Tag><CornerRadius>0</CornerRadius></RadioButton.Tag>
+                                        </RadioButton>
+                                        <RadioButton Grid.Column="2" Style="{StaticResource Seg}" GroupName="CheDoDon" Content="VL khách" IsChecked="{Binding CheDo2}" BorderThickness="1,0,0,0">
+                                            <RadioButton.Tag><CornerRadius>0,4,4,0</CornerRadius></RadioButton.Tag>
+                                        </RadioButton>
+                                    </Grid>
+                                </Border>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding MoTaCheDo}" FontSize="11" Foreground="#7B8794" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Margin="0,10,0,0">
+                                    <Border Height="1" Background="#E1E4E8" Margin="0,0,0,8"/>
+                                    <TextBlock Style="{StaticResource TieuMuc}" Text="Tùy chọn tính giá" Margin="0,0,0,6"/>
+                                    <CheckBox Content="Tự động làm tròn 250" IsChecked="{Binding LamTron250Don}"/>
+                                    <TextBlock Text="Tấm dưới 250 ¥ được tính thành 250 ¥." FontSize="11" Foreground="#7B8794" Margin="20,2,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding LoiThietLap}" Foreground="#C62828" TextWrapping="Wrap" Margin="0,10,0,0"
+                                       Visibility="{Binding CoLoiThietLap, Converter={StaticResource HienKhi}}"/>
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="7"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                <Button Style="{StaticResource Nut}" Background="{DynamicResource Mau}" Margin="0" Padding="4,8" Content="Quét theo vùng"
+                                        Command="{Binding QuetVungCmd}" ToolTip="Kéo chọn khung trên bản vẽ"/>
+                                <Button Grid.Column="2" Style="{StaticResource Nut}" Background="{DynamicResource Mau}" Margin="0" Padding="4,8" Content="Quét toàn bản vẽ"
+                                        Command="{Binding QuetToanCmd}" ToolTip="Quét mọi khung tấm trên bản vẽ"/>
+                            </Grid>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <!-- Danh sach tam -->
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource TenTab}" Text="Danh sách tấm"/>
+                            <TextBlock Style="{StaticResource DemTab}" Text="{Binding NhanTabTam}"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <DockPanel>
                 <DockPanel DockPanel.Dock="Top" Margin="10,8">
                     <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Margin="0" Content="{Binding NhanChiTiet}"
                             Command="{Binding ChiTietCmd}" ToolTip="Mở hoặc thu gọn mọi thẻ tấm"/>
@@ -174,36 +342,6 @@
                         </DockPanel>
                     </Border>
                 </DockPanel>
-                <!-- Danh sach tong hop loi: bam dong = zoom toi vi tri loi, bam tiep = vi tri ke -->
-                <Expander DockPanel.Dock="Top" IsExpanded="True" Margin="10,0,10,8" Foreground="#C62828" FontWeight="SemiBold"
-                          Header="{Binding NhanDsLoi}" Visibility="{Binding CoDsLoi, Converter={StaticResource HienKhi}}">
-                    <ScrollViewer x:Name="CuonLoi" MaxHeight="180" VerticalScrollBarVisibility="Auto" Margin="0,4,0,0">
-                        <ItemsControl ItemsSource="{Binding DsLoi}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border x:Name="DongLoiBd" Background="#FFF8E1" BorderBrush="#FFCA28" BorderThickness="3,0,0,0" CornerRadius="2"
-                                            Padding="6,3" Margin="0,0,0,3" Cursor="Hand" MouseLeftButtonUp="LoiBam"
-                                            ToolTip="Bấm để zoom tới lỗi, bấm tiếp để sang vị trí kế">
-                                        <DockPanel>
-                                            <TextBlock DockPanel.Dock="Right" Text="{Binding NhanViTri}" Foreground="#1565C0" FontWeight="Normal"
-                                                       FontSize="11" Margin="6,0,0,0"/>
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Ten}" Foreground="#263238" FontWeight="SemiBold"/>
-                                                <TextBlock Text="{Binding NoiDung}" Foreground="#37474F" FontWeight="Normal" TextWrapping="Wrap"/>
-                                            </StackPanel>
-                                        </DockPanel>
-                                    </Border>
-                                    <DataTemplate.Triggers>
-                                        <DataTrigger Binding="{Binding LaLoi}" Value="True">
-                                            <Setter TargetName="DongLoiBd" Property="Background" Value="#FDECEA"/>
-                                            <Setter TargetName="DongLoiBd" Property="BorderBrush" Value="#C62828"/>
-                                        </DataTrigger>
-                                    </DataTemplate.Triggers>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Expander>
                 <ScrollViewer x:Name="Cuon" VerticalScrollBarVisibility="Auto" Padding="10,0,10,10">
                     <ItemsControl ItemsSource="{Binding DongHien}">
                         <ItemsControl.ItemTemplate>
@@ -254,63 +392,92 @@
                                             <StackPanel Visibility="{Binding SuaDuoc, Converter={StaticResource HienKhi}}">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="0.7*"/><ColumnDefinition Width="1.15*"/><ColumnDefinition Width="0.7*"/>
-                                                        <ColumnDefinition Width="1.65*"/><ColumnDefinition Width="1.3*"/>
+                                                        <ColumnDefinition Width="0.6*"/><ColumnDefinition Width="1*"/><ColumnDefinition Width="0.7*"/>
+                                                        <ColumnDefinition Width="0.95*"/><ColumnDefinition Width="0.95*"/><ColumnDefinition Width="0.9*"/>
                                                     </Grid.ColumnDefinitions>
                                                     <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
                                                     <TextBlock Style="{StaticResource Nhan}" Text="Q"/>
                                                     <TextBlock Style="{StaticResource Nhan}" Grid.Column="1" Text="M"/>
                                                     <TextBlock Style="{StaticResource Nhan}" Grid.Column="2" Text="T"/>
-                                                    <TextBlock Style="{StaticResource Nhan}" Grid.Column="3" Text="X × Y"/>
-                                                    <TextBlock Style="{StaticResource Nhan}" Grid.Column="4" Text="Gia công" ToolTip="Loại gia công"/>
+                                                    <TextBlock Style="{StaticResource Nhan}" Grid.Column="3" Text="X"/>
+                                                    <TextBlock Style="{StaticResource Nhan}" Grid.Column="4" Text="Y"/>
+                                                    <TextBlock Style="{StaticResource Nhan}" Grid.Column="5" Text="Gia công" ToolTip="Loại gia công"/>
                                                     <TextBox Style="{StaticResource O}" Grid.Row="1" Text="{Binding Q}"/>
                                                     <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="1" Text="{Binding M}"/>
                                                     <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="2" Text="{Binding T}"/>
-                                                    <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="3" Text="{Binding XxY, Mode=OneWay}" IsReadOnly="True"/>
-                                                    <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="4" Text="{Binding LoaiGiaCong}"/>
+                                                    <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="3" Text="{Binding X, Mode=OneWay}" IsReadOnly="True" ToolTip="Đọc từ kích thước trên bản vẽ"/>
+                                                    <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="4" Text="{Binding Y, Mode=OneWay}" IsReadOnly="True" ToolTip="Đọc từ kích thước trên bản vẽ"/>
+                                                    <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="5" Text="{Binding LoaiGiaCong}"/>
                                                 </Grid>
                                                 <StackPanel x:Name="ChiTiet" Visibility="Collapsed">
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="0.85*"/><ColumnDefinition Width="0.85*"/><ColumnDefinition Width="0.65*"/>
-                                                            <ColumnDefinition Width="0.65*"/><ColumnDefinition Width="1.55*"/><ColumnDefinition Width="0.9*"/>
+                                                            <ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/>
                                                         </Grid.ColumnDefinitions>
                                                         <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
                                                         <TextBlock Style="{StaticResource Nhan}" Text="Lỗ nhỏ"/>
                                                         <TextBlock Style="{StaticResource Nhan}" Grid.Column="1" Text="Lỗ lớn"/>
                                                         <TextBlock Style="{StaticResource Nhan}" Grid.Column="2" Text="Tapu" ToolTip="Lỗ Tappu"/>
                                                         <TextBlock Style="{StaticResource Nhan}" Grid.Column="3" Text="Sara" ToolTip="Lỗ Sara"/>
-                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="4" Text="Pitchi lần × dài" ToolTip="Pitchi: số lần × chiều dài"/>
-                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="5" Text="Dài vát" ToolTip="Chiều dài vát"/>
+                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="4" Text="Dài vát" ToolTip="Chiều dài vát"/>
                                                         <TextBox Style="{StaticResource O}" Grid.Row="1" Text="{Binding LoNho, Mode=OneWay}" IsReadOnly="True"/>
                                                         <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="1" Text="{Binding LoLon, Mode=OneWay}" IsReadOnly="True"/>
                                                         <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="2" Text="{Binding Tappu}" ToolTip="Lỗ Tappu"/>
                                                         <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="3" Text="{Binding Sara}" ToolTip="Lỗ Sara"/>
-                                                        <Grid Grid.Row="1" Grid.Column="4" Background="#FFFFFF" Margin="0,0,1,1">
-                                                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
-                                                            <TextBox Style="{StaticResource O}" Margin="0" Text="{Binding PitchiSoLan}" ToolTip="Pitchi - Số lần"/>
-                                                            <TextBlock Grid.Column="1" Text="×" VerticalAlignment="Center"/>
-                                                            <TextBox Style="{StaticResource O}" Grid.Column="2" Margin="0" Text="{Binding PitchiDai}" ToolTip="Pitchi - Chiều dài (mm)"/>
-                                                        </Grid>
-                                                        <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="5" Text="{Binding Vat}"/>
+                                                        <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="4" Text="{Binding Vat}"/>
                                                     </Grid>
-                                                    <StackPanel>
-                                                        <TextBlock Style="{StaticResource Nhan}" Text="Đường bẻ: số đường × chiều dài" TextAlignment="Center"/>
-                                                        <TextBlock Text="{Binding DuongBe}" Background="#FFFFFF" Padding="6,3" Margin="0,0,1,1"
-                                                                   TextAlignment="Center" TextWrapping="Wrap"/>
+                                                    <!-- Be / uon: moi loai 1 dong -->
+                                                    <StackPanel Background="#FFFFFF" Margin="0,0,1,1">
+                                                        <DockPanel Margin="6,4,4,3">
+                                                            <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Margin="0" Padding="7,2" FontSize="11"
+                                                                    Content="+ Thêm đường bẻ" Click="ThemBeBam"/>
+                                                            <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Margin="0,0,4,0" Padding="6,2" FontSize="11" Foreground="#E65100"
+                                                                    Content="↺" Click="VeBeBam" ToolTip="Đang sửa tay. Bấm để lần quét sau lấy lại theo bản vẽ"
+                                                                    Visibility="{Binding BeSuaTay, Converter={StaticResource HienKhi}}"/>
+                                                            <TextBlock Style="{StaticResource TieuMuc}" Text="Bẻ / uốn"/>
+                                                        </DockPanel>
+                                                        <ItemsControl x:Name="DsBe" ItemsSource="{Binding Be}" Margin="6,0,4,3">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Grid Margin="0,0,0,4">
+                                                                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="6"/><ColumnDefinition Width="1.5*"/><ColumnDefinition Width="24"/></Grid.ColumnDefinitions>
+                                                                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                                                        <TextBlock Text="Số đường" FontSize="11" Foreground="#607D8B"/>
+                                                                        <TextBlock Grid.Column="2" Text="Dài (mm)" FontSize="11" Foreground="#607D8B"/>
+                                                                        <TextBox Grid.Row="1" Style="{StaticResource OVien}" Text="{Binding So}"/>
+                                                                        <TextBox Grid.Row="1" Grid.Column="2" Style="{StaticResource OVien}" Text="{Binding Dai}"/>
+                                                                        <Button Grid.Row="1" Grid.Column="3" Content="×" Foreground="#C62828" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                                                                Click="XoaBeBam" ToolTip="Xoá loại đường bẻ này"
+                                                                                Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
                                                     </StackPanel>
+                                                    <!-- Pitchi: loai, so duong nhan, chieu dai canh nhau -->
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="1.25*"/><ColumnDefinition/><ColumnDefinition Width="1.1*"/></Grid.ColumnDefinitions>
+                                                        <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                                                        <TextBlock Style="{StaticResource Nhan}" Text="Loại pitchi"/>
+                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="1" Text="Số đường nhấn"/>
+                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="2" Text="Dài pitchi" ToolTip="Chiều dài pitchi (mm)"/>
+                                                        <ComboBox Grid.Row="1" Margin="0,0,1,1" BorderThickness="0" Background="#FFFFFF" FontSize="11"
+                                                                  ItemsSource="{Binding DsLoaiPitchi}" SelectedItem="{Binding LoaiPitchi}" PreviewMouseWheel="ComboKhongLan"/>
+                                                        <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="1" Text="{Binding PitchiSoLan}"/>
+                                                        <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="2" Text="{Binding PitchiDai}"/>
+                                                    </Grid>
                                                     <!-- thong tin chi dung de tinh gia, luu o data\<don>-gia.json -->
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="1.35*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="0.8*"/>
+                                                            <ColumnDefinition Width="1.35*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="0.9*"/><ColumnDefinition Width="0.7*"/>
                                                         </Grid.ColumnDefinitions>
                                                         <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
-                                                        <TextBlock Style="{StaticResource Nhan}" Text="Loại pitchi"/>
+                                                        <TextBlock Style="{StaticResource Nhan}" Text="Chế độ tính" ToolTip="Chọn riêng cho tấm này, quét lại vẫn giữ"/>
                                                         <TextBlock Style="{StaticResource Nhan}" Grid.Column="1" Text="Cuộn" ToolTip="Nửa hình 6.000, cả hình 12.000. Tự nhận theo r1 / r2"/>
                                                         <TextBlock Style="{StaticResource Nhan}" Grid.Column="2" Text="Đặt ngoài" ToolTip="Đơn giá vật liệu đặt ngoài (khi bảng giá = 0)"/>
                                                         <TextBlock Style="{StaticResource Nhan}" Grid.Column="3" Text="Tròn 250" ToolTip="Giá dưới 250 thì tính 250"/>
                                                         <ComboBox Grid.Row="1" Margin="0,0,1,1" BorderThickness="0" Background="#FFFFFF" FontSize="11"
-                                                                  ItemsSource="{Binding DsLoaiPitchi}" SelectedItem="{Binding LoaiPitchi}" PreviewMouseWheel="ComboKhongLan"/>
+                                                                  ItemsSource="{Binding DsCheDo}" SelectedIndex="{Binding CheDoChon}" PreviewMouseWheel="ComboKhongLan"/>
                                                         <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,0,1,1" BorderThickness="0" Background="#FFFFFF" FontSize="11"
                                                                   ItemsSource="{Binding DsLoaiCuon}" SelectedItem="{Binding LoaiCuonGia}" PreviewMouseWheel="ComboKhongLan"/>
                                                         <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="2" Text="{Binding DonGiaDatNgoai}"/>
@@ -341,22 +508,124 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
-            </DockPanel>
+                    </DockPanel>
+                </TabItem>
+
+                <!-- Loi va canh bao: bam dong = zoom toi vi tri loi, bam tiep = vi tri ke -->
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource TenTab}" Text="Lỗi và cảnh báo"/>
+                            <TextBlock Style="{StaticResource DemTab}" Text="{Binding NhanTabLoi}" Tag="{Binding TabLoiDo}"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <ScrollViewer x:Name="CuonLoi" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="8">
+                            <TextBlock Text="Không có lỗi hay cảnh báo." Foreground="#2E7D32" Margin="2,4"
+                                       Visibility="{Binding KhongCoLoi, Converter={StaticResource HienKhi}}"/>
+                            <ItemsControl ItemsSource="{Binding DsLoi}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="DongLoiBd" Background="#FFF8E1" BorderBrush="#FFCA28" BorderThickness="3,0,0,0" CornerRadius="2"
+                                                Padding="6,3" Margin="0,0,0,3" Cursor="Hand" MouseLeftButtonUp="LoiBam"
+                                                ToolTip="Bấm để zoom tới lỗi, bấm tiếp để sang vị trí kế">
+                                            <DockPanel>
+                                                <StackPanel DockPanel.Dock="Right" Margin="6,0,0,0">
+                                                    <TextBlock Text="{Binding NhanViTri}" Foreground="#1565C0" FontSize="11" TextAlignment="Right"/>
+                                                    <Button Style="{StaticResource NutPhu}" Margin="0,2,0,0" Padding="6,1" FontSize="11" Content="Nhập giá" Click="NhapGiaBam"
+                                                            Visibility="{Binding LaThieuGia, Converter={StaticResource HienKhi}}"/>
+                                                </StackPanel>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Ten}" Foreground="#263238" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding NoiDung}" Foreground="#37474F" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding LaLoi}" Value="True">
+                                                <Setter TargetName="DongLoiBd" Property="Background" Value="#FDECEA"/>
+                                                <Setter TargetName="DongLoiBd" Property="BorderBrush" Value="#C62828"/>
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <!-- Gia VL: gia tam luu o data\<don>-giavl.csv -->
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource TenTab}" Text="Giá VL"/>
+                            <TextBlock Style="{StaticResource DemTab}" Text="{Binding NhanTabGia}" Tag="{Binding TabGiaDo}"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <DockPanel>
+                        <Grid DockPanel.Dock="Top" Background="#ECEFF1">
+                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="40"/><ColumnDefinition Width="104"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="Vật liệu · dày" FontSize="11" Foreground="#52606D" Padding="10,4"/>
+                            <TextBlock Grid.Column="1" Text="Tấm" FontSize="11" Foreground="#52606D" Padding="0,4" TextAlignment="Right"/>
+                            <TextBlock Grid.Column="2" Text="Giá VL (¥/kg)" FontSize="11" Foreground="#52606D" Padding="0,4,10,4" TextAlignment="Right"/>
+                        </Grid>
+                        <ScrollViewer x:Name="CuonGia" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding DsGiaVl}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="DongVl" BorderBrush="#E1E4E8" BorderThickness="0,0,0,1">
+                                            <StackPanel>
+                                                <Grid Margin="10,5">
+                                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="30"/><ColumnDefinition Width="94"/></Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Ten}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock x:Name="NguonVl" Text="{Binding Nguon}" FontSize="11" Foreground="#607D8B" TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" Text="{Binding SoTam}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                                    <TextBox Grid.Column="2" Style="{StaticResource OVien}" Margin="6,0,0,0" Text="{Binding GiaVL}" TextAlignment="Right"
+                                                             ToolTip="Giá tạm của đơn. Xoá trống để bỏ giá tạm"
+                                                             Visibility="{Binding HienNhap, Converter={StaticResource HienKhi}}"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding NhanGiaBang}" TextAlignment="Right" VerticalAlignment="Center" Foreground="#1565C0"
+                                                               Visibility="{Binding HienGiaBang, Converter={StaticResource HienKhi}}"/>
+                                                </Grid>
+                                                <!-- gia gia cong: chi hien voi vat lieu nhap tay -->
+                                                <Grid Margin="10,0,10,6" Visibility="{Binding HienNhap, Converter={StaticResource HienKhi}}">
+                                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                                                    <TextBlock Text="Cắt" FontSize="11" Foreground="#607D8B"/>
+                                                    <TextBlock Grid.Column="1" Text="Uốn" FontSize="11" Foreground="#607D8B" Margin="4,0,0,0"/>
+                                                    <TextBlock Grid.Column="2" Text="Mở lỗ" FontSize="11" Foreground="#607D8B" Margin="4,0,0,0"/>
+                                                    <TextBox Grid.Row="1" Style="{StaticResource OVien}" Text="{Binding Cat}"/>
+                                                    <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource OVien}" Margin="4,0,0,0" Text="{Binding Uon}"/>
+                                                    <TextBox Grid.Row="1" Grid.Column="2" Style="{StaticResource OVien}" Margin="4,0,0,0" Text="{Binding MoLo}"/>
+                                                    <TextBlock Grid.Row="2" Text="Tapu" FontSize="11" Foreground="#607D8B" Margin="0,3,0,0"/>
+                                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="Vát" FontSize="11" Foreground="#607D8B" Margin="4,3,0,0"/>
+                                                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Tỷ trọng" FontSize="11" Foreground="#607D8B" Margin="4,3,0,0"/>
+                                                    <TextBox Grid.Row="3" Style="{StaticResource OVien}" Text="{Binding Tapu}"/>
+                                                    <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource OVien}" Margin="4,0,0,0" Text="{Binding GiaVat}"/>
+                                                    <TextBox Grid.Row="3" Grid.Column="2" Style="{StaticResource OVien}" Margin="4,0,0,0" Text="{Binding TyTrong}"/>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding Thieu}" Value="True">
+                                                <Setter TargetName="DongVl" Property="Background" Value="#FDECEA"/>
+                                                <Setter TargetName="NguonVl" Property="Foreground" Value="#C62828"/>
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </TabItem>
+            </TabControl>
         </Border>
 
-        <!-- Thanh duoi: tong don · nut Quet · trang thai (CSV tu cap nhat) -->
+        <!-- Thanh duoi: tong don · trang thai · 2 file (CSV tu cap nhat) -->
         <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#E1E4E8" BorderThickness="0,1,0,0" Padding="10,8,10,10">
             <StackPanel>
-                <DockPanel Margin="0,0,0,8">
-                    <ComboBox DockPanel.Dock="Right" Width="130" Margin="8,0,0,0" FontSize="11" VerticalAlignment="Center"
-                              ItemsSource="{Binding DsCongTy}" SelectedItem="{Binding CongTy}" IsEnabled="{Binding CoGiaDon}"
-                              PreviewMouseWheel="ComboKhongLan" ToolTip="Công ty tính giá. Đổi là tính lại giá tự động"/>
-                    <TextBlock Text="{Binding NhanTongTien}" ToolTip="{Binding NhanTongTien}" FontWeight="SemiBold"
-                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                </DockPanel>
-                <Button x:Name="NutQuet" Style="{StaticResource Nut}" Margin="0,0,0,8" Padding="4,8" Command="{Binding QuetCmd}"
-                        Content="Quét..." ToolTip="Mở thiết lập quét và tính giá"/>
-
+                <TextBlock Text="{Binding NhanTongTien}" ToolTip="{Binding NhanTongTien}" FontWeight="SemiBold" Margin="0,0,0,5" TextTrimming="CharacterEllipsis"/>
                 <TextBlock Text="{Binding TrangThai}" TextWrapping="Wrap" Foreground="#52606D"/>
                 <Grid Margin="0,7,0,0">
                     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>

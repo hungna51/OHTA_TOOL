@@ -100,6 +100,45 @@ namespace CsvTool.Tests
             Kiem("ChuanDoDay: giu so le co san", PhanTichKhung.ChuanDoDay("1.25"), "1.25");
             Kiem("ChuanDoDay: sai -> null", PhanTichKhung.ChuanDoDay("abc") ?? PhanTichKhung.ChuanDoDay("0") ?? PhanTichKhung.ChuanDoDay("-1") ?? PhanTichKhung.ChuanDoDay(""), null);
 
+            var dTron = new GiaDon { LamTron250 = true };
+            Kiem("Tron250: ca don bat -> tam chua chinh duoc tron", dTron.Tron250(new GiaTam()), true);
+            Kiem("Tron250: tat rieng 1 tam", dTron.Tron250(new GiaTam { TatTron250 = true }), false);
+            Kiem("Tron250: don tat, tam bat rieng", new GiaDon().Tron250(new GiaTam { LamTron250 = true }), true);
+            var tamNho = new TamXuat { N = "R", M = "SS400", T = "6.0", Q = "1", X = "10", Y = "10", Tt = new ThongTinTam { CheDoTinh = "1" } };
+            var dNho = new GiaDon { CongTy = "TH" };
+            TinhGia.ApDung(new[] { tamNho }, dNho, b);
+            string giaNho = tamNho.Tt.GiaBaoGia;
+            dNho.LamTron250 = true;
+            TinhGia.ApDung(new[] { tamNho }, dNho, b);
+            Kiem("ApDung: tron 250 cho ca don", giaNho != "250" && tamNho.Tt.GiaBaoGia == "250", true);
+
+            var dSua = new GiaDon();
+            dSua.Lay("S").SuaBe = true; dSua.Lay("S").CheDoRieng = true;
+            var ttCu = new ThongTinTam { CheDoTinh = "1", DuongBe = new List<(int, int)> { (700, 2) } };
+            var ttMoi = new ThongTinTam { CheDoTinh = "0", DuongBe = new List<(int, int)> { (900, 1) } };
+            dSua.GiuSuaTay("S", ttMoi, ttCu);
+            Kiem("GiuSuaTay: giu be va che do rieng", ttMoi.CheDoTinh + "|" + ttMoi.DuongBe[0].Item1, "1|700");
+            var ttKhac = new ThongTinTam { CheDoTinh = "0", DuongBe = new List<(int, int)> { (900, 1) } };
+            dSua.GiuSuaTay("KHAC", ttKhac, ttCu);
+            Kiem("GiuSuaTay: tam khong sua lay theo ban ve", ttKhac.CheDoTinh + "|" + ttKhac.DuongBe[0].Item1, "0|900");
+
+            var goiY = GiaVlDon.GoiY(b, "ZAM", 3);
+            Kiem("GiaVl: goi y theo SS400 gan nhat, chua co gia VL", goiY.GiaCat + "|" + goiY.GiaUon + "|" + goiY.DonGia, "6|700|0");
+            Kiem("GiaVl: dong da co trong bang lay dung dong", GiaVlDon.GoiY(b, "SUS304", 9).GiaCat, 20.0);
+            var vl = new GiaVlDon();
+            goiY.DonGia = 200;
+            vl.Dat(goiY);
+            var tamZam = new TamXuat { N = "Z", M = "ZAM", T = "3.0", Q = "1", X = "100", Y = "100", Tt = new ThongTinTam { CheDoTinh = "0" } };
+            var dZam = new GiaDon { CongTy = "TH" };
+            Kiem("GiaVl: chua co gia tam -> canh bao", TinhGia.ApDung(new[] { tamZam }, dZam, b)["Z"], "Chưa có giá: ZAM dày 3.");
+            Kiem("GiaVl: co gia tam -> tinh duoc", TinhGia.ApDung(new[] { tamZam }, dZam, vl.Gop(b)).Count + "|" + (tamZam.Tt.GiaBaoGia != ""), "0|True");
+            var ghiDe = GiaVlDon.GoiY(b, "SS400", 6); ghiDe.DonGia = 999;
+            var vl2 = new GiaVlDon(); vl2.Dat(ghiDe);
+            Kiem("GiaVl: gia tam uu tien hon bang gia", vl2.Gop(b).Dong.First(x => x.VatLieu == "SS400" && x.DoDay == 6).DonGia, 999.0);
+            Kiem("GiaVl: bang goc khong bi doi", b.Dong.First(x => x.VatLieu == "SS400" && x.DoDay == 6).DonGia, 140.0);
+            var dsVl = GiaVlDon.DsVatLieu(new[] { tamZam, tamNho, new TamXuat { N = "H", M = "SS400", T = "6", Q = "1", Tt = new ThongTinTam() }, new TamXuat { N = "L", M = "SS400", T = "x", Q = "1", Tt = new ThongTinTam() } });
+            Kiem("GiaVl: gom theo vat lieu + do day", string.Join(";", dsVl.Select(x => x.VatLieu + "/" + x.DoDay + "/" + x.SoTam)), "SS400/6/2;ZAM/3/1");
+
             string thu = Path.Combine(Path.GetTempPath(), "csvtool_gia_" + Guid.NewGuid().ToString("N"));
             try
             {
@@ -117,6 +156,16 @@ namespace CsvTool.Tests
                 Kiem("TepDangMo: file ranh", CsvXuat.TepDangMo(f, f + ".chua-co"), null);
                 using (new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.Read))
                     Kiem("TepDangMo: file dang bi giu", CsvXuat.TepDangMo(f + ".chua-co", f), f);
+                string fVl = Path.Combine(thu, "data", "9-giavl.csv");
+                Kiem("GiaVl: chua co file -> trong", GiaVlDon.DocFile(fVl).Dong.Count, 0);
+                var vlFile = new GiaVlDon();
+                vlFile.Dat(new DongBangGia { VatLieu = "ZAM,A", DoDay = 2.3, DonGia = 212.5, GiaCat = 6, GiaUon = 700, GiaMoLo = 30, GiaTappu = 120, GiaVat = 1500, TyTrong = 7.85 });
+                vlFile.GhiFile(fVl);
+                var vlDoc = GiaVlDon.DocFile(fVl).Tim("ZAM,A", 2.3);
+                Kiem("GiaVl: khu hoi file", vlDoc.DonGia + "|" + vlDoc.GiaVat + "|" + vlDoc.TyTrong, "212.5|1500|7.85");
+                Kiem("GiaVl: file co BOM", File.ReadAllBytes(fVl)[0], (byte)0xEF);
+                File.WriteAllText(fVl, GiaVlDon.TieuDe + "\r\nZAM,abc\r\n");
+                KiemNemBatKy("GiaVl: file hong -> bao loi, khong coi la trong", () => GiaVlDon.DocFile(fVl));
                 File.WriteAllText(f, "{hong");
                 KiemNemBatKy("GiaDon: file hong -> bao loi, khong coi la trong", () => GiaDon.DocFile(f));
             }

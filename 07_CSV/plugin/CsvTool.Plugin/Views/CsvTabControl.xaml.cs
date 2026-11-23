@@ -15,7 +15,7 @@ namespace CsvTool.Views
             InitializeComponent();
             _vm = vm;
             DataContext = vm;
-            NutQuet.Background = vm.AccentBrush;
+            Resources["Mau"] = vm.AccentBrush;
             vm.DongHien.CollectionChanged += (s, e) => _dangChon = null;
             Focusable = true;   // bấm thẻ / dòng lỗi xong, Esc trên tab xoá được cloud
             KeyDown += (s, e) =>
@@ -60,6 +60,40 @@ namespace CsvTool.Views
             if ((sender as FrameworkElement)?.DataContext is DongTam d) _vm.VeGiaTuDong(d);
         }
 
+        private void NhapGiaBam(object sender, RoutedEventArgs e) => _vm.TabDangChon = 3;
+
+        private void ThemBeBam(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is DongTam d) d.ThemBe();
+        }
+
+        private void XoaBeBam(object sender, RoutedEventArgs e)
+        {
+            if (!(sender is FrameworkElement f) || !(f.DataContext is DongBe b)) return;
+            if (f.Tag is DongTam d) d.XoaBe(b);
+        }
+
+        private void VeBeBam(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is DongTam d) d.VeBeBanVe();
+        }
+
+        // Ô công ty gõ được: chỉ ghi khi đã chọn xong, không tính lại giá theo từng ký tự
+        private static void GhiCongTy(object sender) =>
+            (sender as ComboBox)?.GetBindingExpression(ComboBox.TextProperty)?.UpdateSource();
+
+        private void CongTyDong(object sender, System.EventArgs e) => GhiCongTy(sender);
+
+        private void CongTyRoi(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (sender is ComboBox c && !c.IsKeyboardFocusWithin && !c.IsDropDownOpen) GhiCongTy(c);
+        }
+
+        private void CongTyPhim(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter) GhiCongTy(sender);
+        }
+
         private void XoaTim(object sender, RoutedEventArgs e)
         {
             _vm.TimKiem = "";
@@ -87,7 +121,7 @@ namespace CsvTool.Views
         public void ScrollByMouseWheel(int wheelDelta)
         {
             if (wheelDelta == 0) return;
-            ScrollViewer c = CuonLoi.IsMouseOver ? CuonLoi : Cuon;
+            ScrollViewer c = _vm.TabDangChon == 0 ? CuonChung : _vm.TabDangChon == 2 ? CuonLoi : _vm.TabDangChon == 3 ? CuonGia : Cuon;
             c.ScrollToVerticalOffset(c.VerticalOffset - wheelDelta / 120.0 * 48.0);
         }
     }

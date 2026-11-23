@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using CsvTool.Core;
@@ -15,9 +16,12 @@ namespace CsvTool.ViewModels
         public int SoViTri => Goc?.ViTri.Count ?? 0;
         private int _dangXem = -1;
 
-        public DongLoi(DongTam dong, string noiDung, bool laLoi, LoiQuet goc)
+        /// <summary>Cảnh báo thiếu giá: dòng có nút Nhập giá sang tab Giá VL.</summary>
+        public bool LaThieuGia { get; }
+
+        public DongLoi(DongTam dong, string noiDung, bool laLoi, LoiQuet goc, bool laThieuGia = false)
         {
-            Dong = dong; NoiDung = noiDung; LaLoi = laLoi; Goc = goc;
+            Dong = dong; NoiDung = noiDung; LaLoi = laLoi; Goc = goc; LaThieuGia = laThieuGia;
         }
 
         public string NhanViTri => SoViTri == 0 ? "Xem khung" : "Vị trí " + (_dangXem < 0 ? 1 : _dangXem + 1) + "/" + SoViTri;
@@ -28,6 +32,34 @@ namespace CsvTool.ViewModels
             _dangXem = (_dangXem + 1) % SoViTri;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NhanViTri)));
             return Goc.ViTri[_dangXem];
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+    }
+
+    /// <summary>Một loại đường bẻ trên thẻ tấm. Đủ số đường và chiều dài mới được lưu.</summary>
+    public sealed class DongBe : INotifyPropertyChanged
+    {
+        private readonly DongTam _tam;
+        private string _so, _dai;
+
+        public DongBe(DongTam tam, string so, string dai) { _tam = tam; _so = so; _dai = dai; }
+
+        public bool SuaDuoc => true;
+        public string So { get => _so; set => Sua(value, ref _so, nameof(So), "Số đường"); }
+        public string Dai { get => _dai; set => Sua(value, ref _dai, nameof(Dai), "Chiều dài"); }
+        internal bool Du => int.TryParse(_so, out int a) && a > 0 && int.TryParse(_dai, out int b) && b > 0;
+        internal (int Dai, int SoLuong) GiaTri => (int.Parse(_dai), int.Parse(_so));
+
+        private void Sua(string giaTri, ref string o, string ten, string nhan)
+        {
+            string v = (giaTri ?? "").Trim();
+            if (v != o)
+            {
+                if (int.TryParse(v, out int n) && n > 0) { o = n.ToString(); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(ten)); _tam.LuuBe(); return; }
+                _tam.BaoLoiBe(nhan + " phải là số nguyên lớn hơn 0.");
+            }
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(ten));
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -47,6 +79,7 @@ namespace CsvTool.ViewModels
         public DongTam(CsvTabViewModel vm, KhungTho khung, TamXuat tam, string loi)
         {
             _vm = vm; Khung = khung; Tam = tam; _loi = loi;
+            DungBe();
         }
 
         public bool CoLoi => _loi != null;
@@ -76,12 +109,80 @@ namespace CsvTool.ViewModels
             }
         }
 
-        public string XxY => Tam == null ? "" : Tam.X + " × " + Tam.Y;
+        public string X => Tam?.X;
+        public string Y => Tam?.Y;
         public string LoNho => Tam?.Tt.LoNho.ToString();
         public string LoLon => Tam?.Tt.LoLon.ToString();
-        // số đường × chiều dài, như bảng giấy của xưởng
-        public string DuongBe => Tam == null ? "" : Tam.Tt.DuongBe.Count == 0 ? "Không có"
-            : string.Join("     ", Tam.Tt.DuongBe.Select(b => b.SoLuong + " × " + b.Dai));
+
+        // ── Đường bẻ: mỗi loại 1 dòng, tối đa 8 loại vì data CSV có 8 cặp cột ──
+        private const int ToiDaBe = 8;
+        public ObservableCollection<DongBe> Be { get; } = new ObservableCollection<DongBe>();
+        public bool BeSuaTay => Tam != null && _vm.XemGia(Tam.N)?.SuaBe == true;
+
+        private void DungBe()
+        {
+            Be.Clear();
+            if (Tam == null) return;
+            foreach (var b in Tam.Tt.DuongBe) Be.Add(new DongBe(this, b.SoLuong.ToString(), b.Dai.ToString()));
+        }
+
+        internal void BaoLoiBe(string s) => _vm.BaoLoi(s);
+
+        public void ThemBe()
+        {
+            if (Be.Count >= ToiDaBe) { _vm.BaoLoi("Tối đa " + ToiDaBe + " loại đường bẻ."); return; }
+            Be.Add(new DongBe(this, "1", ""));
+        }
+
+        public void XoaBe(DongBe b)
+        {
+            Be.Remove(b);
+            LuuBe();
+        }
+
+        internal void LuuBe()
+        {
+            if (Tam == null) return;
+            var moi = Be.Where(x => x.Du).Select(x => x.GiaTri).ToList();
+            var cu = Tam.Tt.DuongBe;
+            if (moi.SequenceEqual(cu)) return;
+            if (BiKhoa()) { DungBe(); return; }
+            GiaTam g = _vm.GiaCua(Tam.N);
+            if (g == null) { _vm.BaoLoi("Chưa đọc được dữ liệu giá của đơn, quét lại."); DungBe(); return; }
+            bool suaCu = g.SuaBe;
+            Luu(() => { Tam.Tt.DuongBe = moi; g.SuaBe = true; }, () => { Tam.Tt.DuongBe = cu; g.SuaBe = suaCu; });
+            if (Tam.Tt.DuongBe != moi) DungBe();
+            Bao(nameof(BeSuaTay));
+        }
+
+        /// <summary>Bỏ dấu sửa tay: lần quét tấm này tiếp theo lấy lại đường bẻ từ bản vẽ.</summary>
+        public void VeBeBanVe()
+        {
+            GiaTam g = Tam == null ? null : _vm.XemGia(Tam.N);
+            if (g == null) return;
+            g.SuaBe = false;
+            _vm.LuuGia();
+            _vm.BaoLoi("Quét lại tấm này để lấy đường bẻ từ bản vẽ.");
+            Bao(nameof(BeSuaTay));
+        }
+
+        // ── Chế độ tính riêng từng tấm ──
+        public string[] DsCheDo => CsvTabViewModel.DsCheDoTinh;
+        public int CheDoChon
+        {
+            get => int.TryParse(Tam?.Tt.CheDoTinh, out int m) && m >= 0 && m <= 2 ? m : 0;
+            set
+            {
+                // ComboBox đẩy -1 khi thẻ bị dựng lại: không được coi là người dùng chọn
+                if (Tam == null || value < 0 || value == CheDoChon || BiKhoa()) return;
+                GiaTam g = _vm.GiaCua(Tam.N);
+                if (g == null) { _vm.BaoLoi("Chưa đọc được dữ liệu giá của đơn, quét lại."); Bao(null); return; }
+                string cu = Tam.Tt.CheDoTinh;
+                bool rieng = g.CheDoRieng;
+                Luu(() => { Tam.Tt.CheDoTinh = value.ToString(); g.CheDoRieng = true; }, () => { Tam.Tt.CheDoTinh = cu; g.CheDoRieng = rieng; });
+                Bao(null);
+            }
+        }
 
         private bool _moRong;
         public bool MoRong { get => _moRong; set { _moRong = value; Bao(nameof(MoRong)); } }
@@ -130,7 +231,11 @@ namespace CsvTool.ViewModels
             }
         }
         public string DonGiaDatNgoai { get => SoGia(_vm.XemGia(Tam?.N)?.DonGiaDatNgoai); set => SuaSoGia(value, (g, d) => g.DonGiaDatNgoai = d); }
-        public bool LamTron250 { get => _vm.XemGia(Tam?.N)?.LamTron250 == true; set => SuaGia(g => g.LamTron250 = value); }
+        public bool LamTron250
+        {
+            get => Tam != null && _vm.Tron250Cua(Tam.N);
+            set => SuaGia(g => { g.LamTron250 = value; g.TatTron250 = !value && _vm.LamTron250Don; });
+        }
 
         private static string SoGia(double? d) => d > 0 ? d.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "";
 
@@ -154,7 +259,7 @@ namespace CsvTool.ViewModels
             Bao(null);
         }
 
-        public void BaoGia() { Bao(nameof(GiaTien)); Bao(nameof(LaGiaTay)); }
+        public void BaoGia() { Bao(nameof(GiaTien)); Bao(nameof(LaGiaTay)); Bao(nameof(LamTron250)); Bao(nameof(CheDoChon)); }
 
         public string MaMage => Tam == null ? "" : CsvXuat.MaMage(Tam.Tt.LoaiGiaCong);
 

@@ -15,6 +15,9 @@ namespace CsvTool.Core
         [DataMember] public double DonGiaCuon;    // 0 = theo r1/r2, âm = chọn Không, dương = đơn giá đã chọn
         [DataMember] public double DonGiaDatNgoai;
         [DataMember] public bool LamTron250;
+        [DataMember] public bool TatTron250;      // tắt riêng tấm này khi cả đơn đang bật làm tròn 250
+        [DataMember] public bool SuaBe;           // đường bẻ sửa tay: quét lại không đè
+        [DataMember] public bool CheDoRieng;      // chế độ tính chọn riêng: quét lại, đổi chế độ đơn không đè
     }
 
     /// <summary>data\&lt;đơn&gt;-gia.json: công ty + thông tin giá từng tấm, khoá theo tên N.</summary>
@@ -24,12 +27,23 @@ namespace CsvTool.Core
         [DataMember] public string CongTy = "";
         [DataMember] public bool KhongTinhSauQuet;   // mặc định có tính giá sau quét
         [DataMember] public int? CheDoTinh;
+        [DataMember] public bool LamTron250;         // giá dưới 250 tính thành 250 cho cả đơn
         [DataMember] public Dictionary<string, GiaTam> Tam = new Dictionary<string, GiaTam>();
 
         public GiaTam Lay(string ten)
         {
             if (!Tam.TryGetValue(ten, out GiaTam g)) Tam[ten] = g = new GiaTam();
             return g;
+        }
+
+        public bool Tron250(GiaTam g) => g?.TatTron250 != true && (LamTron250 || g?.LamTron250 == true);
+
+        /// <summary>Quét lại: giữ đường bẻ và chế độ tính người dùng đã sửa riêng cho tấm.</summary>
+        public void GiuSuaTay(string ten, ThongTinTam moi, ThongTinTam cu)
+        {
+            if (cu == null || moi == cu || !Tam.TryGetValue(ten, out GiaTam g)) return;
+            if (g.SuaBe) moi.DuongBe = cu.DuongBe;
+            if (g.CheDoRieng) moi.CheDoTinh = cu.CheDoTinh;
         }
 
         public void DoiTen(string cu, string moi)
