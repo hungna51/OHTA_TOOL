@@ -45,6 +45,7 @@ namespace CsvTool.Core
         public List<ChuHinh> ChuQuanh = new List<ChuHinh>();        // ký hiệu bẻ có thể nằm ngoài khung
         public List<GhiChuDan> Dan = new List<GhiChuDan>();
         public List<string> ChuDanTrong = new List<string>();       // chữ của leader có mũi tên chỉ vào khung
+        public List<string> ChuDim = new List<string>();            // chữ ghi đè của DIMENSION trong khung
     }
 
     public sealed class KetQuaHinh
@@ -123,7 +124,7 @@ namespace CsvTool.Core
             var be = DuongBe(d, fname, hoiSoNhan, s => kq.CanhBao.Add(new LoiQuet { Handle = d.HandleKhung, NoiDung = s }));
             var chuTrong = d.ChuTrongKhung.Select(c => c.NoiDung).ToList();
             // chữ của LEADER cũng là 1 đối tượng trong khung: không đếm 2 lần
-            int sara = DemSara(chuTrong.Concat(d.ChuDanTrong.Where(x => !chuTrong.Contains(x))));
+            int sara = DemSara(chuTrong.Concat(d.ChuDanTrong.Where(x => !chuTrong.Contains(x))).Concat(d.ChuDim));
             string gc = LoaiGiaCong(d.ChuTrongKhung, be.Count > 0);
             if (sara > 0 && !gc.Split(new[] { ", " }, StringSplitOptions.None).Contains("s")) gc = gc == "" ? "s" : gc + ", s";
             var tt = new ThongTinTam
@@ -588,29 +589,39 @@ namespace CsvTool.Core
         private static readonly Regex RxSara = new Regex("\u76BF\\s*(\u30E2\u30DF|\u3082\u307F|\u63C9|\u52A0\u5DE5|\u53D6|\u30B6\u30B0\u30EA|\u3056\u3050\u308A)|\u30B5\u30E9\\s*(\u30E2\u30DF|\u3082\u307F|\u63C9|\u52A0\u5DE5|\u53D6)|\u3055\u3089\u3082\u307F", RegexOptions.Compiled);
         private static readonly Regex RxMaMtext = new Regex(@"\\[A-OQ-Za-z][^;\\]*;|[{}]", RegexOptions.Compiled);
         private static readonly Regex RxTich = new Regex(@"^\s*(\d+)\s*[xX×*]\s*(\d+)\s*[-‐−–ー]", RegexOptions.Compiled);
-        private static readonly Regex RxDauSo = new Regex(@"^\s*(\d+)\s*(?:[-‐−–ー]|[xX×*]\s*[∅φΦØøMm])", RegexOptions.Compiled);
+        private static readonly Regex RxDauSo = new Regex(@"^\s*(\d+)\s*(?:[-‐−–ー]|[xX×*]\s*[∅φΦØøMm%])", RegexOptions.Compiled);
+        // dòng trên chỉ ghi lỗ: "5-∅6.8" rồi xuống dòng "皿加工(∅12.8)"
+        private static readonly Regex RxDongLo = new Regex(@"^\s*\d+\s*(?:[xX×*]\s*\d+\s*)?[-‐−–ーxX×*]\s*(?:[∅φΦØø]|%%[Cc])", RegexOptions.Compiled);
         private static readonly Regex RxChoSo = new Regex("(\\d+)\\s*(?:\u7B87\u6240|\u30F6\u6240|\u304B\u6240|\u30AB\u6240|\u30B1\u6240|\u500B\u6240)", RegexOptions.Compiled);
 
         // bỏ mã định dạng MTEXT, đưa chữ nửa độ rộng (ｻﾗﾓﾐ) về chữ thường
         private static string ChuanChu(string s) => RxMaMtext.Replace(GiaiMa(s), "").Normalize(NormalizationForm.FormKC);
 
-        /// <summary>Tổng số lỗ Sara theo ghi chú: "2x2-∅8孔皿モミ" = 4, "4-φ8皿もみ" = 4, "皿モミ 3箇所" = 3, không ghi số = 1.</summary>
+        /// <summary>Tổng số lỗ Sara theo ghi chú: "2x2-∅8孔皿モミ" = 4, "4-φ8皿もみ" = 4, "皿モミ 3箇所" = 3, "5-∅6.8" + dòng "皿加工" = 5, không ghi số = 1.</summary>
         public static int DemSara(IEnumerable<string> chu)
         {
             int tong = 0;
             foreach (string c in chu)
-                foreach (string dong in ChuanChu((c ?? "").Replace("\\P", "\n")).Split('\n'))
-                    if (RxSara.IsMatch(dong)) tong += SoLoGhi(dong);
+            {
+                string[] dong = ChuanChu((c ?? "").Replace("\\P", "\n")).Split('\n');
+                for (int i = 0; i < dong.Length; i++)
+                {
+                    if (!RxSara.IsMatch(dong[i])) continue;
+                    int? so = SoLoGhi(dong[i]);
+                    if (so == null && i > 0 && RxDongLo.IsMatch(dong[i - 1])) so = SoLoGhi(dong[i - 1]);
+                    tong += so ?? 1;
+                }
+            }
             return tong;
         }
 
-        private static int SoLoGhi(string dong)
+        private static int? SoLoGhi(string dong)
         {
             Match m = RxTich.Match(dong);
             if (m.Success && int.TryParse(m.Groups[1].Value, out int a) && int.TryParse(m.Groups[2].Value, out int b) && a > 0 && b > 0 && a <= 1000 && b <= 1000) return a * b;
             m = RxDauSo.Match(dong);
             if (!m.Success) m = RxChoSo.Match(dong);
-            return m.Success && int.TryParse(m.Groups[1].Value, out int n) && n > 0 ? n : 1;
+            return m.Success && int.TryParse(m.Groups[1].Value, out int n) && n > 0 ? n : (int?)null;
         }
 
         /// <summary>CSV--scan-machining-texts: đọc mọi chữ trong khung ra "m, m(pitchi), t, s, k".</summary>

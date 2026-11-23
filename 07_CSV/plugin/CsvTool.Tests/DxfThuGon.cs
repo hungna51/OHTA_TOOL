@@ -127,6 +127,7 @@ namespace CsvTool.Tests
                         d.ChuTrongKhung.Add(c);
                         if (Cung(e.Lop, PhanTichKhung.LopFname)) d.ChuFname.Add(c);
                     }
+                    else if (e.Loai == "DIMENSION" && !string.IsNullOrEmpty(e.Lay(1)) && Trong(e.So(11), e.So(21))) d.ChuDim.Add(e.Lay(1));
                     else if (e.Loai == "HATCH" && Cung(e.Lop, lopTapu) && Trong(e.So(10), e.So(20))) d.SoHatch++;
                     else if (Cung(e.Lop, "0-KAKOU")) DocNet(e, d, Trong, netLop);
                 }

@@ -104,6 +104,9 @@ namespace CsvTool.CadServices
                 if (e.Handle.Value == k.Handle) continue;
                 DuLieuHinh d = ds[i];
                 if (chu != null && laFname && Cham(hop, k)) d.ChuFname.Add(chu);
+                // theo vị trí chữ: đường gióng của dim có thể thò ra ngoài khung
+                if (e is Dimension dm && !string.IsNullOrEmpty(dm.DimensionText) && dm.TextPosition.X >= k.MinX && dm.TextPosition.X <= k.MaxX &&
+                    dm.TextPosition.Y >= k.MinY && dm.TextPosition.Y <= k.MaxY) d.ChuDim.Add(dm.DimensionText);
                 if (!Trong(hop, k)) continue;
                 if (chu != null) d.ChuTrongKhung.Add(chu);
                 if (laTapu) d.SoHatch++;

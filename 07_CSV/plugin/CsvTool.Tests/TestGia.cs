@@ -180,6 +180,9 @@ namespace CsvTool.Tests
             Kiem("Sara: khong ghi so = 1", Sara1("∅8孔皿モミ"), 1);
             Kiem("Sara: dang ma U+", Sara1("2-\\U+76BF\\U+30E2\\U+30DF"), 2);
             Kiem("Sara: nhieu dong", Sara1("2-M5タップ\\P3-∅6皿加工"), 3);
+            Kiem("Sara: mau that 131107, so lo o dong tren", Sara1("{\\fMS PGothic|b0|i0|c128|p50;5-∅6.8\\P皿加工(∅12.8)}"), 5);
+            Kiem("Sara: dong tren dung %%C", Sara1("3-%%C8\\P皿加工"), 3);
+            Kiem("Sara: dong tren la tap thi khong muon so", Sara1("4-M5タップ\\P皿加工"), 1);
             Kiem("Sara: ten vit khong tinh", Sara1("皿小ネジ"), 0);
             Kiem("Sara: tap khong tinh", Sara1("4-M5タップ"), 0);
             Kiem("Sara: loai gia cong co s", PhanTichHinh.LoaiGiaCong(new[] { new ChuHinh { NoiDung = "2x2-∅8孔皿モミ" } }, false), "s");
@@ -190,6 +193,12 @@ namespace CsvTool.Tests
             hinhSara.ChuDanTrong.Add("2-∅6皿もみ");
             var kqSara = PhanTichHinh.Chay(hinhSara, 0.05, 0, (a, c) => null);
             Kiem("Sara: quet ra so lo + loai s, leader khong dem trung", kqSara.Tam == null ? "loi" : kqSara.Tam.Sara + "|" + kqSara.Tam.LoaiGiaCong, "6|s");
+            var hinhDim = new DuLieuHinh { HandleKhung = 2 };
+            hinhDim.Net.AddRange(hinhSara.Net);
+            hinhDim.ChuDim.Add("{\\fMS PGothic|b0|i0|c128|p50;5-∅6.8\\P皿加工(∅12.8)}");
+            hinhDim.ChuDim.Add("%%C6.8");
+            var kqDim = PhanTichHinh.Chay(hinhDim, 0.05, 0, (a, c) => null);
+            Kiem("Sara: doc tu chu ghi de cua dim", kqDim.Tam == null ? "loi" : kqDim.Tam.Sara + "|" + kqDim.Tam.LoaiGiaCong, "5|s");
             var ttCuSara = new ThongTinTam { Sara = 3 };
             var dSuaSara = new GiaDon(); dSuaSara.Lay("S").SuaSara = true;
             var ttMoiSara = new ThongTinTam { Sara = 4 };
