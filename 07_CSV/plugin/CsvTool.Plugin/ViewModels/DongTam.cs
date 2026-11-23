@@ -231,21 +231,10 @@ namespace CsvTool.ViewModels
                 SuaGia(g => g.DonGiaCuon = d);
             }
         }
-        public string DonGiaDatNgoai { get => SoGia(_vm.XemGia(Tam?.N)?.DonGiaDatNgoai); set => SuaSoGia(value, (g, d) => g.DonGiaDatNgoai = d); }
         public bool LamTron250
         {
             get => Tam != null && _vm.Tron250Cua(Tam.N);
             set => SuaGia(g => { g.LamTron250 = value; g.TatTron250 = !value && _vm.LamTron250Don; });
-        }
-
-        private static string SoGia(double? d) => d > 0 ? d.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "";
-
-        private void SuaSoGia(string giaTri, System.Action<GiaTam, double> gan)
-        {
-            string s = (giaTri ?? "").Trim();
-            if (s == "") SuaGia(g => gan(g, 0));
-            else if (TinhGia.SoTien(s, out double d) && d >= 0) SuaGia(g => gan(g, d));
-            else { _vm.BaoLoi("\"" + giaTri + "\" không phải số ≥ 0."); Bao(null); }
         }
 
         private void SuaGia(System.Action<GiaTam> doi)

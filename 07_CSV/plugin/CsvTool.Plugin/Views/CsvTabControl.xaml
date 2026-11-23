@@ -469,19 +469,17 @@
                                                     <!-- thong tin chi dung de tinh gia, luu o data\<don>-gia.json -->
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="1.35*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="0.9*"/><ColumnDefinition Width="0.7*"/>
+                                                            <ColumnDefinition Width="1.35*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="0.7*"/>
                                                         </Grid.ColumnDefinitions>
                                                         <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
                                                         <TextBlock Style="{StaticResource Nhan}" Text="Chế độ tính" ToolTip="Chọn riêng cho tấm này, quét lại vẫn giữ"/>
                                                         <TextBlock Style="{StaticResource Nhan}" Grid.Column="1" Text="Cuộn" ToolTip="Nửa hình 6.000, cả hình 12.000. Tự nhận theo r1 / r2"/>
-                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="2" Text="Đặt ngoài" ToolTip="Đơn giá vật liệu đặt ngoài (khi bảng giá = 0)"/>
-                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="3" Text="Tròn 250" ToolTip="Giá dưới 250 thì tính 250"/>
+                                                        <TextBlock Style="{StaticResource Nhan}" Grid.Column="2" Text="Tròn 250" ToolTip="Giá dưới 250 thì tính 250"/>
                                                         <ComboBox Grid.Row="1" Margin="0,0,1,1" BorderThickness="0" Background="#FFFFFF" FontSize="11"
                                                                   ItemsSource="{Binding DsCheDo}" SelectedIndex="{Binding CheDoChon}" PreviewMouseWheel="ComboKhongLan"/>
                                                         <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,0,1,1" BorderThickness="0" Background="#FFFFFF" FontSize="11"
                                                                   ItemsSource="{Binding DsLoaiCuon}" SelectedItem="{Binding LoaiCuonGia}" PreviewMouseWheel="ComboKhongLan"/>
-                                                        <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="2" Text="{Binding DonGiaDatNgoai}"/>
-                                                        <Border Grid.Row="1" Grid.Column="3" Background="#FFFFFF" Margin="0,0,1,1">
+                                                        <Border Grid.Row="1" Grid.Column="2" Background="#FFFFFF" Margin="0,0,1,1">
                                                             <CheckBox IsChecked="{Binding LamTron250}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                         </Border>
                                                     </Grid>

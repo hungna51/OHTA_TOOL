@@ -161,7 +161,7 @@ namespace CsvTool.Core
                 VatLieu = t.M, CongTy = congTy, LoaiPitchi = g?.LoaiPitchi ?? "Pitchi", DoDay = doDay, X = x, Y = y, SoLuong = q,
                 LoNho = t.Tt.LoNho, LoLon = t.Tt.LoLon, Tappu = t.Tt.Tappu, Sara = t.Tt.Sara,
                 PitchiSoLan = t.Tt.PitchiSoLan, PitchiDai = t.Tt.PitchiDai, VatMm = t.Tt.Vat,
-                DonGiaCuon = DonGiaCuonCua(t, g), DonGiaDatNgoai = g?.DonGiaDatNgoai ?? 0, LamTron250 = g?.LamTron250 ?? false, CheDoTinh = cheDo,
+                DonGiaCuon = DonGiaCuonCua(t, g), LamTron250 = g?.LamTron250 ?? false, CheDoTinh = cheDo,
             };
             v.Be.AddRange(t.Tt.DuongBe.Select(b => ((double)b.SoLuong, (double)b.Dai)));
             return (v, null);
