@@ -7,10 +7,10 @@ using System.Text;
 
 namespace CsvTool.Core
 {
-    /// <summary>data\&lt;đơn&gt;-giavl.csv: giá tạm của vật liệu chưa có trong bảng giá, chỉ dùng cho đơn này.</summary>
+    /// <summary>data\&lt;đơn&gt;-giavl.csv: giá vật liệu tạm của đơn. Thông số gia công luôn lấy từ database, không lưu ở đây.</summary>
     public sealed class GiaVlDon
     {
-        public const string TieuDe = "Vat lieu,Do day,Gia VL,Gia cat,Gia uon,Gia mo lo,Gia tappu,Gia vat,Ty trong";
+        public const string TieuDe = "Vat lieu,Do day,Gia VL";
 
         public List<DongBangGia> Dong = new List<DongBangGia>();
 
@@ -25,32 +25,24 @@ namespace CsvTool.Core
 
         public void Xoa(string vatLieu, double doDay) => Dong.RemoveAll(x => x.VatLieu == vatLieu && x.DoDay == doDay);
 
-        /// <summary>Bảng giá để tính: giá tạm đứng trước nên được ưu tiên, báo giá của đơn không tự đổi khi database đổi.</summary>
+        /// <summary>
+        /// Bảng giá để tính: dòng có giá tạm chỉ thay đơn giá vật liệu, mọi thông số khác giữ của database.
+        /// Vật liệu + độ dày không có trong database thì giá tạm không có tác dụng.
+        /// </summary>
         public BangGia Gop(BangGia b) => new BangGia
         {
-            CapNhat = b.CapNhat, Dong = Dong.Concat(b.Dong).ToList(), CongTyUuDai = b.CongTyUuDai, DacBiet = b.DacBiet, HeSoVL = b.HeSoVL,
+            CapNhat = b.CapNhat, CongTyUuDai = b.CongTyUuDai, DacBiet = b.DacBiet, HeSoVL = b.HeSoVL,
             HeSoGiaCong = b.HeSoGiaCong, PitchiTrongLuong = b.PitchiTrongLuong, PitchiChieuDai = b.PitchiChieuDai, HeSoCuon = b.HeSoCuon,
-        };
-
-        /// <summary>
-        /// Dòng để nhập: chỉ lấy thông số của đúng vật liệu + độ dày trong bảng giá. Không có thì để trống (NaN),
-        /// không mượn của vật liệu khác vì sẽ ra giá sai mà không ai biết.
-        /// </summary>
-        public static DongBangGia GoiY(BangGia b, string vatLieu, double doDay)
-        {
-            DongBangGia g = b?.Dong.FirstOrDefault(x => x.VatLieu == vatLieu && x.DoDay == doDay);
-            return new DongBangGia
+            Dong = b.Dong.Select(x =>
             {
-                VatLieu = vatLieu, DoDay = doDay, DonGia = double.NaN, GiaCat = g?.GiaCat ?? double.NaN, GiaUon = g?.GiaUon ?? double.NaN,
-                GiaMoLo = g?.GiaMoLo ?? double.NaN, GiaTappu = g?.GiaTappu ?? double.NaN, GiaVat = g?.GiaVat ?? double.NaN, TyTrong = g?.TyTrong ?? double.NaN,
-            };
-        }
-
-        /// <summary>Đủ cả 7 thông số thì mới được lưu và dùng để tính tiền.</summary>
-        public static bool Du(DongBangGia d) =>
-            d.DonGia > 0 && d.TyTrong > 0 && d.GiaCat >= 0 && d.GiaUon >= 0 && d.GiaMoLo >= 0 && d.GiaTappu >= 0 && d.GiaVat >= 0
-            && !double.IsInfinity(d.DonGia) && !double.IsInfinity(d.TyTrong) && !double.IsInfinity(d.GiaCat) && !double.IsInfinity(d.GiaUon)
-            && !double.IsInfinity(d.GiaMoLo) && !double.IsInfinity(d.GiaTappu) && !double.IsInfinity(d.GiaVat);
+                DongBangGia t = Tim(x.VatLieu, x.DoDay);
+                return t == null ? x : new DongBangGia
+                {
+                    VatLieu = x.VatLieu, DoDay = x.DoDay, DonGia = t.DonGia, GiaUon = x.GiaUon, GiaCat = x.GiaCat,
+                    GiaMoLo = x.GiaMoLo, GiaTappu = x.GiaTappu, GiaVat = x.GiaVat, TyTrong = x.TyTrong,
+                };
+            }).ToList(),
+        };
 
         /// <summary>Các cặp vật liệu + độ dày trong đơn và số dòng tấm của mỗi cặp. Độ dày không phải số thì bỏ qua.</summary>
         public static List<(string VatLieu, double DoDay, int SoTam)> DsVatLieu(IEnumerable<TamXuat> ds) =>
@@ -71,18 +63,16 @@ namespace CsvTool.Core
             string noiDung;
             using (var s = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
             using (var r = new StreamReader(s, Encoding.UTF8)) noiDung = r.ReadToEnd();
-            foreach (string dong in noiDung.TrimStart('﻿').Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+            foreach (string dong in noiDung.TrimStart('\uFEFF').Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
             {
-                if (dong == TieuDe || dong.Trim() == "") continue;
+                // file của bản trước có thêm cột gia công: bỏ qua các cột đó
+                if (dong.StartsWith("Vat lieu,Do day,Gia VL") || dong.Trim() == "") continue;
                 List<string> o = CsvXuat.TachO(dong);
-                if (o.Count < 9 || o[0] == "") throw new FormatException("Dòng giá vật liệu sai cột: " + dong);
-                double D(int i) => double.Parse(o[i], NumberStyles.Float, CultureInfo.InvariantCulture);
-                var g = new DongBangGia
-                {
-                    VatLieu = o[0], DoDay = D(1), DonGia = D(2), GiaCat = D(3), GiaUon = D(4), GiaMoLo = D(5), GiaTappu = D(6), GiaVat = D(7), TyTrong = D(8),
-                };
-                if (!Du(g)) throw new FormatException("Dòng giá vật liệu thiếu thông số: " + dong);
-                kq.Dat(g);
+                if (o.Count < 3 || o[0] == "") throw new FormatException("Dòng giá vật liệu sai cột: " + dong);
+                double day = double.Parse(o[1], NumberStyles.Float, CultureInfo.InvariantCulture);
+                double gia = double.Parse(o[2], NumberStyles.Float, CultureInfo.InvariantCulture);
+                if (!(gia > 0) || double.IsInfinity(gia)) throw new FormatException("Giá vật liệu không hợp lệ: " + dong);
+                kq.Dat(new DongBangGia { VatLieu = o[0], DoDay = day, DonGia = gia });
             }
             return kq;
         }
@@ -93,7 +83,7 @@ namespace CsvTool.Core
             Directory.CreateDirectory(Path.GetDirectoryName(file));
             var sb = new StringBuilder(TieuDe + "\r\n");
             foreach (DongBangGia d in Dong)
-                sb.Append(string.Join(",", CsvXuat.O(d.VatLieu), So(d.DoDay), So(d.DonGia), So(d.GiaCat), So(d.GiaUon), So(d.GiaMoLo), So(d.GiaTappu), So(d.GiaVat), So(d.TyTrong))).Append("\r\n");
+                sb.Append(string.Join(",", CsvXuat.O(d.VatLieu), So(d.DoDay), So(d.DonGia))).Append("\r\n");
             string tam = file + ".tmp";
             File.WriteAllText(tam, sb.ToString(), new UTF8Encoding(true));
             try { File.Copy(tam, file, true); }

@@ -370,11 +370,10 @@ namespace CsvTool.ViewModels
 
         internal void DatGiaVl(DongGiaVl d, double gia)
         {
-            double cu = d.Nhap.DonGia;
-            bool coCu = GiaTamCua(d.VatLieu, d.DoDay) != null;
-            DongBangGia n = d.Nhap;
+            DongBangGia t = GiaTamCua(d.VatLieu, d.DoDay), n = t ?? new DongBangGia { VatLieu = d.VatLieu, DoDay = d.DoDay };
+            double cu = n.DonGia;
             if (!GhiGiaVl(() => { n.DonGia = gia; _giaVl.Dat(n); },
-                          () => { n.DonGia = cu; if (!coCu) _giaVl.Xoa(d.VatLieu, d.DoDay); })) return;
+                          () => { if (t == null) _giaVl.Xoa(d.VatLieu, d.DoDay); else n.DonGia = cu; })) return;
             SauGiaVl();
         }
 
@@ -382,16 +381,7 @@ namespace CsvTool.ViewModels
         {
             DongBangGia n = GiaTamCua(d.VatLieu, d.DoDay);
             if (n == null || !GhiGiaVl(() => _giaVl.Xoa(d.VatLieu, d.DoDay), () => _giaVl.Dat(n))) return;
-            d.BoGiaTam();
             SauGiaVl();
-        }
-
-        /// <summary>Sửa thông số của dòng đã có giá tạm: lưu và tính lại.</summary>
-        internal bool SuaPhuGiaVl(DongGiaVl d, Action doi, Action hoan)
-        {
-            if (!GhiGiaVl(doi, hoan)) return false;
-            SauGiaVl();
-            return true;
         }
 
         /// <summary>Phân tích hình học các khung, một khung lỗi không làm dừng lượt quét; xong thì tính giá nếu đã chọn.</summary>

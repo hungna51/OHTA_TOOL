@@ -586,23 +586,6 @@
                                                     <TextBlock Grid.Column="2" Text="{Binding NhanGiaBang}" TextAlignment="Right" VerticalAlignment="Center" Foreground="#1565C0"
                                                                Visibility="{Binding HienGiaBang, Converter={StaticResource HienKhi}}"/>
                                                 </Grid>
-                                                <!-- thong so gia cong: khong co trong database thi de trong, nguoi dung tu nhap -->
-                                                <Grid Margin="10,0,10,6" Visibility="{Binding HienNhap, Converter={StaticResource HienKhi}}">
-                                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-                                                    <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
-                                                    <TextBlock Text="Cắt" FontSize="11" Foreground="#607D8B"/>
-                                                    <TextBlock Grid.Column="1" Text="Uốn" FontSize="11" Foreground="#607D8B" Margin="4,0,0,0"/>
-                                                    <TextBlock Grid.Column="2" Text="Mở lỗ" FontSize="11" Foreground="#607D8B" Margin="4,0,0,0"/>
-                                                    <TextBox Grid.Row="1" Style="{StaticResource OVien}" Text="{Binding Cat}"/>
-                                                    <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource OVien}" Margin="4,0,0,0" Text="{Binding Uon}"/>
-                                                    <TextBox Grid.Row="1" Grid.Column="2" Style="{StaticResource OVien}" Margin="4,0,0,0" Text="{Binding MoLo}"/>
-                                                    <TextBlock Grid.Row="2" Text="Tapu" FontSize="11" Foreground="#607D8B" Margin="0,3,0,0"/>
-                                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="Vát" FontSize="11" Foreground="#607D8B" Margin="4,3,0,0"/>
-                                                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Tỷ trọng" FontSize="11" Foreground="#607D8B" Margin="4,3,0,0"/>
-                                                    <TextBox Grid.Row="3" Style="{StaticResource OVien}" Text="{Binding Tapu}"/>
-                                                    <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource OVien}" Margin="4,0,0,0" Text="{Binding GiaVat}"/>
-                                                    <TextBox Grid.Row="3" Grid.Column="2" Style="{StaticResource OVien}" Margin="4,0,0,0" Text="{Binding TyTrong}"/>
-                                                </Grid>
                                             </StackPanel>
                                         </Border>
                                         <DataTemplate.Triggers>
