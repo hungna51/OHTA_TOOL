@@ -156,6 +156,8 @@ namespace CsvTool.ViewModels
                 string f = CsvXuat.TepDangMo(CsvXuat.DuongCuoi(_thuMuc, _maDon), CsvXuat.DuongData(_thuMuc, _maDon), CsvXuat.DuongGiaVl(_thuMuc, _maDon));
                 if (f != null) return Path.GetFileName(f) + " đang mở. Đóng file rồi bấm quét.";
             }
+            if (HienDsCongTy) XongCongTy();
+            if (HienDsCongTy) return LoiNhieuCongTy;
             return _giaDon != null && TinhGiaBat && string.IsNullOrEmpty(CongTy) ? "Chọn công ty, hoặc bỏ tích Tính giá." : null;
         }
 
@@ -164,6 +166,7 @@ namespace CsvTool.ViewModels
         {
             CloudLoiTam.Xoa();
             NapThietLap(doc);
+            NapCongTyNen();
             CapNhatSoKhung(doc);
             TabDangChon = 0;
         }
@@ -303,6 +306,7 @@ namespace CsvTool.ViewModels
 
         private void BaoThietLap()
         {
+            DongBoTenCongTy();
             foreach (string t in new[] { nameof(TinhGiaBat), nameof(CongTy), nameof(CoGiaDon), nameof(CheDo0), nameof(CheDo1), nameof(CheDo2),
                                          nameof(MoTaCheDo), nameof(LamTron250Don), nameof(NhanBanVe), nameof(NhanKhung) }) Bao(t);
             BaoNhanTab();
@@ -539,7 +543,82 @@ namespace CsvTool.ViewModels
             }
         }
 
-        public List<string> DsCongTy { get; private set; } = new List<string>();
+        // ── Chọn công ty: gõ hoặc dán tên phiên âm / tiếng Nhật ──
+        private List<MucCongTy> _dsMucCongTy = new List<MucCongTy>();
+        private BangGia _bangCongTy;
+        private bool _daNapCongTy;
+        public ObservableCollection<MucCongTy> DsCongTyLoc { get; } = new ObservableCollection<MucCongTy>();
+
+        private string _timCongTy = "";
+        public string TimCongTy
+        {
+            get => _timCongTy;
+            set { _timCongTy = value ?? ""; HienDsCongTy = true; LocCongTy(); Bao(); }
+        }
+
+        private bool _hienDsCongTy;
+        public bool HienDsCongTy { get => _hienDsCongTy; private set { _hienDsCongTy = value; Bao(); } }
+
+        public MucCongTy CongTyChon => _dsMucCongTy.FirstOrDefault(m => m.Ten == CongTy);
+        public bool CoCongTyChon => CongTyChon != null;
+
+        private void LocCongTy()
+        {
+            DsCongTyLoc.Clear();
+            foreach (MucCongTy m in CongTyTim.Loc(_dsMucCongTy, _timCongTy).Take(50)) DsCongTyLoc.Add(m);
+        }
+
+        internal void MoDsCongTy()
+        {
+            _timCongTy = CongTy ?? "";
+            DsCongTyLoc.Clear();
+            foreach (MucCongTy m in _dsMucCongTy.Take(50)) DsCongTyLoc.Add(m);   // vừa bấm vào: hiện cả danh sách
+            HienDsCongTy = true;
+        }
+
+        internal void HuyDsCongTy()
+        {
+            HienDsCongTy = false;
+            if (LoiThietLap == LoiNhieuCongTy) LoiThietLap = null;
+            DongBoTenCongTy();
+        }
+
+        private const string LoiNhieuCongTy = "Có nhiều công ty khớp. Chọn 1 công ty trong danh sách.";
+
+        /// <summary>Chốt chữ đã gõ: tên phiên âm hoặc tiếng Nhật đều quy về tên chuẩn trong database.</summary>
+        internal void XongCongTy(MucCongTy chon = null)
+        {
+            if (!HienDsCongTy && chon == null) return;
+            string q = _timCongTy.Trim();
+            // không đổi chữ thì chỉ đóng danh sách, kể cả tên cũ không còn trong database
+            if (chon == null && q == (CongTy ?? "")) { HuyDsCongTy(); return; }
+            MucCongTy m = chon ?? CongTyTim.TimDung(_dsMucCongTy, q);
+            if (m == null && q != "" && CongTyTim.Loc(_dsMucCongTy, q).Count > 1) { LoiThietLap = LoiNhieuCongTy; return; }
+            HienDsCongTy = false;
+            if (LoiThietLap == LoiNhieuCongTy) LoiThietLap = null;
+            CongTy = m?.Ten ?? q;
+            DongBoTenCongTy();
+        }
+
+        private void DongBoTenCongTy()
+        {
+            if (!HienDsCongTy) { _timCongTy = CongTy ?? ""; Bao(nameof(TimCongTy)); }
+            Bao(nameof(CongTyChon)); Bao(nameof(CoCongTyChon));
+        }
+
+        /// <summary>Đọc danh sách mới 1 lần mỗi phiên, không chặn giao diện; lỗi mạng thì giữ danh sách từ bản sao.</summary>
+        private async void NapCongTyNen()
+        {
+            if (_daNapCongTy) return;
+            _daNapCongTy = true;
+            try
+            {
+                BangGia b = await Task.Run(() => new NguonGiaCoDem().Doc());
+                if (b != null) { _bangCongTy = b; CapNhatDsCongTy(); }
+            }
+            catch (Exception) { _daNapCongTy = false; }
+        }
+
         public bool CoGiaDon => _giaDon != null;
 
         /// <summary>Đổi công ty: đã quét thì tính lại giá tự động, giá sửa tay giữ nguyên.</summary>
@@ -565,10 +644,11 @@ namespace CsvTool.ViewModels
 
         private void CapNhatDsCongTy()
         {
-            List<string> ds = _bangGia != null ? _bangGia.CongTyUuDai.Keys.OrderBy(x => x).ToList() : NguonGiaCoDem.DsCongTyDem();
-            if (!string.IsNullOrEmpty(CongTy) && !ds.Contains(CongTy)) ds.Insert(0, CongTy);
-            if (!ds.SequenceEqual(DsCongTy)) { DsCongTy = ds; Bao(nameof(DsCongTy)); }
+            BangGia b = _bangGia ?? _bangCongTy ?? (_bangCongTy = NguonGiaCoDem.BangDem());
+            _dsMucCongTy = CongTyTim.Ds(b);
+            if (HienDsCongTy) LocCongTy();
             Bao(nameof(CoGiaDon)); Bao(nameof(CongTy));
+            DongBoTenCongTy();
         }
 
         private async void DoiCongTy(string moi)
@@ -585,7 +665,7 @@ namespace CsvTool.ViewModels
                 CapNhatDsCongTy();
                 return;
             }
-            System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() => Bao(nameof(CongTy))));
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() => { Bao(nameof(CongTy)); DongBoTenCongTy(); }));
         }
 
         internal GiaTam XemGia(string ten) =>
@@ -639,7 +719,9 @@ namespace CsvTool.ViewModels
 
         private void ApDungVaLuu(BangGia b, string tienTo)
         {
-            _bangGia = b;
+            _bangGia = _bangCongTy = b;
+            _dsMucCongTy = CongTyTim.Ds(b);
+            DongBoTenCongTy();
             DungGiaVl();
             ApDungGia();
             DanhGiaLai();

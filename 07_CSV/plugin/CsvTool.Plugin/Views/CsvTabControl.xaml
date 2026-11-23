@@ -140,6 +140,12 @@
             <Setter Property="Margin" Value="0"/>
             <Setter Property="Height" Value="24"/>
         </Style>
+        <!-- tag cong ty, cung bo mau voi web tinh tien -->
+        <Style x:Key="TagCt" TargetType="Border">
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Padding" Value="5,1"/>
+            <Setter Property="Margin" Value="0,3,3,0"/>
+        </Style>
         <Style x:Key="TieuMuc" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -242,11 +248,66 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
-                                <TextBlock Text="Công ty" VerticalAlignment="Center"/>
-                                <ComboBox Grid.Column="1" IsEditable="True" IsTextSearchEnabled="True" Padding="6,3" IsEnabled="{Binding CoGiaDon}"
-                                          ItemsSource="{Binding DsCongTy}" Text="{Binding CongTy, UpdateSourceTrigger=Explicit}"
-                                          DropDownClosed="CongTyDong" LostKeyboardFocus="CongTyRoi" KeyUp="CongTyPhim" PreviewMouseWheel="ComboKhongLan"
-                                          ToolTip="Công ty tính giá. Đổi sau khi quét là tính lại giá tự động"/>
+                                <TextBlock Text="Công ty" VerticalAlignment="Top" Margin="0,4,0,0"/>
+                                <StackPanel Grid.Column="1">
+                                    <TextBox x:Name="OCongTy" Padding="5,3" IsEnabled="{Binding CoGiaDon}"
+                                             Text="{Binding TimCongTy, UpdateSourceTrigger=PropertyChanged}"
+                                             GotKeyboardFocus="CongTyVao" LostKeyboardFocus="CongTyRoi" PreviewKeyDown="CongTyPhim"
+                                             ToolTip="Gõ hoặc dán tên phiên âm / tiếng Nhật. Đổi sau khi quét là tính lại giá tự động"/>
+                                    <ListBox x:Name="DsCT" ItemsSource="{Binding DsCongTyLoc}" MaxHeight="190" BorderBrush="#B0BEC5" BorderThickness="1,0,1,1"
+                                             Focusable="False" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="False"
+                                             PreviewMouseLeftButtonDown="CongTyBam" Visibility="{Binding HienDsCongTy, Converter={StaticResource HienKhi}}">
+                                        <ListBox.ItemContainerStyle>
+                                            <Style TargetType="ListBoxItem">
+                                                <Setter Property="Focusable" Value="False"/>
+                                                <Setter Property="Padding" Value="5,3"/>
+                                                <Setter Property="Cursor" Value="Hand"/>
+                                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                            </Style>
+                                        </ListBox.ItemContainerStyle>
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <DockPanel Background="Transparent">
+                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Border Style="{StaticResource TagCt}" Margin="3,0,0,0" Background="#F3E8FF" Visibility="{Binding LaDacBiet, Converter={StaticResource HienKhi}}">
+                                                            <TextBlock Text="★ Đặc biệt" FontSize="10.5" Foreground="#7E22CE"/>
+                                                        </Border>
+                                                        <Border Style="{StaticResource TagCt}" Margin="3,0,0,0" Background="#DCFCE7" Visibility="{Binding UuDai, Converter={StaticResource HienKhi}}">
+                                                            <TextBlock Text="Ưu đãi" FontSize="10.5" Foreground="#15803D"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Ten}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding TiengNhat}" FontSize="11" Foreground="#607D8B" TextTrimming="CharacterEllipsis"
+                                                                   Visibility="{Binding CoTiengNhat, Converter={StaticResource HienKhi}}"/>
+                                                    </StackPanel>
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                    <!-- tag cua cong ty dang chon, nhu web tinh tien -->
+                                    <StackPanel Margin="0,3,0,0" Visibility="{Binding CoCongTyChon, Converter={StaticResource HienKhi}}">
+                                        <TextBlock Text="{Binding CongTyChon.TiengNhat}" FontSize="11" Foreground="#607D8B" TextWrapping="Wrap"
+                                                   Visibility="{Binding CongTyChon.CoTiengNhat, Converter={StaticResource HienKhi}}"/>
+                                        <WrapPanel>
+                                            <Border Style="{StaticResource TagCt}" Background="#F3E8FF" Visibility="{Binding CongTyChon.LaDacBiet, Converter={StaticResource HienKhi}}">
+                                                <TextBlock Text="★ Công ty đặc biệt" FontSize="11" Foreground="#7E22CE"/>
+                                            </Border>
+                                            <Border Style="{StaticResource TagCt}" Background="#F3F4F6" Visibility="{Binding CongTyChon.LaDacBiet, Converter={StaticResource HienKhi}}">
+                                                <TextBlock Text="Tính theo khối lượng" FontSize="11" Foreground="#4B5563"/>
+                                            </Border>
+                                            <Border Style="{StaticResource TagCt}" Background="#EFF6FF" Visibility="{Binding CongTyChon.LaDacBiet, Converter={StaticResource HienKhi}}">
+                                                <TextBlock Text="{Binding CongTyChon.NhanTamDon}" FontSize="11" Foreground="#2563EB"/>
+                                            </Border>
+                                            <Border Style="{StaticResource TagCt}" Background="#FFF7ED" Visibility="{Binding CongTyChon.LaDacBiet, Converter={StaticResource HienKhi}}">
+                                                <TextBlock Text="{Binding CongTyChon.NhanTamBe}" FontSize="11" Foreground="#EA580C"/>
+                                            </Border>
+                                            <Border Style="{StaticResource TagCt}" Background="#DCFCE7" Visibility="{Binding CongTyChon.UuDai, Converter={StaticResource HienKhi}}">
+                                                <TextBlock Text="Ưu đãi" FontSize="11" Foreground="#15803D"/>
+                                            </Border>
+                                        </WrapPanel>
+                                    </StackPanel>
+                                </StackPanel>
                                 <TextBlock Grid.Row="2" Text="Chế độ tính" VerticalAlignment="Center"/>
                                 <Border Grid.Row="2" Grid.Column="1" BorderBrush="{DynamicResource Mau}" BorderThickness="1" CornerRadius="5">
                                     <Grid>

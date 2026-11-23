@@ -49,8 +49,8 @@ namespace CsvTool.CadServices
             catch (Exception) { return null; }
         }
 
-        /// <summary>Danh sách công ty từ bản sao, để mở dialog ngay không phải chờ mạng.</summary>
-        public static List<string> DsCongTyDem() => DocDem()?.CongTyUuDai.Keys.OrderBy(x => x).ToList() ?? new List<string>();
+        /// <summary>Bản sao bảng giá, để hiện danh sách công ty ngay không phải chờ mạng.</summary>
+        public static BangGia BangDem() => DocDem();
 
         public static void XoaDem()
         {

@@ -286,8 +286,8 @@ namespace CsvTool.Core
             foreach (var r in hoi("SELECT \"vatLieu\",\"doDay\",\"donGia\",\"giaUon\",\"giaCat\",\"giaMoLo\",\"giaTappu\",\"giaVat\",\"tyTrong\" FROM \"BangGiaVL\" ORDER BY id"))
                 b.Dong.Add(new DongBangGia { VatLieu = r[0], DoDay = S(r[1]), DonGia = S(r[2]), GiaUon = S(r[3]), GiaCat = S(r[4]), GiaMoLo = S(r[5]), GiaTappu = S(r[6]), GiaVat = S(r[7]), TyTrong = S(r[8]) });
             // web dùng find(): tên trùng thì lấy dòng đầu
-            foreach (var r in hoi("SELECT \"tenCongTy\",\"isUuDai\" FROM \"CongTy\" ORDER BY id"))
-                if (!b.CongTyUuDai.ContainsKey(r[0])) b.CongTyUuDai[r[0]] = r[1] == "t";
+            foreach (var r in hoi("SELECT \"tenCongTy\",\"isUuDai\",\"tiengNhat\" FROM \"CongTy\" ORDER BY id"))
+                if (!b.CongTyUuDai.ContainsKey(r[0])) { b.CongTyUuDai[r[0]] = r[1] == "t"; b.TenNhat[r[0]] = r[2] ?? ""; }
             foreach (var r in hoi("SELECT \"tenCongTy\",\"donGiaTamDon\",\"donGiaTamGiaCong\",\"soSanhGiaThuong\" FROM \"CongTyDacBiet\" ORDER BY id"))
                 if (!b.DacBiet.ContainsKey(r[0])) b.DacBiet[r[0]] = new CongTyDacBiet { DonGiaTamDon = S(r[1]), DonGiaTamGiaCong = S(r[2]), SoSanhGiaThuong = r[3] == "t" };
             foreach (var r in hoi("SELECT \"tenLoai\",\"heSo\" FROM \"HeSoGiaVL\" ORDER BY id"))

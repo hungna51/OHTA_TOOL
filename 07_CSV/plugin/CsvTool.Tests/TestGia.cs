@@ -171,6 +171,28 @@ namespace CsvTool.Tests
             var dsVl = GiaVlDon.DsVatLieu(new[] { tamZam, tamNho, new TamXuat { N = "H", M = "SS400", T = "6", Q = "1", Tt = new ThongTinTam() }, new TamXuat { N = "L", M = "SS400", T = "x", Q = "1", Tt = new ThongTinTam() } });
             Kiem("GiaVl: gom theo vat lieu + do day", string.Join(";", dsVl.Select(x => x.VatLieu + "/" + x.DoDay + "/" + x.SoTam)), "SS400/6/2;ZAM/3/1");
 
+            var bCt = new BangGia();
+            bCt.CongTyUuDai["OTK BANDO"] = true; bCt.TenNhat["OTK BANDO"] = "株式会社オーティーケー坂東";
+            bCt.CongTyUuDai["HANWA"] = false; bCt.TenNhat["HANWA"] = "阪和興業";
+            bCt.CongTyUuDai["HANWA 2"] = false;
+            bCt.CongTyUuDai["ABC"] = false;
+            bCt.DacBiet["OTK BANDO"] = new CongTyDacBiet { DonGiaTamDon = 230, DonGiaTamGiaCong = 280 };
+            var dsCt = CongTyTim.Ds(bCt);
+            string CtDung(string q) => CongTyTim.TimDung(dsCt, q)?.Ten;
+            Kiem("CongTy: go phien am khong phan biet hoa thuong", CtDung("otk bando"), "OTK BANDO");
+            Kiem("CongTy: dan ten tieng Nhat", CtDung("株式会社オーティーケー坂東"), "OTK BANDO");
+            Kiem("CongTy: dan ten co (株) va 御中", CtDung("(株)オーティーケー坂東 御中"), "OTK BANDO");
+            Kiem("CongTy: dan ky hieu ㈱", CtDung("㈱オーティーケー坂東"), "OTK BANDO");
+            Kiem("CongTy: nua do rong", CtDung("ｵｰﾃｨｰｹｰ坂東"), "OTK BANDO");
+            Kiem("CongTy: dan them chi nhanh", CtDung("阪和興業株式会社 大阪支店"), "HANWA");
+            Kiem("CongTy: mot phan tieng Nhat", CtDung("坂東"), "OTK BANDO");
+            Kiem("CongTy: khop dung uu tien hon khop mot phan", CtDung("hanwa"), "HANWA");
+            Kiem("CongTy: nhieu ket qua, khong tu chon", CtDung("han"), null);
+            Kiem("CongTy: loc nhieu ket qua", CongTyTim.Loc(dsCt, "han").Count, 2);
+            Kiem("CongTy: khong co", CtDung("XYZ"), null);
+            Kiem("CongTy: tag dac biet", dsCt.First(x => x.Ten == "OTK BANDO").NhanTamDon + "|" + dsCt.First(x => x.Ten == "OTK BANDO").NhanTamBe + "|" + dsCt.First(x => x.Ten == "OTK BANDO").UuDai, "Tấm đơn: ¥230/kg|Tấm bẻ: ¥280/kg|True");
+            Kiem("CongTy: ban sao cu chua co ten Nhat", CongTyTim.Ds(new BangGia { TenNhat = null, CongTyUuDai = { ["A"] = false } })[0].TiengNhat, "");
+
             int Sara1(string x) => PhanTichHinh.DemSara(new[] { x });
             Kiem("Sara: mau that 2x2-phi8 = 4", Sara1("{\\W1;2x2-∅8孔皿モミ}"), 4);
             Kiem("Sara: 4-phi8 hiragana", Sara1("4-φ8皿もみ"), 4);

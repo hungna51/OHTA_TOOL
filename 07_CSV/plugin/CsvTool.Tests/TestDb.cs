@@ -48,10 +48,11 @@ namespace CsvTool.Tests
             var bang = NguonPostgres.DocBang(sql =>
                 sql.Contains("\"BangGiaVL\"") ? new List<string[]> { new[] { "SS400", "6", "140", "900", "7", "45", "150", "1700", "7.85" } } :
                 sql.Contains("\"CongTyDacBiet\"") ? new List<string[]> { new[] { "DB", "260", "330", "t" } } :
-                sql.Contains("\"CongTy\"") ? new List<string[]> { new[] { "UD", "t" }, new[] { "UD", "f" }, new[] { "TH", "f" } } :
+                sql.Contains("\"CongTy\"") ? new List<string[]> { new[] { "UD", "t", "ユーディー" }, new[] { "UD", "f", "別" }, new[] { "TH", "f", null } } :
                 sql.Contains("\"HeSoGiaVL\"") ? new List<string[]> { new[] { "Ưu đãi SS", "1.15" } } :
                 sql.Contains("\"HeSoPitchiKakumaru\"") ? new List<string[]> { new[] { "trong_luong", "0.8" }, new[] { "chieu_dai", "0.75" } } :
                 sql.Contains("\"HeSoCuon\"") ? new List<string[]> { new[] { "0.4" } } : new List<string[]>());
+            Kiem("DocBang: ten tieng Nhat, ten trung lay dong dau, NULL = rong", bang.TenNhat["UD"] + "|" + bang.TenNhat["TH"], "ユーディー|");
             Kiem("DocBang: map cot, ten trung lay dong dau", bang.Dong[0].GiaTappu + "|" + bang.CongTyUuDai["UD"] + "|" + bang.DacBiet["DB"].SoSanhGiaThuong + "|" + bang.PitchiTrongLuong[0] + "|" + bang.PitchiChieuDai[0],
                  "150|True|True|0.8|0.75");
             var khoiPhuc = BangGia.TuByte(bang.ThanhByte());

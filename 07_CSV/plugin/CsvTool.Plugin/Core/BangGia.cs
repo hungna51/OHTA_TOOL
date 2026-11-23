@@ -29,6 +29,7 @@ namespace CsvTool.Core
         [DataMember] public DateTime CapNhat;
         [DataMember] public List<DongBangGia> Dong = new List<DongBangGia>();
         [DataMember] public Dictionary<string, bool> CongTyUuDai = new Dictionary<string, bool>();        // tên → có ưu đãi
+        [DataMember] public Dictionary<string, string> TenNhat = new Dictionary<string, string>();        // tên → tên tiếng Nhật
         [DataMember] public Dictionary<string, CongTyDacBiet> DacBiet = new Dictionary<string, CongTyDacBiet>();
         [DataMember] public Dictionary<string, double> HeSoVL = new Dictionary<string, double>();         // "Ưu đãi SS", "Không ưu đãi SUS"...
         [DataMember] public Dictionary<string, double> HeSoGiaCong = new Dictionary<string, double>();    // Pitchi, Non, NonLech, Kakumaru...

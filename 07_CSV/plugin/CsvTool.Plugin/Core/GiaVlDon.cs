@@ -31,7 +31,7 @@ namespace CsvTool.Core
         /// </summary>
         public BangGia Gop(BangGia b) => new BangGia
         {
-            CapNhat = b.CapNhat, CongTyUuDai = b.CongTyUuDai, DacBiet = b.DacBiet, HeSoVL = b.HeSoVL,
+            CapNhat = b.CapNhat, CongTyUuDai = b.CongTyUuDai, TenNhat = b.TenNhat, DacBiet = b.DacBiet, HeSoVL = b.HeSoVL,
             HeSoGiaCong = b.HeSoGiaCong, PitchiTrongLuong = b.PitchiTrongLuong, PitchiChieuDai = b.PitchiChieuDai, HeSoCuon = b.HeSoCuon,
             Dong = b.Dong.Select(x =>
             {

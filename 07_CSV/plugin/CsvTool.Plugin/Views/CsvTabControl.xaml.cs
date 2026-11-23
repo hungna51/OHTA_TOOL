@@ -78,20 +78,46 @@ namespace CsvTool.Views
             if ((sender as FrameworkElement)?.DataContext is DongTam d) d.VeBeBanVe();
         }
 
-        // Ô công ty gõ được: chỉ ghi khi đã chọn xong, không tính lại giá theo từng ký tự
-        private static void GhiCongTy(object sender) =>
-            (sender as ComboBox)?.GetBindingExpression(ComboBox.TextProperty)?.UpdateSource();
-
-        private void CongTyDong(object sender, System.EventArgs e) => GhiCongTy(sender);
-
-        private void CongTyRoi(object sender, KeyboardFocusChangedEventArgs e)
+        // Ô công ty: danh sách nằm ngay dưới ô (không dùng Popup vì chạy trong PaletteSet), con trỏ luôn ở ô gõ
+        private void CongTyVao(object sender, KeyboardFocusChangedEventArgs e)
         {
-            if (sender is ComboBox c && !c.IsKeyboardFocusWithin && !c.IsDropDownOpen) GhiCongTy(c);
+            OCongTy.SelectAll();
+            _vm.MoDsCongTy();
         }
+
+        private void CongTyRoi(object sender, KeyboardFocusChangedEventArgs e) => _vm.XongCongTy();
 
         private void CongTyPhim(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Enter) GhiCongTy(sender);
+            if (e.Key == Key.Down || e.Key == Key.Up)
+            {
+                int n = DsCT.Items.Count;
+                if (n == 0) return;
+                DsCT.SelectedIndex = e.Key == Key.Down ? (DsCT.SelectedIndex + 1) % n : (DsCT.SelectedIndex <= 0 ? n : DsCT.SelectedIndex) - 1;
+                DsCT.ScrollIntoView(DsCT.SelectedItem);
+            }
+            else if (e.Key == Key.Enter) _vm.XongCongTy(DsCT.SelectedItem as CsvTool.Core.MucCongTy);
+            else if (e.Key == Key.Escape) _vm.HuyDsCongTy();
+            else return;
+            e.Handled = true;
+        }
+
+        private void CongTyBam(object sender, MouseButtonEventArgs e)
+        {
+            if (!((e.OriginalSource as FrameworkElement)?.DataContext is CsvTool.Core.MucCongTy m)) return;   // bấm thanh cuộn thì bỏ qua
+            _vm.XongCongTy(m);
+            e.Handled = true;
+        }
+
+        private static ScrollViewer TimCuon(DependencyObject o)
+        {
+            if (o is ScrollViewer c) return c;
+            for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(o); i++)
+            {
+                ScrollViewer kq = TimCuon(System.Windows.Media.VisualTreeHelper.GetChild(o, i));
+                if (kq != null) return kq;
+            }
+            return null;
         }
 
         private void XoaTim(object sender, RoutedEventArgs e)
@@ -121,7 +147,7 @@ namespace CsvTool.Views
         public void ScrollByMouseWheel(int wheelDelta)
         {
             if (wheelDelta == 0) return;
-            ScrollViewer c = _vm.TabDangChon == 0 ? CuonChung : _vm.TabDangChon == 2 ? CuonLoi : _vm.TabDangChon == 3 ? CuonGia : Cuon;
+            ScrollViewer c = _vm.TabDangChon == 0 ? (DsCT.IsVisible && DsCT.IsMouseOver ? TimCuon(DsCT) ?? CuonChung : CuonChung) : _vm.TabDangChon == 2 ? CuonLoi : _vm.TabDangChon == 3 ? CuonGia : Cuon;
             c.ScrollToVerticalOffset(c.VerticalOffset - wheelDelta / 120.0 * 48.0);
         }
     }
