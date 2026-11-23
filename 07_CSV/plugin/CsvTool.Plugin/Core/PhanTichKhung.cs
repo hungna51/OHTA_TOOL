@@ -78,7 +78,12 @@ namespace CsvTool.Core
             if (moi.Vat == 0) moi.Vat = cu.Vat;
             // tổng Tapu + Sara không đổi thì giữ cách chia người dùng đã sửa
             if (cu.Tappu + cu.Sara == moi.Tappu + moi.Sara) { moi.Tappu = cu.Tappu; moi.Sara = cu.Sara; }
-            else if (moi.Sara == 0) moi.Sara = cu.Sara;   // bản vẽ không có ghi chú Sara: giữ số đã nhập
+            else
+            {
+                // bản vẽ không có ghi chú / tô màu: giữ số đã nhập
+                if (moi.Sara == 0) moi.Sara = cu.Sara;
+                if (moi.Tappu == 0) moi.Tappu = cu.Tappu;
+            }
             return moi;
         }
 

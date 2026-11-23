@@ -288,7 +288,11 @@ namespace CsvTool.ViewModels
         public string MaMage => Tam == null ? "" : CsvXuat.MaMage(Tam.Tt.LoaiGiaCong);
 
         // thông tin tấm → data CSV (không còn text trên bản vẽ)
-        public string Tappu { get => Tam?.Tt.Tappu.ToString(); set => SuaSo(value, Tam?.Tt.Tappu, v => Tam.Tt.Tappu = v); }
+        public string Tappu
+        {
+            get => Tam?.Tt.Tappu.ToString();
+            set => SuaSo(value, Tam?.Tt.Tappu, v => { Tam.Tt.Tappu = v; GiaTam g = _vm.GiaCua(Tam.N); if (g != null) g.SuaTapu = true; });
+        }
         public string Sara
         {
             get => Tam?.Tt.Sara.ToString();

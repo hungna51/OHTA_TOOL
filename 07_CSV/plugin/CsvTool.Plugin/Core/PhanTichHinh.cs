@@ -109,7 +109,7 @@ namespace CsvTool.Core
         private const double BeTol = 0.001;
 
         private const string Poshi = "\u767A\u62BC\u3057", Shimame = "\u30B7\u30DE\u76EE", Hikishiro = "\u5F15\u4EE3";
-        private const string MageKakudo = "\u66F2\u3052\u89D2\u5EA6", Tappu = "\u30BF\u30C3\u30D7";
+        private const string MageKakudo = "\u66F2\u3052\u89D2\u5EA6";
         private const string Kaisaki = "\u958B\u5148\u65BD\u5DE5\u7BC4\u56F2";
 
         private static readonly Regex MaU = new Regex(@"\\U\+([0-9A-Fa-f]{4})", RegexOptions.Compiled);
@@ -124,12 +124,15 @@ namespace CsvTool.Core
             var be = DuongBe(d, fname, hoiSoNhan, s => kq.CanhBao.Add(new LoiQuet { Handle = d.HandleKhung, NoiDung = s }));
             var chuTrong = d.ChuTrongKhung.Select(c => c.NoiDung).ToList();
             // chữ của LEADER cũng là 1 đối tượng trong khung: không đếm 2 lần
-            int sara = DemSara(chuTrong.Concat(d.ChuDanTrong.Where(x => !chuTrong.Contains(x))).Concat(d.ChuDim));
-            string gc = LoaiGiaCong(d.ChuTrongKhung, be.Count > 0);
-            if (sara > 0 && !gc.Split(new[] { ", " }, StringSplitOptions.None).Contains("s")) gc = gc == "" ? "s" : gc + ", s";
+            var ghiChu = chuTrong.Concat(d.ChuDanTrong.Where(x => !chuTrong.Contains(x))).Concat(d.ChuDim).ToList();
+            int sara = DemSara(ghiChu), tapuGhi = DemTapu(ghiChu);
+            if (d.SoHatch > 0 && tapuGhi > 0 && d.SoHatch != tapuGhi)
+                kq.CanhBao.Add(new LoiQuet { Handle = d.HandleKhung, NoiDung = "Số Tapu lệch: tô màu " + d.SoHatch + ", ghi chú " + tapuGhi + ". Đang lấy số lớn hơn." });
+            int tapu = Math.Max(d.SoHatch, tapuGhi);
             var tt = new ThongTinTam
             {
-                LoNho = nho, LoLon = lon, Tappu = d.SoHatch, Sara = sara, LoaiGiaCong = gc,
+                LoNho = nho, LoLon = lon, Tappu = tapu, Sara = sara,
+                LoaiGiaCong = LoaiGiaCong(d.ChuTrongKhung, be.Count > 0, tapuGhi > 0, sara > 0),
                 CheDoTinh = cheDoTinh.ToString(System.Globalization.CultureInfo.InvariantCulture),
             };
             tt.DuongBe.AddRange(be);
@@ -587,18 +590,24 @@ namespace CsvTool.Core
 
         // Bản vẽ thật ghi "2x2-∅8孔皿モミ"; "皿小ネジ" là tên vít, không phải gia công
         private static readonly Regex RxSara = new Regex("\u76BF\\s*(\u30E2\u30DF|\u3082\u307F|\u63C9|\u52A0\u5DE5|\u53D6|\u30B6\u30B0\u30EA|\u3056\u3050\u308A)|\u30B5\u30E9\\s*(\u30E2\u30DF|\u3082\u307F|\u63C9|\u52A0\u5DE5|\u53D6)|\u3055\u3089\u3082\u307F", RegexOptions.Compiled);
+        private static readonly Regex RxTapu = new Regex("\u30BF\u30C3\u30D7|\\bTAP\\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex RxMaMtext = new Regex(@"\\[A-OQ-Za-z][^;\\]*;|[{}]", RegexOptions.Compiled);
         private static readonly Regex RxTich = new Regex(@"^\s*(\d+)\s*[xX×*]\s*(\d+)\s*[-‐−–ー]", RegexOptions.Compiled);
         private static readonly Regex RxDauSo = new Regex(@"^\s*(\d+)\s*(?:[-‐−–ー]|[xX×*]\s*[∅φΦØøMm%])", RegexOptions.Compiled);
         // dòng trên chỉ ghi lỗ: "5-∅6.8" rồi xuống dòng "皿加工(∅12.8)"
-        private static readonly Regex RxDongLo = new Regex(@"^\s*\d+\s*(?:[xX×*]\s*\d+\s*)?[-‐−–ーxX×*]\s*(?:[∅φΦØø]|%%[Cc])", RegexOptions.Compiled);
+        private static readonly Regex RxDongLo = new Regex(@"^\s*\d+\s*(?:[xX×*]\s*\d+\s*)?[-‐−–ーxX×*]\s*(?:[∅φΦØø]|%%[Cc]|[Mm]\d)", RegexOptions.Compiled);
         private static readonly Regex RxChoSo = new Regex("(\\d+)\\s*(?:\u7B87\u6240|\u30F6\u6240|\u304B\u6240|\u30AB\u6240|\u30B1\u6240|\u500B\u6240)", RegexOptions.Compiled);
 
         // bỏ mã định dạng MTEXT, đưa chữ nửa độ rộng (ｻﾗﾓﾐ) về chữ thường
         private static string ChuanChu(string s) => RxMaMtext.Replace(GiaiMa(s), "").Normalize(NormalizationForm.FormKC);
 
         /// <summary>Tổng số lỗ Sara theo ghi chú: "2x2-∅8孔皿モミ" = 4, "4-φ8皿もみ" = 4, "皿モミ 3箇所" = 3, "5-∅6.8" + dòng "皿加工" = 5, không ghi số = 1.</summary>
-        public static int DemSara(IEnumerable<string> chu)
+        public static int DemSara(IEnumerable<string> chu) => DemGhiChu(chu, RxSara);
+
+        /// <summary>Tổng số lỗ Tapu theo ghi chú: "4-M5タップ" = 4, "5×2-M12タップ" = 10, "4-M5" + dòng "タップ" = 4, không ghi số = 1.</summary>
+        public static int DemTapu(IEnumerable<string> chu) => DemGhiChu(chu, RxTapu);
+
+        private static int DemGhiChu(IEnumerable<string> chu, Regex loai)
         {
             int tong = 0;
             foreach (string c in chu)
@@ -606,9 +615,11 @@ namespace CsvTool.Core
                 string[] dong = ChuanChu((c ?? "").Replace("\\P", "\n")).Split('\n');
                 for (int i = 0; i < dong.Length; i++)
                 {
-                    if (!RxSara.IsMatch(dong[i])) continue;
+                    if (!loai.IsMatch(dong[i])) continue;
                     int? so = SoLoGhi(dong[i]);
-                    if (so == null && i > 0 && RxDongLo.IsMatch(dong[i - 1])) so = SoLoGhi(dong[i - 1]);
+                    // dòng trên là ghi chú gia công khác thì số lỗ không thuộc dòng này
+                    if (so == null && i > 0 && RxDongLo.IsMatch(dong[i - 1]) && !RxSara.IsMatch(dong[i - 1]) && !RxTapu.IsMatch(dong[i - 1]))
+                        so = SoLoGhi(dong[i - 1]);
                     tong += so ?? 1;
                 }
             }
@@ -625,9 +636,9 @@ namespace CsvTool.Core
         }
 
         /// <summary>CSV--scan-machining-texts: đọc mọi chữ trong khung ra "m, m(pitchi), t, s, k".</summary>
-        public static string LoaiGiaCong(IEnumerable<ChuHinh> chu, bool coDuongBe)
+        public static string LoaiGiaCong(IEnumerable<ChuHinh> chu, bool coDuongBe, bool coTapu = false, bool coSara = false)
         {
-            bool m = coDuongBe, pitchi = false, t = false, s = false, k = false;
+            bool m = coDuongBe, pitchi = false, t = coTapu, s = coSara, k = false;
             foreach (ChuHinh c in chu)
             {
                 if (c.NoiDung == null) continue;
@@ -635,7 +646,7 @@ namespace CsvTool.Core
                 if (hoa.Contains("V=") || hoa.Contains("U=") || hoa.Contains("P=") || hoa.Contains("R=") || CoPoshi(c.NoiDung) ||
                     (CoShimame(c.NoiDung) && v.Contains(Hikishiro))) m = true;
                 if (v.Contains(MageKakudo)) pitchi = true;
-                if (v.Contains(Tappu)) t = true;
+                if (RxTapu.IsMatch(ChuanChu(c.NoiDung))) t = true;
                 if (RxSara.IsMatch(ChuanChu(c.NoiDung))) s = true;
                 if (v.Contains(Kaisaki)) k = true;
             }
