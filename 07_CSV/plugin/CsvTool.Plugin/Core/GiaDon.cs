@@ -17,6 +17,7 @@ namespace CsvTool.Core
         [DataMember] public bool TatTron250;      // tắt riêng tấm này khi cả đơn đang bật làm tròn 250
         [DataMember] public bool SuaBe;           // đường bẻ sửa tay: quét lại không đè
         [DataMember] public bool CheDoRieng;      // chế độ tính chọn riêng: quét lại, đổi chế độ đơn không đè
+        public double TienVlHienTai;              // tiền vật liệu 1 tấm của lần tính gần nhất, chỉ để hiện, không lưu
     }
 
     /// <summary>data\&lt;đơn&gt;-gia.json: công ty + thông tin giá từng tấm, khoá theo tên N.</summary>

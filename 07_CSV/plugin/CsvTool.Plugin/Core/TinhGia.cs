@@ -11,6 +11,7 @@ namespace CsvTool.Core
         public double DoDay, X, Y, SoLuong, LoNho, LoLon, Tappu, Sara, PitchiSoLan, PitchiDai, DonGiaCuon, VatMm, DonGiaDatNgoai;
         public List<(double SoDuong, double Dai)> Be = new List<(double, double)>();
         public int CheDoTinh;   // 0 thường, 1 chỉ gia công, 2 vật liệu khách cấp
+        public double? TienVLTay;   // tiền vật liệu 1 tấm do người dùng tự tính: giá = số này + cắt + gia công
         public bool LamTron250;
     }
 
@@ -135,6 +136,12 @@ namespace CsvTool.Core
                 kq.TienVL = 0; kq.TienCat = 0;
                 kq.Gia1Tam = Tron10(kq.TongGiaCong);
             }
+            else if (v.TienVLTay != null)
+            {
+                // đã tự tính vật liệu: không áp hệ số, luật tỉ trọng hay giá theo kg của công ty
+                kq.TienVL = v.TienVLTay.Value; kq.KlThucTe = kl; kq.TienCat = tienCat; kq.TongGiaCong = giaCong;
+                kq.Gia1Tam = Tron10(kq.TienVL + tienCat + giaCong);
+            }
             else if (v.CheDoTinh == 2)
             {
                 kq.TienVL *= 0.15;
@@ -154,7 +161,7 @@ namespace CsvTool.Core
         private static string LoiGiaVlBang0(DauVaoGia v, BangGia b)
         {
             DongBangGia g = b.Dong.FirstOrDefault(x => x.VatLieu == v.VatLieu && x.DoDay == v.DoDay);
-            if (g == null || g.DonGia > 0 || v.DonGiaDatNgoai > 0 || v.CheDoTinh == 1) return null;
+            if (g == null || g.DonGia > 0 || v.DonGiaDatNgoai > 0 || v.CheDoTinh == 1 || v.TienVLTay != null) return null;
             bool coSus = (v.VatLieu ?? "").ToUpperInvariant().Contains("SUS");
             if (v.CheDoTinh == 0 && !coSus && b.DacBiet.TryGetValue(v.CongTy ?? "", out CongTyDacBiet db) && !db.SoSanhGiaThuong) return null;
             return LoiChuaCoGia(v);
@@ -177,6 +184,7 @@ namespace CsvTool.Core
                 LoNho = t.Tt.LoNho, LoLon = t.Tt.LoLon, Tappu = t.Tt.Tappu, Sara = t.Tt.Sara,
                 PitchiSoLan = t.Tt.PitchiSoLan, PitchiDai = t.Tt.PitchiDai, VatMm = t.Tt.Vat,
                 DonGiaCuon = DonGiaCuonCua(t, g), LamTron250 = g?.LamTron250 ?? false, CheDoTinh = cheDo,
+                TienVLTay = SoTien(t.Tt.TienVatLieu, out double tay) && tay >= 0 ? tay : (double?)null,
             };
             v.Be.AddRange(t.Tt.DuongBe.Select(b => ((double)b.SoLuong, (double)b.Dai)));
             return (v, null);
@@ -192,12 +200,13 @@ namespace CsvTool.Core
             foreach (TamXuat t in ds)
             {
                 GiaTam g = don.Lay(t.N);
-                if (!string.IsNullOrEmpty(t.Tt.GiaBaoGia) && !g.TuDong) continue;
                 var (v, loi) = TaoDauVao(t, g, don.CongTy);
                 KetQuaGia kq = null;
                 if (v != null) v.LamTron250 = don.Tron250(g);
                 if (loi == null) loi = LoiGiaVlBang0(v, b);
                 if (loi == null) (kq, loi) = Tinh(v, b);
+                g.TienVlHienTai = kq?.TienVL ?? 0;
+                if (!string.IsNullOrEmpty(t.Tt.GiaBaoGia) && !g.TuDong) continue;   // giá tay: không đè, không cảnh báo
                 if (kq == null)
                 {
                     t.Tt.GiaBaoGia = "";

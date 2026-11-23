@@ -167,6 +167,36 @@ namespace CsvTool.ViewModels
             Bao(nameof(BeSuaTay));
         }
 
+        // ── Tiền vật liệu 1 tấm: hiện số đang tính, gõ số khác thì giá = số đó + cắt + gia công ──
+        public bool LaVlTay => Tam != null && !string.IsNullOrWhiteSpace(Tam.Tt.TienVatLieu) && CheDoChon != 1;
+        public bool ChoSuaTienVl => Tam != null && CheDoChon != 1;
+        public string TienVl
+        {
+            get
+            {
+                if (!ChoSuaTienVl) return "";
+                if (LaVlTay) return Tam.Tt.TienVatLieu;
+                double h = _vm.XemGia(Tam.N)?.TienVlHienTai ?? 0;
+                return h > 0 ? h.ToString("0", System.Globalization.CultureInfo.InvariantCulture) : "";
+            }
+            set
+            {
+                if (!ChoSuaTienVl) return;
+                string v = (value ?? "").Trim();
+                if (v == TienVl) return;   // Tab qua ô không được biến số đang tính thành số nhập tay
+                double d = 0;
+                if (v != "" && (!TinhGia.SoTien(v, out d) || d < 0)) { _vm.BaoLoi("Giá VL phải là số từ 0 trở lên."); Bao(null); return; }
+                string moi = v == "" ? "" : d.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), cu = Tam.Tt.TienVatLieu ?? "";
+                if (moi == cu) { Bao(null); return; }
+                if (BiKhoa()) return;
+                GiaTam g = _vm.GiaCua(Tam.N);
+                if (g == null) { _vm.BaoLoi("Chưa đọc được dữ liệu giá của đơn, quét lại."); Bao(null); return; }
+                bool tuDongCu = g.TuDong;
+                Luu(() => { Tam.Tt.TienVatLieu = moi; g.TuDong = true; }, () => { Tam.Tt.TienVatLieu = cu; g.TuDong = tuDongCu; });
+                Bao(null);
+            }
+        }
+
         // ── Chế độ tính riêng từng tấm ──
         public string[] DsCheDo => CsvTabViewModel.DsCheDoTinh;
         public int CheDoChon
@@ -249,7 +279,7 @@ namespace CsvTool.ViewModels
             Bao(null);
         }
 
-        public void BaoGia() { Bao(nameof(GiaTien)); Bao(nameof(LaGiaTay)); Bao(nameof(LamTron250)); Bao(nameof(CheDoChon)); }
+        public void BaoGia() { Bao(nameof(GiaTien)); Bao(nameof(LaGiaTay)); Bao(nameof(LamTron250)); Bao(nameof(CheDoChon)); Bao(nameof(TienVl)); Bao(nameof(LaVlTay)); Bao(nameof(ChoSuaTienVl)); }
 
         public string MaMage => Tam == null ? "" : CsvXuat.MaMage(Tam.Tt.LoaiGiaCong);
 

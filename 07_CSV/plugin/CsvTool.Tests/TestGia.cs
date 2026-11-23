@@ -150,6 +150,24 @@ namespace CsvTool.Tests
             var tam0Tam = Tam12("A", "0");
             Kiem("Gia 0: nhap gia tam -> tinh duoc", TinhGia.ApDung(new[] { tam0Tam }, new GiaDon { CongTy = "TH" }, vl12.Gop(b)).Count + "|" + (tam0Tam.Tt.GiaBaoGia != ""), "0|True");
 
+            string GiaVlTay(string m, string t, string cheDo, string congTy, string tien)
+            {
+                var x = new TamXuat { N = "V", M = m, T = t, Q = "1", X = "100", Y = "100", Tt = new ThongTinTam { CheDoTinh = cheDo, TienVatLieu = tien } };
+                var cb = TinhGia.ApDung(new[] { x }, new GiaDon { CongTy = congTy }, b);
+                return cb.ContainsKey("V") ? "thieu" : x.Tt.GiaBaoGia;
+            }
+            Kiem("VL tay: gia = VL + cat (1000 + 16.8)", GiaVlTay("SS400", "6.0", "0", "TH", "1000"), "1020");
+            Kiem("VL tay: VL khach cap khong nhan 0.15", GiaVlTay("SS400", "6.0", "2", "TH", "1000"), "1020");
+            Kiem("VL tay: cong ty theo kg khong de", GiaVlTay("SS400", "6.0", "0", "DB1", "1000"), "1020");
+            Kiem("VL tay: chi gia cong khong tinh VL", GiaVlTay("SS400", "6.0", "1", "TH", "1000"), "0");
+            Kiem("VL tay: bang gia = 0 van tinh duoc", GiaVlTay("SS400", "12.0", "0", "TH", "500"), "540");
+            Kiem("VL tay: khong co trong database van thieu", GiaVlTay("ZAM", "3.0", "0", "TH", "500"), "thieu");
+            Kiem("VL tay: de trong tinh nhu thuong", GiaVlTay("SS400", "6.0", "0", "TH", "") != "1020", true);
+            var dHien = new GiaDon { CongTy = "TH" };
+            var tHien = new TamXuat { N = "H", M = "SS400", T = "6.0", Q = "1", X = "100", Y = "100", Tt = new ThongTinTam { CheDoTinh = "0", GiaBaoGia = "9999" } };
+            TinhGia.ApDung(new[] { tHien }, dHien, b);
+            Kiem("VL tay: tam gia tay van co tien VL de hien, khong doi gia", dHien.Tam["H"].TienVlHienTai > 0 && tHien.Tt.GiaBaoGia == "9999", true);
+
             var dsVl = GiaVlDon.DsVatLieu(new[] { tamZam, tamNho, new TamXuat { N = "H", M = "SS400", T = "6", Q = "1", Tt = new ThongTinTam() }, new TamXuat { N = "L", M = "SS400", T = "x", Q = "1", Tt = new ThongTinTam() } });
             Kiem("GiaVl: gom theo vat lieu + do day", string.Join(";", dsVl.Select(x => x.VatLieu + "/" + x.DoDay + "/" + x.SoTam)), "SS400/6/2;ZAM/3/1");
 
