@@ -44,6 +44,10 @@ namespace CsvTool.Tests
             var tMt = PhanTichKhung.DocFnameDim(kMt, "1-XY", 8).Tam;
             Kiem("Quet F-name MTEXT doi font giua dong: ten vat lieu dung", tMt == null ? "null" : tMt.M + "|" + tMt.T + "|" + tMt.Q, "SUS304 No.1|4.0|5");
             Kiem("MtextPhang: giu \\U+ va ngoac thoat", ThongTinTamParser.MtextPhang("M=SS400 \\U+7E1E\\{x\\}"), "M=SS400 \\U+7E1E\\{x\\}");
+            var fnS = new[] { "N=131311-1", "M=SUS304 No.1", "T=4.0", "Q=5", "V=25-3.7(90%%d)", "Z=SUS-N2" };
+            Kiem("SoDongFname: khop (khac thu tu, %%d = do)", PhanTichKhung.SoDongFname(fnS, new[] { "Z=SUS-N2", "N=131311-1", "M=SUS304 No.1", "T=4.0", "Q=5", "V=25-3.7(90°)" }), null);
+            Kiem("SoDongFname: vat lieu tach 2 dong", PhanTichKhung.SoDongFname(fnS, new[] { "N=131311-1", "M=SUS304", "No.1", "T=4.0", "Q=5", "V=25-3.7(90°)", "Z=SUS-N2" }),
+                 "thiếu \"M=SUS304 NO.1\", thừa \"M=SUS304\", \"NO.1\".");
             var gc = new ThongTinTam(); gc.DuongBe.Add((100, 1));
             Kiem("In PDF: tam be la tam gia cong", PhanTichKhung.LaTamGiaCong(gc), true);
         }

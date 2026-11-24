@@ -130,6 +130,22 @@ namespace CsvTool.Core
                       ? ThongTinTamParser.TachDong(t.NoiDung, true).Count(d => d.StartsWith("N="))
                       : (t.NoiDung ?? "").StartsWith("N=") ? 1 : 0);
 
+        /// <summary>
+        /// So các dòng F-name trong file A với F-name trên bản vẽ S (không kể thứ tự, %%d = °, \U+ giải mã).
+        /// Khớp → null, lệch → "thiếu ..., thừa ...".
+        /// </summary>
+        public static string SoDongFname(IEnumerable<string> mongDoi, IEnumerable<string> thucTe)
+        {
+            string Chuan(string x) => ThongTinTamParser.ChuanHoa((x ?? "").Replace("%%d", "°").Replace("%%D", "°")).Trim();
+            var can = mongDoi.Select(Chuan).Where(x => x != "").ToList();
+            var co = thucTe.Select(Chuan).Where(x => x != "").ToList();
+            var thieu = new List<string>(can);
+            var thua = new List<string>();
+            foreach (string x in co) if (!thieu.Remove(x)) thua.Add(x);
+            if (thieu.Count == 0 && thua.Count == 0) return null;
+            return string.Join(", ", new[] { thieu.Count > 0 ? "thiếu \"" + string.Join("\", \"", thieu) + "\"" : null, thua.Count > 0 ? "thừa \"" + string.Join("\", \"", thua) + "\"" : null }.Where(x => x != null)) + ".";
+        }
+
         /// <summary>Tấm gia công (in PDF trước): có bẻ, pitchi, vát, Tapu, Sara hoặc cuộn. Chỉ có lỗ thì không tính.</summary>
         public static bool LaTamGiaCong(ThongTinTam t) =>
             t.DuongBe.Count > 0 || t.PitchiSoLan > 0 || t.Vat > 0 || t.Tappu > 0 || t.Sara > 0 || CsvXuat.LoaiCuon(t.LoaiGiaCong) != "0";

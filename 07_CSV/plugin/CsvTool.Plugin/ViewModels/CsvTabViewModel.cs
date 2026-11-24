@@ -1073,10 +1073,15 @@ namespace CsvTool.ViewModels
                     {
                         double x0 = fn.Min(c => c.MinX), y0 = fn.Min(c => c.MinY);
                         cho = FnameTrongTam.TimCho(hq.R.BienNgoai, hq.R.Lo, fn.Max(c => c.MaxX) - x0, fn.Max(c => c.MaxY) - y0, y);
-                        if (cho != null) ds.Add(new TamFileA { HandleKhung = h, GocX = x0, GocY = y0, TiLe = cho.TiLe, DenX = cho.X, DenY = cho.Y });
+                        if (cho != null) ds.Add(new TamFileA { HandleKhung = h, GocX = x0, GocY = y0, TiLe = cho.TiLe, DenX = cho.X, DenY = cho.Y, DongFname = PhanTichKhung.DongFname(d.Khung) });
                     }
                     if (cho == null)
                         loi.Add(new LoiQuet { Handle = h, LaLoi = true, NoiDung = "Không đặt được F-name vào phần thịt sau " + FnameTrongTam.SoLanThu + " lần thu nhỏ. Kiểm tra lại hình." });
+                }
+                if (loi.Count == 0)
+                {
+                    try { loi = TaoFileACad.Ghi(doc, DuongFileA, ds); }
+                    catch (Exception ex) { TrangThai += " Không tạo được file A: " + ex.Message; return; }
                 }
                 if (loi.Count > 0)
                 {
@@ -1086,16 +1091,11 @@ namespace CsvTool.ViewModels
                         dsl.Add(l);
                     }
                     GomLoi();
-                    TrangThai += " " + loi.Count + " tấm không đặt được F-name, chưa tạo file A và PDF.";
+                    TabDangChon = 2;
+                    TrangThai += " " + loi.Count + " lỗi khi tạo file A (xem tab Error), chưa tạo file A và PDF.";
                     return;
                 }
-                string duongA = DuongFileA;
-                try
-                {
-                    TaoFileACad.Ghi(doc, duongA, ds);
-                    TrangThai += " Đã tạo " + Path.GetFileName(duongA) + ".";
-                }
-                catch (Exception ex) { TrangThai += " Không tạo được file A: " + ex.Message; return; }
+                TrangThai += " Đã tạo " + Path.GetFileName(DuongFileA) + ".";
             }
 
             if (inPdf)
