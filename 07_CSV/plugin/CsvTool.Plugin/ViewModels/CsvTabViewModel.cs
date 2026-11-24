@@ -551,6 +551,30 @@ namespace CsvTool.ViewModels
             }
         }
 
+        /// <summary>Tổng cân (kg) của đơn; chỉ hiện khi đã có bảng giá vì tỉ trọng lấy từ bảng giá.</summary>
+        public string NhanKg
+        {
+            get
+            {
+                if (_bangGia == null || _giaDon == null) return "";
+                var ds = _tatCa.Where(d => d.Tam != null && !d.BoQua).Select(d => d.Tam).ToList();
+                if (ds.Count == 0) return "";
+                TongCan c = TinhGia.TongKg(ds, _giaDon, BangDung);
+                string Kg(double x) => x.ToString("#,0.0", CultureInfo.InvariantCulture);
+                string Yen(double x) => x.ToString("#,0", CultureInfo.InvariantCulture) + " ¥";
+                string s = "Tổng KG: " + Kg(c.KgDon + c.KgGiaCong) + " kg · tấm đơn " + Kg(c.KgDon) + " · gia công " + Kg(c.KgGiaCong) +
+                           (c.ChuaCoKg > 0 ? " · " + c.ChuaCoKg + " tấm chưa có KG" : "");
+                if (!c.DacBiet) return s;
+                var phan = new List<string>();
+                if (c.KgDbDon > 0) phan.Add("tấm đơn " + Kg(c.KgDbDon) + " kg × " + Yen(c.DonGiaKgDon) + " = " + Yen(c.TienDbDon));
+                if (c.KgDbGiaCong > 0) phan.Add("gia công " + Kg(c.KgDbGiaCong) + " kg × " + Yen(c.DonGiaKgGiaCong) + " = " + Yen(c.TienDbGiaCong));
+                if (c.TamThuong > 0) phan.Add(c.TamThuong + " tấm tính giá thường");
+                return s + "\nTheo kg (X+6): " + string.Join(" · ", phan);
+            }
+        }
+
+        public bool CoNhanKg => NhanKg != "";
+
         // ── Chọn công ty: gõ hoặc dán tên phiên âm / tiếng Nhật ──
         private List<MucCongTy> _dsMucCongTy = new List<MucCongTy>();
         private BangGia _bangCongTy;
@@ -856,7 +880,7 @@ namespace CsvTool.ViewModels
                 if (d.CanhBaoGia != null) Them(new DongLoi(d, d.CanhBaoGia, false, null, d.CanhBaoGia.StartsWith("Chưa có giá")) { LaGia = true });
             }
             PhanTichKhung.DongBoDs(DsLoi, moi);
-            Bao(nameof(NhanTongTien));
+            Bao(nameof(NhanTongTien)); Bao(nameof(NhanKg)); Bao(nameof(CoNhanKg));
             BaoNhanTab();
         }
 

@@ -745,6 +745,7 @@
         <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#E1E4E8" BorderThickness="0,1,0,0" Padding="10,8,10,10">
             <StackPanel>
                 <TextBlock Text="{Binding NhanTongTien}" ToolTip="{Binding NhanTongTien}" FontWeight="SemiBold" Foreground="#1B5E20" Margin="0,0,0,5" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding NhanKg}" Visibility="{Binding CoNhanKg, Converter={StaticResource HienKhi}}" TextWrapping="Wrap" Foreground="#1B5E20" Margin="0,0,0,5"/>
                 <TextBlock Text="{Binding TrangThai}" TextWrapping="Wrap" Foreground="#52606D"/>
                 <Grid Margin="0,7,0,0">
                     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
