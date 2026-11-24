@@ -123,7 +123,7 @@ namespace CsvTool.ViewModels
 
             HienTai = this;
             try { CadApplication.DocumentManager.DocumentActivated += (s, e) => DoiBanVe(e.Document); } catch { }
-            try { if (CadApplication.DocumentManager.MdiActiveDocument != null) NapThietLap(CadApplication.DocumentManager.MdiActiveDocument); } catch { }
+            try { if (CadApplication.DocumentManager.MdiActiveDocument != null) { NapThietLap(CadApplication.DocumentManager.MdiActiveDocument); NapLai(CadApplication.DocumentManager.MdiActiveDocument); } } catch { }
         }
 
         // ── Quét: chọn khung → PhanTichHinh → SauQuet ─────────────────
@@ -440,7 +440,9 @@ namespace CsvTool.ViewModels
         /// Danh sách mới chỉ gồm các khung vừa quét (khung quét nhầm, tấm thừa của lượt trước biến mất).
         /// Thông tin tấm lấy từ kết quả vừa phân tích, số đã nhập lấy từ data CSV. Không tạo / xoá gì trên bản vẽ.
         /// </summary>
-        private bool SauQuet(Document doc, List<KhungTho> khung, int dimzin, Dictionary<long, ThongTinTam> quet, List<LoiQuet> loiMoi, Dictionary<long, DuLieuHinh> hinhKhung)
+        /// <param name="chiNap">Mở / quay lại bản vẽ: dựng danh sách từ file đã xuất, không ghi đè file nào.</param>
+        private bool SauQuet(Document doc, List<KhungTho> khung, int dimzin, Dictionary<long, ThongTinTam> quet, List<LoiQuet> loiMoi, Dictionary<long, DuLieuHinh> hinhKhung,
+                             bool chiNap = false)
         {
             _docDanhSach = _docThietLap = doc;
             if (Convert.ToInt32(CadApplication.GetSystemVariable("DWGTITLED")) != 1)
@@ -517,6 +519,11 @@ namespace CsvTool.ViewModels
             {
                 TrangThai = "Không có tấm đọc được. Giữ nguyên file data.";
                 return false;
+            }
+            if (chiNap)
+            {
+                TrangThai = "Đã nạp lại " + tot.Count + " tấm từ file data lần xuất gần nhất. Sửa bản vẽ thì bấm Quét lại.";
+                return true;
             }
             var conLai = new HashSet<string>(tot.Select(x => x.Tam.N));
             int boRa = cu.Keys.Count(n => !conLai.Contains(n));
@@ -907,6 +914,33 @@ namespace CsvTool.ViewModels
             catch (Exception ex) { _docThietLap = null; LoiThietLap = "Không đọc được thiết lập của bản vẽ: " + ex.Message; }
             TabDangChon = 0;
             TrangThai = "Đổi bản vẽ. Thiết lập rồi bấm quét.";
+            NapLai(doc);
+        }
+
+        /// <summary>
+        /// Mở / quay lại bản vẽ đã xuất: ghép khung trên bản vẽ với data CSV (theo tên N), giá json và giá VL.
+        /// Không phân tích lại hình; lỗi hình học lấy từ lượt quét gần nhất của bản vẽ trong phiên CAD này.
+        /// </summary>
+        private void NapLai(Document doc)
+        {
+            try
+            {
+                if (_thuMuc == null || !File.Exists(CsvXuat.DuongData(_thuMuc, _maDon))) return;
+                var tenData = new HashSet<string>(CsvXuat.DocData(DocChiaSe(CsvXuat.DuongData(_thuMuc, _maDon))).Keys);
+                var (khung, dimzin) = QuetKhungCad.Quet(doc, QuetKhungCad.TatCaKhung(doc, CaiDat.LopKhungDung));
+                // chỉ các khung đã có trong data: lượt xuất trước có thể chỉ quét một vùng
+                var daXuat = khung.Where(k => PhanTichKhung.CoFname(k) && tenData.Contains(PhanTichKhung.TenKhung(k) ?? "")).ToList();
+                if (daXuat.Count == 0) return;
+                var loiCu = (doc.UserData[KhoaLoiQuet] as Dictionary<long, List<LoiQuet>>)?.Values.SelectMany(x => x).ToList() ?? new List<LoiQuet>();
+                _hinhQuet.Clear();
+                if (SauQuet(doc, daXuat, dimzin, new Dictionary<long, ThongTinTam>(), loiCu, new Dictionary<long, DuLieuHinh>(), chiNap: true))
+                {
+                    CapNhatSoKhung(doc);
+                    BaoThietLap();
+                    TabDangChon = 1;
+                }
+            }
+            catch (Exception ex) { TrangThai = "Không nạp lại được danh sách đã xuất: " + ex.Message; }
         }
 
         // ── Sửa ô ─────────────────────────────────────────────────────
