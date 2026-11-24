@@ -634,6 +634,12 @@
                                                     <TextBlock Text="{Binding NhanViTri}" Foreground="#1565C0" FontSize="11" TextAlignment="Right"/>
                                                     <Button Style="{StaticResource NutPhu}" Margin="0,2,0,0" Padding="6,1" FontSize="11" Content="Nhập giá" Click="NhapGiaBam"
                                                             Visibility="{Binding LaThieuGia, Converter={StaticResource HienKhi}}"/>
+                                                    <Button Style="{StaticResource NutPhu}" Margin="0,2,0,0" Padding="6,1" FontSize="11" Content="Sửa theo bảng" Click="SuaFnameBam"
+                                                            ToolTip="Ghi lại dòng này trên F-name theo dữ liệu Fname"
+                                                            Visibility="{Binding CoSuaFname, Converter={StaticResource HienKhi}}"/>
+                                                    <Button Style="{StaticResource NutPhu}" Margin="0,2,0,0" Padding="6,1" FontSize="11" Content="Bổ sung" Click="BoSungFnameBam"
+                                                            ToolTip="Mở cửa sổ Bổ sung vật liệu của tab Fname để gửi admin duyệt"
+                                                            Visibility="{Binding CoBoSung, Converter={StaticResource HienKhi}}"/>
                                                 </StackPanel>
                                                 <StackPanel>
                                                     <TextBlock Text="{Binding Ten}" Foreground="#263238" FontWeight="SemiBold"/>

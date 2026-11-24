@@ -466,6 +466,8 @@ namespace CsvTool.ViewModels
             foreach (var g in loiMoi.GroupBy(l => l.Handle)) loiKhung[g.Key] = g.ToList();
             doc.UserData[KhoaLoiQuet] = loiKhung;
             _loiKhung = loiKhung;
+            _goiYKhung.Clear();
+            NapFname();
 
             var tot = new List<(TamXuat Tam, KhungTho Khung, string CanhBao)>();
             var loi = new List<DongTam>();
@@ -494,7 +496,7 @@ namespace CsvTool.ViewModels
                                       .Select(t => new DongTam(this, theoHandle[t.HandleKhung].Khung, t, theoHandle[t.HandleKhung].CanhBao)
                                       { LoiQuet = LoiHinhCua(t.HandleKhung) }))
                         .ToList();
-            foreach (DongTam d in _tatCa) d.MoRong = _chiTiet;
+            foreach (DongTam d in _tatCa) { d.MoRong = _chiTiet; KiemFname(d); }
             DsGiaVl.Clear();   // giá tạm vừa đọc lại từ file: không giữ dòng trỏ vào dữ liệu cũ
             DungGiaVl();
             TinhLaiNeuCo();   // số đo có thể đã đổi: giá tự động không được giữ giá trị cũ
@@ -843,6 +845,8 @@ namespace CsvTool.ViewModels
                 foreach (LoiQuet l in ds?.Where(x => x.LaLoi) ?? Enumerable.Empty<LoiQuet>())
                     Them(new DongLoi(d, l.NoiDung, true, l));
                 if (d.LoiKhac != null) Them(new DongLoi(d, d.LoiKhac, true, null));
+                if (d.Tam != null && _goiYKhung.TryGetValue(d.Khung.Handle, out var goiY))
+                    foreach (GoiYFname g in goiY) Them(new DongLoi(d, g.NoiDung, false, null) { GoiY = g });
                 foreach (LoiQuet w in ds?.Where(l => !l.LaLoi) ?? Enumerable.Empty<LoiQuet>())
                     Them(new DongLoi(d, w.NoiDung, false, w));
                 if (d.CanhBaoGia != null) Them(new DongLoi(d, d.CanhBaoGia, false, null, d.CanhBaoGia.StartsWith("Chưa có giá")));
@@ -919,6 +923,61 @@ namespace CsvTool.ViewModels
         }
 
         internal void BaoLoi(string s) => TrangThai = s;
+
+        // ── Đối chiếu F-name với dữ liệu tab Fname (catalog + TraV) ──
+        private readonly Dictionary<long, List<GoiYFname>> _goiYKhung = new Dictionary<long, List<GoiYFname>>();
+        private OhtaTool.Plugin.Core.FnameCatalogData _catFname;
+        private const string KhoaBoSung = "OHTA_FN_BOSUNG";   // OHTATOOL đọc M, T qua AppDomain (2 DLL không tham chiếu nhau)
+
+        /// <summary>Đọc catalog + TraV như tab Fname: cache Google Sheet trên máy, không có thì bản mẫu 01_Fname\data.</summary>
+        private void NapFname()
+        {
+            try
+            {
+                string dir = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(typeof(CsvTabViewModel).Assembly.Location), "..", "..", "..", "01_Fname"));
+                _catFname = OhtaTool.Plugin.Core.FnameCatalogData.LoadFromModuleDirectory(dir);
+                OhtaTool.Plugin.Core.TraVCalculator.Load(dir);
+                OhtaTool.Plugin.Core.TraVCalculator.SetCatalog(_catFname);
+            }
+            catch (Exception) { _catFname = null; }   // thiếu dữ liệu Fname thì bỏ qua kiểm tra, không chặn quét
+        }
+
+        private void KiemFname(DongTam d)
+        {
+            if (d.Tam == null) return;
+            try { _goiYKhung[d.Khung.Handle] = KiemTraFname.Chay(PhanTichKhung.DongFname(d.Khung), _catFname, OhtaTool.Plugin.Core.TraVCalculator.GetBendOptionsForFname); }
+            catch (Exception) { _goiYKhung.Remove(d.Khung.Handle); }
+        }
+
+        /// <summary>Nút Sửa theo bảng: thay dòng F-name trên bản vẽ bằng dòng đúng theo dữ liệu Fname.</summary>
+        public void SuaTheoBang(DongLoi l)
+        {
+            Document doc = CadApplication.DocumentManager.MdiActiveDocument;
+            GoiYFname g = l?.GoiY;
+            if (g?.DongMoi == null || doc == null || doc != _docDanhSach) { BaoLoi("Mở đúng bản vẽ đã quét rồi bấm lại."); return; }
+            KhungTho k = l.Dong.Khung;
+            try { GhiNguocCad.SuaDong(doc, k.Handle, g.DongCu, g.DongMoi); }
+            catch (Exception ex) { BaoLoi("Không sửa được F-name: " + ex.Message); return; }
+            foreach (TextTho t in k.Text.Where(x => string.Equals(x.Lop, PhanTichKhung.LopFname, StringComparison.OrdinalIgnoreCase)))
+            {
+                string moi = PhanTichKhung.ThayDongFname(t.NoiDung, t.LaMtext, x => x.Trim() == g.DongCu, g.DongMoi);
+                if (moi != null) { t.NoiDung = moi; break; }
+            }
+            KiemFname(l.Dong);
+            GomLoi();
+            TrangThai = "Đã sửa " + g.DongCu + " thành " + g.DongMoi + ".";
+        }
+
+        /// <summary>Nút Bổ sung: mở cửa sổ Bổ sung vật liệu của tab Fname, điền sẵn M và T.</summary>
+        public void BoSungFname(DongLoi l)
+        {
+            Document doc = CadApplication.DocumentManager.MdiActiveDocument;
+            if (l?.GoiY?.BoSung != true || doc == null) return;
+            AppDomain.CurrentDomain.SetData(KhoaBoSung, l.GoiY.M + "\n" + l.GoiY.T);
+            string huy = Convert.ToInt32(CadApplication.GetSystemVariable("CMDACTIVE")) == 0 ? "" : "\x03\x03";
+            doc.SendStringToExecute(huy + "OHTA_FN_BOSUNG\n", true, false, true);
+            TrangThai = "Gửi bổ sung xong thì quét lại để kiểm tra.";
+        }
 
         /// <summary>File CSV / data đang mở thì không cho đổi gì, để bản vẽ, tab và 2 file không lệch nhau.</summary>
         internal bool ChoPhepSua()

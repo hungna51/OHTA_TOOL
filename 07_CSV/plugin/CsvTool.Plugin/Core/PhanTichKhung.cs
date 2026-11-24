@@ -107,9 +107,12 @@ namespace CsvTool.Core
 
         /// <summary>Tên N để hiện ở danh sách lỗi, kể cả khi F-name chưa đủ trường; không có → null.</summary>
         public static string TenKhung(KhungTho k) =>
+            DongFname(k).Where(d => d.StartsWith("N=") && d.Length > 2).Select(d => d.Substring(2)).FirstOrDefault();
+
+        /// <summary>Mọi dòng F-name của khung (MTEXT tách theo dòng, đã bỏ mã định dạng).</summary>
+        public static List<string> DongFname(KhungTho k) =>
             k.Text.Where(t => CungLop(t.Lop, LopFname))
-                  .SelectMany(t => t.LaMtext ? ThongTinTamParser.TachDong(t.NoiDung, true) : new List<string> { t.NoiDung ?? "" })
-                  .Where(d => d.StartsWith("N=") && d.Length > 2).Select(d => d.Substring(2)).FirstOrDefault();
+                  .SelectMany(t => t.LaMtext ? ThongTinTamParser.TachDong(t.NoiDung, true) : new List<string> { t.NoiDung ?? "" }).ToList();
 
         /// <summary>Khung có text trên layer F-name (khung chú thích không có → không phải tấm).</summary>
         public static bool CoFname(KhungTho k) => k.Text.Any(t => CungLop(t.Lop, LopFname));
@@ -265,20 +268,24 @@ namespace CsvTool.Core
         /// Thay giá trị trường F-name (N/M/T/Q) trong nội dung thô của 1 TEXT/MTEXT; trường không có
         /// trong text này → null. MTEXT giữ nguyên khối định dạng "{\...;" đầu và "}" cuối.
         /// </summary>
-        public static string ThayTruongFname(string noiDung, bool laMtext, char truong, string giaTri)
+        public static string ThayTruongFname(string noiDung, bool laMtext, char truong, string giaTri) =>
+            ThayDongFname(noiDung, laMtext, d => d.StartsWith(truong + "=", StringComparison.Ordinal), truong + "=" + giaTri);
+
+        /// <summary>Thay dòng đầu tiên thoả khop bằng dongMoi; không có dòng nào → null. MTEXT giữ khối định dạng đầu / cuối.</summary>
+        public static string ThayDongFname(string noiDung, bool laMtext, Func<string, bool> khop, string dongMoi)
         {
-            string dau = truong + "=";
             noiDung = noiDung ?? "";
-            if (!laMtext) return noiDung.StartsWith(dau) ? dau + giaTri : null;
+            if (!laMtext) return khop(noiDung) ? dongMoi : null;
             string[] doan = noiDung.Split(new[] { "\\P" }, StringSplitOptions.None);
             bool boc = noiDung.StartsWith("{\\") && noiDung.EndsWith("}");
             for (int i = 0; i < doan.Length; i++)
             {
                 int batDau = 0;
                 if (i == 0 && boc) batDau = doan[0].IndexOf(';') + 1;
-                if (string.CompareOrdinal(doan[i], batDau, dau, 0, dau.Length) != 0) continue;
                 bool cuoi = boc && i == doan.Length - 1;
-                doan[i] = doan[i].Substring(0, batDau) + dau + giaTri + (cuoi ? "}" : "");
+                string dong = doan[i].Substring(batDau, Math.Max(0, doan[i].Length - batDau - (cuoi ? 1 : 0)));
+                if (!khop(dong)) continue;
+                doan[i] = doan[i].Substring(0, batDau) + dongMoi + (cuoi ? "}" : "");
                 return string.Join("\\P", doan);
             }
             return null;

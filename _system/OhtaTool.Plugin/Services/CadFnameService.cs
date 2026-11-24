@@ -270,6 +270,28 @@ namespace OhtaTool.Plugin.Services
             });
         }
 
+        /// <summary>
+        /// Tab CSV (CSVTOOL.dll) gặp vật liệu / độ dày chưa có trong dữ liệu Fname: mở cửa sổ Bổ sung vật liệu.
+        /// M, T truyền qua AppDomain "OHTA_FN_BOSUNG" dạng "M\nT" vì 2 DLL không tham chiếu nhau.
+        /// </summary>
+        [CommandMethod("OHTA_FN_BOSUNG")]
+        public static void CmdBoSungVatLieu()
+        {
+            BugGuard.Run("OHTA_FN_BOSUNG", () =>
+            {
+                string[] p = (AppDomain.CurrentDomain.GetData("OHTA_FN_BOSUNG") as string ?? "").Split('\n');
+                AppDomain.CurrentDomain.SetData("OHTA_FN_BOSUNG", null);
+                OhtaPaletteCommands.ActivateModuleTab("fname");
+                FnameTabViewModel vm = ActiveViewModel;
+                if (vm == null)
+                {
+                    CadCompat.WriteMessage("\n[OHTA Fname] Hãy mở bảng OHTA (Tab Fname) trước.\n");
+                    return;
+                }
+                vm.OpenMaterialEditorDirectly(null, p[0].Length > 0 ? p[0] : null, p.Length > 1 && p[1].Length > 0 ? p[1] : null);
+            });
+        }
+
         [CommandMethod("OHTA_FN_PICK_ANGLE")]
         public static void CmdPickAngle()
         {

@@ -19,6 +19,11 @@ namespace CsvTool.CadServices
             Sua(doc, handleKhung, PhanTichKhung.LopFname, (noi, laM) => PhanTichKhung.ThayTruongFname(noi, laM, truong, giaTri),
                 "Không tìm thấy trường " + truong + "= trong F-name của khung.");
 
+        /// <summary>Thay nguyên 1 dòng F-name (Z=, V=...) của khung bằng dòng theo dữ liệu Fname.</summary>
+        public static void SuaDong(Document doc, long handleKhung, string dongCu, string dongMoi) =>
+            Sua(doc, handleKhung, PhanTichKhung.LopFname, (noi, laM) => PhanTichKhung.ThayDongFname(noi, laM, d => d.Trim() == dongCu, dongMoi),
+                "Không tìm thấy dòng " + dongCu + " trong F-name của khung (có thể đã bị sửa, quét lại).");
+
         private static void Sua(Document doc, long handleKhung, string lop, Func<string, bool, string> thay, string loi)
         {
             Database db = doc.Database;

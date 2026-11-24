@@ -966,9 +966,10 @@ namespace OhtaTool.Plugin.ViewModels
             return true;
         }
 
-        public void OpenMaterialEditorDirectly(Window owner = null)
+        /// <summary>m / t khác null: điền sẵn theo tấm (tab CSV gọi qua lệnh OHTA_FN_BOSUNG), không lấy ô đang nhập.</summary>
+        public void OpenMaterialEditorDirectly(Window owner = null, string m = null, string t = null)
         {
-            var editor = new FnameMaterialWindow(() => _catalog, TraVCalculator.GetMaterialTypeOptions(), _valM, _valT, SubmitMaterialAsync, SubmitTamAsync);
+            var editor = new FnameMaterialWindow(() => _catalog, TraVCalculator.GetMaterialTypeOptions(), m ?? _valM, t ?? _valT, SubmitMaterialAsync, SubmitTamAsync);
             if (owner != null)
             {
                 editor.Owner = owner;

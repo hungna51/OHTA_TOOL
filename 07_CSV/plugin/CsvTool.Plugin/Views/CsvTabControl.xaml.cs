@@ -65,6 +65,16 @@ namespace CsvTool.Views
 
         private void NhapGiaBam(object sender, RoutedEventArgs e) => _vm.TabDangChon = 3;
 
+        private void SuaFnameBam(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is DongLoi l) _vm.SuaTheoBang(l);
+        }
+
+        private void BoSungFnameBam(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is DongLoi l) _vm.BoSungFname(l);
+        }
+
         private void ThemBeBam(object sender, RoutedEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is DongTam d) d.ThemBe();
