@@ -40,6 +40,7 @@ namespace CsvTool.CadServices
             var fname = new Dictionary<ObjectId, Matrix3d>();
             var chu = new List<ObjectId>();
             var netTam = new List<ObjectId>();   // nét TXTEXP tạo tạm trên bản vẽ S, xoá sau khi chép sang file A
+            bool nhomUndo = false;
             // không LockDocument: lệnh CAD đang chạy đã giữ khoá, khoá thêm thì Editor.Command (TXTEXP) có thể bị từ chối
             try
             {
@@ -60,6 +61,8 @@ namespace CsvTool.CadServices
                     }
                     tr.Commit();
                 }
+                // chép chữ + TXTEXP + xoá nét tạm gói trong 1 nhóm Undo: Undo một lần là bỏ hết, không hiện lại nét tạm
+                if (chu.Count > 0) { doc.Editor.Command("_.UNDO", "_BE"); nhomUndo = true; }
                 netTam.AddRange(TachChu(doc, chu));
                 foreach (ObjectId id in netTam) ids.Add(id);
                 if (ids.Count == 0) throw new InvalidOperationException("không có đối tượng nào để chép.");
@@ -115,6 +118,7 @@ namespace CsvTool.CadServices
                             if (!id.IsErased) tr.GetObject(id, OpenMode.ForWrite).Erase();
                         tr.Commit();
                     }
+                if (nhomUndo) doc.Editor.Command("_.UNDO", "_E");
             }
         }
 
