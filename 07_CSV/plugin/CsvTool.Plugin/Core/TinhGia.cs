@@ -10,7 +10,7 @@ namespace CsvTool.Core
         public string VatLieu = "", CongTy = "", LoaiPitchi = "Pitchi";
         public double DoDay, X, Y, SoLuong, LoNho, LoLon, Tappu, Sara, PitchiSoLan, PitchiDai, DonGiaCuon, VatMm, DonGiaDatNgoai;
         public List<(double SoDuong, double Dai)> Be = new List<(double, double)>();
-        public int CheDoTinh;   // 0 thường, 1 chỉ gia công, 2 vật liệu khách cấp
+        public int CheDoTinh;   // 0 thường, 1 chỉ gia công (15% VL, không cắt, không lỗ), 2 vật liệu khách cấp
         public double? TienVLTay;   // tiền vật liệu 1 tấm do người dùng tự tính: giá = số này + cắt + gia công
         public bool LamTron250;
     }
@@ -133,8 +133,9 @@ namespace CsvTool.Core
             }
             if (v.CheDoTinh == 1)
             {
-                kq.TienVL = 0; kq.TienCat = 0;
-                kq.Gia1Tam = Tron10(kq.TongGiaCong);
+                // không cắt nên không tính lỗ (lỗ chuẩn là một dạng cắt laser); khác web, theo yêu cầu của xưởng
+                kq.TienVL = v.TienVLTay ?? tienVL * 0.15; kq.TienCat = 0; kq.TongGiaCong = giaCong - tienLo;
+                kq.Gia1Tam = Tron10(kq.TienVL + kq.TongGiaCong);
             }
             else if (v.TienVLTay != null)
             {
@@ -156,12 +157,12 @@ namespace CsvTool.Core
 
         /// <summary>
         /// Bảng giá = 0 mà tấm cần tiền vật liệu → báo thiếu, để không ra báo giá thấp mà không ai biết.
-        /// Không cần giá VL: chế độ chỉ gia công, công ty tính theo kg không so với giá thường.
+        /// Không cần giá VL: công ty tính theo kg không so với giá thường.
         /// </summary>
         private static string LoiGiaVlBang0(DauVaoGia v, BangGia b)
         {
             DongBangGia g = b.Dong.FirstOrDefault(x => x.VatLieu == v.VatLieu && x.DoDay == v.DoDay);
-            if (g == null || g.DonGia > 0 || v.DonGiaDatNgoai > 0 || v.CheDoTinh == 1 || v.TienVLTay != null) return null;
+            if (g == null || g.DonGia > 0 || v.DonGiaDatNgoai > 0 || v.TienVLTay != null) return null;
             bool coSus = (v.VatLieu ?? "").ToUpperInvariant().Contains("SUS");
             if (v.CheDoTinh == 0 && !coSus && b.DacBiet.TryGetValue(v.CongTy ?? "", out CongTyDacBiet db) && !db.SoSanhGiaThuong) return null;
             return LoiChuaCoGia(v);
