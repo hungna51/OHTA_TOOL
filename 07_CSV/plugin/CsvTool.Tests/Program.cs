@@ -36,6 +36,7 @@ namespace CsvTool.Tests
             TestThongTinTam();
             TestPhanTichKhung();
             TestKiemTraFname();
+            TestFileA();
             TestCsvXuat();
             TestCaiDat();
             TestDuLieu();

@@ -98,6 +98,8 @@ namespace CsvTool.CadServices
             NetCat net = null;
             List<CungHinh> cung = laKakou || Cung(e.Layer, c.LopKhungDung) ? null : CungCua(e);
             List<NetBe> doanMc = laKakou || Cung(e.Layer, c.LopKhungDung) ? null : DoanCua(e);
+            bool laPhu = (Cung(e.Layer, "3-KEGAKI") || Cung(e.Layer, "4-SHT")) && e is Curve && LoaiNet.Contains(loai);
+            NetCat phu = null;
             NetBe be = laBe ? new NetBe { X1 = ((Line)e).StartPoint.X, Y1 = ((Line)e).StartPoint.Y, X2 = ((Line)e).EndPoint.X, Y2 = ((Line)e).EndPoint.Y } : null;
 
             for (int i = 0; i < khung.Count; i++)
@@ -113,6 +115,11 @@ namespace CsvTool.CadServices
                 if (chu != null) d.ChuTrongKhung.Add(chu);
                 if (cung != null) d.CungMatCat.AddRange(cung);
                 if (doanMc != null) d.DoanMatCat.AddRange(doanMc);
+                if (laPhu)
+                {
+                    if (phu == null) phu = LamNet((Curve)e, loai, c.BuocSpline);
+                    d.NetPhu.Add((e.Layer, phu.Diem, hopGon));
+                }
                 if (laTapu) d.SoHatch++;
                 if (laFname && chu == null) d.SaiFname.Add((loai, hopGon));
                 if (trangSaiLop) d.NetTrangSaiLop.Add((e.Layer, hopGon));

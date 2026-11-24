@@ -36,6 +36,9 @@ namespace OhtaTool.Plugin
         public bool AddCheckBox;
         public double CheckBoxWidthCad;
         public double CheckBoxHeightCad;
+        /// <summary>Tab CSV: danh sách trang đã xếp sẵn (thay cho gom khung) và file PDF cố định, ghi đè không hỏi.</summary>
+        public List<PlotPage> Pages;
+        public string TargetPath;
     }
 
     public static class PrintRunner
@@ -161,7 +164,7 @@ namespace OhtaTool.Plugin
                 return;
             }
 
-            List<PlotPage> areas = CollectAreas(doc, req);
+            List<PlotPage> areas = req.Pages ?? CollectAreas(doc, req);
             if (areas == null)
             {
                 PrintRunner.Report("Đã huỷ in.");
@@ -178,8 +181,13 @@ namespace OhtaTool.Plugin
             string dir = (string)CadApp.GetSystemVariable("DWGPREFIX");
             string basePath = Path.Combine(dir, PrintCore.PdfBaseName((string)CadApp.GetSystemVariable("DWGNAME")) + ".pdf");
             // Một trang thì luôn là <tên>.pdf, không thêm -1
-            bool merge = (p.Merge ?? true) || areas.Count == 1;
-            List<string> targets = ResolveTargets(basePath, areas.Count, merge, req.SkipOverwritePrompt);
+            bool merge = (p.Merge ?? true) || areas.Count == 1 || req.TargetPath != null;
+            if (req.TargetPath != null && File.Exists(req.TargetPath) && IsLocked(req.TargetPath))
+            {
+                PrintRunner.Report(Path.GetFileName(req.TargetPath) + " đang mở, chưa in được. Đóng file rồi quét lại.");
+                return;
+            }
+            List<string> targets = req.TargetPath != null ? new List<string> { req.TargetPath } : ResolveTargets(basePath, areas.Count, merge, req.SkipOverwritePrompt);
             if (targets == null)
             {
                 PrintRunner.Report("Đã huỷ in.");
@@ -254,6 +262,75 @@ namespace OhtaTool.Plugin
                 try { Process.Start(new ProcessStartInfo(shown) { UseShellExecute = true }); }
                 catch (System.Exception ex) { OhtaTool.Plugin.Core.BugLog.Write("OHTA/PrintCommands", ex); CadCompat.WriteMessage("\n[OI] Không mở được: " + ex.Message + "\n"); }
             }
+        }
+
+        /// <summary>
+        /// Tab CSV (CSVTOOL.dll) gọi sau khi quét: in các khung tấm theo thứ tự đã xếp ra một file PDF.
+        /// Dữ liệu qua AppDomain "OHTA_CSV_PDF": dòng 1 tên profile, dòng 2 file PDF, mỗi dòng sau "xmin,ymin,xmax,ymax".
+        /// </summary>
+        [CommandMethod("OHTA_CSV_PDF", CommandFlags.Modal)]
+        public static void CmdCsvPdf()
+        {
+            BugGuard.Run("OHTA_CSV_PDF", () =>
+            {
+                string[] dong = (AppDomain.CurrentDomain.GetData("OHTA_CSV_PDF") as string ?? "").Split('\n');
+                AppDomain.CurrentDomain.SetData("OHTA_CSV_PDF", null);
+                CadDocument doc = CadCompat.ActiveDocument;
+                if (dong.Length < 3 || doc == null)
+                    return;
+
+                PrintSettingsData s = PrintSettingsStore.Load();
+                PrintParams drawing;
+                using (CadCompat.LockActiveDocument())
+                    drawing = CadPrintService.ReadDrawingParams(doc);
+                PrintProfile prof = s.Profiles.FirstOrDefault(x => string.Equals(x.Name, dong[0], StringComparison.OrdinalIgnoreCase));
+                ResolvedPrint r = PrintSettingsResolver.Resolve(prof, drawing, s.Defaults, new CadPlotCatalog());
+                if (string.IsNullOrEmpty(r.Values.Device) || string.IsNullOrEmpty(r.Values.Media))
+                {
+                    PrintRunner.Report("Profile " + dong[0] + " chưa có máy in / khổ giấy. Chọn lại ở tab PRINT.");
+                    return;
+                }
+
+                var pages = new List<PlotPage>();
+                for (int i = 2; i < dong.Length; i++)
+                {
+                    double[] v = dong[i].Split(',').Select(x => double.TryParse(x, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double d) ? d : double.NaN).ToArray();
+                    if (v.Length != 4 || v.Any(double.IsNaN))
+                        continue;
+                    double w = v[2] - v[0], h = v[3] - v[1];
+                    pages.Add(new PlotPage
+                    {
+                        LowerLeft = new Point2d(v[0], v[1]),
+                        UpperRight = new Point2d(v[2], v[3]),
+                        Portrait = PrintCore.IsPortrait(w, h),
+                        FrameWidthCad = w,
+                        FrameHeightCad = h
+                    });
+                }
+                if (pages.Count == 0)
+                    return;
+
+                PrintRunner.Pending = new PrintRequest
+                {
+                    Mode = "frames",
+                    Pages = pages,
+                    TargetPath = dong[1],
+                    SkipOverwritePrompt = true,
+                    AddCheckBox = s.AddCheckBox,
+                    CheckBoxWidthCad = s.CheckBoxWidthCad,
+                    CheckBoxHeightCad = s.CheckBoxHeightCad,
+                    Params = new PrintParams
+                    {
+                        Device = r.Values.Device,
+                        Media = r.Values.Media,
+                        StyleSheet = r.Values.StyleSheet ?? string.Empty,
+                        Lineweights = r.Values.Lineweights ?? true,
+                        Merge = true,
+                        OpenAfter = r.Values.OpenAfter ?? true
+                    }
+                };
+                CmdPrint();
+            });
         }
 
         private static List<PlotPage> CollectAreas(CadDocument doc, PrintRequest req)

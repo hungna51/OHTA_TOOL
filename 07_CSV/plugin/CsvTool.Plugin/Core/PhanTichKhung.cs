@@ -130,6 +130,10 @@ namespace CsvTool.Core
                       ? ThongTinTamParser.TachDong(t.NoiDung, true).Count(d => d.StartsWith("N="))
                       : (t.NoiDung ?? "").StartsWith("N=") ? 1 : 0);
 
+        /// <summary>Tấm gia công (in PDF trước): có bẻ, pitchi, vát, Tapu, Sara hoặc cuộn. Chỉ có lỗ thì không tính.</summary>
+        public static bool LaTamGiaCong(ThongTinTam t) =>
+            t.DuongBe.Count > 0 || t.PitchiSoLan > 0 || t.Vat > 0 || t.Tappu > 0 || t.Sara > 0 || CsvXuat.LoaiCuon(t.LoaiGiaCong) != "0";
+
         public const string LoiThieuPitchi = "Có gia công pitchi, chưa nhập số lần hoặc chiều dài.";
 
         /// <summary>Đưa ds về đúng thứ tự của moi mà giữ phần tử còn lại, để ô đang nhập trên giao diện không bị dựng lại.</summary>

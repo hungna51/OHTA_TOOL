@@ -65,6 +65,8 @@ namespace CsvTool.Views
 
         private void NhapGiaBam(object sender, RoutedEventArgs e) => _vm.TabDangChon = 3;
 
+        private void ProfileInMo(object sender, System.EventArgs e) => _vm.NapProfileIn();
+
         private void SuaFnameBam(object sender, RoutedEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is DongLoi l) _vm.SuaTheoBang(l);

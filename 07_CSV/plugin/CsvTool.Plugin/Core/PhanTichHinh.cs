@@ -51,6 +51,9 @@ namespace CsvTool.Core
         public List<string> ChuDim = new List<string>();            // chữ ghi đè của DIMENSION trong khung
         public List<CungHinh> CungMatCat = new List<CungHinh>();    // cung ngoài 0-KAKOU, để nhận mặt cắt tấm cuộn
         public List<NetBe> DoanMatCat = new List<NetBe>();          // đoạn thẳng ngoài 0-KAKOU, phần thẳng nối tiếp cung cuộn
+        /// <summary>Nét 3-KEGAKI (ケガキ) và 4-SHT (スリット) trong khung, đã làm phẳng: phải nằm trong hình chính.</summary>
+        public List<(string Lop, List<(double X, double Y)> Diem, (double MinX, double MinY, double MaxX, double MaxY) Hop)> NetPhu =
+            new List<(string, List<(double, double)>, (double, double, double, double))>();
     }
 
     public sealed class KetQuaHinh
@@ -58,6 +61,9 @@ namespace CsvTool.Core
         public ThongTinTam Tam;
         public List<LoiQuet> Loi = new List<LoiQuet>();   // mọi lỗi biên dạng của tấm
         public List<LoiQuet> CanhBao = new List<LoiQuet>();
+        /// <summary>Biên ngoài và các lỗ đã làm phẳng (chỉ có khi không lỗi): phần thịt để đặt F-name trong file A.</summary>
+        public List<(double X, double Y)> BienNgoai;
+        public List<List<(double X, double Y)>> Lo;
     }
 
     /// <summary>Làm phẳng cung tròn / polyline có bulge, sai số dây cung ≤ 0.005 mm.</summary>
@@ -120,10 +126,12 @@ namespace CsvTool.Core
         private static readonly Regex MaU = new Regex(@"\\U\+([0-9A-Fa-f]{4})", RegexOptions.Compiled);
 
         /// <summary>hoiSoNhan(tên tấm, số đoạn): số đường bẻ nhấn 1 lần khi ký hiệu không khớp; null = không nhập.</summary>
-        public static KetQuaHinh Chay(DuLieuHinh d, double tol, int cheDoTinh, Func<string, int, int?> hoiSoNhan)
+        /// <param name="kiemNetPhu">Đang tạo file A: nét ケガキ / スリット ngoài hình chính là lỗi.</param>
+        public static KetQuaHinh Chay(DuLieuHinh d, double tol, int cheDoTinh, Func<string, int, int?> hoiSoNhan, bool kiemNetPhu = false)
         {
             var kq = new KetQuaHinh();
-            kq.Loi = Bien(d, tol, out int nho, out int lon);
+            kq.Loi = Bien(d, tol, out int nho, out int lon, out kq.BienNgoai, out kq.Lo);
+            if (kq.Loi.Count == 0 && kiemNetPhu) kq.Loi.AddRange(NetPhuNgoaiHinh(d, kq.BienNgoai, tol));
             if (kq.Loi.Count > 0) return kq;
             string fname = string.Concat(d.ChuFname.Select(c => "," + c.NoiDung));
             var be = DuongBe(d, fname, hoiSoNhan, s => kq.CanhBao.Add(new LoiQuet { Handle = d.HandleKhung, NoiDung = s }));
@@ -158,9 +166,41 @@ namespace CsvTool.Core
         /// Báo đủ mọi lỗi: nét đã báo lỗi được loại ra rồi kiểm tra tiếp phần còn lại.
         /// Biên ngoài còn hở thì không biết vòng nào là biên, nên chỉ kiểm tra các vòng kín có chồng nhau không.
         /// </summary>
-        private static List<LoiQuet> Bien(DuLieuHinh d, double tol, out int nho, out int lon)
+        /// <summary>Nét 3-KEGAKI / 4-SHT có điểm nằm ngoài biên ngoài (quá dung sai): file A sẽ có nét lạc ngoài tấm.</summary>
+        public static List<LoiQuet> NetPhuNgoaiHinh(DuLieuHinh d, List<(double X, double Y)> ngoai, double tol)
+        {
+            var kq = new List<LoiQuet>();
+            if (ngoai == null) return kq;
+            double sai = Math.Max(tol, 0.1);
+            bool Ngoai((double X, double Y) p)
+            {
+                if (FnameTrongTam.TrongDaGiac(p, ngoai)) return false;
+                for (int i = 0; i < ngoai.Count; i++)
+                    if (KcDoan(p, ngoai[i], ngoai[(i + 1) % ngoai.Count]) <= sai) return false;   // nét スリット bắt đầu đúng trên biên
+                return true;
+            }
+            foreach (var g in d.NetPhu.Where(n => n.Diem.Any(Ngoai)).GroupBy(n => n.Lop.ToUpperInvariant()))
+                kq.Add(new LoiQuet
+                {
+                    Handle = d.HandleKhung, LaLoi = true, ViTri = g.Select(n => n.Hop).ToList(),
+                    NoiDung = "Nét " + g.Key + (g.Key == "4-SHT" ? " (スリット)" : " (ケガキ)") + " nằm ngoài hình chính. Xoá hoặc dời vào trong tấm.",
+                });
+            return kq;
+        }
+
+        private static double KcDoan((double X, double Y) p, (double X, double Y) a, (double X, double Y) b)
+        {
+            double dx = b.X - a.X, dy = b.Y - a.Y, l2 = dx * dx + dy * dy;
+            double t = l2 <= 0 ? 0 : Math.Max(0, Math.Min(1, ((p.X - a.X) * dx + (p.Y - a.Y) * dy) / l2));
+            double x = a.X + t * dx - p.X, y = a.Y + t * dy - p.Y;
+            return Math.Sqrt(x * x + y * y);
+        }
+
+        private static List<LoiQuet> Bien(DuLieuHinh d, double tol, out int nho, out int lon,
+                                          out List<(double X, double Y)> bienNgoai, out List<List<(double X, double Y)>> dsLo)
         {
             nho = lon = 0;
+            bienNgoai = null; dsLo = null;
             var kq = new List<LoiQuet>();
             void Them(string msg, IEnumerable<(double MinX, double MinY, double MaxX, double MaxY)> viTri) =>
                 kq.Add(new LoiQuet { Handle = d.HandleKhung, LaLoi = true, NoiDung = msg, ViTri = viTri.ToList() });
@@ -227,6 +267,8 @@ namespace CsvTool.Core
             if (chong.Count > 0) Them("Có lỗ trùng hoặc chồng nhau. Xoá bớt hoặc sửa lại.", chong.Select(HopNet));
 
             if (kq.Count > 0) return kq;
+            bienNgoai = ngoai.Diem;
+            dsLo = lo.Select(v => v.Diem).ToList();
             double chuVi30 = Math.PI * 30.0;
             nho = lo.Count(v => v.ChuVi <= chuVi30 + Eps);
             lon = lo.Count - nho;

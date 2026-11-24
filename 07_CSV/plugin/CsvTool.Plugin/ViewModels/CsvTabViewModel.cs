@@ -34,7 +34,7 @@ namespace CsvTool.ViewModels
     }
 
     /// <summary>
-    /// Tab CSV gồm 4 tab con. Lệnh CSV mở tab Thông tin chung (CSVTHIETLAP), 2 nút quét phân tích hình học bằng C#: thông tin tấm lưu ở
+    /// Tab CSV gồm 4 tab con. Lệnh CSV mở tab Home (CSVTHIETLAP), 2 nút quét phân tích hình học bằng C#: thông tin tấm lưu ở
     /// data\&lt;đơn&gt;-data.csv (không để text trên bản vẽ). Sửa ô: N/Q/M/T ghi F-name, còn lại ghi data CSV.
     /// File cuối &lt;đơn&gt;.csv tự cập nhật sau khi quét và sau mỗi thay đổi trên tab.
     /// </summary>
@@ -112,6 +112,7 @@ namespace CsvTool.ViewModels
             try { AccentBrush = (Brush)new BrushConverter().ConvertFromString(string.IsNullOrWhiteSpace(mauNhan) ? "#1E7F4F" : mauNhan); }
             catch { AccentBrush = Brushes.SeaGreen; }
             try { CaiDat = CaiDatRegistry.Doc(); } catch { CaiDat = new CaiDatCsv(); }
+            DocNhanh();
 
             QuetVungCmd = new Lenh(() => GoiQuet(false));
             QuetToanCmd = new Lenh(() => GoiQuet(true));
@@ -161,7 +162,7 @@ namespace CsvTool.ViewModels
             return _giaDon != null && TinhGiaBat && string.IsNullOrEmpty(CongTy) ? "Chọn công ty, hoặc bỏ tích Tính giá." : null;
         }
 
-        /// <summary>Lệnh CSV: mở tab Thông tin chung, không đụng vào danh sách đã quét.</summary>
+        /// <summary>Lệnh CSV: mở tab Home, không đụng vào danh sách đã quét.</summary>
         public void MoThietLap(Document doc)
         {
             CloudLoiTam.Xoa();
@@ -220,7 +221,7 @@ namespace CsvTool.ViewModels
             Bao(nameof(NhanKhung));
         }
 
-        // ── Tab Thông tin chung ───────────────────────────────────────
+        // ── Tab Home ───────────────────────────────────────
 
         private bool CoDanhSach => _docDanhSach != null && _tatCa.Any(d => d.Tam != null);
 
@@ -404,13 +405,15 @@ namespace CsvTool.ViewModels
 
             var hinh = QuetHinhCad.Doc(doc, daChon.Where(k => PhanTichKhung.SoDongN(k) == 1).ToList(), CaiDat);
             var quet = new Dictionary<long, ThongTinTam>();
+            _hinhQuet.Clear();
             var loiMoi = new List<LoiQuet>();
             foreach (DuLieuHinh d in hinh)
             {
                 try
                 {
-                    KetQuaHinh r = PhanTichHinh.Chay(d, CaiDat.DungSaiKheHo, CaiDat.CheDoTinh, (ten, soDoan) => QuetHinhCad.HoiSoNhan(doc, ten, soDoan));
+                    KetQuaHinh r = PhanTichHinh.Chay(d, CaiDat.DungSaiKheHo, CaiDat.CheDoTinh, (ten, soDoan) => QuetHinhCad.HoiSoNhan(doc, ten, soDoan), TaoFileA);
                     if (r.Tam != null) quet[d.HandleKhung] = r.Tam;
+                    _hinhQuet[d.HandleKhung] = (d, r);
                     loiMoi.AddRange(r.Loi);
                     loiMoi.AddRange(r.CanhBao);
                 }
@@ -421,6 +424,7 @@ namespace CsvTool.ViewModels
             }
             var hinhKhung = hinh.ToDictionary(x => x.HandleKhung);
             bool daQuet = SauQuet(doc, daChon, dimzin, quet, loiMoi, hinhKhung);
+            if (daQuet) TaoNhanh(doc);
             CapNhatSoKhung(doc);
             BaoThietLap();
             if (_tatCa.Count > 0) TabDangChon = 1;
@@ -774,7 +778,7 @@ namespace CsvTool.ViewModels
         internal void VeGiaTuDong(DongTam d)
         {
             if (!ChoPhepSua()) return;
-            if (_bangGia == null || _giaDon == null || _giaDon.CongTy == "") { TrangThai = "Chưa có bảng giá. Tích Tính giá ở tab Thông tin chung rồi quét."; return; }
+            if (_bangGia == null || _giaDon == null || _giaDon.CongTy == "") { TrangThai = "Chưa có bảng giá. Tích Tính giá ở tab Home rồi quét."; return; }
             GiaCua(d.Tam.N).TuDong = true;
             ApDungGia();
             DanhGiaLai();
@@ -837,7 +841,7 @@ namespace CsvTool.ViewModels
             {
                 DongTam dau = _tatCa.FirstOrDefault(x => x.Tam != null && !x.BoQua && x.Tam.M == v.VatLieu
                     && double.TryParse((x.Tam.T ?? "").Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double day) && day == v.DoDay);
-                if (dau != null) Them(new DongLoi(dau, "Chưa có trong database (" + v.SoTam + " tấm). Cần bổ sung.", false, null, true, v.Ten));
+                if (dau != null) Them(new DongLoi(dau, "Chưa có trong database (" + v.SoTam + " tấm). Cần bổ sung.", false, null, true, v.Ten) { LaGia = true });
             }
             foreach (DongTam d in _tatCa.Where(x => !x.BoQua))
             {
@@ -849,7 +853,7 @@ namespace CsvTool.ViewModels
                     foreach (GoiYFname g in goiY) Them(new DongLoi(d, g.NoiDung, false, null) { GoiY = g });
                 foreach (LoiQuet w in ds?.Where(l => !l.LaLoi) ?? Enumerable.Empty<LoiQuet>())
                     Them(new DongLoi(d, w.NoiDung, false, w));
-                if (d.CanhBaoGia != null) Them(new DongLoi(d, d.CanhBaoGia, false, null, d.CanhBaoGia.StartsWith("Chưa có giá")));
+                if (d.CanhBaoGia != null) Them(new DongLoi(d, d.CanhBaoGia, false, null, d.CanhBaoGia.StartsWith("Chưa có giá")) { LaGia = true });
             }
             PhanTichKhung.DongBoDs(DsLoi, moi);
             Bao(nameof(NhanTongTien));
@@ -923,6 +927,105 @@ namespace CsvTool.ViewModels
         }
 
         internal void BaoLoi(string s) => TrangThai = s;
+
+        // ── Tạo file A và PDF nhanh (tab Home) ──
+        private readonly Dictionary<long, (DuLieuHinh D, KetQuaHinh R)> _hinhQuet = new Dictionary<long, (DuLieuHinh, KetQuaHinh)>();
+        private bool _taoFileA, _inPdf;
+        private string _profileIn;
+        public ObservableCollection<string> DsProfileIn { get; } = new ObservableCollection<string>();
+        public const string ProfileTheoBanVe = "Theo bản vẽ";   // trùng PrintSettingsResolver.FromDrawingName của tab PRINT
+
+        public bool TaoFileA { get => _taoFileA; set { _taoFileA = value; Bao(); GhiNhanh(); } }
+        public bool InPdf { get => _inPdf; set { _inPdf = value; Bao(); GhiNhanh(); } }
+        public string ProfileIn { get => _profileIn; set { if (value == null) return; _profileIn = value; Bao(); GhiNhanh(); } }
+        public string NhanFileA => (_maDon ?? "<đơn>") + "-A.dxf, F-name thu vào trong tấm";
+        public string NhanPdf => (_maDon ?? "<đơn>") + ".pdf, tấm gia công in trước";
+
+        private void GhiNhanh() => CaiDatRegistry.GhiNhanh(_taoFileA, _inPdf, _profileIn);
+
+        private void DocNhanh()
+        {
+            var (a, b, p) = CaiDatRegistry.DocNhanh();
+            _taoFileA = a; _inPdf = b; _profileIn = p;
+            NapProfileIn();
+        }
+
+        /// <summary>Danh sách profile của tab PRINT; profile đã nhớ không còn thì về Theo bản vẽ.</summary>
+        public void NapProfileIn()
+        {
+            string giu = _profileIn;
+            DsProfileIn.Clear();
+            DsProfileIn.Add(ProfileTheoBanVe);
+            foreach (string t in CaiDatRegistry.DocTenProfileIn()) DsProfileIn.Add(t);
+            _profileIn = DsProfileIn.FirstOrDefault(t => string.Equals(t, giu, StringComparison.OrdinalIgnoreCase)) ?? ProfileTheoBanVe;
+            Bao(nameof(ProfileIn));
+        }
+
+        /// <summary>
+        /// Sau khi quét: nếu không còn lỗi và cảnh báo nào ngoài cảnh báo giá thì tạo file A / in PDF theo ô đã tick.
+        /// Còn lỗi thì không tạo gì, người dùng sửa rồi quét lại.
+        /// </summary>
+        private void TaoNhanh(Document doc)
+        {
+            Bao(nameof(NhanFileA)); Bao(nameof(NhanPdf));
+            if (!_taoFileA && !_inPdf) return;
+            int chan = DsLoi.Count(l => !l.LaGia);
+            if (chan > 0) { TrangThai += " Còn " + chan + " lỗi / cảnh báo, chưa tạo file A và PDF. Sửa ở tab Error rồi quét lại."; return; }
+            var tam = _tatCa.Where(d => d.Tam != null && !d.BoQua).ToList();
+            if (tam.Count == 0) return;
+
+            if (_taoFileA)
+            {
+                var ds = new List<TamFileA>();
+                var loi = new List<LoiQuet>();
+                foreach (DongTam d in tam)
+                {
+                    long h = d.Khung.Handle;
+                    _hinhQuet.TryGetValue(h, out var hq);
+                    var fn = hq.D?.ChuFname ?? new List<ChuHinh>();
+                    ChoFname cho = null;
+                    if (hq.R?.BienNgoai != null && fn.Count > 0 &&
+                        double.TryParse(d.Tam.Y, NumberStyles.Float, CultureInfo.InvariantCulture, out double y))
+                    {
+                        double x0 = fn.Min(c => c.MinX), y0 = fn.Min(c => c.MinY);
+                        cho = FnameTrongTam.TimCho(hq.R.BienNgoai, hq.R.Lo, fn.Max(c => c.MaxX) - x0, fn.Max(c => c.MaxY) - y0, y);
+                        if (cho != null) ds.Add(new TamFileA { HandleKhung = h, GocX = x0, GocY = y0, TiLe = cho.TiLe, DenX = cho.X, DenY = cho.Y });
+                    }
+                    if (cho == null)
+                        loi.Add(new LoiQuet { Handle = h, LaLoi = true, NoiDung = "Không đặt được F-name vào phần thịt sau " + FnameTrongTam.SoLanThu + " lần thu nhỏ. Kiểm tra lại hình." });
+                }
+                if (loi.Count > 0)
+                {
+                    foreach (LoiQuet l in loi)
+                    {
+                        if (!_loiKhung.TryGetValue(l.Handle, out var dsl)) _loiKhung[l.Handle] = dsl = new List<LoiQuet>();
+                        dsl.Add(l);
+                    }
+                    GomLoi();
+                    TrangThai += " " + loi.Count + " tấm không đặt được F-name, chưa tạo file A và PDF.";
+                    return;
+                }
+                string duongA = Path.Combine(_thuMuc, _maDon + "-A.dxf");
+                try
+                {
+                    TaoFileACad.Ghi(doc, duongA, ds);
+                    TrangThai += " Đã tạo " + Path.GetFileName(duongA) + ".";
+                }
+                catch (Exception ex) { TrangThai += " Không tạo được file A: " + ex.Message; return; }
+            }
+
+            if (_inPdf)
+            {
+                var thuTu = tam.Where(d => PhanTichKhung.LaTamGiaCong(d.Tam.Tt)).Concat(tam.Where(d => !PhanTichKhung.LaTamGiaCong(d.Tam.Tt)));
+                var dong = new List<string> { _profileIn ?? ProfileTheoBanVe, Path.Combine(_thuMuc, _maDon + ".pdf") };
+                dong.AddRange(thuTu.Select(d => string.Join(",", new[] { d.Khung.MinX, d.Khung.MinY, d.Khung.MaxX, d.Khung.MaxY }
+                    .Select(v => v.ToString("R", CultureInfo.InvariantCulture)))));
+                // OHTATOOL.dll in giúp (dùng chung máy in, profile, gộp PDF của tab PRINT); 2 DLL không tham chiếu nhau
+                AppDomain.CurrentDomain.SetData("OHTA_CSV_PDF", string.Join("\n", dong));
+                doc.SendStringToExecute("OHTA_CSV_PDF\n", true, false, true);
+                TrangThai += " Đang in " + tam.Count + " tấm ra " + _maDon + ".pdf.";
+            }
+        }
 
         // ── Đối chiếu F-name với dữ liệu tab Fname (catalog + TraV) ──
         private readonly Dictionary<long, List<GoiYFname>> _goiYKhung = new Dictionary<long, List<GoiYFname>>();

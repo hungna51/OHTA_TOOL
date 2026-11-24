@@ -14,7 +14,7 @@ using CadApplication = Autodesk.AutoCAD.ApplicationServices.Application;
 namespace CsvTool
 {
     /// <summary>
-    /// CSVTHIETLAP: lệnh CSV gọi để mở tab Thông tin chung. CSVQUETVUNG / CSVQUETTOAN: 2 nút quét gọi,
+    /// CSVTHIETLAP: lệnh CSV gọi để mở tab Home. CSVQUETVUNG / CSVQUETTOAN: 2 nút quét gọi,
     /// chạy trong ngữ cảnh lệnh để chọn vùng và hỏi số trên dòng lệnh được.
     /// Phân tích hình học bằng C#, kết quả lưu vào data CSV, không thay đổi bản vẽ.
     /// </summary>

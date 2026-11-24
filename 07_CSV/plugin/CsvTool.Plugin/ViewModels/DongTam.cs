@@ -21,6 +21,8 @@ namespace CsvTool.ViewModels
         public bool LaThieuGia { get; }
         /// <summary>Thiếu số pitchi: dòng có ô nhập nhanh ngay trên thẻ lỗi.</summary>
         public bool LaThieuPitchi => NoiDung == PhanTichKhung.LoiThieuPitchi;
+        /// <summary>Cảnh báo về giá: không chặn tạo file A và PDF.</summary>
+        public bool LaGia { get; set; }
         /// <summary>F-name lệch dữ liệu Fname: nút Sửa theo bảng (có dòng đúng) hoặc Bổ sung (vật liệu / độ dày chưa có).</summary>
         public GoiYFname GoiY { get; set; }
         public bool CoSuaFname => GoiY?.DongMoi != null;

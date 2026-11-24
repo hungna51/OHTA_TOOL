@@ -223,7 +223,7 @@
                 <TabItem>
                     <TabItem.Header>
                         <StackPanel>
-                            <TextBlock Style="{StaticResource TenTab}" Text="Thông tin chung"/>
+                            <TextBlock Style="{StaticResource TenTab}" Text="Home"/>
                             <TextBlock Style="{StaticResource DemTab}" Text="{Binding NhanTabChung}"/>
                         </StackPanel>
                     </TabItem.Header>
@@ -331,6 +331,19 @@
                                     <TextBlock Text="Tấm dưới 250 ¥ được tính thành 250 ¥." FontSize="11" Foreground="#7B8794" Margin="20,2,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Grid>
+                            <!-- tao file A va PDF nhanh: chay sau khi quet neu khong con loi -->
+                            <Border Height="1" Background="#E1E4E8" Margin="0,12,0,8"/>
+                            <TextBlock Style="{StaticResource TieuMuc}" Text="Tạo file A và PDF nhanh:" Margin="0,0,0,6"/>
+                            <CheckBox Content="Tạo file A" IsChecked="{Binding TaoFileA}"/>
+                            <TextBlock Text="{Binding NhanFileA}" FontSize="11" Foreground="#7B8794" Margin="20,2,0,6" TextWrapping="Wrap"/>
+                            <CheckBox Content="In PDF" IsChecked="{Binding InPdf}"/>
+                            <TextBlock Text="{Binding NhanPdf}" FontSize="11" Foreground="#7B8794" Margin="20,2,0,4" TextWrapping="Wrap"/>
+                            <Grid Margin="20,0,0,0" IsEnabled="{Binding InPdf}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                <TextBlock Text="Profile in" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding DsProfileIn}" SelectedItem="{Binding ProfileIn}"
+                                          DropDownOpened="ProfileInMo" PreviewMouseWheel="ComboKhongLan" ToolTip="Tạo / sửa profile ở tab PRINT"/>
+                            </Grid>
                             <TextBlock Text="{Binding LoiThietLap}" Foreground="#C62828" TextWrapping="Wrap" Margin="0,10,0,0"
                                        Visibility="{Binding CoLoiThietLap, Converter={StaticResource HienKhi}}"/>
                             <Grid Margin="0,12,0,0">
@@ -348,7 +361,7 @@
                 <TabItem>
                     <TabItem.Header>
                         <StackPanel>
-                            <TextBlock Style="{StaticResource TenTab}" Text="Danh sách tấm"/>
+                            <TextBlock Style="{StaticResource TenTab}" Text="List"/>
                             <TextBlock Style="{StaticResource DemTab}" Text="{Binding NhanTabTam}"/>
                         </StackPanel>
                     </TabItem.Header>
@@ -612,7 +625,7 @@
                 <TabItem>
                     <TabItem.Header>
                         <StackPanel>
-                            <TextBlock Style="{StaticResource TenTab}" Text="Lỗi và cảnh báo"/>
+                            <TextBlock Style="{StaticResource TenTab}" Text="Error"/>
                             <TextBlock Style="{StaticResource DemTab}" Text="{Binding NhanTabLoi}" Tag="{Binding TabLoiDo}"/>
                         </StackPanel>
                     </TabItem.Header>
