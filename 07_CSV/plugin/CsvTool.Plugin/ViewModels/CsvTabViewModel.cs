@@ -866,7 +866,7 @@ namespace CsvTool.ViewModels
             foreach (DongTam d in tam)
             {
                 d.LoiKhac = trung.Contains(d.Tam.N) ? "Tên tấm trùng: " + d.Tam.N
-                          : PhanTichKhung.KiemTraDongFname(PhanTichKhung.DongFname(d.Khung)) ?? PhanTichKhung.KiemTra(d.Tam.Tt);
+                          : PhanTichKhung.KiemTraDongFname(PhanTichKhung.DongFname(d.Khung), KhongCanZ) ?? PhanTichKhung.KiemTra(d.Tam.Tt);
                 d.Loi = NoiLoi(d.LoiQuet, d.LoiKhac);
             }
             GomLoi();
@@ -1157,6 +1157,9 @@ namespace CsvTool.ViewModels
             }
             catch (Exception) { _catFname = null; }   // thiếu dữ liệu Fname thì bỏ qua kiểm tra, không chặn quét
         }
+
+        /// <summary>Vật liệu có trong danh sách M–Z của tab Fname nhưng cột Z trống: F-name không cần dòng Z=.</summary>
+        private bool KhongCanZ(string m) => _catFname?.FindMaterial(m) is OhtaTool.Plugin.Core.FnameMaterialSpec sp && string.IsNullOrWhiteSpace(sp.Z);
 
         private void KiemFname(DongTam d)
         {

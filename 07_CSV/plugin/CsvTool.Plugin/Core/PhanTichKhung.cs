@@ -133,14 +133,17 @@ namespace CsvTool.Core
         /// <summary>
         /// Số dòng F-name của 1 tấm: N, M, T, Q, Z mỗi trường đúng 1 dòng, các dòng còn lại phải là dòng F-name hợp lệ
         /// theo tab Fname (V=, V1..3=, U=, シマ目…, 裏から見た図, 内R…, …発押し). Đúng → null, sai → lời báo.
+        /// khongCanZ(M): vật liệu có trong danh sách M–Z nhưng không có Z → được thiếu dòng Z=.
         /// </summary>
-        public static string KiemTraDongFname(IEnumerable<string> dong)
+        public static string KiemTraDongFname(IEnumerable<string> dong, Func<string, bool> khongCanZ = null)
         {
             var ds = dong.Select(x => (x ?? "").Trim()).Where(x => x != "").ToList();
             var loi = new List<string>();
+            string m = ds.FirstOrDefault(x => x.StartsWith("M=", StringComparison.OrdinalIgnoreCase))?.Substring(2).Trim();
             foreach (string k in new[] { "N=", "M=", "T=", "Q=", "Z=" })
             {
                 int n = ds.Count(x => x.StartsWith(k, StringComparison.OrdinalIgnoreCase));
+                if (n == 0 && k == "Z=" && m != null && khongCanZ != null && khongCanZ(m)) continue;
                 if (n == 0) loi.Add("thiếu dòng " + k);
                 else if (n > 1) loi.Add(n + " dòng " + k);
             }

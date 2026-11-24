@@ -54,6 +54,9 @@ namespace CsvTool.Tests
                  "F-name có 7 dòng, cần 6: dòng thừa \"23213\". Xoá chữ thừa trên layer 2-F-NAME trong khung.");
             Kiem("KiemTraDongFname: thieu Z, 2 dong Q", PhanTichKhung.KiemTraDongFname(new[] { "N=A", "M=SS400", "T=3.2", "Q=1", "Q=2" }),
                  "F-name có 5 dòng: 2 dòng Q=, thiếu dòng Z=. Xoá chữ thừa trên layer 2-F-NAME trong khung.");
+            var khongZ = new[] { "N=A", "M=SPHC", "T=2.3", "Q=1" };
+            Kiem("KiemTraDongFname: vat lieu khong co Z trong danh sach -> duoc thieu Z", PhanTichKhung.KiemTraDongFname(khongZ, m => m == "SPHC"), null);
+            Kiem("KiemTraDongFname: vat lieu co Z -> van bat Z", PhanTichKhung.KiemTraDongFname(khongZ, m => false), "F-name có 4 dòng: thiếu dòng Z=. Xoá chữ thừa trên layer 2-F-NAME trong khung.");
             var gc = new ThongTinTam(); gc.DuongBe.Add((100, 1));
             Kiem("In PDF: tam be la tam gia cong", PhanTichKhung.LaTamGiaCong(gc), true);
         }
