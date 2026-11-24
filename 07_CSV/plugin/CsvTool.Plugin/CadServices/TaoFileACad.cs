@@ -38,7 +38,7 @@ namespace CsvTool.CadServices
                     {
                         Matrix3d m = Matrix3d.Displacement(new Vector3d(t.DenX - t.GocX, t.DenY - t.GocY, 0)) *
                                      Matrix3d.Scaling(t.TiLe, new Point3d(t.GocX, t.GocY, 0));
-                        foreach (Entity e in QuetKhungCad.TrongKhung(tr, db, t.HandleKhung))
+                        foreach (Entity e in QuetKhungCad.TrongKhung(tr, db, t.HandleKhung, false))
                         {
                             if (!e.Visible || !LopGiu.Any(l => string.Equals(l, e.Layer, StringComparison.OrdinalIgnoreCase)) || ids.Contains(e.ObjectId)) continue;
                             ids.Add(e.ObjectId);

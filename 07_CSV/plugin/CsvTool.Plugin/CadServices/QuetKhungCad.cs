@@ -157,8 +157,8 @@ namespace CsvTool.CadServices
             return (ketQua, dimzin);
         }
 
-        /// <summary>Hộp khung theo handle + mọi entity trong không gian hiện tại nằm trọn trong hộp (dùng khi ghi ngược).</summary>
-        internal static List<Entity> TrongKhung(Transaction tr, Database db, long handleKhung)
+        /// <summary>Hộp khung theo handle + chữ (TEXT/MTEXT) nằm trọn trong hộp; chiChu = false thì lấy mọi entity (file A).</summary>
+        internal static List<Entity> TrongKhung(Transaction tr, Database db, long handleKhung, bool chiChu = true)
         {
             ObjectId idKhung = db.GetObjectId(false, new Handle(handleKhung), 0);
             if (idKhung.IsNull || idKhung.IsErased) throw new InvalidOperationException("Khung in không còn trong bản vẽ — quét lại.");
@@ -167,7 +167,7 @@ namespace CsvTool.CadServices
             var kq = new List<Entity>();
             foreach (ObjectId id in (BlockTableRecord)tr.GetObject(db.CurrentSpaceId, OpenMode.ForRead))
             {
-                if (id == idKhung || !(tr.GetObject(id, OpenMode.ForRead) is Entity e) || !(e is MText || e is DBText)) continue;
+                if (id == idKhung || !(tr.GetObject(id, OpenMode.ForRead) is Entity e) || (chiChu && !(e is MText || e is DBText))) continue;
                 Extents3d h;
                 try { h = e.GeometricExtents; } catch { continue; }
                 if (h.MinPoint.X < x0 - Eps || h.MaxPoint.X > x1 + Eps || h.MinPoint.Y < y0 - Eps || h.MaxPoint.Y > y1 + Eps) continue;

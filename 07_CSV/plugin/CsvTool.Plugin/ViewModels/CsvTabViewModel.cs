@@ -105,6 +105,10 @@ namespace CsvTool.ViewModels
         public string NhanChiTiet => _chiTiet ? "Xem rút gọn" : "Xem chi tiết";
         public ICommand MoFile10Cmd { get; }
         public ICommand MoFile35Cmd { get; }
+        public ICommand XuatFileACmd { get; }
+        public ICommand XuatPdfCmd { get; }
+        public ICommand MoFileACmd { get; }
+        public ICommand MoPdfCmd { get; }
 
         public CsvTabViewModel(string tieuDe, string moTa, string mauNhan, string thuMucModule)
         {
@@ -120,6 +124,10 @@ namespace CsvTool.ViewModels
             ChiTietCmd = new Lenh(() => ChiTiet = !ChiTiet);
             MoFile10Cmd = new Lenh(() => Mo(File10));
             MoFile35Cmd = new Lenh(() => Mo(File35));
+            XuatFileACmd = new Lenh(() => XuatNgay(true, false));
+            XuatPdfCmd = new Lenh(() => XuatNgay(false, true));
+            MoFileACmd = new Lenh(() => MoHoacBao(DuongFileA));
+            MoPdfCmd = new Lenh(() => MoHoacBao(DuongPdf));
 
             HienTai = this;
             try { CadApplication.DocumentManager.DocumentActivated += (s, e) => DoiBanVe(e.Document); } catch { }
@@ -989,16 +997,20 @@ namespace CsvTool.ViewModels
         /// Sau khi quét: nếu không còn lỗi và cảnh báo nào ngoài cảnh báo giá thì tạo file A / in PDF theo ô đã tick.
         /// Còn lỗi thì không tạo gì, người dùng sửa rồi quét lại.
         /// </summary>
-        private void TaoNhanh(Document doc)
+        private void TaoNhanh(Document doc) => TaoNhanh(doc, _taoFileA, _inPdf);
+
+        private void TaoNhanh(Document doc, bool taoA, bool inPdf)
         {
             Bao(nameof(NhanFileA)); Bao(nameof(NhanPdf));
-            if (!_taoFileA && !_inPdf) return;
+            if (!taoA && !inPdf) return;
             int chan = DsLoi.Count(l => !l.LaGia);
             if (chan > 0) { TrangThai += " Còn " + chan + " lỗi / cảnh báo, chưa tạo file A và PDF. Sửa ở tab Error rồi quét lại."; return; }
             var tam = _tatCa.Where(d => d.Tam != null && !d.BoQua).ToList();
             if (tam.Count == 0) return;
+            taoA = taoA && ChoGhiDe(DuongFileA);
+            inPdf = inPdf && ChoGhiDe(DuongPdf);
 
-            if (_taoFileA)
+            if (taoA)
             {
                 var ds = new List<TamFileA>();
                 var loi = new List<LoiQuet>();
@@ -1029,7 +1041,7 @@ namespace CsvTool.ViewModels
                     TrangThai += " " + loi.Count + " tấm không đặt được F-name, chưa tạo file A và PDF.";
                     return;
                 }
-                string duongA = Path.Combine(_thuMuc, _maDon + "-A.dxf");
+                string duongA = DuongFileA;
                 try
                 {
                     TaoFileACad.Ghi(doc, duongA, ds);
@@ -1038,10 +1050,10 @@ namespace CsvTool.ViewModels
                 catch (Exception ex) { TrangThai += " Không tạo được file A: " + ex.Message; return; }
             }
 
-            if (_inPdf)
+            if (inPdf)
             {
                 var thuTu = tam.Where(d => PhanTichKhung.LaTamGiaCong(d.Tam.Tt)).Concat(tam.Where(d => !PhanTichKhung.LaTamGiaCong(d.Tam.Tt)));
-                var dong = new List<string> { _profileIn ?? ProfileTheoBanVe, Path.Combine(_thuMuc, _maDon + ".pdf") };
+                var dong = new List<string> { _profileIn ?? ProfileTheoBanVe, DuongPdf };
                 dong.AddRange(thuTu.Select(d => string.Join(",", new[] { d.Khung.MinX, d.Khung.MinY, d.Khung.MaxX, d.Khung.MaxY }
                     .Select(v => v.ToString("R", CultureInfo.InvariantCulture)))));
                 // OHTATOOL.dll in giúp (dùng chung máy in, profile, gộp PDF của tab PRINT); 2 DLL không tham chiếu nhau
@@ -1049,6 +1061,34 @@ namespace CsvTool.ViewModels
                 doc.SendStringToExecute("OHTA_CSV_PDF\n", true, false, true);
                 TrangThai += " Đang in " + tam.Count + " tấm ra " + _maDon + ".pdf.";
             }
+        }
+
+        private string DuongFileA => _thuMuc == null ? null : Path.Combine(_thuMuc, _maDon + "-A.dxf");
+        private string DuongPdf => _thuMuc == null ? null : Path.Combine(_thuMuc, _maDon + ".pdf");
+
+        /// <summary>File đã có thì hỏi trước khi ghi đè; chọn Không thì giữ file cũ và báo.</summary>
+        private bool ChoGhiDe(string f)
+        {
+            if (f == null || !File.Exists(f)) return true;
+            bool co = System.Windows.MessageBox.Show(Path.GetFileName(f) + " đã có. Ghi đè file cũ?", "OHTA CSV",
+                System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question) == System.Windows.MessageBoxResult.Yes;
+            if (!co) TrangThai += " Giữ nguyên " + Path.GetFileName(f) + ".";
+            return co;
+        }
+
+        /// <summary>2 nút Xuất file A / Xuất PDF: dùng kết quả lượt quét gần nhất, không cần tích ô.</summary>
+        private void XuatNgay(bool taoA, bool inPdf)
+        {
+            Document doc = CadApplication.DocumentManager.MdiActiveDocument;
+            if (doc == null || doc != _docThietLap || _thuMuc == null || _hinhQuet.Count == 0)
+            {
+                TrangThai = "Quét bản vẽ trước rồi mới xuất file A / PDF.";
+                return;
+            }
+            TrangThai = "";
+            TaoNhanh(doc, taoA, inPdf);
+            if (TrangThai == "") TrangThai = "Không có tấm nào để xuất.";
+            TrangThai = TrangThai.Trim();
         }
 
         // ── Đối chiếu F-name với dữ liệu tab Fname (catalog + TraV) ──
@@ -1150,6 +1190,13 @@ namespace CsvTool.ViewModels
         public string File35 { get => _file35; private set { _file35 = value; Bao(); Bao(nameof(CoFile35)); } }
         public bool CoFile10 => !string.IsNullOrEmpty(_file10);
         public bool CoFile35 => !string.IsNullOrEmpty(_file35);
+
+        // PDF được in sau (lệnh OHTA_CSV_PDF) nên không khoá nút theo file có hay chưa, bấm mà chưa có thì báo
+        private void MoHoacBao(string f)
+        {
+            if (f == null || !File.Exists(f)) { TrangThai = "Chưa có " + (f == null ? "file" : Path.GetFileName(f)) + ". Bấm Xuất file A / Xuất PDF trước."; return; }
+            Mo(f);
+        }
 
         private void Mo(string f)
         {
