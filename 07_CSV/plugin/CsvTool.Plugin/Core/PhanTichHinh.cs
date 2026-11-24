@@ -634,53 +634,81 @@ namespace CsvTool.Core
         private const double DungSaiTam = 0.5, DungSaiDay = 0.2, DungSaiGoc = 1, DungSaiCuon = 2;
 
         /// <summary>
-        /// Nhận cuộn chỉ bằng hình: mặt cắt là 2 cung đồng tâm, cùng góc, cách nhau đúng độ dày,
-        /// và chiều dài cung giữa (cộng phần thẳng nối tiếp nếu có) bằng X hoặc Y của tấm.
-        /// Cả vòng → r2, một phần vòng → r1, không có → null.
+        /// Nhận cuộn chỉ bằng hình: mặt cắt là 2 cung đồng tâm cách nhau đúng độ dày, và chiều dài khai triển
+        /// bằng X hoặc Y của tấm. Khai triển = cung giữa + phần thẳng tiếp tuyến + chân bẻ − 2 × denta mỗi góc bẻ
+        /// (denta lấy từ dòng V= cùng góc). Cả vòng → r2, một phần vòng → r1, không có → null.
         /// </summary>
-        public static string LoaiCuonTuHinh(IReadOnlyList<CungHinh> cung, double x, double y, double doDay, IReadOnlyList<NetBe> doan = null)
+        public static string LoaiCuonTuHinh(IReadOnlyList<CungHinh> cung, double x, double y, double doDay, IReadOnlyList<NetBe> doan = null,
+                                            IReadOnlyList<(double Goc, double Denta)> be = null)
         {
             string kq = null;
             foreach (CungHinh a in cung)
                 foreach (CungHinh b in cung)
                 {
-                    if (a.R <= b.R || Math.Abs(a.R - b.R - doDay) > DungSaiDay || Math.Abs(a.Goc - b.Goc) > DungSaiGoc) continue;
+                    // có chân bẻ thì cung ngoài ngắn hơn cung trong khoảng t / R ở mỗi đầu (131190-5: 63.02° và 63.22°)
+                    double lechGoc = DungSaiGoc + 2 * doDay / Math.Max(b.R, 1e-9) * 180 / Math.PI;
+                    if (a.R <= b.R || Math.Abs(a.R - b.R - doDay) > DungSaiDay || Math.Abs(a.Goc - b.Goc) > lechGoc) continue;
                     if (Math.Abs(a.CX - b.CX) > DungSaiTam || Math.Abs(a.CY - b.CY) > DungSaiTam) continue;
-                    double dai = a.Goc * Math.PI / 180 * (a.R + b.R) / 2;
+                    double goc = Math.Max(a.Goc, b.Goc), dai = goc * Math.PI / 180 * (a.R + b.R) / 2;
                     // shortcut: R < 10t coi là góc bẻ (130581-4-1: R9, t6), gặp tấm cuộn bán kính nhỏ thì hạ ngưỡng
-                    double coThang = a.Goc >= 359 || doan == null || a.R < 10 * doDay ? dai : dai + PhanThang(a, b, doan);
+                    double coThang = goc >= 359 || doan == null || a.R < 10 * doDay ? dai : dai + PhanThang(a, b, doan, doDay, be);
                     if (!new[] { dai, coThang }.Any(l => Math.Abs(x - l) <= DungSaiCuon || Math.Abs(y - l) <= DungSaiCuon)) continue;
-                    if (a.Goc >= 359) return "r2";
+                    if (goc >= 359) return "r2";
                     kq = "r1";
                 }
             return kq;
         }
 
-        /// <summary>Tổng phần thẳng ở 2 đầu cung: mỗi đầu cần 1 đoạn tiếp tuyến ở cả cung ngoài và cung trong, dài bằng nhau.</summary>
-        private static double PhanThang(CungHinh a, CungHinh b, IReadOnlyList<NetBe> doan)
+        private const double GocTiepTuyen = 3;   // độ: đoạn lệch tiếp tuyến ít hơn thế là phần thẳng nối tiếp, nhiều hơn là chân bẻ
+
+        /// <summary>
+        /// Phần thẳng ở 2 đầu cung, mỗi đầu cần 1 nét chạm đầu cung ngoài và 1 nét chạm đầu cung trong.
+        /// Tiếp tuyến: cộng trung bình 2 nét. Chân bẻ: cộng nét dài (mặt ngoài) trừ 2 × denta của dòng V= cùng góc;
+        /// không có dòng V= cùng góc thì đầu đó không cộng (tấm sẽ không khớp, không đoán).
+        /// </summary>
+        private static double PhanThang(CungHinh a, CungHinh b, IReadOnlyList<NetBe> doan, double doDay, IReadOnlyList<(double Goc, double Denta)> be)
         {
             double tong = 0;
             foreach (var (px, py) in new[] { (a.X1, a.Y1), (a.X2, a.Y2) })
             {
                 bool dau1 = Math.Abs(b.X1 - px) + Math.Abs(b.Y1 - py) <= Math.Abs(b.X2 - px) + Math.Abs(b.Y2 - py);
-                double la = DoanTiepTuyen(a, px, py, doan), lb = DoanTiepTuyen(b, dau1 ? b.X1 : b.X2, dau1 ? b.Y1 : b.Y2, doan);
-                if (la > 0 && lb > 0 && Math.Abs(la - lb) <= DungSaiCuon) tong += (la + lb) / 2;
+                var na = NetTaiDau(a, px, py, doan, doDay);
+                var nb = NetTaiDau(b, dau1 ? b.X1 : b.X2, dau1 ? b.Y1 : b.Y2, doan, doDay);
+                if (na.Net == null || nb.Net == null || na.Net == nb.Net) continue;
+                if (na.Lech <= GocTiepTuyen && nb.Lech <= GocTiepTuyen)
+                {
+                    if (Math.Abs(na.Dai - nb.Dai) <= DungSaiCuon) tong += (na.Dai + nb.Dai) / 2;
+                    continue;
+                }
+                if (na.Lech <= GocTiepTuyen || nb.Lech <= GocTiepTuyen || !SongSong(na.Net, nb.Net)) continue;
+                double gocBe = 180 - (na.Lech + nb.Lech) / 2;   // góc trong như dòng V=: chân vuông với cung → 90°
+                var v = (be ?? new List<(double, double)>()).Where(x => Math.Abs(x.Goc - gocBe) <= DungSaiGoc).ToList();
+                if (v.Count > 0) tong += Math.Max(na.Dai, nb.Dai) - 2 * v[0].Denta;
             }
             return tong;
         }
 
-        private static double DoanTiepTuyen(CungHinh c, double px, double py, IReadOnlyList<NetBe> doan)
+        /// <summary>Nét dài nhất chạm điểm (px, py) của cung, dài hơn nắp đầu (1.5t); Lech = góc với tiếp tuyến tại điểm đó (0–90°).</summary>
+        private static (NetBe Net, double Dai, double Lech) NetTaiDau(CungHinh c, double px, double py, IReadOnlyList<NetBe> doan, double doDay)
         {
-            double dai = 0;
+            (NetBe, double, double) kq = (null, 0, 0);
+            double rx = px - c.CX, ry = py - c.CY, r = Math.Sqrt(rx * rx + ry * ry);
             foreach (NetBe d in doan)
             {
                 bool cham1 = Math.Abs(d.X1 - px) <= DungSaiTam && Math.Abs(d.Y1 - py) <= DungSaiTam;
                 if (!cham1 && (Math.Abs(d.X2 - px) > DungSaiTam || Math.Abs(d.Y2 - py) > DungSaiTam)) continue;
                 double dx = d.X2 - d.X1, dy = d.Y2 - d.Y1, l = Math.Sqrt(dx * dx + dy * dy);
-                // tiếp tuyến thì vuông góc bán kính; nắp cuối dày t nằm theo bán kính nên bị loại
-                if (l > dai && Math.Abs(dx * (px - c.CX) + dy * (py - c.CY)) <= 0.05 * l * c.R) dai = l;
+                if (l <= 1.5 * doDay || l <= kq.Item2 || r < 1e-9) continue;
+                double lech = Math.Asin(Math.Min(1, Math.Abs(dx * rx + dy * ry) / (l * r))) * 180 / Math.PI;
+                kq = (d, l, lech);
             }
-            return dai;
+            return kq;
+        }
+
+        private static bool SongSong(NetBe p, NetBe q)
+        {
+            double ax = p.X2 - p.X1, ay = p.Y2 - p.Y1, bx = q.X2 - q.X1, by = q.Y2 - q.Y1;
+            return Math.Abs(ax * by - ay * bx) <= 0.02 * Math.Sqrt(ax * ax + ay * ay) * Math.Sqrt(bx * bx + by * by);
         }
 
         private static int? SoLoGhi(string dong)

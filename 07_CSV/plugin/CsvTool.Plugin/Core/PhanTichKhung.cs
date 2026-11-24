@@ -86,14 +86,20 @@ namespace CsvTool.Core
         private static void ThemLoai(ThongTinTam tt, string loai) =>
             tt.LoaiGiaCong = string.IsNullOrEmpty(tt.LoaiGiaCong) ? loai : tt.LoaiGiaCong + ", " + loai;
 
+        /// <summary>Góc và denta của các dòng V= trong F-name, để trừ độ dãn khi mặt cắt cuộn có chân bẻ.</summary>
+        public static List<(double Goc, double Denta)> BeTuFname(IEnumerable<string> dong) =>
+            dong.Select(x => KiemTraFname.DocV(x, out _, out double denta, out string goc) &&
+                             double.TryParse(goc, NumberStyles.Float, CultureInfo.InvariantCulture, out double g) ? (g, denta) : (-1.0, 0.0))
+                .Where(x => x.Item1 > 0).ToList();
+
         /// <summary>Tấm vừa quét chưa có r1 / r2: thêm nếu trong khung có mặt cắt cuộn khớp kích thước tấm.</summary>
-        public static void ThemCuonTuHinh(TamXuat t, IReadOnlyList<CungHinh> cung, IReadOnlyList<NetBe> doan = null)
+        public static void ThemCuonTuHinh(TamXuat t, IReadOnlyList<CungHinh> cung, IReadOnlyList<NetBe> doan = null, IReadOnlyList<(double Goc, double Denta)> be = null)
         {
             if (CsvXuat.LoaiCuon(t.Tt.LoaiGiaCong) != "0") return;
             var so = CultureInfo.InvariantCulture;
             if (!double.TryParse(t.X, NumberStyles.Float, so, out double x) || !double.TryParse(t.Y, NumberStyles.Float, so, out double y) ||
                 !double.TryParse((t.T ?? "").Trim(), NumberStyles.Float, so, out double day)) return;
-            string r = PhanTichHinh.LoaiCuonTuHinh(cung, x, y, day, doan);
+            string r = PhanTichHinh.LoaiCuonTuHinh(cung, x, y, day, doan, be);
             if (r != null) ThemLoai(t.Tt, r);
         }
 

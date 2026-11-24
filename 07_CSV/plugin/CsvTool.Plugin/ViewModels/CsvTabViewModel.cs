@@ -483,7 +483,7 @@ namespace CsvTool.ViewModels
                 {
                     cu.TryGetValue(r.Tam.N, out ThongTinTam daCo);
                     _giaDon?.GiuSuaTay(r.Tam.N, r.Tam.Tt, daCo);
-                    if (quet.ContainsKey(k.Handle) && hinhKhung.TryGetValue(k.Handle, out DuLieuHinh dh)) PhanTichKhung.ThemCuonTuHinh(r.Tam, dh.CungMatCat, dh.DoanMatCat);
+                    if (quet.ContainsKey(k.Handle) && hinhKhung.TryGetValue(k.Handle, out DuLieuHinh dh)) PhanTichKhung.ThemCuonTuHinh(r.Tam, dh.CungMatCat, dh.DoanMatCat, PhanTichKhung.BeTuFname(PhanTichKhung.DongFname(k)));
                     tot.Add((r.Tam, k, r.Loi));
                     continue;
                 }

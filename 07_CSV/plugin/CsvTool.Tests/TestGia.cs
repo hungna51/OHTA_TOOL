@@ -220,6 +220,20 @@ namespace CsvTool.Tests
             Kiem("Cuon: chi 1 net thang khong tinh", PhanTichHinh.LoaiCuonTuHinh(cungDuoi, daiDuoi, 20, 3.2, duoi.Take(1).ToList()), null);
             var napCuoi = new List<NetBe> { new NetBe { X1 = 100, Y1 = 0, X2 = 50, Y2 = 0 }, new NetBe { X1 = 96.8, Y1 = 0, X2 = 46.8, Y2 = 0 } };
             Kiem("Cuon: doan theo ban kinh khong phai phan thang", PhanTichHinh.LoaiCuonTuHinh(cungDuoi, daiDuoi, 20, 3.2, napCuoi), null);
+            // cuộn + chân bẻ 90° (giống 131190-5): cung trong R96.8 0–90°, cung ngoài R100 dừng ở x = 3.2,
+            // chân theo hướng bán kính: mặt ngoài 50 từ đầu cung trong, mặt trong từ đầu cung ngoài; đầu kia có nắp dày t
+            double gocNgoai = Math.Acos(3.2 / 100) * 180 / Math.PI, yNgoai = Math.Sqrt(100 * 100 - 3.2 * 3.2);
+            var cungChan = new List<CungHinh> {
+                new CungHinh { R = 100, Goc = gocNgoai, X1 = 100, Y1 = 0, X2 = 3.2, Y2 = yNgoai },
+                new CungHinh { R = 96.8, Goc = 90, X1 = 96.8, Y1 = 0, X2 = 0, Y2 = 96.8 } };
+            var chan = new List<NetBe> { new NetBe { X1 = 0, Y1 = 96.8, X2 = 0, Y2 = 146.8 }, new NetBe { X1 = 3.2, Y1 = yNgoai, X2 = 3.2, Y2 = 146.8 },
+                                         new NetBe { X1 = 96.8, Y1 = 0, X2 = 100, Y2 = 0 } };
+            double daiChan = Math.PI / 2 * 98.4 + 50 - 2 * 2.6;
+            var v90 = new List<(double, double)> { (90.0, 2.6) };
+            Kiem("Cuon + chan be: tru 2 x denta", PhanTichHinh.LoaiCuonTuHinh(cungChan, daiChan, 20, 3.2, chan, v90), "r1");
+            Kiem("Cuon + chan be: khong co V= cung goc thi khong nhan", PhanTichHinh.LoaiCuonTuHinh(cungChan, daiChan, 20, 3.2, chan, new List<(double, double)> { (120.0, 2.6) }), null);
+            Kiem("Cuon + chan be: chi cung van nhan khi X bang cung", PhanTichHinh.LoaiCuonTuHinh(cungChan, Math.PI / 2 * 98.4, 20, 3.2, chan, v90), "r1");
+            Kiem("BeTuFname: doc goc, denta", string.Join(";", PhanTichKhung.BeTuFname(new[] { "N=A", "V=16-2.6(90°)", "シマ目外 V6引代 1.2(135°)" })), "(90, 2.6);(135, 1.2)");
             var gocBe = new List<CungHinh> {
                 new CungHinh { R = 9, Goc = 90, X1 = 9, Y1 = 0, X2 = 0, Y2 = 9 },
                 new CungHinh { R = 3, Goc = 90, X1 = 3, Y1 = 0, X2 = 0, Y2 = 3 } };
