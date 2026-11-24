@@ -67,27 +67,19 @@ namespace CsvTool.Core
             return (tam, KiemTra(tam.Tt));
         }
 
-        /// <summary>CSV là nơi lưu duy nhất: quét lại không được xoá số người dùng đã nhập mà lisp không đo được.</summary>
+        /// <summary>
+        /// Quét lại: bẻ, cuộn, Tapu, Sara lấy hoàn toàn theo bản vẽ (người dùng không phải nhớ số nào là sửa tay).
+        /// Chỉ giữ số không đo được từ hình: pitchi, vát, giá, tiền vật liệu, ưu đãi.
+        /// </summary>
         private static ThongTinTam GiuGiaTriNhapTay(ThongTinTam moi, ThongTinTam cu)
         {
             if (cu == null) return moi;
-            // r1 / r2 là loại cuộn người dùng đã ghi, không đo được từ hình
-            string cuonCu = CsvXuat.LoaiCuon(cu.LoaiGiaCong);
-            if (cuonCu != "0" && CsvXuat.LoaiCuon(moi.LoaiGiaCong) == "0") ThemLoai(moi, "r" + cuonCu);
             moi.PitchiSoLan = cu.PitchiSoLan;
             moi.PitchiDai = cu.PitchiDai;
             moi.GiaBaoGia = cu.GiaBaoGia;
             moi.TienVatLieu = cu.TienVatLieu;
             moi.UuDai = cu.UuDai;
             if (moi.Vat == 0) moi.Vat = cu.Vat;
-            // tổng Tapu + Sara không đổi thì giữ cách chia người dùng đã sửa
-            if (cu.Tappu + cu.Sara == moi.Tappu + moi.Sara) { moi.Tappu = cu.Tappu; moi.Sara = cu.Sara; }
-            else
-            {
-                // bản vẽ không có ghi chú / tô màu: giữ số đã nhập
-                if (moi.Sara == 0) moi.Sara = cu.Sara;
-                if (moi.Tappu == 0) moi.Tappu = cu.Tappu;
-            }
             return moi;
         }
 

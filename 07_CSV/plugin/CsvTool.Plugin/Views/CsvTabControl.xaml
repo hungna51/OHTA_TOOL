@@ -518,9 +518,6 @@
                                                         <DockPanel Margin="6,4,4,3">
                                                             <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Margin="0" Padding="7,2" FontSize="11"
                                                                     Content="+ Thêm đường bẻ" Click="ThemBeBam"/>
-                                                            <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Margin="0,0,4,0" Padding="6,2" FontSize="11" Foreground="#E65100"
-                                                                    Content="↺" Click="VeBeBam" ToolTip="Đang sửa tay. Bấm để lần quét sau lấy lại theo bản vẽ"
-                                                                    Visibility="{Binding BeSuaTay, Converter={StaticResource HienKhi}}"/>
                                                             <TextBlock Style="{StaticResource TieuMuc}" Text="Bẻ / uốn"/>
                                                         </DockPanel>
                                                         <ItemsControl x:Name="DsBe" ItemsSource="{Binding Be}" Margin="6,0,4,3">

@@ -86,10 +86,6 @@ namespace CsvTool.Views
             if (f.Tag is DongTam d) d.XoaBe(b);
         }
 
-        private void VeBeBam(object sender, RoutedEventArgs e)
-        {
-            if ((sender as FrameworkElement)?.DataContext is DongTam d) d.VeBeBanVe();
-        }
 
         // Ô công ty: danh sách nằm ngay dưới ô (không dùng Popup vì chạy trong PaletteSet), con trỏ luôn ở ô gõ
         private void CongTyVao(object sender, KeyboardFocusChangedEventArgs e)

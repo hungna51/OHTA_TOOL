@@ -15,10 +15,7 @@ namespace CsvTool.Core
         [DataMember] public double DonGiaCuon;    // 0 = theo r1/r2, âm = chọn Không, dương = đơn giá đã chọn
         [DataMember] public bool LamTron250;
         [DataMember] public bool TatTron250;      // tắt riêng tấm này khi cả đơn đang bật làm tròn 250
-        [DataMember] public bool SuaBe;           // đường bẻ sửa tay: quét lại không đè
         [DataMember] public bool CheDoRieng;      // chế độ tính chọn riêng: quét lại, đổi chế độ đơn không đè
-        [DataMember] public bool SuaSara;         // số lỗ Sara sửa tay: quét lại không đè
-        [DataMember] public bool SuaTapu;         // số lỗ Tapu sửa tay: quét lại không đè
         public double TienVlHienTai;              // tiền vật liệu 1 tấm của lần tính gần nhất, chỉ để hiện, không lưu
     }
 
@@ -40,16 +37,14 @@ namespace CsvTool.Core
 
         public bool Tron250(GiaTam g) => g?.TatTron250 != true && (LamTron250 || g?.LamTron250 == true);
 
-        /// <summary>Quét lại: giữ đường bẻ và chế độ tính người dùng đã sửa riêng cho tấm.</summary>
+        /// <summary>Quét lại: chỉ giữ chế độ tính chọn riêng; ô Cuộn chọn tay về theo r1 / r2 vừa nhận từ hình.</summary>
         public void GiuSuaTay(string ten, ThongTinTam moi, ThongTinTam cu)
         {
             if (moi == cu || !Tam.TryGetValue(ten, out GiaTam g)) return;
+            g.DonGiaCuon = 0;
             // tấm đã rời danh sách rồi quét lại: không còn số sửa tay để giữ, bỏ dấu cũ
-            if (cu == null) { g.SuaBe = false; g.CheDoRieng = false; g.SuaSara = false; g.SuaTapu = false; return; }
-            if (g.SuaBe) moi.DuongBe = cu.DuongBe;
+            if (cu == null) { g.CheDoRieng = false; return; }
             if (g.CheDoRieng) moi.CheDoTinh = cu.CheDoTinh;
-            if (g.SuaSara) moi.Sara = cu.Sara;
-            if (g.SuaTapu) moi.Tappu = cu.Tappu;
         }
 
         public void DoiTen(string cu, string moi)

@@ -124,7 +124,6 @@ namespace CsvTool.ViewModels
         // ── Đường bẻ: mỗi loại 1 dòng, tối đa 8 loại vì data CSV có 8 cặp cột ──
         private const int ToiDaBe = 8;
         public ObservableCollection<DongBe> Be { get; } = new ObservableCollection<DongBe>();
-        public bool BeSuaTay => Tam != null && _vm.XemGia(Tam.N)?.SuaBe == true;
 
         private void DungBe()
         {
@@ -154,23 +153,8 @@ namespace CsvTool.ViewModels
             var cu = Tam.Tt.DuongBe;
             if (moi.SequenceEqual(cu)) return;
             if (BiKhoa()) { DungBe(); return; }
-            GiaTam g = _vm.GiaCua(Tam.N);
-            if (g == null) { _vm.BaoLoi("Chưa đọc được dữ liệu giá của đơn, quét lại."); DungBe(); return; }
-            bool suaCu = g.SuaBe;
-            Luu(() => { Tam.Tt.DuongBe = moi; g.SuaBe = true; }, () => { Tam.Tt.DuongBe = cu; g.SuaBe = suaCu; });
+            Luu(() => Tam.Tt.DuongBe = moi, () => Tam.Tt.DuongBe = cu);
             if (Tam.Tt.DuongBe != moi) DungBe();
-            Bao(nameof(BeSuaTay));
-        }
-
-        /// <summary>Bỏ dấu sửa tay: lần quét tấm này tiếp theo lấy lại đường bẻ từ bản vẽ.</summary>
-        public void VeBeBanVe()
-        {
-            GiaTam g = Tam == null ? null : _vm.XemGia(Tam.N);
-            if (g == null) return;
-            g.SuaBe = false;
-            _vm.LuuGia();
-            _vm.BaoLoi("Quét lại tấm này để lấy đường bẻ từ bản vẽ.");
-            Bao(nameof(BeSuaTay));
         }
 
         // ── Tiền vật liệu 1 tấm: hiện số đang tính, gõ số khác thì giá = số đó + cắt + gia công ──
@@ -298,12 +282,12 @@ namespace CsvTool.ViewModels
         public string Tappu
         {
             get => Tam?.Tt.Tappu.ToString();
-            set => SuaSo(value, Tam?.Tt.Tappu, v => { Tam.Tt.Tappu = v; GiaTam g = _vm.GiaCua(Tam.N); if (g != null) g.SuaTapu = true; });
+            set => SuaSo(value, Tam?.Tt.Tappu, v => Tam.Tt.Tappu = v);
         }
         public string Sara
         {
             get => Tam?.Tt.Sara.ToString();
-            set => SuaSo(value, Tam?.Tt.Sara, v => { Tam.Tt.Sara = v; GiaTam g = _vm.GiaCua(Tam.N); if (g != null) g.SuaSara = true; });
+            set => SuaSo(value, Tam?.Tt.Sara, v => Tam.Tt.Sara = v);
         }
         public string PitchiSoLan { get => Tam?.Tt.PitchiSoLan.ToString(); set => SuaSo(value, Tam?.Tt.PitchiSoLan, v => Tam.Tt.PitchiSoLan = v); }
         public string PitchiDai { get => Tam?.Tt.PitchiDai.ToString(); set => SuaSo(value, Tam?.Tt.PitchiDai, v => Tam.Tt.PitchiDai = v); }

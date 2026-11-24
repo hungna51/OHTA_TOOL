@@ -113,18 +113,18 @@ namespace CsvTool.Tests
             Kiem("ApDung: tron 250 cho ca don", giaNho != "250" && tamNho.Tt.GiaBaoGia == "250", true);
 
             var dSua = new GiaDon();
-            dSua.Lay("S").SuaBe = true; dSua.Lay("S").CheDoRieng = true;
+            dSua.Lay("S").CheDoRieng = true; dSua.Lay("S").DonGiaCuon = 12000;
             var ttCu = new ThongTinTam { CheDoTinh = "1", DuongBe = new List<(int, int)> { (700, 2) } };
             var ttMoi = new ThongTinTam { CheDoTinh = "0", DuongBe = new List<(int, int)> { (900, 1) } };
             dSua.GiuSuaTay("S", ttMoi, ttCu);
-            Kiem("GiuSuaTay: giu be va che do rieng", ttMoi.CheDoTinh + "|" + ttMoi.DuongBe[0].Item1, "1|700");
+            Kiem("GiuSuaTay: giu che do rieng, be va o cuon theo ban ve", ttMoi.CheDoTinh + "|" + ttMoi.DuongBe[0].Item1 + "|" + dSua.Tam["S"].DonGiaCuon, "1|900|0");
             var ttKhac = new ThongTinTam { CheDoTinh = "0", DuongBe = new List<(int, int)> { (900, 1) } };
             dSua.GiuSuaTay("KHAC", ttKhac, ttCu);
             Kiem("GiuSuaTay: tam khong sua lay theo ban ve", ttKhac.CheDoTinh + "|" + ttKhac.DuongBe[0].Item1, "0|900");
 
             var ttQuetLai = new ThongTinTam { CheDoTinh = "0", DuongBe = new List<(int, int)> { (900, 1) } };
             dSua.GiuSuaTay("S", ttQuetLai, null);
-            Kiem("GiuSuaTay: tam da roi danh sach -> bo dau sua tay", dSua.Tam["S"].SuaBe + "|" + dSua.Tam["S"].CheDoRieng + "|" + ttQuetLai.DuongBe[0].Item1, "False|False|900");
+            Kiem("GiuSuaTay: tam da roi danh sach -> bo dau sua tay", dSua.Tam["S"].CheDoRieng + "|" + ttQuetLai.DuongBe[0].Item1, "False|900");
 
             var vl = new GiaVlDon();
             vl.Dat(new DongBangGia { VatLieu = "ZAM", DoDay = 3, DonGia = 200 });
@@ -233,7 +233,7 @@ namespace CsvTool.Tests
             var kCuon = new KhungTho { Handle = 0x77, Text = KhungMau(text: new[] { Fn("N=A-1\\PM=SS400\\PT=3.2\\PQ=2") }).Text, Dim = KhungMau().Dim };
             var gopCuon = PhanTichKhung.Ghep(kCuon, "1-XY", 8, new Dictionary<string, ThongTinTam> { ["A-1"] = new ThongTinTam { LoaiGiaCong = "m, r2" } },
                 new Dictionary<long, ThongTinTam> { [0x77] = new ThongTinTam { LoaiGiaCong = "m" } });
-            Kiem("Cuon: r2 ghi tay duoc giu khi quet lai", gopCuon.Tam?.Tt.LoaiGiaCong, "m, r2");
+            Kiem("Cuon: quet lai bo r2 cu, lay theo ban ve", gopCuon.Tam?.Tt.LoaiGiaCong, "m");
 
             int Sara1(string x) => PhanTichHinh.DemSara(new[] { x });
             Kiem("Sara: mau that 2x2-phi8 = 4", Sara1("{\\W1;2x2-∅8孔皿モミ}"), 4);
@@ -292,15 +292,6 @@ namespace CsvTool.Tests
             hinhCaHai.ChuDim.Add("2-M5タップ");
             hinhCaHai.ChuDim.Add("3-∅8皿モミ");
             Kiem("Gia cong: thu tu t, s", PhanTichHinh.Chay(hinhCaHai, 0.05, 0, (a, c) => null).Tam.LoaiGiaCong, "t, s");
-            var dSuaTap = new GiaDon(); dSuaTap.Lay("S").SuaTapu = true;
-            var ttMoiTap = new ThongTinTam { Tappu = 8 };
-            dSuaTap.GiuSuaTay("S", ttMoiTap, new ThongTinTam { Tappu = 2 });
-            Kiem("Tapu: so sua tay duoc giu khi quet lai", ttMoiTap.Tappu, 2);
-            var ttCuSara = new ThongTinTam { Sara = 3 };
-            var dSuaSara = new GiaDon(); dSuaSara.Lay("S").SuaSara = true;
-            var ttMoiSara = new ThongTinTam { Sara = 4 };
-            dSuaSara.GiuSuaTay("S", ttMoiSara, ttCuSara);
-            Kiem("Sara: so sua tay duoc giu khi quet lai", ttMoiSara.Sara, 3);
 
             string thu = Path.Combine(Path.GetTempPath(), "csvtool_gia_" + Guid.NewGuid().ToString("N"));
             try

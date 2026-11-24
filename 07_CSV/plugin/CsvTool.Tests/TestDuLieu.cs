@@ -43,9 +43,9 @@ namespace CsvTool.Tests
             kQuet.Handle = 0x2F1;
             var daNhap = new Dictionary<string, ThongTinTam> { ["A-1"] = new ThongTinTam { Tappu = 3, Sara = 1, Vat = 70, PitchiSoLan = 2, PitchiDai = 50, GiaBaoGia = "9" } };
             var gop = PhanTichKhung.Ghep(kQuet, "1-XY", 8, daNhap, quet);
-            Kiem("Ghep_Quet: lay ket qua quet, giu so nhap tay trong CSV",
+            Kiem("Ghep_Quet: Tapu, Sara theo ban ve, giu vat, pitchi, gia nhap tay",
                  gop.Tam == null ? gop.Loi : gop.Tam.Tt.LoNho + "|" + gop.Tam.Tt.Tappu + "|" + gop.Tam.Tt.Sara + "|" + gop.Tam.Tt.Vat + "|" + gop.Tam.Tt.PitchiDai + "|" + gop.Tam.Tt.GiaBaoGia,
-                 "3|3|1|70|50|9");
+                 "3|4|0|70|50|9");
             var textCu = PhanTichKhung.Ghep(KhungMau(text: new[] { Fn("N=A-1\\PM=SS400\\PT=3.2\\PQ=2"), new TextTho { Lop = "KHUNG_IN", NoiDung = "Lỗ Tappu: 2", LaMtext = true } }), "1-XY", 8, khongCo, chuaQuet);
             Kiem("Ghep_TextCu: khong doc text cu tren ban ve", textCu.Loi, PhanTichKhung.LoiChuaCoThongTin);
             var tuCsv = PhanTichKhung.Ghep(KhungMau(text: new[] { Fn("N=A-1\\PM=SS400\\PT=3.2\\PQ=2") }), "1-XY", 8, cu, chuaQuet);
