@@ -2322,8 +2322,9 @@
 )
 
 ;; Chuoi chi gom ky tu kieu KICH THUOC (so, dau, phi, R, C, M, t, x, do, +-...) -> T.
+;; Muc 233: phai co it nhat 1 chu so - "C" dung mot minh khong bi bao nghi van kich thuoc.
 (defun gro--text-kich-thuoc-p (codes / ok c)
-  (setq ok (if codes T nil))
+  (setq ok (if (vl-some '(lambda (c) (or (and (>= c 48) (<= c 57)) (and (>= c 65296) (<= c 65305)))) codes) T nil))
   (foreach c codes
     (if (not (or (and (>= c 48) (<= c 57))
                  (and (>= c 65296) (<= c 65305))
@@ -2367,7 +2368,7 @@
 ;; Buoc 6c2. Tra chuoi bao cao (ASCII) hoac nil.
 (defun gro--doi-text-khac-chu (kq-tk notes bang raw-tam-list / khungs ds-tam k ss i e ed lst net
                                n vao ds-bg s g geo bb tb cx cy bgs ens-bo bg-k tron cham ly ds-canh x
-                               lst2 hinhs khoi-k x2)
+                               lst2 hinhs khoi-k x2 pre kt ds-kt bgx)
   (setq khungs (if kq-tk (car kq-tk) nil)
         ds-tam nil
         n      0
@@ -2418,14 +2419,19 @@
       ;; ~160 chu = 2200 lan COM, buoc mat 9 giay. Nay hop bao + phep chu kich thuoc tinh MOT
       ;; lan moi chu, chi giu chu cham it nhat mot hinh cua tam khac chu: lst2 = ((e tb) ...)
       (setq hinhs (apply 'append (mapcar '(lambda (k) (mapcar '(lambda (s) (nth 2 s)) (nth 5 k))) ds-tam))
-            lst2  nil)
+            lst2  nil
+            pre   nil)
       (foreach e lst
         (if (and (setq tb (gro--bbox e))
                  (vl-some '(lambda (hb) (gro--bb-giao-p tb hb)) hinhs)
-                 (not (gro--text-kich-thuoc-p (bg--ent-codes e)))
             )
-          (setq lst2 (cons (list e tb) lst2))
+          (setq pre (cons (list e tb (bg--ent-codes e)) pre))
         )
+      )
+      ;; muc 233: KHONG loai text kieu kich thuoc nua (C3, R10 co the la chu khac) - van doi, danh dau
+      ;; nghi van de bao nguoi dung kiem tra: lst2 = ((e tb giong-kich-thuoc) ...)
+      (foreach x (reverse pre)
+        (setq lst2 (cons (list (car x) (cadr x) (gro--text-kich-thuoc-p (caddr x))) lst2))
       )
       (setq lst2 (reverse lst2))
       (setq ds-canh nil) ; muc 189: ((chuoi-bango noi-dung ly-do) ...)
@@ -2446,7 +2452,8 @@
           )
           (foreach x2 lst2
             (setq e  (car x2)
-                  tb (cadr x2))
+                  tb (cadr x2)
+                  kt (caddr x2))
             ;; muc 189: truoc doi hop chu nam TRON trong hop hinh (+-0.5) -> chu tho ra ngoai mep
             ;; (vd "2C-W4,W8,W9") bi bo qua. Nay: hop chu GIAO hop hinh va TAM chu nam trong hop
             ;; hinh + trong thit -> van doi; chu tho ra ngoai hinh / cham net cat 0-KAKOU cua hinh
@@ -2484,6 +2491,11 @@
                             ds-canh (cons (list bg-k (bg--codes-str (bg--ent-codes e)) ly) ds-canh)
                       )
                     )
+                    ;; muc 233: chu giong kich thuoc (C3 = vat mep?, R10 = ban kinh?) -> nghi van
+                    (if kt
+                      (setq ds-kt (cons (list bg-k (bg--codes-str (bg--ent-codes e))) ds-kt))
+                    )
+                    (if kt (gro--gan-co-xdata khoi-k "KC_NGHI_KT"))
                     ;; muc 190: co vao XData bango -> cot Ghi chu bang DST
                     (if (not tron) (gro--gan-co-xdata khoi-k "KC_NGOAI_HINH"))
                     (if cham (gro--gan-co-xdata khoi-k "KC_CHAM_NET"))
@@ -2506,6 +2518,13 @@
         (gro--princ (strcat "\n  !!! Khac chu bango " (car x) ": text [" (cadr x) "] " (caddr x)
                        " - da doi sang 3-KEGAKI, KIEM TRA LAI vi tri chu (muc 189)."))
       )
+      ;; muc 233: gop theo tam - 1 dong / bango, khong 1 dong / chu
+      (foreach bgx (gro--remove-duplicates (reverse (mapcar 'car ds-kt)))
+        (setq ly (vl-remove-if-not '(lambda (x) (= (car x) bgx)) (reverse ds-kt)))
+        (gro--princ (strcat "\n  !!! Khac chu bango " bgx ": " (itoa (length ly)) " text GIONG TEXT KICH THUOC ["
+                       (gro--noi-ds (gro--remove-duplicates (mapcar 'cadr ly)) 10)
+                       "] (vat mep C / ban kinh R ...) - da doi sang 3-KEGAKI, NGHI VAN: kiem tra (muc 233)."))
+      )
     )
   )
   (if (equal ds-bg (list "KHONG_NET"))
@@ -2521,7 +2540,13 @@
             (if ds-canh
               (strcat "\n!!! Khac chu: " (itoa (length ds-canh))
                       " text nam mot phan ngoai hinh / cham net cat 0-KAKOU - kiem tra: bango "
-                      (gro--noi-ds (reverse (mapcar 'car ds-canh)) 15))
+                      (gro--noi-ds (gro--remove-duplicates (reverse (mapcar 'car ds-canh))) 15))
+              ""
+            )
+            (if ds-kt
+              (strcat "\n!!! Khac chu: " (itoa (length ds-kt))
+                      " text giong kich thuoc (nghi van) - kiem tra: bango "
+                      (gro--noi-ds (gro--remove-duplicates (reverse (mapcar 'car ds-kt))) 15))
               ""
             ))
     (if ds-tam

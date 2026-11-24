@@ -18,6 +18,16 @@ namespace CsvTool.Core
     public sealed class KetQuaGia
     {
         public double KlThucTe, TienVL, TienCat, TongGiaCong, Gia1Tam, AllIn;
+        public double KlThuong;    // (X+10)(Y+10): cân của tấm khi không tính theo kg
+        public double DonGiaKg;    // > 0: tấm tính theo kg của công ty đặc biệt, KlThucTe là cân (X+6)(Y+6)
+    }
+
+    /// <summary>Tổng cân của đơn (đã nhân Q). Db* = phần tấm tính theo kg của công ty đặc biệt.</summary>
+    public sealed class TongCan
+    {
+        public double KgDon, KgGiaCong, KgDbDon, KgDbGiaCong, TienDbDon, TienDbGiaCong, DonGiaKgDon, DonGiaKgGiaCong;
+        public int TamThuong, ChuaCoKg;   // TamThuong: đơn đặc biệt nhưng tấm tính giá thường
+        public bool DacBiet;
     }
 
     /// <summary>
@@ -118,17 +128,16 @@ namespace CsvTool.Core
             double vlNhap = kl * donGia, tiLe = tong > 0 ? vlNhap / tong : 0;
             bool laInox = hoa.StartsWith("SUS");
             double tho = !laInox && tiLe > 0.55 ? vlNhap * (20.0 / 11) : laInox && tiLe > 0.68 ? vlNhap * (25.0 / 17) : tong;
-            var kq = new KetQuaGia { KlThucTe = kl, TienVL = tienVL, TienCat = tienCat, TongGiaCong = giaCong, Gia1Tam = Tron10(tho) };
+            var kq = new KetQuaGia { KlThucTe = kl, KlThuong = kl, TienVL = tienVL, TienCat = tienCat, TongGiaCong = giaCong, Gia1Tam = Tron10(tho) };
 
             if (v.CheDoTinh == 0 && !coSus && b.DacBiet.TryGetValue(v.CongTy ?? "", out CongTyDacBiet db))
             {
-                bool coGiaCong = v.Be.Any(x => x.Dai > 0) || v.PitchiSoLan > 0 || v.Tappu > 0 || v.Sara > 0 || v.DonGiaCuon > 0 || v.VatMm > 0;
-                double giaKg = coGiaCong ? db.DonGiaTamGiaCong : db.DonGiaTamDon;
+                double giaKg = CoGiaCong(v) ? db.DonGiaTamGiaCong : db.DonGiaTamDon;
                 double klDb = (v.X + 6) * (v.Y + 6) * v.DoDay * (g.TyTrong != 0 ? g.TyTrong : 7.85) / 1_000_000;
                 double giaKL = Tron10(giaKg * klDb);
                 if (!db.SoSanhGiaThuong || giaKL < kq.Gia1Tam)
                 {
-                    kq.TienVL = giaKg * klDb; kq.KlThucTe = klDb; kq.TienCat = 0; kq.TongGiaCong = 0; kq.Gia1Tam = giaKL;
+                    kq.TienVL = giaKg * klDb; kq.KlThucTe = klDb; kq.TienCat = 0; kq.TongGiaCong = 0; kq.Gia1Tam = giaKL; kq.DonGiaKg = giaKg;
                 }
             }
             if (v.CheDoTinh == 1)
@@ -140,7 +149,7 @@ namespace CsvTool.Core
             else if (v.TienVLTay != null)
             {
                 // đã tự tính vật liệu: không áp hệ số, luật tỉ trọng hay giá theo kg của công ty
-                kq.TienVL = v.TienVLTay.Value; kq.KlThucTe = kl; kq.TienCat = tienCat; kq.TongGiaCong = giaCong;
+                kq.TienVL = v.TienVLTay.Value; kq.KlThucTe = kl; kq.DonGiaKg = 0; kq.TienCat = tienCat; kq.TongGiaCong = giaCong;
                 kq.Gia1Tam = Tron10(kq.TienVL + tienCat + giaCong);
             }
             else if (v.CheDoTinh == 2)
@@ -151,6 +160,35 @@ namespace CsvTool.Core
             if (v.LamTron250 && kq.Gia1Tam < 250) kq.Gia1Tam = 250;
             kq.AllIn = kq.Gia1Tam * v.SoLuong;
             return (kq, null);
+        }
+
+        /// <summary>Tấm gia công (khác tấm đơn): có bẻ, pitchi, tappu, sara, cuộn hoặc vát. Lỗ không tính.</summary>
+        public static bool CoGiaCong(DauVaoGia v) =>
+            v.Be.Any(x => x.Dai > 0) || v.PitchiSoLan > 0 || v.Tappu > 0 || v.Sara > 0 || v.DonGiaCuon > 0 || v.VatMm > 0;
+
+        /// <summary>
+        /// Tổng cân theo đúng cách đã tính tiền từng tấm: tấm tính theo kg của công ty đặc biệt dùng (X+6)(Y+6),
+        /// tấm còn lại (kể cả giá tay) dùng (X+10)(Y+10). Tấm thiếu số hoặc vật liệu chưa có trong bảng → ChuaCoKg.
+        /// </summary>
+        public static TongCan TongKg(IEnumerable<TamXuat> ds, GiaDon don, BangGia b)
+        {
+            var r = new TongCan { DacBiet = b.DacBiet.ContainsKey(don.CongTy ?? "") };
+            foreach (TamXuat t in ds)
+            {
+                GiaTam g = don.Tam.TryGetValue(t.N ?? "", out GiaTam gt) ? gt : null;
+                var (v, loi) = TaoDauVao(t, g, don.CongTy);
+                KetQuaGia kq = loi == null ? Tinh(v, b).Kq : null;
+                if (kq == null) { r.ChuaCoKg++; continue; }
+                bool giaTay = !string.IsNullOrEmpty(t.Tt.GiaBaoGia) && g?.TuDong != true;
+                bool theoKg = kq.DonGiaKg > 0 && !giaTay, gc = CoGiaCong(v);
+                double kg = (theoKg ? kq.KlThucTe : kq.KlThuong) * v.SoLuong;
+                if (gc) r.KgGiaCong += kg; else r.KgDon += kg;
+                if (!theoKg) { if (r.DacBiet) r.TamThuong++; continue; }
+                double tien = kq.Gia1Tam * v.SoLuong;
+                if (gc) { r.KgDbGiaCong += kg; r.TienDbGiaCong += tien; r.DonGiaKgGiaCong = kq.DonGiaKg; }
+                else { r.KgDbDon += kg; r.TienDbDon += tien; r.DonGiaKgDon = kq.DonGiaKg; }
+            }
+            return r;
         }
 
         private static string LoiChuaCoGia(DauVaoGia v) => "Chưa có giá: " + v.VatLieu + " dày " + v.DoDay.ToString(CultureInfo.InvariantCulture) + ".";

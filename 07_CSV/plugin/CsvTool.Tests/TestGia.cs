@@ -93,6 +93,21 @@ namespace CsvTool.Tests
 
             var tong = TinhGia.TongTien(new[] { tay, TamGia("B", "100"), TamGia("C") });
             Kiem("TongTien: don gia x Q, bo tam chua co gia", tong.Tong + "|" + tong.CoGia, "36300|2");
+
+            // SS400 6 x 575 x 1219, Q=3: thuong (585*1229*6*7.85/1e6)*3 = 101.59; dac biet (581*1225)*... *3 = 100.57; SUS 3 = 51.31
+            TamXuat TamKg(string n) => new TamXuat { N = n, M = "SS400", T = "6.0", Q = "3", X = "575", Y = "1219", Tt = new ThongTinTam { CheDoTinh = "0" } };
+            var kDon = TamKg("K1"); var kGc = TamKg("K2"); kGc.Tt.Tappu = 2;
+            var kSus = TamKg("K3"); kSus.M = "SUS304"; kSus.T = "3"; var kThieu = TamKg("K4"); kThieu.M = "SPCC";
+            var kTay = TamKg("K5"); kTay.Tt.GiaBaoGia = "5000";
+            string R(double x) => x.ToString("0.00", CultureInfo.InvariantCulture);
+            var cTh = TinhGia.TongKg(new[] { kDon, kGc, kThieu }, new GiaDon { CongTy = "TH" }, b);
+            Kiem("TongKg: cong ty thuong, (X+10), tach don/gia cong, dem tam chua co KG",
+                 R(cTh.KgDon) + "|" + R(cTh.KgGiaCong) + "|" + cTh.ChuaCoKg + "|" + cTh.DacBiet, "101.59|101.59|1|False");
+            var cDb = TinhGia.TongKg(new[] { kDon, kGc, kSus, kTay }, new GiaDon { CongTy = "DB1" }, b);
+            Kiem("TongKg: dac biet, (X+6) theo kg, SUS + gia tay tinh thuong",
+                 R(cDb.KgDbDon) + "|" + cDb.DonGiaKgDon + "|" + R(cDb.KgDbGiaCong) + "|" + cDb.DonGiaKgGiaCong + "|" + cDb.TamThuong + "|" + R(cDb.KgDon),
+                 "100.57|260|100.57|330|2|253.47");
+            Kiem("TongKg: tien theo kg = gia 1 tam x Q", cDb.TienDbDon, TinhGia.Tinh(TinhGia.TaoDauVao(kDon, null, "DB1").V, b).Kq.Gia1Tam * 3);
             Kiem("Dong10: cot don gia, boc nhay khi co phay", CsvXuat.Dong10(tay, "9").EndsWith(",,\"12,000\""), true);
 
             Kiem("ChuanDoDay: so nguyen -> 1 so le", PhanTichKhung.ChuanDoDay("6"), "6.0");

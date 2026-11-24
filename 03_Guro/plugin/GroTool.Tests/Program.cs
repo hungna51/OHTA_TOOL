@@ -807,6 +807,11 @@ namespace ZwCadPlugin.Tests
             BangSoLieu.DocCoMaKhac("KC_NGOAI_HINH;KC_CHAM_NET", out cbMk, out gcMk);
             Kiem("co khac chu: ngoai hinh + cham net", string.Join("|", cbMk),
                  "Chữ khắc nằm một phần ngoài hình — kiểm tra|Chữ khắc chạm nét cắt 0-KAKOU — kiểm tra");
+            BangSoLieu.DocCoMaKhac("KC_NGHI_KT", out cbMk, out gcMk);
+            Kiem("muc 233: co khac chu giong kich thuoc", string.Join("|", cbMk), "Chữ khắc giống kích thước (C3, R…) — nghi vấn, kiểm tra");
+            Kiem("muc 233: dich dong nghi van",
+                 ThongTinGro.Dich("!!! Khac chu: 2 text giong kich thuoc (nghi van) - kiem tra: bango 10, 20"),
+                 "!!! Khắc chữ: 2 chữ giống kích thước (C3, R…) — nghi vấn, cần kiểm tra: bango 10, 20");
             Kiem("dich dong khac chu",
                  ThongTinGro.Dich("Khac chu: doi 14 text trong hinh sang 3-KEGAKI - bango 6, 5, 4"),
                  "Khắc chữ: đã đổi 14 chữ trong hình sang ケガキ (3-KEGAKI) — bango 6, 5, 4");

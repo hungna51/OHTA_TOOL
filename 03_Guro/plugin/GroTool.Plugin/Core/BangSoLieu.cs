@@ -213,6 +213,7 @@ namespace ZwCadPlugin.Core
             // Mục 190: chữ khắc (tấm 文字ケガキ, mục 156/189) đã đổi sang ケガキ nhưng cần kiểm tra
             if (co_("KC_NGOAI_HINH")) canhBao.Add("Chữ khắc nằm một phần ngoài hình — kiểm tra");
             if (co_("KC_CHAM_NET")) canhBao.Add("Chữ khắc chạm nét cắt 0-KAKOU — kiểm tra");
+            if (co_("KC_NGHI_KT")) canhBao.Add("Chữ khắc giống kích thước (C3, R…) — nghi vấn, kiểm tra");   // muc 233
         }
 
         public static bool HopGiao(double[] a, double[] b)

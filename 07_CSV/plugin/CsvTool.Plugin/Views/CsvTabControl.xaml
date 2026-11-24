@@ -353,6 +353,13 @@
                                 <Button Grid.Column="2" Style="{StaticResource Nut}" Background="{DynamicResource Mau}" Margin="0" Padding="4,8" Content="Quét toàn bản vẽ"
                                         Command="{Binding QuetToanCmd}" ToolTip="Quét mọi khung tấm trên bản vẽ"/>
                             </Grid>
+                            <Grid Margin="0,7,0,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="7"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                <Button Style="{StaticResource NutPhu}" Margin="0" Padding="4,7" Content="Xuất file A"
+                                        Command="{Binding XuatFileACmd}" ToolTip="Tạo file A từ lượt quét gần nhất (đã có file thì hỏi trước khi ghi đè)"/>
+                                <Button Grid.Column="2" Style="{StaticResource NutPhu}" Margin="0" Padding="4,7" Content="Xuất PDF"
+                                        Command="{Binding XuatPdfCmd}" ToolTip="In PDF các tấm của lượt quét gần nhất (đã có file thì hỏi trước khi ghi đè)"/>
+                            </Grid>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
@@ -745,13 +752,16 @@
         <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#E1E4E8" BorderThickness="0,1,0,0" Padding="10,8,10,10">
             <StackPanel>
                 <TextBlock Text="{Binding NhanTongTien}" ToolTip="{Binding NhanTongTien}" FontWeight="SemiBold" Foreground="#1B5E20" Margin="0,0,0,5" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding NhanKg}" Visibility="{Binding CoNhanKg, Converter={StaticResource HienKhi}}" TextWrapping="Wrap" Foreground="#1B5E20" Margin="0,0,0,5"/>
                 <TextBlock Text="{Binding TrangThai}" TextWrapping="Wrap" Foreground="#52606D"/>
                 <Grid Margin="0,7,0,0">
-                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
                     <Button Style="{StaticResource NutPhu}" Padding="6,5" Content="File CSV" Command="{Binding MoFile10Cmd}"
                             IsEnabled="{Binding CoFile10}" ToolTip="{Binding File10}" ToolTipService.ShowOnDisabled="False"/>
-                    <Button Grid.Column="1" Style="{StaticResource NutPhu}" Margin="0" Padding="6,5" Content="File data" Command="{Binding MoFile35Cmd}"
+                    <Button Grid.Column="1" Style="{StaticResource NutPhu}" Padding="6,5" Content="File data" Command="{Binding MoFile35Cmd}"
                             IsEnabled="{Binding CoFile35}" ToolTip="{Binding File35}" ToolTipService.ShowOnDisabled="False"/>
+                    <Button Grid.Column="2" Style="{StaticResource NutPhu}" Padding="6,5" Content="File A" Command="{Binding MoFileACmd}" ToolTip="Mở file &lt;đơn&gt;-A.dxf"/>
+                    <Button Grid.Column="3" Style="{StaticResource NutPhu}" Margin="0" Padding="6,5" Content="PDF" Command="{Binding MoPdfCmd}" ToolTip="Mở file &lt;đơn&gt;.pdf"/>
                 </Grid>
             </StackPanel>
         </Border>

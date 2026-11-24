@@ -157,8 +157,8 @@ namespace CsvTool.CadServices
             return (ketQua, dimzin);
         }
 
-        /// <summary>Hộp khung theo handle + mọi entity trong không gian hiện tại nằm trọn trong hộp (dùng khi ghi ngược).</summary>
-        internal static List<Entity> TrongKhung(Transaction tr, Database db, long handleKhung)
+        /// <summary>Hộp khung theo handle + chữ (TEXT/MTEXT) nằm trọn trong hộp; chiChu = false thì lấy mọi entity (file A).</summary>
+        internal static List<Entity> TrongKhung(Transaction tr, Database db, long handleKhung, bool chiChu = true)
         {
             ObjectId idKhung = db.GetObjectId(false, new Handle(handleKhung), 0);
             if (idKhung.IsNull || idKhung.IsErased) throw new InvalidOperationException("Khung in không còn trong bản vẽ — quét lại.");
@@ -167,13 +167,36 @@ namespace CsvTool.CadServices
             var kq = new List<Entity>();
             foreach (ObjectId id in (BlockTableRecord)tr.GetObject(db.CurrentSpaceId, OpenMode.ForRead))
             {
-                if (id == idKhung || !(tr.GetObject(id, OpenMode.ForRead) is Entity e) || !(e is MText || e is DBText)) continue;
+                if (id == idKhung || !(tr.GetObject(id, OpenMode.ForRead) is Entity e) || (chiChu && !(e is MText || e is DBText))) continue;
                 Extents3d h;
                 try { h = e.GeometricExtents; } catch { continue; }
                 if (h.MinPoint.X < x0 - Eps || h.MaxPoint.X > x1 + Eps || h.MinPoint.Y < y0 - Eps || h.MaxPoint.Y > y1 + Eps) continue;
                 kq.Add(e);
             }
             return kq;
+        }
+
+        /// <summary>
+        /// Chạy -OVERKILL (thiết lập mặc định) 1 lượt cho mọi đối tượng nằm trọn trong các khung đã chọn, trước khi quét.
+        /// Sửa bản vẽ S (Undo được). Trả về số đối tượng bị xoá / gộp.
+        /// </summary>
+        internal static int Overkill(Document doc, IEnumerable<ObjectId> khung)
+        {
+            Database db = doc.Database;
+            var ids = new List<ObjectId>();
+            using (doc.LockDocument())
+            using (Transaction tr = db.TransactionManager.StartTransaction())
+            {
+                var da = new HashSet<ObjectId>();
+                foreach (ObjectId k in khung)
+                    foreach (Entity e in TrongKhung(tr, db, k.Handle.Value, false))
+                        if (!khung.Contains(e.ObjectId) && da.Add(e.ObjectId)) ids.Add(e.ObjectId);
+                tr.Commit();
+            }
+            if (ids.Count < 2) return 0;
+            // -OVERKILL: chọn đối tượng, Enter kết thúc chọn, Enter = <Done> (ZWCAD 2026 và AutoCAD cùng lời nhắc)
+            doc.Editor.Command("_.-OVERKILL", SelectionSet.FromObjectIds(ids.ToArray()), "", "");
+            return ids.Count(id => id.IsErased);
         }
 
         /// <summary>Mã DXF 70 lisp lọc: dim thẳng 32, dim phi 3, còn lại mã loại khác (bị bỏ qua).</summary>

@@ -136,6 +136,8 @@ namespace ZwCadPlugin.Core
               m => $"Khắc chữ: đã đổi {m.Groups[1]} chữ trong hình sang ケガキ (3-KEGAKI) — bango {m.Groups[2]}"),
             M(@"^!!! Khac chu: (\d+) text nam mot phan ngoai hinh / cham net cat 0-KAKOU - kiem tra: bango (.*)$",
               m => $"!!! Khắc chữ: {m.Groups[1]} chữ nằm một phần ngoài hình hoặc chạm nét cắt 0-KAKOU — cần kiểm tra: bango {m.Groups[2]}"),
+            M(@"^!!! Khac chu: (\d+) text giong kich thuoc \(nghi van\) - kiem tra: bango (.*)$",
+              m => $"!!! Khắc chữ: {m.Groups[1]} chữ giống kích thước (C3, R…) — nghi vấn, cần kiểm tra: bango {m.Groups[2]}"),
             M(@"^!!! Tam khac chu \((\d+) tam\) khong co text nao trong hinh de doi sang 3-KEGAKI\.$",
               m => $"!!! Tấm khắc chữ ({m.Groups[1]} tấm) không có chữ nào trong hình để đổi sang ケガキ (3-KEGAKI)."),
             M(@"^!!! Con (\d+) cap khung in chong nhau - kiem tra va tach tay\.$",

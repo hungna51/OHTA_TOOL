@@ -38,7 +38,7 @@ namespace CsvTool.CadServices
                     {
                         Matrix3d m = Matrix3d.Displacement(new Vector3d(t.DenX - t.GocX, t.DenY - t.GocY, 0)) *
                                      Matrix3d.Scaling(t.TiLe, new Point3d(t.GocX, t.GocY, 0));
-                        foreach (Entity e in QuetKhungCad.TrongKhung(tr, db, t.HandleKhung))
+                        foreach (Entity e in QuetKhungCad.TrongKhung(tr, db, t.HandleKhung, false))
                         {
                             if (!e.Visible || !LopGiu.Any(l => string.Equals(l, e.Layer, StringComparison.OrdinalIgnoreCase)) || ids.Contains(e.ObjectId)) continue;
                             ids.Add(e.ObjectId);
@@ -74,6 +74,16 @@ namespace CsvTool.CadServices
                                 if (o is Entity c) { kg.AppendEntity(c); trA.AddNewlyCreatedDBObject(c, true); }
                                 else o.Dispose();
                             mt.Erase();
+                        }
+                        // mọi đối tượng về ByLayer; đường bẻ (LINE 0-KAKOU nét DASHED*) giữ nguyên kiểu nét
+                        foreach (ObjectId id in kg.Cast<ObjectId>().ToList())
+                        {
+                            if (id.IsErased || !(trA.GetObject(id, OpenMode.ForWrite) is Entity e)) continue;
+                            e.ColorIndex = 256;
+                            e.LineWeight = LineWeight.ByLayer;
+                            bool laBe = e is Line && string.Equals(e.Layer, "0-KAKOU", StringComparison.OrdinalIgnoreCase) &&
+                                        (e.Linetype ?? "").StartsWith("DASHED", StringComparison.OrdinalIgnoreCase);
+                            if (!laBe) e.Linetype = "ByLayer";
                         }
                         trA.Commit();
                     }
