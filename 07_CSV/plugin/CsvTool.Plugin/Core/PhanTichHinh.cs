@@ -663,8 +663,9 @@ namespace CsvTool.Core
 
         /// <summary>
         /// Phần thẳng ở 2 đầu cung, mỗi đầu cần 1 nét chạm đầu cung ngoài và 1 nét chạm đầu cung trong.
-        /// Tiếp tuyến: cộng trung bình 2 nét. Chân bẻ: cộng nét dài (mặt ngoài) trừ 2 × denta của dòng V= cùng góc;
-        /// không có dòng V= cùng góc thì đầu đó không cộng (tấm sẽ không khớp, không đoán).
+        /// Tiếp tuyến: cộng trung bình 2 nét. Chân bẻ: đi lần theo từng chân (2 nét song song cách nhau t),
+        /// cộng chiều dài chân đo giữa 2 đỉnh nhọn mặt ngoài, trừ 2 × denta của dòng V= cùng góc ở mỗi góc bẻ.
+        /// Một góc bẻ không có dòng V= cùng góc thì bỏ cả đầu đó (tấm sẽ không khớp, không đoán).
         /// </summary>
         private static double PhanThang(CungHinh a, CungHinh b, IReadOnlyList<NetBe> doan, double doDay, IReadOnlyList<(double Goc, double Denta)> be)
         {
@@ -672,8 +673,9 @@ namespace CsvTool.Core
             foreach (var (px, py) in new[] { (a.X1, a.Y1), (a.X2, a.Y2) })
             {
                 bool dau1 = Math.Abs(b.X1 - px) + Math.Abs(b.Y1 - py) <= Math.Abs(b.X2 - px) + Math.Abs(b.Y2 - py);
+                (double X, double Y) qb = dau1 ? (b.X1, b.Y1) : (b.X2, b.Y2);
                 var na = NetTaiDau(a, px, py, doan, doDay);
-                var nb = NetTaiDau(b, dau1 ? b.X1 : b.X2, dau1 ? b.Y1 : b.Y2, doan, doDay);
+                var nb = NetTaiDau(b, qb.X, qb.Y, doan, doDay);
                 if (na.Net == null || nb.Net == null || na.Net == nb.Net) continue;
                 if (na.Lech <= GocTiepTuyen && nb.Lech <= GocTiepTuyen)
                 {
@@ -681,11 +683,70 @@ namespace CsvTool.Core
                     continue;
                 }
                 if (na.Lech <= GocTiepTuyen || nb.Lech <= GocTiepTuyen || !SongSong(na.Net, nb.Net)) continue;
-                double gocBe = 180 - (na.Lech + nb.Lech) / 2;   // góc trong như dòng V=: chân vuông với cung → 90°
-                var v = (be ?? new List<(double, double)>()).Where(x => Math.Abs(x.Goc - gocBe) <= DungSaiGoc).ToList();
-                if (v.Count > 0) tong += Math.Max(na.Dai, nb.Dai) - 2 * v[0].Denta;
+                double? d = Denta(be, 180 - (na.Lech + nb.Lech) / 2);   // chân vuông với cung → 90°
+                if (d == null) continue;
+                double? chan = DoChan(na.Net, (px, py), nb.Net, qb, doan, doDay, be);
+                if (chan != null) tong += chan.Value - 2 * d.Value;
             }
             return tong;
+        }
+
+        /// <summary>
+        /// Đi lần theo chân bẻ từ đầu cung (tối đa 8 chân). Mỗi chân = 2 nét song song fa, fb; chiều dài = khoảng phủ
+        /// của 4 đầu mút chiếu lên trục chân, tức khoảng giữa 2 đỉnh nhọn mặt ngoài (131190-6: 92.68 / 91.14 → 94.42).
+        /// Trả tổng chiều dài chân trừ 2 × denta các góc giữa 2 chân; góc thiếu dòng V= → null.
+        /// </summary>
+        private static double? DoChan(NetBe fa, (double X, double Y) qa, NetBe fb, (double X, double Y) qb,
+                                      IReadOnlyList<NetBe> doan, double doDay, IReadOnlyList<(double Goc, double Denta)> be)
+        {
+            double tong = 0;
+            for (int i = 0; i < 8; i++)
+            {
+                var ea = DauKia(fa, qa); var eb = DauKia(fb, qb);
+                double ux = ea.X - qa.X, uy = ea.Y - qa.Y, l = Math.Sqrt(ux * ux + uy * uy);
+                if (l < 1e-9) return null;
+                ux /= l; uy /= l;
+                var chieu = new[] { qa, ea, qb, eb }.Select(p => (p.X - qa.X) * ux + (p.Y - qa.Y) * uy).ToList();
+                tong += chieu.Max() - chieu.Min();
+
+                NetBe ga = NetNoi(doan, ea, fa, doDay), gb = NetNoi(doan, eb, fb, doDay);
+                if (ga == null || gb == null || ga == gb || !SongSong(ga, gb)) return tong;   // hết chân (đầu tự do có nắp dày t)
+                var ka = DauKia(ga, ea);
+                double vx = ka.X - ea.X, vy = ka.Y - ea.Y, lv = Math.Sqrt(vx * vx + vy * vy);
+                double lechChan = Math.Acos(Math.Max(-1, Math.Min(1, (ux * vx + uy * vy) / Math.Max(lv, 1e-9)))) * 180 / Math.PI;
+                if (lechChan > GocTiepTuyen)
+                {
+                    double? d = Denta(be, 180 - lechChan);
+                    if (d == null) return null;
+                    tong -= 2 * d.Value;
+                }
+                fa = ga; fb = gb; qa = ea; qb = eb;
+            }
+            return tong;
+        }
+
+        private static double? Denta(IReadOnlyList<(double Goc, double Denta)> be, double goc)
+        {
+            foreach (var v in be ?? new List<(double, double)>())
+                if (Math.Abs(v.Goc - goc) <= DungSaiGoc) return v.Denta;
+            return null;
+        }
+
+        private static (double X, double Y) DauKia(NetBe d, (double X, double Y) gan) =>
+            Math.Abs(d.X1 - gan.X) + Math.Abs(d.Y1 - gan.Y) <= Math.Abs(d.X2 - gan.X) + Math.Abs(d.Y2 - gan.Y) ? (d.X2, d.Y2) : (d.X1, d.Y1);
+
+        /// <summary>Nét khác 'bo' chạm điểm p, dài hơn nắp (1.5t); nhiều nét thì lấy nét dài nhất.</summary>
+        private static NetBe NetNoi(IReadOnlyList<NetBe> doan, (double X, double Y) p, NetBe bo, double doDay)
+        {
+            NetBe kq = null; double dai = 0;
+            foreach (NetBe d in doan)
+            {
+                if (d == bo) continue;
+                bool cham = (Math.Abs(d.X1 - p.X) <= DungSaiTam && Math.Abs(d.Y1 - p.Y) <= DungSaiTam) || (Math.Abs(d.X2 - p.X) <= DungSaiTam && Math.Abs(d.Y2 - p.Y) <= DungSaiTam);
+                double l = Math.Sqrt((d.X2 - d.X1) * (d.X2 - d.X1) + (d.Y2 - d.Y1) * (d.Y2 - d.Y1));
+                if (cham && l > 1.5 * doDay && l > dai) { kq = d; dai = l; }
+            }
+            return kq;
         }
 
         /// <summary>Nét dài nhất chạm điểm (px, py) của cung, dài hơn nắp đầu (1.5t); Lech = góc với tiếp tuyến tại điểm đó (0–90°).</summary>

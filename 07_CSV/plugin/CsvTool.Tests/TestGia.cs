@@ -233,6 +233,14 @@ namespace CsvTool.Tests
             Kiem("Cuon + chan be: tru 2 x denta", PhanTichHinh.LoaiCuonTuHinh(cungChan, daiChan, 20, 3.2, chan, v90), "r1");
             Kiem("Cuon + chan be: khong co V= cung goc thi khong nhan", PhanTichHinh.LoaiCuonTuHinh(cungChan, daiChan, 20, 3.2, chan, new List<(double, double)> { (120.0, 2.6) }), null);
             Kiem("Cuon + chan be: chi cung van nhan khi X bang cung", PhanTichHinh.LoaiCuonTuHinh(cungChan, Math.PI / 2 * 98.4, 20, 3.2, chan, v90), "r1");
+            // 2 chân: chân 1 đi lên, góc 90° rồi chân 2 sang trái; mặt ngoài góc 2 là phía x = 3.2 nên chân 1 dài 53.2
+            var chan2 = new List<NetBe> {
+                new NetBe { X1 = 0, Y1 = 96.8, X2 = 0, Y2 = 146.8 }, new NetBe { X1 = 3.2, Y1 = yNgoai, X2 = 3.2, Y2 = 150 },
+                new NetBe { X1 = 0, Y1 = 146.8, X2 = -40, Y2 = 146.8 }, new NetBe { X1 = 3.2, Y1 = 150, X2 = -40, Y2 = 150 },
+                new NetBe { X1 = -40, Y1 = 146.8, X2 = -40, Y2 = 150 }, new NetBe { X1 = 96.8, Y1 = 0, X2 = 100, Y2 = 0 } };
+            double dai2Chan = Math.PI / 2 * 98.4 + 53.2 + 43.2 - 4 * 2.6;
+            Kiem("Cuon + 2 chan be: do giua dinh nhon mat ngoai", PhanTichHinh.LoaiCuonTuHinh(cungChan, dai2Chan, 20, 3.2, chan2, v90), "r1");
+            Kiem("Cuon + 2 chan be: chi tinh chan 1 thi khong khop", PhanTichHinh.LoaiCuonTuHinh(cungChan, Math.PI / 2 * 98.4 + 50 - 2 * 2.6, 20, 3.2, chan2, v90), null);
             Kiem("BeTuFname: doc goc, denta", string.Join(";", PhanTichKhung.BeTuFname(new[] { "N=A", "V=16-2.6(90°)", "シマ目外 V6引代 1.2(135°)" })), "(90, 2.6);(135, 1.2)");
             var gocBe = new List<CungHinh> {
                 new CungHinh { R = 9, Goc = 90, X1 = 9, Y1 = 0, X2 = 0, Y2 = 9 },
