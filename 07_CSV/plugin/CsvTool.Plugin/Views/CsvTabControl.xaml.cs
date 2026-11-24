@@ -49,6 +49,9 @@ namespace CsvTool.Views
             _vm.ChonLoi(l);
         }
 
+        /// <summary>Bấm vào vùng nhập trên thẻ lỗi không zoom bản vẽ và không lấy mất con trỏ.</summary>
+        private void ChanBam(object sender, MouseButtonEventArgs e) => e.Handled = true;
+
         /// <summary>Lăn chuột qua ô chọn đang đóng không được đổi giá trị (làm đổi giá tấm mà không hay).</summary>
         private void ComboKhongLan(object sender, MouseWheelEventArgs e)
         {

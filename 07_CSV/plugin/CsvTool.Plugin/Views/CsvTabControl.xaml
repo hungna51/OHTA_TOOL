@@ -638,6 +638,22 @@
                                                 <StackPanel>
                                                     <TextBlock Text="{Binding Ten}" Foreground="#263238" FontWeight="SemiBold"/>
                                                     <TextBlock Text="{Binding NoiDung}" Foreground="#37474F" TextWrapping="Wrap"/>
+                                                    <!-- nhap nhanh pitchi: du so lan va chieu dai thi dong loi tu mat -->
+                                                    <Border Margin="0,4,0,1" Background="#E1E4E8" Padding="1,1,0,0" Cursor="Arrow" MouseLeftButtonUp="ChanBam"
+                                                            ToolTip="Nhập xong bấm Enter hoặc Tab để lưu"
+                                                            Visibility="{Binding LaThieuPitchi, Converter={StaticResource HienKhi}}">
+                                                        <Grid DataContext="{Binding Dong}">
+                                                            <Grid.ColumnDefinitions><ColumnDefinition Width="1.25*"/><ColumnDefinition/><ColumnDefinition Width="1.1*"/></Grid.ColumnDefinitions>
+                                                            <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                                                            <TextBlock Style="{StaticResource Nhan}" Text="Loại pitchi"/>
+                                                            <TextBlock Style="{StaticResource Nhan}" Grid.Column="1" Text="Số đường nhấn"/>
+                                                            <TextBlock Style="{StaticResource Nhan}" Grid.Column="2" Text="Dài pitchi"/>
+                                                            <ComboBox Grid.Row="1" Margin="0,0,1,1" BorderThickness="0" Background="#FFFFFF" FontSize="11"
+                                                                      ItemsSource="{Binding DsLoaiPitchi}" SelectedItem="{Binding LoaiPitchi}" PreviewMouseWheel="ComboKhongLan"/>
+                                                            <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="1" Text="{Binding PitchiSoLan}"/>
+                                                            <TextBox Style="{StaticResource O}" Grid.Row="1" Grid.Column="2" Text="{Binding PitchiDai}"/>
+                                                        </Grid>
+                                                    </Border>
                                                 </StackPanel>
                                             </DockPanel>
                                         </Border>

@@ -68,6 +68,13 @@ namespace CsvTool.Tests
             Kiem("DimSaiLop: bo qua", Loi(KhungMau(dim: new[] { Dim(32, 300, 0, "0"), Dim(32, 200, 0, "0") })), "Không tìm thấy dim tổng.");
 
             Kiem("VatChuaNhap", PhanTichKhung.KiemTra(new ThongTinTam { LoaiGiaCong = "m, k" }), "Có gia công vát (k), chưa nhập chiều dài vát.");
+            var dsLoi = new System.Collections.ObjectModel.ObservableCollection<string>(new[] { "a", "b", "c", "d" });
+            string giuB = dsLoi[1];
+            int soDoi = 0; dsLoi.CollectionChanged += (s, e) => soDoi++;
+            PhanTichKhung.DongBoDs(dsLoi, new[] { "a", giuB, "c", "d" });
+            Kiem("DongBoDs: khong doi thi khong dung lai", soDoi, 0);
+            PhanTichKhung.DongBoDs(dsLoi, new[] { "d", "x", giuB });
+            Kiem("DongBoDs: bo, them, doi cho", string.Join("", dsLoi), "dxb");
             Kiem("PitchiChuaNhap", PhanTichKhung.KiemTra(new ThongTinTam { LoaiGiaCong = "m(pitchi)" }), "Có gia công pitchi, chưa nhập số lần hoặc chiều dài.");
             Kiem("LoaiGiaCong: m(pitchi)->m, bo trung", PhanTichKhung.ChuanHoaGiaCong("m(pitchi), s, m"), "m, s");
 

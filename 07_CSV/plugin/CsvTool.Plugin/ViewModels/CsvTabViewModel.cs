@@ -826,23 +826,28 @@ namespace CsvTool.ViewModels
 
         private void GomLoi()
         {
-            DsLoi.Clear();
+            var cu = DsLoi.ToList();
+            var moi = new List<DongLoi>();
+            // giữ dòng không đổi: đang gõ ở ô pitchi trên thẻ lỗi thì thẻ không bị dựng lại
+            void Them(DongLoi l) => moi.Add(cu.FirstOrDefault(x => !moi.Contains(x) && x.Dong == l.Dong && x.Goc == l.Goc && x.Ten == l.Ten &&
+                x.NoiDung == l.NoiDung && x.LaLoi == l.LaLoi && x.LaThieuGia == l.LaThieuGia) ?? l);
             foreach (DongGiaVl v in DsGiaVl.Where(x => x.ChuaCoDb))
             {
                 DongTam dau = _tatCa.FirstOrDefault(x => x.Tam != null && !x.BoQua && x.Tam.M == v.VatLieu
                     && double.TryParse((x.Tam.T ?? "").Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double day) && day == v.DoDay);
-                if (dau != null) DsLoi.Add(new DongLoi(dau, "Chưa có trong database (" + v.SoTam + " tấm). Cần bổ sung.", false, null, true, v.Ten));
+                if (dau != null) Them(new DongLoi(dau, "Chưa có trong database (" + v.SoTam + " tấm). Cần bổ sung.", false, null, true, v.Ten));
             }
             foreach (DongTam d in _tatCa.Where(x => !x.BoQua))
             {
                 _loiKhung.TryGetValue(d.Khung.Handle, out var ds);
                 foreach (LoiQuet l in ds?.Where(x => x.LaLoi) ?? Enumerable.Empty<LoiQuet>())
-                    DsLoi.Add(new DongLoi(d, l.NoiDung, true, l));
-                if (d.LoiKhac != null) DsLoi.Add(new DongLoi(d, d.LoiKhac, true, null));
+                    Them(new DongLoi(d, l.NoiDung, true, l));
+                if (d.LoiKhac != null) Them(new DongLoi(d, d.LoiKhac, true, null));
                 foreach (LoiQuet w in ds?.Where(l => !l.LaLoi) ?? Enumerable.Empty<LoiQuet>())
-                    DsLoi.Add(new DongLoi(d, w.NoiDung, false, w));
-                if (d.CanhBaoGia != null) DsLoi.Add(new DongLoi(d, d.CanhBaoGia, false, null, d.CanhBaoGia.StartsWith("Chưa có giá")));
+                    Them(new DongLoi(d, w.NoiDung, false, w));
+                if (d.CanhBaoGia != null) Them(new DongLoi(d, d.CanhBaoGia, false, null, d.CanhBaoGia.StartsWith("Chưa có giá")));
             }
+            PhanTichKhung.DongBoDs(DsLoi, moi);
             Bao(nameof(NhanTongTien));
             BaoNhanTab();
         }

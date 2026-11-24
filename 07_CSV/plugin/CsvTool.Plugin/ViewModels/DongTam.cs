@@ -19,6 +19,8 @@ namespace CsvTool.ViewModels
 
         /// <summary>Cảnh báo thiếu giá: dòng có nút Nhập giá sang tab Giá VL.</summary>
         public bool LaThieuGia { get; }
+        /// <summary>Thiếu số pitchi: dòng có ô nhập nhanh ngay trên thẻ lỗi.</summary>
+        public bool LaThieuPitchi => NoiDung == PhanTichKhung.LoiThieuPitchi;
 
         public DongLoi(DongTam dong, string noiDung, bool laLoi, LoiQuet goc, bool laThieuGia = false, string ten = null)
         {

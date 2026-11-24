@@ -129,6 +129,20 @@ namespace CsvTool.Core
                       ? ThongTinTamParser.TachDong(t.NoiDung, true).Count(d => d.StartsWith("N="))
                       : (t.NoiDung ?? "").StartsWith("N=") ? 1 : 0);
 
+        public const string LoiThieuPitchi = "Có gia công pitchi, chưa nhập số lần hoặc chiều dài.";
+
+        /// <summary>Đưa ds về đúng thứ tự của moi mà giữ phần tử còn lại, để ô đang nhập trên giao diện không bị dựng lại.</summary>
+        public static void DongBoDs<T>(System.Collections.ObjectModel.ObservableCollection<T> ds, IList<T> moi) where T : class
+        {
+            for (int i = ds.Count - 1; i >= 0; i--) if (!moi.Contains(ds[i])) ds.RemoveAt(i);
+            for (int i = 0; i < moi.Count; i++)
+            {
+                if (i < ds.Count && ds[i] == moi[i]) continue;
+                int cu = ds.IndexOf(moi[i]);
+                if (cu >= 0) ds.Move(cu, i); else ds.Insert(i, moi[i]);
+            }
+        }
+
         /// <summary>Có gia công k mà chưa có vát / m(pitchi) mà thiếu số lần hoặc chiều dài → lời cảnh báo.</summary>
         public static string KiemTra(ThongTinTam tt)
         {
@@ -136,7 +150,7 @@ namespace CsvTool.Core
             if (gc.Contains("K") && tt.Vat <= 0)
                 return "Có gia công vát (k), chưa nhập chiều dài vát.";
             if (gc.Contains("PITCHI") && (tt.PitchiSoLan <= 0 || tt.PitchiDai <= 0))
-                return "Có gia công pitchi, chưa nhập số lần hoặc chiều dài.";
+                return LoiThieuPitchi;
             return null;
         }
 
