@@ -2368,7 +2368,7 @@
 ;; Buoc 6c2. Tra chuoi bao cao (ASCII) hoac nil.
 (defun gro--doi-text-khac-chu (kq-tk notes bang raw-tam-list / khungs ds-tam k ss i e ed lst net
                                n vao ds-bg s g geo bb tb cx cy bgs ens-bo bg-k tron cham ly ds-canh x
-                               lst2 hinhs khoi-k x2 pre kt ds-kt)
+                               lst2 hinhs khoi-k x2 pre kt ds-kt bgx)
   (setq khungs (if kq-tk (car kq-tk) nil)
         ds-tam nil
         n      0
@@ -2518,9 +2518,12 @@
         (gro--princ (strcat "\n  !!! Khac chu bango " (car x) ": text [" (cadr x) "] " (caddr x)
                        " - da doi sang 3-KEGAKI, KIEM TRA LAI vi tri chu (muc 189)."))
       )
-      (foreach x (reverse ds-kt)
-        (gro--princ (strcat "\n  !!! Khac chu bango " (car x) ": text [" (cadr x) "] GIONG TEXT KICH THUOC"
-                       " (vat mep C / ban kinh R ...) - da doi sang 3-KEGAKI, NGHI VAN: kiem tra (muc 233)."))
+      ;; muc 233: gop theo tam - 1 dong / bango, khong 1 dong / chu
+      (foreach bgx (gro--remove-duplicates (reverse (mapcar 'car ds-kt)))
+        (setq ly (vl-remove-if-not '(lambda (x) (= (car x) bgx)) (reverse ds-kt)))
+        (gro--princ (strcat "\n  !!! Khac chu bango " bgx ": " (itoa (length ly)) " text GIONG TEXT KICH THUOC ["
+                       (gro--noi-ds (gro--remove-duplicates (mapcar 'cadr ly)) 10)
+                       "] (vat mep C / ban kinh R ...) - da doi sang 3-KEGAKI, NGHI VAN: kiem tra (muc 233)."))
       )
     )
   )
@@ -2537,13 +2540,13 @@
             (if ds-canh
               (strcat "\n!!! Khac chu: " (itoa (length ds-canh))
                       " text nam mot phan ngoai hinh / cham net cat 0-KAKOU - kiem tra: bango "
-                      (gro--noi-ds (reverse (mapcar 'car ds-canh)) 15))
+                      (gro--noi-ds (gro--remove-duplicates (reverse (mapcar 'car ds-canh))) 15))
               ""
             )
             (if ds-kt
               (strcat "\n!!! Khac chu: " (itoa (length ds-kt))
                       " text giong kich thuoc (nghi van) - kiem tra: bango "
-                      (gro--noi-ds (reverse (mapcar 'car ds-kt)) 15))
+                      (gro--noi-ds (gro--remove-duplicates (reverse (mapcar 'car ds-kt))) 15))
               ""
             ))
     (if ds-tam
