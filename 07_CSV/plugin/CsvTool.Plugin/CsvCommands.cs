@@ -32,6 +32,12 @@ namespace CsvTool
         [CommandMethod("CSVQUETTOAN", CommandFlags.UsePickSet)]
         public void QuetToan() => Chay((vm, doc) => vm.QuetTuLenh(doc, true));
 
+        [CommandMethod("CSVXUATA")]
+        public void XuatA() => Chay((vm, doc) => vm.XuatNgay(true, false));
+
+        [CommandMethod("CSVXUATPDF")]
+        public void XuatPdf() => Chay((vm, doc) => vm.XuatNgay(false, true));
+
         private static void Chay(System.Action<CsvTabViewModel, Document> viec)
         {
             Document doc = CadApplication.DocumentManager.MdiActiveDocument;

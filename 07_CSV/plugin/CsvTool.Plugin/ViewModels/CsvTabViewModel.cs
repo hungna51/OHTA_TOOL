@@ -124,8 +124,8 @@ namespace CsvTool.ViewModels
             ChiTietCmd = new Lenh(() => ChiTiet = !ChiTiet);
             MoFile10Cmd = new Lenh(() => Mo(File10));
             MoFile35Cmd = new Lenh(() => Mo(File35));
-            XuatFileACmd = new Lenh(() => XuatNgay(true, false));
-            XuatPdfCmd = new Lenh(() => XuatNgay(false, true));
+            XuatFileACmd = new Lenh(() => GuiLenh("CSVXUATA"));
+            XuatPdfCmd = new Lenh(() => GuiLenh("CSVXUATPDF"));
             MoFileACmd = new Lenh(() => MoHoacBao(DuongFileA));
             MoPdfCmd = new Lenh(() => MoHoacBao(DuongPdf));
 
@@ -156,6 +156,15 @@ namespace CsvTool.ViewModels
                 doc.SendStringToExecute(huy + (toan ? "CSVQUETTOAN\n" : "CSVQUETVUNG\n"), true, false, true);
             }
             catch (Exception ex) { LoiThietLap = "Không chạy được lệnh quét: " + ex.Message; }
+        }
+
+        /// <summary>Nút Xuất file A / PDF: chạy trong ngữ cảnh lệnh (TXTEXP của file A cần Editor.Command).</summary>
+        private void GuiLenh(string lenh)
+        {
+            Document doc = CadApplication.DocumentManager.MdiActiveDocument;
+            if (doc == null) return;
+            string huy = Convert.ToInt32(CadApplication.GetSystemVariable("CMDACTIVE")) == 0 ? "" : "\x03\x03";
+            doc.SendStringToExecute(huy + lenh + "\n", true, false, true);
         }
 
         private string KiemTruocQuet()
@@ -1116,7 +1125,7 @@ namespace CsvTool.ViewModels
         }
 
         /// <summary>2 nút Xuất file A / Xuất PDF: dùng kết quả lượt quét gần nhất, không cần tích ô.</summary>
-        private void XuatNgay(bool taoA, bool inPdf)
+        internal void XuatNgay(bool taoA, bool inPdf)
         {
             Document doc = CadApplication.DocumentManager.MdiActiveDocument;
             if (doc == null || doc != _docThietLap || _thuMuc == null || _hinhQuet.Count == 0)
