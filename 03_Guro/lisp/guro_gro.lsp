@@ -2322,8 +2322,9 @@
 )
 
 ;; Chuoi chi gom ky tu kieu KICH THUOC (so, dau, phi, R, C, M, t, x, do, +-...) -> T.
+;; Muc 233: phai co it nhat 1 chu so - chu khac "C" dung mot minh (131304-1) khong phai kich thuoc.
 (defun gro--text-kich-thuoc-p (codes / ok c)
-  (setq ok (if codes T nil))
+  (setq ok (if (vl-some '(lambda (c) (or (and (>= c 48) (<= c 57)) (and (>= c 65296) (<= c 65305)))) codes) T nil))
   (foreach c codes
     (if (not (or (and (>= c 48) (<= c 57))
                  (and (>= c 65296) (<= c 65305))
@@ -2333,6 +2334,22 @@
     )
   )
   ok
+)
+
+;; Muc 233: "chu cai + so" (vd C3) la MOT PHAN DAY CHU KHAC khi trong cac text cham tam khac chu co
+;; text cung phan so voi chu cai KHAC va text do khong phai kich thuoc (131304-1: A3 B3 C3 D3 -> C3
+;; giong vat mep C3 nhung la chu khac).
+(defun gro--chu-trong-day-p (codes all / so)
+  (and (cdr codes)
+       (>= (car codes) 65) (<= (car codes) 90)
+       (setq so (cdr codes))
+       (vl-every '(lambda (c) (and (>= c 48) (<= c 57))) so)
+       (vl-some '(lambda (c2) (and (equal (cdr c2) so)
+                                   (>= (car c2) 65) (<= (car c2) 90)
+                                   (/= (car c2) (car codes))
+                                   (not (gro--text-kich-thuoc-p c2))))
+                all)
+  )
 )
 
 ;; Muc 190: them co vao truong flags (chuoi thu 4) cua XData GRO_METADATA tren cac entity
@@ -2367,7 +2384,7 @@
 ;; Buoc 6c2. Tra chuoi bao cao (ASCII) hoac nil.
 (defun gro--doi-text-khac-chu (kq-tk notes bang raw-tam-list / khungs ds-tam k ss i e ed lst net
                                n vao ds-bg s g geo bb tb cx cy bgs ens-bo bg-k tron cham ly ds-canh x
-                               lst2 hinhs khoi-k x2)
+                               lst2 hinhs khoi-k x2 pre)
   (setq khungs (if kq-tk (car kq-tk) nil)
         ds-tam nil
         n      0
@@ -2418,13 +2435,20 @@
       ;; ~160 chu = 2200 lan COM, buoc mat 9 giay. Nay hop bao + phep chu kich thuoc tinh MOT
       ;; lan moi chu, chi giu chu cham it nhat mot hinh cua tam khac chu: lst2 = ((e tb) ...)
       (setq hinhs (apply 'append (mapcar '(lambda (k) (mapcar '(lambda (s) (nth 2 s)) (nth 5 k))) ds-tam))
-            lst2  nil)
+            lst2  nil
+            pre   nil)
       (foreach e lst
         (if (and (setq tb (gro--bbox e))
                  (vl-some '(lambda (hb) (gro--bb-giao-p tb hb)) hinhs)
-                 (not (gro--text-kich-thuoc-p (bg--ent-codes e)))
             )
-          (setq lst2 (cons (list e tb) lst2))
+          (setq pre (cons (list e tb (bg--ent-codes e)) pre))
+        )
+      )
+      ;; muc 233: text kieu kich thuoc van doi neu thuoc day chu khac (A3 B3 C3 D3)
+      (foreach x (reverse pre)
+        (if (or (not (gro--text-kich-thuoc-p (caddr x)))
+                (gro--chu-trong-day-p (caddr x) (mapcar 'caddr pre)))
+          (setq lst2 (cons (list (car x) (cadr x)) lst2))
         )
       )
       (setq lst2 (reverse lst2))
