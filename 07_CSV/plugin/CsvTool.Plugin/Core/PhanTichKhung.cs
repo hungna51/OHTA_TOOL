@@ -175,7 +175,8 @@ namespace CsvTool.Core
             if (fnMtext.Count > 0)
             {
                 if (fnMtext.Count > 1) return (null, "Khung có nhiều hơn 1 F-name.");
-                string c = ThongTinTamParser.BoBocMtext(fnMtext[0].NoiDung ?? "");
+                // làm phẳng trước: đổi font giữa dòng ("M=SUS30}{\f...;4 No.1") không được lọt vào tên vật liệu
+                string c = ThongTinTamParser.BoBocMtext(ThongTinTamParser.MtextPhang(fnMtext[0].NoiDung ?? ""));
                 if (!new[] { "N=", "M=", "Q=", "T=", "Z=" }.Any(c.Contains)) return (null, LoiKhongFname);
                 if (c.Contains("\r")) c = c.Replace("\r", ",").Replace("\n", "").Replace("\\P", "");
                 else if (c.Contains("\n")) c = c.Replace("\n", ",").Replace("\\P", "");

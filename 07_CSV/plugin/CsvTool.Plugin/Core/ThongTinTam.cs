@@ -26,7 +26,7 @@ namespace CsvTool.Core
         {
             var kq = new List<string>();
             if (noiDung == null) return kq;
-            string txt = laMtext ? BoBocMtext(noiDung) : noiDung;
+            string txt = laMtext ? BoBocMtext(MtextPhang(noiDung)) : noiDung;
             foreach (string p in txt.Replace("\\P", "\n").Split('\n'))
                 kq.Add(p.Trim(' ', '\r'));
             return kq;

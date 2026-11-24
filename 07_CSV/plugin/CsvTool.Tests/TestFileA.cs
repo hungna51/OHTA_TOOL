@@ -39,6 +39,10 @@ namespace CsvTool.Tests
                  "{\\fGulim|b0|i0|c129|p0;N=131311-1\\PM=SUS304 No.1\\PT=4.0\\PV=25-3.7(90%%d)\\PZ=SUS-N2}");
             Kiem("MtextPhang: tach dong van dung", string.Join("|", ThongTinTamParser.TachDong(ThongTinTamParser.MtextPhang(mt), true)),
                  "N=131311-1|M=SUS304 No.1|T=4.0|V=25-3.7(90%%d)|Z=SUS-N2");
+            var kMt = new KhungTho { Text = new List<TextTho> { new TextTho { Lop = "2-F-NAME", LaMtext = true, NoiDung = mt.Replace("\\PZ", "\\PQ=5\\PZ") } },
+                                     Dim = new List<DimTho> { new DimTho { Lop = "1-XY", Co70 = 32, DoDai = 300 }, new DimTho { Lop = "1-XY", Co70 = 32, DoDai = 200 } } };
+            var tMt = PhanTichKhung.DocFnameDim(kMt, "1-XY", 8).Tam;
+            Kiem("Quet F-name MTEXT doi font giua dong: ten vat lieu dung", tMt == null ? "null" : tMt.M + "|" + tMt.T + "|" + tMt.Q, "SUS304 No.1|4.0|5");
             Kiem("MtextPhang: giu \\U+ va ngoac thoat", ThongTinTamParser.MtextPhang("M=SS400 \\U+7E1E\\{x\\}"), "M=SS400 \\U+7E1E\\{x\\}");
             var gc = new ThongTinTam(); gc.DuongBe.Add((100, 1));
             Kiem("In PDF: tam be la tam gia cong", PhanTichKhung.LaTamGiaCong(gc), true);
