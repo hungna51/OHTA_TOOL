@@ -257,7 +257,7 @@ namespace CsvTool.ViewModels
         public bool CheDo1 { get => _cheDo == 1; set { if (value) DoiCheDo(1); } }
         public bool CheDo2 { get => _cheDo == 2; set { if (value) DoiCheDo(2); } }
         public string MoTaCheDo => _cheDo == 2 ? "Vật liệu do khách cấp, tính 15% tiền vật liệu."
-                                 : _cheDo == 1 ? "Chỉ tính tiền gia công." : "Tính đủ vật liệu, cắt và gia công.";
+                                 : _cheDo == 1 ? "Khách cấp vật liệu đã cắt. Chỉ tính bẻ, vát, pitchi, cuộn, Sara, M-タップ và lỗ." : "Tính đủ vật liệu, cắt và gia công.";
 
         /// <summary>Chế độ của đơn áp cho mọi tấm, trừ tấm đã chọn riêng trên thẻ.</summary>
         private void DoiCheDo(int m)
