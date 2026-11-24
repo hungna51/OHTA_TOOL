@@ -402,6 +402,10 @@ namespace CsvTool.ViewModels
         {
             List<Autodesk_ObjectId> ids = toanBanVe ? QuetKhungCad.TatCaKhung(doc, CaiDat.LopKhungDung) : QuetKhungCad.ChonVung(doc, CaiDat.LopKhungDung);
             if (ids == null) { TrangThai = "Đã huỷ quét."; return; }
+            // OVERKILL trước khi đọc khung: handle chữ / dim đọc sau đó không trỏ vào đối tượng đã bị xoá
+            string ghiChuOk;
+            try { int xoa = QuetKhungCad.Overkill(doc, ids); ghiChuOk = xoa > 0 ? " OVERKILL bỏ " + xoa + " đối tượng trùng." : ""; }
+            catch (Exception ex) { ghiChuOk = " Không chạy được OVERKILL: " + ex.Message; }
             var (daChon, dimzin) = QuetKhungCad.Quet(doc, ids);
             // chọn nhầm vùng trống không được xoá danh sách và file data đang có
             if (!daChon.Any(k => PhanTichKhung.CoFname(k) && !PhanTichKhung.LaKhungChuThich(k)))
@@ -432,6 +436,7 @@ namespace CsvTool.ViewModels
             }
             var hinhKhung = hinh.ToDictionary(x => x.HandleKhung);
             bool daQuet = SauQuet(doc, daChon, dimzin, quet, loiMoi, hinhKhung);
+            TrangThai += ghiChuOk;
             if (daQuet) TaoNhanh(doc);
             CapNhatSoKhung(doc);
             BaoThietLap();

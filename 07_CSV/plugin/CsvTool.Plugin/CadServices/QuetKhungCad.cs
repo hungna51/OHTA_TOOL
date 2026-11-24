@@ -176,6 +176,29 @@ namespace CsvTool.CadServices
             return kq;
         }
 
+        /// <summary>
+        /// Chạy -OVERKILL (thiết lập mặc định) 1 lượt cho mọi đối tượng nằm trọn trong các khung đã chọn, trước khi quét.
+        /// Sửa bản vẽ S (Undo được). Trả về số đối tượng bị xoá / gộp.
+        /// </summary>
+        internal static int Overkill(Document doc, IEnumerable<ObjectId> khung)
+        {
+            Database db = doc.Database;
+            var ids = new List<ObjectId>();
+            using (doc.LockDocument())
+            using (Transaction tr = db.TransactionManager.StartTransaction())
+            {
+                var da = new HashSet<ObjectId>();
+                foreach (ObjectId k in khung)
+                    foreach (Entity e in TrongKhung(tr, db, k.Handle.Value, false))
+                        if (!khung.Contains(e.ObjectId) && da.Add(e.ObjectId)) ids.Add(e.ObjectId);
+                tr.Commit();
+            }
+            if (ids.Count < 2) return 0;
+            // -OVERKILL: chọn đối tượng, Enter kết thúc chọn, Enter = <Done> (ZWCAD 2026 và AutoCAD cùng lời nhắc)
+            doc.Editor.Command("_.-OVERKILL", SelectionSet.FromObjectIds(ids.ToArray()), "", "");
+            return ids.Count(id => id.IsErased);
+        }
+
         /// <summary>Mã DXF 70 lisp lọc: dim thẳng 32, dim phi 3, còn lại mã loại khác (bị bỏ qua).</summary>
         private static int MaDxf70(Dimension d) =>
             d is RotatedDimension ? 32 : d is DiametricDimension ? 3 : d is AlignedDimension ? 33 : 0;

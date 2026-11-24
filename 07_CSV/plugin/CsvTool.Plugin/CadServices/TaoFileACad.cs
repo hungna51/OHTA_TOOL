@@ -75,6 +75,16 @@ namespace CsvTool.CadServices
                                 else o.Dispose();
                             mt.Erase();
                         }
+                        // mọi đối tượng về ByLayer; đường bẻ (LINE 0-KAKOU nét DASHED*) giữ nguyên kiểu nét
+                        foreach (ObjectId id in kg.Cast<ObjectId>().ToList())
+                        {
+                            if (id.IsErased || !(trA.GetObject(id, OpenMode.ForWrite) is Entity e)) continue;
+                            e.ColorIndex = 256;
+                            e.LineWeight = LineWeight.ByLayer;
+                            bool laBe = e is Line && string.Equals(e.Layer, "0-KAKOU", StringComparison.OrdinalIgnoreCase) &&
+                                        (e.Linetype ?? "").StartsWith("DASHED", StringComparison.OrdinalIgnoreCase);
+                            if (!laBe) e.Linetype = "ByLayer";
+                        }
                         trA.Commit();
                     }
                     dbA.DxfOut(duong, 16, DwgVersion.Current);
