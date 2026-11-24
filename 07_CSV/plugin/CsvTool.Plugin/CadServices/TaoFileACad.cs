@@ -165,6 +165,7 @@ namespace CsvTool.CadServices
                         trA.Commit();
                     }
                     if (loi.Count > 0) return loi;
+                    dbA.Ltscale = db.Ltscale;   // nét đứt (đường bẻ) hiện giống bản vẽ S
                     dbA.DxfOut(duong, 16, DwgVersion.Current);
                 }
                 return loi;
