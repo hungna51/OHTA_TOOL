@@ -80,6 +80,7 @@ namespace CsvTool.Tests
                         {
                             Lop = e.Lop, Co70 = int.Parse(e.Lay(70).Trim()), DoDai = e.So(42),
                             Dimdec = DimdecCuaDim(e, dimdecKieu, dimdecChung),
+                            DX = e.So(14) - e.So(13), DY = e.So(24) - e.So(23),
                         });
                 }
                 khung.Add(k);

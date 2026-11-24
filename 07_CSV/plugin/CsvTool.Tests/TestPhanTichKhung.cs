@@ -37,11 +37,16 @@ namespace CsvTool.Tests
             var dao = PhanTichKhung.DocFnameDim(KhungMau(dim: new[] { Dim(160, 200), Dim(32, 300) }), "1-XY", 8);
             Kiem("HaiDimThang dao: X >= Y", dao.Tam == null ? "" : dao.Tam.X + "x" + dao.Tam.Y, "300x200");
 
-            var canh = PhanTichKhung.DocFnameDim(KhungMau(dim: new[] { Dim(33, 20), Dim(33, 1015.26, 2) }), "1-XY", 8);
+            DimTho Canh(double d, double dx, double dy, int dec = 0) { var x = Dim(33, d, dec); x.DX = dx; x.DY = dy; return x; }
+            var canh = PhanTichKhung.DocFnameDim(KhungMau(dim: new[] { Canh(20, 0, 20), Canh(1015.26, 1015.26, 0, 2) }), "1-XY", 8);
             Kiem("HaiDimAligned: X Y", canh.Tam == null ? canh.Loi : canh.Tam.X + "x" + canh.Tam.Y, "1015.26x20");
-            var uuTien = PhanTichKhung.DocFnameDim(KhungMau(dim: new[] { Dim(32, 300), Dim(32, 200), Dim(33, 50) }), "1-XY", 8);
+            var uuTien = PhanTichKhung.DocFnameDim(KhungMau(dim: new[] { Dim(32, 300), Dim(32, 200), Canh(50, 30, 40) }), "1-XY", 8);
             Kiem("Dim thang uu tien hon Aligned", uuTien.Tam == null ? uuTien.Loi : uuTien.Tam.X + "x" + uuTien.Tam.Y, "300x200");
-            var phiCanh = PhanTichKhung.DocFnameDim(KhungMau(dim: new[] { Dim(3, 90), Dim(33, 50) }), "1-XY", 8);
+            var phiCanh = PhanTichKhung.DocFnameDim(KhungMau(dim: new[] { Dim(3, 90), Canh(50, 50, 0) }), "1-XY", 8);
+            Kiem("HaiDimAligned xien: bao loi", Loi(KhungMau(dim: new[] { Canh(20, 0, 20), Canh(1015.26, 800, 625) })),
+                 "2 dim Aligned không theo phương X và Y (cần 1 dim ngang, 1 dim đứng).");
+            Kiem("HaiDimAligned cung ngang: bao loi", Loi(KhungMau(dim: new[] { Canh(20, 20, 0), Canh(1015.26, -1015.26, 0) })),
+                 "2 dim Aligned không theo phương X và Y (cần 1 dim ngang, 1 dim đứng).");
             Kiem("Dim phi khong bi 1 Aligned lan", phiCanh.Tam == null ? phiCanh.Loi : phiCanh.Tam.X + "x" + phiCanh.Tam.Y, "90x90");
 
             Kiem("KhongFname", Loi(KhungMau(text: new TextTho[0])), "Không tìm thấy F-name.");

@@ -8,8 +8,8 @@ namespace CsvTool.Core
     /// <summary>TEXT/MTEXT thô nằm trọn trong khung. NoiDung = chuỗi thô (MText.Contents / DXF 3+1).</summary>
     public sealed class TextTho { public string Lop, NoiDung; public bool LaMtext; }
 
-    /// <summary>DIMENSION thô: Co70 = mã DXF 70 (32/160 = dim thẳng, 33/161 = dim Aligned, 3/35/163 = dim phi), DoDai = mã 42.</summary>
-    public sealed class DimTho { public string Lop; public int Co70; public double DoDai; public int Dimdec; }
+    /// <summary>DIMENSION thô: Co70 = mã DXF 70 (32/160 = dim thẳng, 33/161 = dim Aligned, 3/35/163 = dim phi), DoDai = mã 42, DX / DY = hướng 2 điểm gióng (mã 13 → 14).</summary>
+    public sealed class DimTho { public string Lop; public int Co70; public double DoDai; public int Dimdec; public double DX, DY; }
 
     /// <summary>Một khung tấm cùng mọi TEXT/MTEXT/DIMENSION nằm trọn trong nó (theo thứ tự CAD trả về).</summary>
     public sealed class KhungTho
@@ -44,6 +44,7 @@ namespace CsvTool.Core
         public const string LopFname = "2-F-NAME";
 
         private const string LoiKhongFname = "Không tìm thấy F-name.";
+        private const string LoiAlignedXien = "2 dim Aligned không theo phương X và Y (cần 1 dim ngang, 1 dim đứng).";
         private const string LoiSoDim = "Sai số dim tổng (cần 2 dim, hoặc 1 dim phi).";
 
         public const string LoiChuaCoThongTin = "Chưa có thông tin tấm. Bấm Quét.";
@@ -182,7 +183,12 @@ namespace CsvTool.Core
             if (thang.Count == 0)   // bản vẽ chỉ dùng dim Aligned: đúng 2 cái mới là X, Y, để không lấn nhánh dim phi
             {
                 var canh = k.Dim.Where(d => CungLop(d.Lop, lopDim) && (d.Co70 == 33 || d.Co70 == 161)).ToList();
-                if (canh.Count == 2) thang = canh;
+                // Aligned đo theo đường nối 2 điểm, nên chỉ là X, Y khi 1 cái nằm ngang và 1 cái thẳng đứng (lệch tối đa ~0.1°)
+                bool ngang(DimTho d) => Math.Abs(d.DY) <= 0.002 * Math.Abs(d.DX);
+                bool dung(DimTho d) => Math.Abs(d.DX) <= 0.002 * Math.Abs(d.DY);
+                if (canh.Count == 2 && canh.Any(ngang) && canh.Any(dung)) thang = canh;
+                else if (canh.Count == 2 && !k.Dim.Any(d => CungLop(d.Lop, lopDim) && (d.Co70 == 163 || d.Co70 == 35 || d.Co70 == 3)))
+                    return (null, LoiAlignedXien);
             }
             string gx, gy;
             if (thang.Count > 0)

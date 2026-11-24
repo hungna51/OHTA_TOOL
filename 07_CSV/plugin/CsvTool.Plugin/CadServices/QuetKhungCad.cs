@@ -124,7 +124,9 @@ namespace CsvTool.CadServices
                     if (e is MText mt) du = new TextTho { Lop = mt.Layer, NoiDung = mt.Contents, LaMtext = true };
                     else if (e is DBText t) du = new TextTho { Lop = t.Layer, NoiDung = t.TextString, LaMtext = false };
                     else if (e is Dimension d)
-                        du = new DimTho { Lop = d.Layer, Co70 = MaDxf70(d), DoDai = d.Measurement, Dimdec = d.Dimdec };
+                        du = new DimTho { Lop = d.Layer, Co70 = MaDxf70(d), DoDai = d.Measurement, Dimdec = d.Dimdec,
+                            DX = d is AlignedDimension ad ? ad.XLine2Point.X - ad.XLine1Point.X : 0,
+                            DY = d is AlignedDimension ad2 ? ad2.XLine2Point.Y - ad2.XLine1Point.Y : 0 };
                     if (du == null) continue;
                     Extents3d hop;
                     try { hop = e.GeometricExtents; } catch { continue; }
