@@ -48,6 +48,12 @@ namespace CsvTool.Tests
             Kiem("SoDongFname: khop (khac thu tu, %%d = do)", PhanTichKhung.SoDongFname(fnS, new[] { "Z=SUS-N2", "N=131311-1", "M=SUS304 No.1", "T=4.0", "Q=5", "V=25-3.7(90°)" }), null);
             Kiem("SoDongFname: vat lieu tach 2 dong", PhanTichKhung.SoDongFname(fnS, new[] { "N=131311-1", "M=SUS304", "No.1", "T=4.0", "Q=5", "V=25-3.7(90°)", "Z=SUS-N2" }),
                  "thiếu \"M=SUS304 NO.1\", thừa \"M=SUS304\", \"NO.1\".");
+            Kiem("KiemTraDongFname: du dong", PhanTichKhung.KiemTraDongFname(fnS), null);
+            Kiem("KiemTraDongFname: SIMA + nhan 1 lan hop le", PhanTichKhung.KiemTraDongFname(new[] { "N=A", "M=SS400 縞板", "T=4.5", "Q=1", "Z=SS-SIMA", "裏から見た図", "内R3-発押し90°" }), null);
+            Kiem("KiemTraDongFname: chu thua 23213", PhanTichKhung.KiemTraDongFname(fnS.Concat(new[] { "23213" })),
+                 "F-name có 7 dòng, cần 6: dòng thừa \"23213\". Xoá chữ thừa trên layer 2-F-NAME trong khung.");
+            Kiem("KiemTraDongFname: thieu Z, 2 dong Q", PhanTichKhung.KiemTraDongFname(new[] { "N=A", "M=SS400", "T=3.2", "Q=1", "Q=2" }),
+                 "F-name có 5 dòng: 2 dòng Q=, thiếu dòng Z=. Xoá chữ thừa trên layer 2-F-NAME trong khung.");
             var gc = new ThongTinTam(); gc.DuongBe.Add((100, 1));
             Kiem("In PDF: tam be la tam gia cong", PhanTichKhung.LaTamGiaCong(gc), true);
         }

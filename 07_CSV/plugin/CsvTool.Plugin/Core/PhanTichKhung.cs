@@ -131,6 +131,27 @@ namespace CsvTool.Core
                       : (t.NoiDung ?? "").StartsWith("N=") ? 1 : 0);
 
         /// <summary>
+        /// Số dòng F-name của 1 tấm: N, M, T, Q, Z mỗi trường đúng 1 dòng, các dòng còn lại phải là dòng F-name hợp lệ
+        /// theo tab Fname (V=, V1..3=, U=, シマ目…, 裏から見た図, 内R…, …発押し). Đúng → null, sai → lời báo.
+        /// </summary>
+        public static string KiemTraDongFname(IEnumerable<string> dong)
+        {
+            var ds = dong.Select(x => (x ?? "").Trim()).Where(x => x != "").ToList();
+            var loi = new List<string>();
+            foreach (string k in new[] { "N=", "M=", "T=", "Q=", "Z=" })
+            {
+                int n = ds.Count(x => x.StartsWith(k, StringComparison.OrdinalIgnoreCase));
+                if (n == 0) loi.Add("thiếu dòng " + k);
+                else if (n > 1) loi.Add(n + " dòng " + k);
+            }
+            var la = ds.Where(x => !OhtaTool.Plugin.Core.FnameParser.IsFnameComponentLine(x)).ToList();
+            if (la.Count > 0) loi.Add("dòng thừa \"" + string.Join("\", \"", la) + "\"");
+            if (loi.Count == 0) return null;
+            int can = ds.Count - la.Count;
+            return "F-name có " + ds.Count + " dòng" + (la.Count > 0 ? ", cần " + can : "") + ": " + string.Join(", ", loi) + ". Xoá chữ thừa trên layer " + LopFname + " trong khung.";
+        }
+
+        /// <summary>
         /// So các dòng F-name trong file A với F-name trên bản vẽ S (không kể thứ tự, %%d = °, \U+ giải mã).
         /// Khớp → null, lệch → "thiếu ..., thừa ...".
         /// </summary>

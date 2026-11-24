@@ -865,7 +865,8 @@ namespace CsvTool.ViewModels
             var trung = new HashSet<string>(tam.GroupBy(d => d.Tam.N).Where(g => g.Count() > 1).Select(g => g.Key));
             foreach (DongTam d in tam)
             {
-                d.LoiKhac = trung.Contains(d.Tam.N) ? "Tên tấm trùng: " + d.Tam.N : PhanTichKhung.KiemTra(d.Tam.Tt);
+                d.LoiKhac = trung.Contains(d.Tam.N) ? "Tên tấm trùng: " + d.Tam.N
+                          : PhanTichKhung.KiemTraDongFname(PhanTichKhung.DongFname(d.Khung)) ?? PhanTichKhung.KiemTra(d.Tam.Tt);
                 d.Loi = NoiLoi(d.LoiQuet, d.LoiKhac);
             }
             GomLoi();
