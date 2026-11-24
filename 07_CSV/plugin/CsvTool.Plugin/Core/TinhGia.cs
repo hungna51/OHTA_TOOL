@@ -124,10 +124,8 @@ namespace CsvTool.Core
             double tienVat = v.VatMm / 1000 * (g.GiaVat != 0 ? g.GiaVat : 1800);
             double giaCong = tienLo + tienTappu + tienSara + tienBe + TienPitchi(v, b) + TienCuon(v, b) + tienVat;
 
-            double tong = tienVL + tienCat + giaCong;
-            double vlNhap = kl * donGia, tiLe = tong > 0 ? vlNhap / tong : 0;
             bool laInox = hoa.StartsWith("SUS");
-            double tho = !laInox && tiLe > 0.55 ? vlNhap * (20.0 / 11) : laInox && tiLe > 0.68 ? vlNhap * (25.0 / 17) : tong;
+            double tho = LuatTiTrong(kl * donGia, tienVL + tienCat + giaCong, laInox);
             var kq = new KetQuaGia { KlThucTe = kl, KlThuong = kl, TienVL = tienVL, TienCat = tienCat, TongGiaCong = giaCong, Gia1Tam = Tron10(tho) };
 
             if (v.CheDoTinh == 0 && !coSus && b.DacBiet.TryGetValue(v.CongTy ?? "", out CongTyDacBiet db))
@@ -148,9 +146,9 @@ namespace CsvTool.Core
             }
             else if (v.TienVLTay != null)
             {
-                // đã tự tính vật liệu: không áp hệ số, luật tỉ trọng hay giá theo kg của công ty
+                // đã tự tính vật liệu: không áp hệ số hay giá theo kg của công ty, vẫn áp luật tỉ trọng 55% / 68%
                 kq.TienVL = v.TienVLTay.Value; kq.KlThucTe = kl; kq.DonGiaKg = 0; kq.TienCat = tienCat; kq.TongGiaCong = giaCong;
-                kq.Gia1Tam = Tron10(kq.TienVL + tienCat + giaCong);
+                kq.Gia1Tam = Tron10(LuatTiTrong(kq.TienVL, kq.TienVL + tienCat + giaCong, laInox));
             }
             else if (v.CheDoTinh == 2)
             {
@@ -160,6 +158,13 @@ namespace CsvTool.Core
             if (v.LamTron250 && kq.Gia1Tam < 250) kq.Gia1Tam = 250;
             kq.AllIn = kq.Gia1Tam * v.SoLuong;
             return (kq, null);
+        }
+
+        /// <summary>Vật liệu thô quá 55% tổng (không inox) / 68% (inox) thì giá = vật liệu thô ÷ 0,55 / 0,68.</summary>
+        static double LuatTiTrong(double vlTho, double tong, bool laInox)
+        {
+            double tiLe = tong > 0 ? vlTho / tong : 0;
+            return !laInox && tiLe > 0.55 ? vlTho * (20.0 / 11) : laInox && tiLe > 0.68 ? vlTho * (25.0 / 17) : tong;
         }
 
         /// <summary>Tấm gia công (khác tấm đơn): có bẻ, pitchi, tappu, sara, cuộn hoặc vát. Lỗ không tính.</summary>

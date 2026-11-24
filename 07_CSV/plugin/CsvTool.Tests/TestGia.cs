@@ -175,13 +175,14 @@ namespace CsvTool.Tests
                 var cb = TinhGia.ApDung(new[] { x }, new GiaDon { CongTy = congTy }, b);
                 return cb.ContainsKey("V") ? "thieu" : x.Tt.GiaBaoGia;
             }
-            Kiem("VL tay: gia = VL + cat (1000 + 16.8)", GiaVlTay("SS400", "6.0", "0", "TH", "1000"), "1020");
-            Kiem("VL tay: VL khach cap khong nhan 0.15", GiaVlTay("SS400", "6.0", "2", "TH", "1000"), "1020");
-            Kiem("VL tay: cong ty theo kg khong de", GiaVlTay("SS400", "6.0", "0", "DB1", "1000"), "1020");
+            Kiem("VL tay: VL qua 55% -> VL x 20/11 (1000 / 1016.8)", GiaVlTay("SS400", "6.0", "0", "TH", "1000"), "1820");
+            Kiem("VL tay: VL duoi 55% -> VL + cat (10 + 16.8)", GiaVlTay("SS400", "6.0", "0", "TH", "10"), "30");
+            Kiem("VL tay: VL khach cap khong nhan 0.15", GiaVlTay("SS400", "6.0", "2", "TH", "1000"), "1820");
+            Kiem("VL tay: cong ty theo kg khong de", GiaVlTay("SS400", "6.0", "0", "DB1", "1000"), "1820");
             Kiem("VL tay: chi gia cong lay dung so nhap, khong cat", GiaVlTay("SS400", "6.0", "1", "TH", "1000"), "1000");
-            Kiem("VL tay: bang gia = 0 van tinh duoc", GiaVlTay("SS400", "12.0", "0", "TH", "500"), "540");
+            Kiem("VL tay: bang gia = 0 van tinh duoc", GiaVlTay("SS400", "12.0", "0", "TH", "500"), "910");
             Kiem("VL tay: khong co trong database van thieu", GiaVlTay("ZAM", "3.0", "0", "TH", "500"), "thieu");
-            Kiem("VL tay: de trong tinh nhu thuong", GiaVlTay("SS400", "6.0", "0", "TH", "") != "1020", true);
+            Kiem("VL tay: de trong tinh nhu thuong", GiaVlTay("SS400", "6.0", "0", "TH", "") != "1820", true);
             var dHien = new GiaDon { CongTy = "TH" };
             var tHien = new TamXuat { N = "H", M = "SS400", T = "6.0", Q = "1", X = "100", Y = "100", Tt = new ThongTinTam { CheDoTinh = "0", GiaBaoGia = "9999" } };
             TinhGia.ApDung(new[] { tHien }, dHien, b);
