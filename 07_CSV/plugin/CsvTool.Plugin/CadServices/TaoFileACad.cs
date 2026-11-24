@@ -68,6 +68,7 @@ namespace CsvTool.CadServices
                             var e = (Entity)trA.GetObject(map[f.Key].Value, OpenMode.ForWrite);
                             e.TransformBy(f.Value);
                             if (!(e is MText mt)) continue;
+                            mt.Contents = ThongTinTamParser.MtextPhang(mt.Contents);   // tách đúng 1 TEXT mỗi dòng
                             var manh = new DBObjectCollection();
                             mt.Explode(manh);
                             foreach (DBObject o in manh)

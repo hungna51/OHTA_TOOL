@@ -32,6 +32,39 @@ namespace CsvTool.Core
             return kq;
         }
 
+        /// <summary>
+        /// Nội dung MTEXT đồng một định dạng: bỏ mọi mã giữa dòng (font, màu, cao chữ, gạch chân…) và ngoặc nhóm,
+        /// chỉ giữ font đầu tiên cho cả khối (chữ Nhật vẫn hiện). Tách MTEXT đã làm phẳng → mỗi dòng đúng 1 TEXT
+        /// (trước đó "M=SUS30" + "4 No.1" bị tách đôi chỗ đổi định dạng).
+        /// </summary>
+        public static string MtextPhang(string noiDung)
+        {
+            string s = noiDung ?? "", font = null;
+            var sb = new StringBuilder();
+            for (int i = 0; i < s.Length; i++)
+            {
+                char c = s[i];
+                if (c == '{' || c == '}') continue;
+                if (c != '\\' || i + 1 >= s.Length) { sb.Append(c); continue; }
+                char n = s[i + 1];
+                if (n == 'P') { sb.Append("\\P"); i++; }
+                else if (n == '\\' || n == '{' || n == '}') { sb.Append('\\').Append(n); i++; }
+                else if (n == '~') { sb.Append(' '); i++; }
+                else if (n == 'U' || n == 'u') sb.Append(c);                    // \U+XXXX giữ nguyên để CAD giải mã
+                else if ("LlOoKkNn".IndexOf(n) >= 0) i++;
+                else
+                {
+                    int ket = s.IndexOf(';', i);
+                    if (ket < 0) { i++; continue; }
+                    string ma = s.Substring(i, ket - i + 1);
+                    if (n == 'S') sb.Append(ma.Substring(2, ma.Length - 3).Replace('^', '/').Replace('#', '/'));   // phân số xếp chồng
+                    else if ((n == 'f' || n == 'F') && font == null) font = ma;
+                    i = ket;
+                }
+            }
+            return font == null ? sb.ToString() : "{" + font + sb + "}";
+        }
+
         /// <summary>CSV--mtext-plain: \P thành xuống dòng, bỏ khối "{\...;" đầu và "}" cuối.</summary>
         public static string BoBocMtext(string txt)
         {

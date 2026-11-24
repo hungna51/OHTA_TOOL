@@ -34,6 +34,12 @@ namespace CsvTool.Tests
             var loiPhu = PhanTichHinh.NetPhuNgoaiHinh(d, tam, 0.01);
             Kiem("NetPhu: ケガキ ngoai hinh chinh -> loi", loiPhu.Count + "|" + loiPhu[0].LaLoi + "|" + loiPhu[0].NoiDung.StartsWith("Nét 3-KEGAKI (ケガキ)"), "1|True|True");
 
+            string mt = "{\\fGulim|b0|i0|c129|p0;N=131311-1\\PM=SUS30}{\\fArial|b0|i0|c0|p34;\\C3;4 No.1}\\P\\H2.5x;T=4.0\\PV=25-3.7(90%%d)\\PZ=SUS-N2";
+            Kiem("MtextPhang: bo ma giua dong, giu font dau", ThongTinTamParser.MtextPhang(mt),
+                 "{\\fGulim|b0|i0|c129|p0;N=131311-1\\PM=SUS304 No.1\\PT=4.0\\PV=25-3.7(90%%d)\\PZ=SUS-N2}");
+            Kiem("MtextPhang: tach dong van dung", string.Join("|", ThongTinTamParser.TachDong(ThongTinTamParser.MtextPhang(mt), true)),
+                 "N=131311-1|M=SUS304 No.1|T=4.0|V=25-3.7(90%%d)|Z=SUS-N2");
+            Kiem("MtextPhang: giu \\U+ va ngoac thoat", ThongTinTamParser.MtextPhang("M=SS400 \\U+7E1E\\{x\\}"), "M=SS400 \\U+7E1E\\{x\\}");
             var gc = new ThongTinTam(); gc.DuongBe.Add((100, 1));
             Kiem("In PDF: tam be la tam gia cong", PhanTichKhung.LaTamGiaCong(gc), true);
         }
