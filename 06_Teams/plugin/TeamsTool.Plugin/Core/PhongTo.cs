@@ -20,6 +20,7 @@ namespace TeamsTool.Core
 @"Bạn là kỹ sư triển khai kim loại tấm của OHTA. Đầu vào: ẢNH PHÓNG TO vùng MỘT tấm cắt từ bản vẽ khách (có thể lẫn phần hình khác ở mép — chỉ xét tấm được mô tả) và dữ liệu lượt đọc cả trang (đọc trên ảnh nhỏ nên CÓ THỂ SAI: nhầm số, sót lỗ, sót kích thước).
 Đọc KỸ ảnh và trả lại bản ĐÚNG của các ô dưới đây (giữ đúng giá trị đầu vào nếu ảnh không cho thấy khác):
 - M, T, Q, kich_thuoc (""rộng x dài""), kieu_td (phang / be / lam_tay), td_x, td_y (LUÔN điền — tấm phẳng: td_x = chiều theo x / ngang, td_y = chiều theo y / dọc, vd ""635"" và ""460""; tiết diện dạng chữ: số = đoạn mm xen chỗ uốn b<góc> / a<góc>r<R> / c<cung>r<R> / p<góc>), mo_ta (mô tả chi tiết hình đủ để vẽ lại).
+- ke_gaki, dinh, slit, duong_tam: trả dạng CHUỖI chứa mảng JSON như mô tả dưới (vd dinh ""[[0,0],[10,0],[10,5]]""); không có → ""[]"".
 - MẪU CHO TẤM PHẲNG: tấm phẳng (không bẻ / cuộn) hình chữ nhật → 4canh; MỌI hình phẳng khác (cung, cạnh xiên, góc cắt, tai, tròn…) → da_giac với ô dinh — KHÔNG chọn chua_co và không dùng mẫu riêng (kể cả mẫu thử) cho tấm phẳng mà da_giac vẽ được.
 - CHỌN MẪU VẼ: bien_dang = tên đúng MỘT mẫu trong ""Thư viện biên dạng"" (cuối phần người dùng, [nhóm] tam_don / tam_be / tam_cuon…) khớp hình TRẢI PHẲNG; làm tay (lam_tay) → rỗng; không mẫu nào khớp → ""chua_co"" và mo_ta_bien_dang = mô tả hình trải phẳng (viền, góc cắt, đường bẻ, lỗ / rãnh đặc biệt) đủ để viết mẫu vẽ mới (còn lại rỗng). tham_so: thông số riêng của mẫu đã chọn dạng ""r1=45; r2=38"" — đúng tên thông số của mẫu, số đọc từ ảnh; mẫu không có thông số riêng → rỗng; bắt buộc mà không đọc được → hỏi trong van_de. bien_dang người dùng đã sửa → giữ nguyên.
 - lo: mỗi nhóm lỗ {d, so_luong, taro, kieu ("""" tròn / ""sara D"" / ""dai RxL G"" / ""khoa D d k G nho"" = lỗ khoá / 変形孔 (hình ở chi tiết phóng A, B…): Ø lớn D + Ø nhỏ d, k = khoảng cách HAI TÂM; vi_tri = TÂM MÀ KHÁCH DIM TỚI (chuỗi dim trên hình chính), chữ cuối nho / lon = tâm đó là của Ø nhỏ hay Ø lớn; G = hướng từ tâm đó sang tâm kia (0 phải, 90 lên, 180 trái, 270 xuống) — MỌI lỗ cùng hướng như hình chi tiết. Vd chi tiết A ghi mép tấm → tâm Ø7 = 10, tâm Ø7 → tâm Ø12 = 6, Ø12 bên phải → ""khoa 12 7 6 0 nho"", vi_tri x = 10.), ghi_chu, cach_duong_be, vi_tri [[x, y], …] = TÂM từng lỗ trên hình TRẢI PHẲNG, gốc góc trái dưới của tấm, tính từ kích thước ghi trên bản vẽ (vd ""100P×5=500"" = 6 lỗ cách đều 100), noi_tam: true nếu bản vẽ khách VẼ đường tâm (nét chấm gạch) nối các lỗ của nhóm (vd khung chữ nhật qua tâm các lỗ chu vi), không vẽ → false.}.
@@ -43,7 +44,7 @@ Không bịa: không đọc được thì giữ đầu vào và đưa vào khong
             JsonObject s = Kieu("string"), n = Kieu("number"), cap = Mang(Mang(n));
             return Obj(("M", s), ("T", s), ("Q", s), ("kich_thuoc", s), ("kieu_td", s), ("td_x", s), ("td_y", s), ("bien_dang", s), ("mo_ta_bien_dang", s), ("tham_so", s), ("goc", s), ("khoet", s), ("mo_ta", s),
                        ("lo", Mang(Obj(("d", n), ("so_luong", n), ("taro", s), ("kieu", s), ("ghi_chu", s), ("cach_duong_be", n), ("vi_tri", cap), ("noi_tam", Kieu("boolean"))))),
-                       ("ke_gaki", cap), ("dim_khach", Mang(Obj(("loai", s), ("gia_tri", n), ("tu", n), ("den", n), ("tai", n), ("diem", cap)))), ("dinh", cap), ("slit", cap), ("duong_tam", cap), ("chua_chac", Mang(Obj(("o", s), ("so", n), ("noi_dung", s)))), ("mau_thuan", Mang(s)),
+                       ("ke_gaki", s), ("dim_khach", Mang(Obj(("loai", s), ("gia_tri", n), ("tu", n), ("den", n), ("tai", n), ("diem", cap)))), ("dinh", s), ("slit", s), ("duong_tam", s), ("chua_chac", Mang(Obj(("o", s), ("so", n), ("noi_dung", s)))), ("mau_thuan", Mang(s)),
                        ("khong_chac", Mang(s)), ("van_de", Mang(PhongKiemTra.SchemaVanDe())), ("bo_nghi_van", Mang(n)));
         }
 
@@ -144,6 +145,14 @@ Không bịa: không đọc được thì giữ đầu vào và đưa vào khong
         /// Áp kết quả phóng to vào tấm: ô người đã sửa giữ nguyên; ô chữ rỗng / mảng rỗng của AI không xoá dữ liệu cũ.
         /// Trả tên các ô đã đổi.
         /// </summary>
+        /// <summary>ke_gaki / dinh / slit / duong_tam: schema bước 2 để CHUỖI JSON (mảng số lồng nhau làm grammar structured output quá lớn — lỗi API 25/11); vẫn nhận mảng.</summary>
+        internal static List<object> MangHoacChuoi(object v)
+        {
+            if (v is List<object> l) return l;
+            if (!(v is string s) || s.Trim().Length == 0) return null;
+            try { return JsonLite.Parse(s) as List<object>; } catch (Exception) { return null; }
+        }
+
         public static List<string> ApDung(TamAi t, JsonObject nd)
         {
             var doi = new List<string>();
@@ -164,22 +173,22 @@ Không bịa: không đọc được thì giữ đầu vào và đưa vào khong
                 string j = JsonLite.Serialize(lo);
                 if (j != t.LoJson) { t.LoJson = j; doi.Add("lo"); }
             }
-            if (!t.DaSua.Contains("ke_gaki") && nd.Get("ke_gaki") is List<object> kg && kg.Count > 0)
+            if (!t.DaSua.Contains("ke_gaki") && MangHoacChuoi(nd.Get("ke_gaki")) is List<object> kg && kg.Count > 0)
             {
                 string j = JsonLite.Serialize(PhongDocBanVe.Diem(kg));
                 if (j != t.KeGakiJson) { t.KeGakiJson = j; doi.Add("ke_gaki"); }
             }
-            if (!t.DaSua.Contains("dinh") && nd.Get("dinh") is List<object> dn && dn.Count > 0)
+            if (!t.DaSua.Contains("dinh") && MangHoacChuoi(nd.Get("dinh")) is List<object> dn && dn.Count > 0)
             {
                 string j = JsonLite.Serialize(dn);
                 if (j != t.DinhJson) { t.DinhJson = j; doi.Add("dinh"); }
             }
-            if (!t.DaSua.Contains("slit") && nd.Get("slit") is List<object> sl && sl.Count > 0)
+            if (!t.DaSua.Contains("slit") && MangHoacChuoi(nd.Get("slit")) is List<object> sl && sl.Count > 0)
             {
                 string j = JsonLite.Serialize(sl);
                 if (j != t.SlitJson) { t.SlitJson = j; doi.Add("slit"); }
             }
-            if (!t.DaSua.Contains("duong_tam") && nd.Get("duong_tam") is List<object> dt && dt.Count > 0)
+            if (!t.DaSua.Contains("duong_tam") && MangHoacChuoi(nd.Get("duong_tam")) is List<object> dt && dt.Count > 0)
             {
                 string j = JsonLite.Serialize(dt);
                 if (j != t.DuongTamJson) { t.DuongTamJson = j; doi.Add("duong_tam"); }
