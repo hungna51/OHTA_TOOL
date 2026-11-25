@@ -27,11 +27,16 @@ Xong khi: mọi nét và mọi chữ trên ảnh đều thuộc một chi tiết
 Dùng công cụ hỏi (AskUserQuestion, ≤ 4 câu mỗi lần, hỏi tiếp nếu còn). Mỗi câu nêu đúng chỗ mơ hồ + cách đọc mình nghiêng về (lựa chọn đầu, ghi "(Đề xuất)") + các cách đọc khác; luôn kèm lựa chọn **"Chưa rõ — để AI tự suy (tô vàng)"**.
 Xong khi: mỗi chi tiết **không rõ** đã có câu trả lời, hoặc người dùng chọn để AI tự suy.
 
-### 4. Viết khối mô tả
-Dạng khối code để người dùng chép nguyên. Tiếng Việt, mỗi chi tiết một dòng, theo thứ tự: biên dạng + vật liệu → lỗ → khoét / góc → ケガキ → スリット → dim cần có → ghi chú đơn (nói rõ "chỉ ghi chú, không phải thông số hình").
-- Chi tiết **chắc / tính được / đã trả lời**: ghi số và, khi có ô dữ liệu, ghi luôn giá trị ô (mục *Ô dữ liệu* dưới) — AI chỉ chép, không tự tính.
-- Chi tiết người dùng để AI tự suy: ghi "chưa rõ <cái gì> → vẽ chỗ hợp lý nhất, ghi chua_chac" để phần đó tô vàng.
-- Thuật ngữ Nhật dễ đọc sai thì ghi kèm nghĩa ngay trong dòng (vd "中抜きなし = chỉ khắc, KHÔNG cắt").
+### 4. Viết khối mô tả — NGẮN, chỉ phần AI dễ sai
+AI đọc được ảnh, nên khối chỉ ghi chỗ **khó đọc, đặc biệt, hoặc vừa được người dùng trả lời**. Chi tiết in rõ, số rõ ràng (Ø ngoài, kích thước tổng, lỗ thường có dim đủ) → bỏ, không ghi. Mỗi dòng một ý, gọn như ghi chú tay.
+Dòng đáng ghi:
+- Số nhoè / đọc được hai cách → số đúng.
+- Chi tiết phải **tính** (dấu cách đều quanh tâm, đỉnh qua dim xiên…) → ghi luôn giá trị ô (mục *Ô dữ liệu*) để AI chép, không tự tính.
+- Thuật ngữ dễ hiểu sai → nghĩa ngắn (vd "中抜きなし = chỉ khắc, không cắt").
+- Câu trả lời của người dùng ở bước 3.
+- Chỗ để AI tự suy → "chưa rõ <cái gì> → tự suy, ghi chua_chac" (tô vàng).
+- Chữ trên hình dễ bị hiểu là thông số mà không phải (số lượng khoảng, giá, hạn giao, nét người dùng viết nhầm) → "bỏ qua …".
+Dạng khối code để người dùng chép nguyên.
 
 ### 5. Tự kiểm khối trước khi trả
 - Khung bao: đỉnh viền bắt đầu từ (0, 0), rộng × cao khớp kích thước tổng.
