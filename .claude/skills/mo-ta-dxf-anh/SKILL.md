@@ -8,7 +8,7 @@ description: >
 
 # Mô tả bản vẽ cho tab DXF ảnh
 
-Đầu ra là một khối chữ người dùng dán vào ô **Thông tin bổ sung** (tab DXF ảnh trong CAD, hoặc ô ghi chú cửa sổ Thử nhanh của OhtaTeams). AI đọc ảnh làm theo khối này — **ghi chú thắng hình**, khác hình thì AI báo "⚠ Ghi chú khác hình". Nên mọi số trong khối phải là số đúng: chỗ còn mơ hồ phải hỏi người dùng **trước** khi viết khối.
+Đầu ra là một khối chữ ngắn người dùng dán vào ô **Thông tin bổ sung** (tab DXF ảnh trong CAD, hoặc ô ghi chú cửa sổ Thử nhanh của OhtaTeams). Khối **chỉ** gồm các thông tin chưa rõ trên ảnh — đã được người dùng xác nhận, hoặc còn phải hỏi khách — để AI vẽ không **đoán mò**. Phần ảnh đã rõ AI tự đọc, không chép lại. Ghi chú thắng hình: khác hình thì AI báo "⚠ Ghi chú khác hình".
 
 ## Các bước
 
@@ -24,18 +24,13 @@ Xong khi: mọi nét và mọi chữ trên ảnh đều thuộc một chi tiết
 Đọc hình theo số, không theo tỉ lệ — bản vẽ tay hầu như không đúng tỉ lệ.
 
 ### 3. Hỏi người dùng mọi chỗ **không rõ** — trước khi viết khối
-Dùng công cụ hỏi (AskUserQuestion, ≤ 4 câu mỗi lần, hỏi tiếp nếu còn). Mỗi câu nêu đúng chỗ mơ hồ + cách đọc mình nghiêng về (lựa chọn đầu, ghi "(Đề xuất)") + các cách đọc khác; luôn kèm lựa chọn **"Chưa rõ — để AI tự suy (tô vàng)"**.
-Xong khi: mỗi chi tiết **không rõ** đã có câu trả lời, hoặc người dùng chọn để AI tự suy.
+Dùng công cụ hỏi (AskUserQuestion, ≤ 4 câu mỗi lần, hỏi tiếp nếu còn). Mỗi câu nêu đúng chỗ mơ hồ + cách đọc mình nghiêng về (lựa chọn đầu, ghi "(Đề xuất)") + các cách đọc khác; luôn kèm lựa chọn **"Chưa rõ — hỏi khách"**.
+Xong khi: mỗi chi tiết **không rõ** đã được xác nhận, hoặc người dùng chọn hỏi khách.
 
-### 4. Viết khối mô tả — NGẮN, chỉ phần AI dễ sai
-AI đọc được ảnh, nên khối chỉ ghi chỗ **khó đọc, đặc biệt, hoặc vừa được người dùng trả lời**. Chi tiết in rõ, số rõ ràng (Ø ngoài, kích thước tổng, lỗ thường có dim đủ) → bỏ, không ghi. Mỗi dòng một ý, gọn như ghi chú tay.
-Dòng đáng ghi:
-- Số nhoè / đọc được hai cách → số đúng.
-- Chi tiết phải **tính** (dấu cách đều quanh tâm, đỉnh qua dim xiên…) → ghi luôn giá trị ô (mục *Ô dữ liệu*) để AI chép, không tự tính.
-- Thuật ngữ dễ hiểu sai → nghĩa ngắn (vd "中抜きなし = chỉ khắc, không cắt").
-- Câu trả lời của người dùng ở bước 3.
-- Chỗ để AI tự suy → "chưa rõ <cái gì> → tự suy, ghi chua_chac" (tô vàng).
-- Chữ trên hình dễ bị hiểu là thông số mà không phải (số lượng khoảng, giá, hạn giao, nét người dùng viết nhầm) → "bỏ qua …".
+### 4. Viết khối mô tả — chỉ các chỗ chưa rõ
+Mỗi dòng một chỗ chưa rõ, gọn như ghi chú tay. Chi tiết **chắc** (in rõ, số rõ) → bỏ, không ghi. Hai loại dòng:
+- **Đã xác nhận**: `<chi tiết>: <giá trị đúng>` — số nhoè / đọc hai cách, nét cắt hay khắc, vị trí chỉ có mũi tên, nghĩa thuật ngữ dễ hiểu sai (vd "中抜きなし = chỉ khắc, không cắt"), chữ trên hình KHÔNG phải thông số ("bỏ qua số 90 — viết nhầm"). Chi tiết **tính được** mà AI dễ tính sai (dấu cách đều quanh tâm, đỉnh qua dim xiên…) → ghi luôn giá trị ô (mục *Ô dữ liệu*) để AI chép.
+- **Chưa rõ — hỏi khách**: `CHƯA RÕ <chi tiết>: <điều chưa biết> — không đoán, ghi chua_chac + hỏi khách`. AI vẽ chỗ hợp lý nhất, phần đó tô VÀNG và vào danh sách "Cần xác nhận" — không lặng lẽ chọn một số.
 Dạng khối code để người dùng chép nguyên.
 
 ### 5. Tự kiểm khối trước khi trả
