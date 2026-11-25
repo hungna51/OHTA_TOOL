@@ -177,26 +177,37 @@ namespace CsvTool.CadServices
         }
 
         /// <summary>
-        /// Chạy -OVERKILL (thiết lập mặc định) 1 lượt cho mọi đối tượng nằm trọn trong các khung đã chọn, trước khi quét.
+        /// Chạy -OVERKILL 1 lượt cho mọi đối tượng nằm trọn trong các khung đã chọn, trước khi quét.
+        /// Chạy riêng từng nhóm cùng layer + kiểu nét: thiết lập OVERKILL lưu trên máy có thể bỏ qua layer
+        /// (ZWCAD mặc định bỏ qua mọi thuộc tính), khi đó nét 4-SHT / 3-KEGAKI trùng nét 0-KAKOU bị xoá mất.
         /// Sửa bản vẽ S (Undo được). Trả về số đối tượng bị xoá / gộp.
         /// </summary>
         internal static int Overkill(Document doc, IEnumerable<ObjectId> khung)
         {
             Database db = doc.Database;
-            var ids = new List<ObjectId>();
+            var nhom = new Dictionary<string, List<ObjectId>>(StringComparer.OrdinalIgnoreCase);
             using (doc.LockDocument())
             using (Transaction tr = db.TransactionManager.StartTransaction())
             {
                 var da = new HashSet<ObjectId>();
                 foreach (ObjectId k in khung)
                     foreach (Entity e in TrongKhung(tr, db, k.Handle.Value, false))
-                        if (!khung.Contains(e.ObjectId) && da.Add(e.ObjectId)) ids.Add(e.ObjectId);
+                    {
+                        if (khung.Contains(e.ObjectId) || !da.Add(e.ObjectId)) continue;
+                        string khoa = e.Layer + "|" + e.Linetype;
+                        if (!nhom.TryGetValue(khoa, out var ds)) nhom[khoa] = ds = new List<ObjectId>();
+                        ds.Add(e.ObjectId);
+                    }
                 tr.Commit();
             }
-            if (ids.Count < 2) return 0;
-            // -OVERKILL: chọn đối tượng, Enter kết thúc chọn, Enter = <Done> (ZWCAD 2026 và AutoCAD cùng lời nhắc)
-            doc.Editor.Command("_.-OVERKILL", SelectionSet.FromObjectIds(ids.ToArray()), "", "");
-            return ids.Count(id => id.IsErased);
+            int xoa = 0;
+            foreach (List<ObjectId> ids in nhom.Values.Where(x => x.Count > 1))
+            {
+                // -OVERKILL: chọn đối tượng, Enter kết thúc chọn, Enter = <Done> (ZWCAD 2026 và AutoCAD cùng lời nhắc)
+                doc.Editor.Command("_.-OVERKILL", SelectionSet.FromObjectIds(ids.ToArray()), "", "");
+                xoa += ids.Count(id => id.IsErased);
+            }
+            return xoa;
         }
 
         /// <summary>Mã DXF 70 lisp lọc: dim thẳng 32, dim phi 3, còn lại mã loại khác (bị bỏ qua).</summary>
