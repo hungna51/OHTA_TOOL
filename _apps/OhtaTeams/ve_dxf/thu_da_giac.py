@@ -63,19 +63,20 @@ HINH = [
      "vang": 4,
      "dim_khach": [ng(0, 100, 420), ng(100, 355, 420), ng(355, 455, 420), ng(0, 120, 185), ng(120, 360, 185), ng(360, 455, 185),
                    ng(0, 50, -30), doc(35, 335, 420), doc(0, 65, 230), doc(65, 305, 230), doc(305, 370, 230)]},
-    # fax 25/11: vành Ø242.6 / Ø151.7, 3 マーキング tam giác cạnh 30, MŨI cách tâm 95.5 chỉ vào tâm (120°), スリット cắt đứt vành ở dưới (chưa chắc)
+    # fax 25/11: vành Ø242.6 / Ø151.7, 3 マーキング chữ V đáy 30 nằm trên vòng ngoài, MŨI cách tâm 95.5 chỉ vào tâm (120°) — bản đúng Desktop/test.dxf, スリット cắt đứt vành bên trái ngang tâm (chưa chắc)
     {"bango": "vanh_slit", "bien_dang": "da_giac", "x": 242.6, "y": 242.6,
      "dinh": [[121.3, 0, 121.3], [242.6, 121.3, 121.3], [121.3, 242.6, 121.3], [0, 121.3, 121.3]],
      "lo": [{"d": 151.7, "so_luong": 1, "vi_tri": [{"x": 121.3, "y": 121.3}]}],
-     "ke_gaki": [[121.3, 216.8, 30, 270], [38.594, 73.55, 30, 30], [204.006, 73.55, 30, 150]],
-     "slit": [[121.3, 0, 121.3, 45.45]],
+     "ke_gaki": [[121.3, 216.8, 30, 270, 24.869], [38.594, 73.55, 30, 30, 24.869], [204.006, 73.55, 30, 150, 24.869]],
+     "slit": [[0, 121.3, 45.45, 121.3]],
      "chua_chac": [{"o": "slit", "so": 1, "noi_dung": "スリット: khách không ghi vị trí / bề rộng"}],
-     "vang_lop": ("4-SHT", 1), "ke_gaki_net": 9,
-     "dim_khach": [ng(0, 242.6, 300), doc(0, 242.6, 300), doc(121.3, 216.8, 140), ng(106.3, 136.3, 260)]},
+     "vang_lop": ("4-SHT", 1), "ke_gaki_net": 6,
+     "dim_khach": [{"loai": "phi", "gia_tri": 242.6, "tu": 0, "den": 0}, doc(121.3, 216.8, 140), ng(106.3, 136.3, 260),
+                   {"loai": "goc", "gia_tri": 120, "tu": 0, "den": 0, "diem": [[121.3, 216.8], [121.3, 121.3], [204.006, 73.55]]}]},
     # 25/11 12:41: tấm tròn Ø500 lỗ Ø245 — AI ghi 2 đỉnh (2 nửa cung R250), trước bị chặn "cần ≥ 3 đỉnh"
     {"bango": "tron", "bien_dang": "da_giac", "x": 500, "y": 500, "dinh": [[0, 250, 250], [500, 250, 250]],
      "lo": [{"d": 245, "so_luong": 1, "vi_tri": [{"x": 250, "y": 250}]}],
-     "dim_khach": [ng(0, 500, 540), doc(0, 500, 540)]},
+     "dim_khach": [{"loai": "phi", "gia_tri": 500, "tu": 0, "den": 0}]},
 ]
 
 
@@ -115,10 +116,15 @@ def kiem_tam(moi_truong, t, thu_muc):
         lp, n = t["vang_lop"]
         if len([e for e in msp.query('*[layer=="%s"]' % lp) if e.dxf.get("color") == 2]) != n:
             loi.append("cần %d nét vàng trên %s" % (n, lp))
+    for d in msp.query("DIMENSION"):
+        if d.dimtype & 7 == 5:
+            gk = [x["gia_tri"] for x in t["dim_khach"] if x["loai"] == "goc"]
+            if gk and all(abs(d.get_measurement() * (180 / 3.141592653589793 if d.get_measurement() < 6.3 else 1) - g) > 0.5 for g in gk):
+                loi.append("dim góc ra %.2f, khách ghi %s" % (d.get_measurement(), gk))
     vang = [e for e in msp.query('*[layer=="0-KAKOU"]') if e.dxf.get("color") == 2]
     if len(vang) != t.get("vang", 0) or any(e.dxftype() != "ARC" for e in vang):
         loi.append("tô vàng %d nét (%s), cần %d cung" % (len(vang), ",".join(sorted({e.dxftype() for e in vang})), t.get("vang", 0)))
-    can = len([x for x in t["dim_khach"] if x["loai"] != "r"])
+    can = len([x for x in t["dim_khach"] if x["loai"] not in ("r", "phi")])   # R / Ø: dim bán kính / đường kính, không có chân gióng
     if so_dim < can:
         loi.append("chỉ có %d dim thẳng / góc, khách có %d" % (so_dim, can))
     return loi + ["cảnh báo: " + s for s in canh_bao]

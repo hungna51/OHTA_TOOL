@@ -9,7 +9,7 @@
     python ve.py VIEC.json              → {"ket_qua": [{"bango", "tep", "anh", "loi", "thieu_dim", "canh_bao"}]}
 
 VIEC.json (OhtaTeams ghi): {"moi_truong": dxf, "thu_muc_ra": dir, "thu_vien": [dir…], "chi_hinh": bỏ F-name + Khung_IN (tuỳ chọn),
-  "tam": [{"bango", "bien_dang", "x", "y", "tham_so": {tên: số}, "be_x", "be_y", "doan_x", "doan_y", "ke_gaki": [[x, y] | [x, y, cạnh tam giác, hướng mũi °]…], "slit": [[x1, y1, x2, y2]…] (nét 4-SHT), "dim_khach": [{"loai", "gia_tri", "tu", "den"}], "fname": [dòng], "ghi_chu": [dòng],
+  "tam": [{"bango", "bien_dang", "x", "y", "tham_so": {tên: số}, "be_x", "be_y", "doan_x", "doan_y", "ke_gaki": [[x, y] | [x, y, cạnh đáy, hướng mũi °, cao]…], "slit": [[x1, y1, x2, y2]…] (nét 4-SHT), "dim_khach": [{"loai", "gia_tri", "tu", "den"}], "fname": [dòng], "ghi_chu": [dòng],
   "goc": [{"dinh", "kieu" C/R, "gia_tri"}], "khoet": [{"kieu", "rong", "cao", "goc_xoay", "r", "dinh", "vi_tri"}], "t_day": số}]}  (xem goc_khoet.py)
 Mẫu biên dạng (thu_vien/<nhóm>/<ten>.py — nhóm: tam_don, tam_be, tam_cuon…): MO_TA + ve(nen, t) vẽ viền / đường bẻ / dim riêng của hình; ケガキ, chuỗi dim dưới / phải,
 dim tổng (1-XY), F-name, Khung_IN thêm ở đây (them_chung) theo bản chuẩn xưởng.
@@ -18,6 +18,7 @@ Tệp đã sửa tay trên CAD (mã băm khác lần ghi trước, nhớ trong .
 import hashlib
 import importlib.util
 import json
+import math
 import os
 import sys
 import traceback
@@ -507,6 +508,8 @@ def ve_dim_diem(nen, hinh, loai, so, diem, khung, le):
         return ten + ": góc giữa 3 điểm là %g°, khác số khách" % round(goc, 2)
     r = 0.6 * min(math.hypot(p1[0] - c[0], p1[1] - c[1]), math.hypot(p2[0] - c[0], p2[1] - c[1]))
     gb = g1 + ((g2 - g1 + math.pi) % (2 * math.pi) - math.pi) / 2.0
+    if (g2 - g1) % (2 * math.pi) > math.pi:   # dim góc 3 điểm đo ngược chiều kim đồng hồ p1 → p2: đổi chỗ để ra góc nhỏ (120°, không phải 240°)
+        p1, p2 = p2, p1
     nen.dim_goc(c, p1, p2, (c[0] + r * math.cos(gb), c[1] + r * math.sin(gb)))
     return None
 
@@ -566,19 +569,25 @@ def them_chung(nen, t, x0, y0, x1, y1, chi_dim=False, nhan_goc=()):
     le, buoc = max(10.0, le * nen.ti_le), max(8.0, buoc * nen.ti_le)  # tỉ lệ dim theo cỡ tấm (18/11)
     ck_x, ck_y = chuoi_khach(t, "ngang", x0, x1), chuoi_khach(t, "doc", y0, y1)
     tren = bool(ck_x or ck_y)  # dim theo khách
+    import chan_dim
+    vien = chan_dim.hinh_tu_nen(nen)   # viền + lỗ trước khi thêm dấu: đáy tam giác nằm trên mép → chỉ vẽ chữ V
     kg = sorted((mt.ke_gaki_so(k) for k in t.get("ke_gaki", [])), key=lambda k: k[0])
-    for kx, ky, canh, huong in kg:
-        nen.ke_gaki(kx, ky, canh, huong)
-    for s in t.get("slit") or []:   # 25/11: スリット = nét cắt đơn 4-SHT
-        if isinstance(s, (list, tuple)) and len(s) >= 4:
-            nen.slit((float(s[0]), float(s[1])), (float(s[2]), float(s[3])))
+    for kx, ky, canh, huong, cao in kg:
+        bo_day = canh > 0 and all(chan_dim.tren_hinh(vien, p) for p in mt.dinh_tam_giac(kx, ky, canh, huong, cao)[1:])
+        nen.ke_gaki(kx, ky, canh, huong, cao, bo_day)
+    sl = [[float(v) for v in s[:4]] for s in (t.get("slit") or []) if isinstance(s, (list, tuple)) and len(s) >= 4]
+    for s in sl:   # 25/11: スリット = nét cắt đơn 4-SHT
+        nen.slit((s[0], s[1]), (s[2], s[3]))
     y_duoi = y0 - 10.0 * nen.ti_le if tren else None  # dim ở trên → nhãn leader xuống dưới
+    if sl:         # nhãn スリット (bản đúng 25/11): leader từ giữa nét slit đầu ra ngoài bên trái tấm
+        mx, my = (sl[0][0] + sl[0][2]) / 2.0, (sl[0][1] + sl[0][3]) / 2.0
+        xk, yk = x0 - 25 * nen.ti_le, my - 40 * nen.ti_le
+        nen.leader([(mx, my), (xk, yk), (xk - 1, yk)], "スリット" if len(sl) == 1 else "%d-スリット" % len(sl))
     if kg:
         gx, gy = kg[len(kg) // 2][:2]
         yk = y1 + 53 * nen.ti_le if not tren else y_duoi - 53 * nen.ti_le
         nen.leader([(gx, gy), (gx + 23 * nen.ti_le, yk), (gx + 24 * nen.ti_le, yk)], "%d-ケガキ" % len(kg))
     lo_x, lo_y, lo_phi, thieu_lo = ve_lo(nen, t, y1, 1 if kg else 0, le, y_duoi)
-    import chan_dim
     hinh = chan_dim.hinh_tu_nen(nen)   # 25/11: chân dim chỉ đặt vào đỉnh / cạnh / điểm cực cung / tâm lỗ / ケガキ (0.05)
     bo = []                            # dim không vẽ vì chân không chạm hình
 
@@ -648,15 +657,25 @@ def them_chung(nen, t, x0, y0, x1, y1, chi_dim=False, nhan_goc=()):
             co_them += [(l, float(g.get(k) or 0)) for k in ("rong", "dai") for l in ("ngang", "doc")]
     co_them += [("ngang", (b - a) / int(chu.split("×")[1].split("=")[0])) for a, b, chu in dx if chu != "<>"]
     co_them += [("doc", (b - a) / int(chu.split("×")[1].split("=")[0])) for a, b, chu in dy if chu != "<>"]
+    dn = t.get("dinh") or []
+    rt, cx, cy = (x1 - x0) / 2.0, (x0 + x1) / 2.0, (y0 + y1) / 2.0   # tấm tròn: mọi đỉnh trên vòng tâm khung bao, mọi cạnh là cung bán kính đó
+    tron = (len(dn) >= 2 and abs((x1 - x0) - (y1 - y0)) <= 0.05
+            and all(isinstance(q, (list, tuple)) and len(q) > 2 and abs(abs(float(q[2] or 0)) - rt) <= 0.05
+                    and abs(math.hypot(float(q[0]) - cx, float(q[1]) - cy) - rt) <= 0.05 for q in dn))
+    if tron:       # tấm tròn: dim tổng là Ø (1-XY) thay cho X / Y (bản đúng 25/11)
+        co_them.append(("phi", x1 - x0))
     hx, hy, thieu = du_dim_khach(nen, t, x0, y0, x1, y1, hang_x, hang_y, lo_phi, co_them, le, buoc, tren, hinh)
     y_tong = max(y1 + le + hx * buoc, tren_max + buoc) if tren else (y0 - le - hx * buoc)  # dim tổng luôn ngoài cùng
     x_tong = max(x1 + le + hy * buoc, phai_max + buoc) if tren else x1 + le + hy * buoc
-    ya, yb2 = chan2("x", x0, x1, y_tong)
-    if ya is not None and yb2 is not None:
-        nen.dim_ngang(x0, x1, ya, y_tong, lop=mt.LOP_XY, y_a=ya, y_b=yb2)
-    xa, xb2 = chan2("y", y0, y1, x_tong)
-    if xa is not None and xb2 is not None:
-        nen.dim_doc(y0, y1, xa, x_tong, lop=mt.LOP_XY, x_a=xa, x_b=xb2)
+    if tron:
+        nen.dim_phi((x0 + x1) / 2.0, (y0 + y1) / 2.0, x1 - x0, goc=225.0, le=le / 2.0, lop=mt.LOP_XY)
+    else:
+        ya, yb2 = chan2("x", x0, x1, y_tong)
+        if ya is not None and yb2 is not None:
+            nen.dim_ngang(x0, x1, ya, y_tong, lop=mt.LOP_XY, y_a=ya, y_b=yb2)
+        xa, xb2 = chan2("y", y0, y1, x_tong)
+        if xa is not None and xb2 is not None:
+            nen.dim_doc(y0, y1, xa, x_tong, lop=mt.LOP_XY, x_a=xa, x_b=xb2)
     thieu = list(dict.fromkeys(thieu_lo + bo + thieu))  # chuỗi khách bỏ dim rồi du_dim_khach thử lại cùng dim → một dòng
     if chi_dim:
         return thieu

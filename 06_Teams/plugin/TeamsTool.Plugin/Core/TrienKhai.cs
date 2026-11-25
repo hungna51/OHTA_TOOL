@@ -259,7 +259,7 @@ namespace TeamsTool.Core
                 j.Set("y", new JsonNumber(F(y)));
                 j.Set("be_x", So(tk.BeX)); j.Set("be_y", So(tk.BeY));
                 j.Set("doan_x", So(tk.DoanPhangX)); j.Set("doan_y", So(tk.DoanPhangY));
-                j.Set("ke_gaki", KeGaki(t).Select(k => (object)So(k.Canh > 0 ? new[] { k.X, k.Y, k.Canh, k.Goc } : new[] { k.X, k.Y })).ToList());
+                j.Set("ke_gaki", KeGaki(t).Select(k => (object)So(k.Canh > 0 ? new[] { k.X, k.Y, k.Canh, k.Goc, k.Cao } : new[] { k.X, k.Y })).ToList());
                 j.Set("slit", DsJson(t.SlitJson)); // スリット: nét 4-SHT (25/11)
                 j.Set("dim_khach", DsJson(t.DimKhachJson));
                 j.Set("dinh", DsJson(t.DinhJson)); // mẫu da_giac (25/11)
@@ -302,14 +302,14 @@ namespace TeamsTool.Core
             try { return JsonLite.Parse(json ?? "[]") as List<object> ?? new List<object>(); } catch (Exception) { return new List<object>(); }
         }
 
-        /// <summary>Các dấu ケガキ đọc được (bỏ dấu thiếu x / y); Canh > 0 = dấu tam giác, Goc = hướng mũi (mặc định 90 = lên).</summary>
-        public static List<(double X, double Y, double Canh, double Goc)> KeGaki(TamAi t)
+        /// <summary>Các dấu ケガキ đọc được (bỏ dấu thiếu x / y); Canh > 0 = dấu tam giác (đáy), Goc = hướng mũi (mặc định 90 = lên), Cao = mũi → đáy (0 = tam giác đều).</summary>
+        public static List<(double X, double Y, double Canh, double Goc, double Cao)> KeGaki(TamAi t)
         {
-            var ds = new List<(double, double, double, double)>();
+            var ds = new List<(double, double, double, double, double)>();
             List<object> l;
             try { l = JsonLite.Parse(t.KeGakiJson ?? "[]") as List<object> ?? new List<object>(); } catch (Exception) { l = new List<object>(); }
             foreach (JsonObject o in l.OfType<JsonObject>())
-                if (SoJ(o, "x") is double x && SoJ(o, "y") is double y) ds.Add((x, y, SoJ(o, "canh") ?? 0, SoJ(o, "goc") ?? 90));
+                if (SoJ(o, "x") is double x && SoJ(o, "y") is double y) ds.Add((x, y, SoJ(o, "canh") ?? 0, SoJ(o, "goc") ?? 90, SoJ(o, "cao") ?? 0));
             return ds;
         }
 

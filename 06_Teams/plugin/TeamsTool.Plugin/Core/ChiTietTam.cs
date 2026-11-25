@@ -322,7 +322,7 @@ TIẾT DIỆN của mỗi tấm (để trải phẳng — KHÔNG tự tính tr�
   · Bẻ / ấn: đoạn là kích thước NGOÀI (tới giao điểm cạnh ngoài) như ghi trên bản vẽ. Cuộn: đoạn kề là phần thẳng tiếp tuyến (0 nếu không có).
   · Hướng không uốn: một số = chiều dài phẳng theo hướng đó. Tấm phẳng: td_x = ""dài"", td_y = ""rộng"". Hộp 3–4 cạnh: td_x và td_y đều có chỗ uốn (thành – đáy – thành).
 - ghi_chu_td: tiếng Việt, ngắn (hướng bẻ V / N, chỗ chưa chắc). Không đọc được tiết diện → để rỗng, ghi lý do, thêm tiet_dien vào khong_chac.
-- ke_gaki: mỗi dấu khắc vạch (マーキング / ケガキ / 罫書き — dấu vạch, KHÔNG phải lỗ; 中抜きなし = không cắt thủng) một mục [x, y] = toạ độ tâm (mm) — dấu vẽ hình TAM GIÁC thì [x, y, cạnh, hướng mũi °] (x, y = MŨI tam giác — chỗ khách dim tới; hướng mũi 0 phải, 90 lên, 180 trái, 270 xuống; dấu quanh tâm tròn: mũi chỉ vào tâm) — trên hình TRẢI PHẲNG, gốc ở góc trái dưới của tấm, x theo hướng td_x; không có → rỗng. Bản vẽ chỉ ghi số dấu mà thiếu vị trí → để rỗng và hỏi trong van_de.
+- ke_gaki: mỗi dấu khắc vạch (マーキング / ケガキ / 罫書き — dấu vạch, KHÔNG phải lỗ; 中抜きなし = không cắt thủng) một mục [x, y] = toạ độ tâm (mm) — dấu vẽ hình TAM GIÁC / chữ V thì [x, y, đáy, hướng mũi °, cao] (x, y = MŨI — chỗ khách dim tới; hướng mũi 0 phải, 90 lên, 180 trái, 270 xuống; dấu quanh tâm tròn: mũi chỉ vào tâm; cao = mũi → đáy, 0 = tam giác đều; đáy nằm trên mép tấm thì cao tính để 2 góc đáy chạm mép) — trên hình TRẢI PHẲNG, gốc ở góc trái dưới của tấm, x theo hướng td_x; không có → rỗng. Bản vẽ chỉ ghi số dấu mà thiếu vị trí → để rỗng và hỏi trong van_de.
 - goc: vát C / bo R ở GÓC VIỀN NGOÀI, chữ dạng ""<đỉnh> C<số>; <đỉnh> R<số>"" — đỉnh là tên góc khung bao trai_duoi / phai_duoi / phai_tren / trai_tren hoặc toạ độ ""x,y"" trên hình TRẢI PHẲNG (gốc trái dưới); vd ""trai_duoi C10; phai_duoi C10"". XEM TỪNG GÓC trên hình vẽ: khách thường chỉ ghi nhãn (C10) ở MỘT góc — góc khác vẽ vát / bo giống hệt cũng ghi vào goc cùng cỡ. Không có → rỗng. (Không ghi vát mép chiều dày 面取り ở đây — đó là ghi chú gia công.)
 - khoet: khoét trong KHÔNG phải lỗ tròn / lỗ dài (ô vuông, chữ nhật, hình đa giác), chữ dạng ""□rộngxcao R<bo góc> G<góc xoay> @ x,y; x,y"" (tâm từng vị trí) hoặc đa giác ""[x,y x,y x,y …] @ x,y"" (đỉnh so với điểm đặt), các khoét cách nhau bằng |; toạ độ trên hình trải phẳng, gốc trái dưới. Không có → rỗng.
 - vung: [x0, y0, x1, y1] khung bao TRỌN hình vẽ của tấm trên trang PDF (mọi hình chiếu + dim + ghi chú của tấm, không gồm khung tên / ghi chú chung; tấm chỉ định bằng ô ghi chú có mũi tên / đường dẫn → vùng phải ôm cả KHUNG HÌNH mà mũi tên chỉ tới, không chỉ ô ghi chú), tỉ lệ 0–1 theo bề rộng / cao trang, gốc trái TRÊN (x0, y0 = góc trái trên; x1, y1 = góc phải dưới). DXF: theo khung bao bản vẽ.
@@ -546,6 +546,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
                 d.Set("x", c[0]); d.Set("y", c[1]);
                 if (c.Count >= 3) d.Set("canh", c[2]); // ケガキ tam giác: cạnh + hướng mũi
                 if (c.Count >= 4) d.Set("goc", c[3]);
+                if (c.Count >= 5) d.Set("cao", c[4]);
                 kq.Add(d);
             }
             return kq;

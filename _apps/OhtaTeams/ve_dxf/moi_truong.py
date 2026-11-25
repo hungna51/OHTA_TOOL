@@ -38,14 +38,24 @@ CO_KEGAKI = 5.0           # nửa cạnh chữ thập ケガキ (10 mm)
 
 
 def ke_gaki_so(k):
-    """Một dấu ケガキ: [x, y] | [x, y, cạnh, hướng] | {x, y, canh, goc} → (x, y, cạnh (0 = chữ thập), hướng mũi tam giác °)."""
+    """Một dấu ケガキ: [x, y] | [x, y, cạnh, hướng[, cao]] | {x, y, canh, goc, cao}
+    → (x, y, cạnh (0 = chữ thập), hướng mũi tam giác °, cao mũi → đáy (0 = tam giác đều))."""
     if isinstance(k, dict):
-        k = [k.get("x"), k.get("y"), k.get("canh"), k.get("goc")]
-    k = list(k) + [None, None]
-    return float(k[0]), float(k[1]), float(k[2] or 0), float(90 if k[3] is None else k[3])
+        k = [k.get("x"), k.get("y"), k.get("canh"), k.get("goc"), k.get("cao")]
+    k = list(k) + [None, None, None]
+    return float(k[0]), float(k[1]), float(k[2] or 0), float(90 if k[3] is None else k[3]), float(k[4] or 0)
 
 
-assert ke_gaki_so([1, 2]) == (1.0, 2.0, 0.0, 90.0) and ke_gaki_so({"x": 1, "y": 2, "canh": 30, "goc": 0}) == (1.0, 2.0, 30.0, 0.0)
+def dinh_tam_giac(x, y, canh, goc, cao=0.0):
+    """Mũi (x, y) chỉ hướng goc; đáy rộng canh lùi sau mũi một đoạn cao (0 = tam giác đều) → [mũi, góc đáy 1, góc đáy 2]."""
+    ux, uy = math.cos(math.radians(goc)), math.sin(math.radians(goc))
+    h = cao if cao and cao > 0 else canh * math.sqrt(3.0) / 2.0
+    bx, by = x - ux * h, y - uy * h
+    return [(x, y), (bx - uy * canh / 2.0, by + ux * canh / 2.0), (bx + uy * canh / 2.0, by - ux * canh / 2.0)]
+
+
+assert ke_gaki_so([1, 2]) == (1.0, 2.0, 0.0, 90.0, 0.0) and ke_gaki_so({"x": 1, "y": 2, "canh": 30, "goc": 0}) == (1.0, 2.0, 30.0, 0.0, 0.0)
+assert [tuple(round(v, 3) for v in p) for p in dinh_tam_giac(0, 0, 30, 270, 24.869)] == [(0, 0), (15.0, 24.869), (-15.0, 24.869)]
 
 
 class NenVe:
@@ -139,22 +149,19 @@ class NenVe:
         """Lỗ tròn cắt: CIRCLE trên 0-KAKOU (lệnh TMT / GRO nhận Ø)."""
         return self.msp.add_circle((x, y), d / 2.0, dxfattribs={"layer": LOP_CAT})
 
-    def ke_gaki(self, x, y, canh=0.0, goc=90.0):
-        """Dấu ケガキ trên 3-KEGAKI: canh = 0 → chữ thập 10 mm tâm (x, y); canh > 0 → tam giác đều cạnh canh,
+    def ke_gaki(self, x, y, canh=0.0, goc=90.0, cao=0.0, bo_day=False):
+        """Dấu ケガキ trên 3-KEGAKI: canh = 0 → chữ thập 10 mm tâm (x, y); canh > 0 → tam giác đáy canh,
         MŨI tại (x, y) (khách dim tới mũi), mũi chỉ hướng goc (độ, 90 = lên; dấu quanh tâm tròn thì chỉ vào tâm),
-        đáy lùi về phía sau mũi. → các đỉnh (chữ thập: [])."""
+        đáy lùi sau mũi một đoạn cao (0 = tam giác đều). bo_day: chỉ vẽ chữ V 2 nét (đáy là mép tấm — bản đúng 25/11). → các đỉnh (chữ thập: [])."""
         self.diem_kegaki.append((x, y))
         if not canh or canh <= 0:
             self.msp.add_line((x, y - CO_KEGAKI), (x, y + CO_KEGAKI), dxfattribs={"layer": LOP_KEGAKI})
             self.msp.add_line((x - CO_KEGAKI, y), (x + CO_KEGAKI, y), dxfattribs={"layer": LOP_KEGAKI})
             return []
-        ux, uy = math.cos(math.radians(goc)), math.sin(math.radians(goc))
-        h = canh * math.sqrt(3.0) / 2.0                 # mũi → giữa đáy
-        bx, by = x - ux * h, y - uy * h
-        dinh = [(x, y), (bx - uy * canh / 2.0, by + ux * canh / 2.0), (bx + uy * canh / 2.0, by - ux * canh / 2.0)]
-        for i in range(3):
-            self.msp.add_line(dinh[i], dinh[(i + 1) % 3], dxfattribs={"layer": LOP_KEGAKI})
-        self.diem_kegaki += dinh[1:] + [(bx, by)]
+        dinh = dinh_tam_giac(x, y, canh, goc, cao)
+        for a, b in ((dinh[0], dinh[1]), (dinh[0], dinh[2])) + (() if bo_day else ((dinh[1], dinh[2]),)):
+            self.msp.add_line(a, b, dxfattribs={"layer": LOP_KEGAKI})
+        self.diem_kegaki += dinh[1:] + [((dinh[1][0] + dinh[2][0]) / 2.0, (dinh[1][1] + dinh[2][1]) / 2.0)]
         return dinh
 
     def leader(self, diem, noi_dung):
@@ -203,11 +210,11 @@ class NenVe:
         d.render()
         return d
 
-    def dim_phi(self, x, y, d, goc=60.0, le=LE_DIM, chu="<>", chu_ngang=False):
+    def dim_phi(self, x, y, d, goc=60.0, le=LE_DIM, chu="<>", chu_ngang=False, lop=LOP_DIM):
         """Dim đường kính Ø một lỗ tròn, chữ ra ngoài theo góc goc (bản chuẩn 130996-3); chu "4-<>" = nhóm 4 lỗ (bản sửa 18/11)."""
         r, a = d / 2.0, math.radians(goc)
         d2 = self.msp.add_diameter_dim(center=(x, y), radius=r, angle=goc, text=chu, location=(x + (r + 2 * le) * math.cos(a), y + (r + 2 * le) * math.sin(a)),  # chữ ra hẳn ngoài viền
-                                       dimstyle=self.kieu_dim, override=self.ov(dict({"dimtmove": 0}, **({"dimtoh": 1} if chu_ngang else {}))), dxfattribs={"layer": LOP_DIM})  # đường dim kéo tới chữ; chu_ngang: chữ nằm ngang
+                                       dimstyle=self.kieu_dim, override=self.ov(dict({"dimtmove": 0}, **({"dimtoh": 1} if chu_ngang else {}))), dxfattribs={"layer": lop})  # đường dim kéo tới chữ; chu_ngang: chữ nằm ngang
         d2.render()
         return d2
 

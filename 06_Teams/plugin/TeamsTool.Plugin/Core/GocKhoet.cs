@@ -143,7 +143,7 @@ namespace TeamsTool.Core
             List<object> l;
             try { l = JsonLite.Parse(string.IsNullOrWhiteSpace(json) ? "[]" : json) as List<object> ?? new List<object>(); } catch (Exception) { return json ?? ""; }
             return string.Join("; ", l.OfType<JsonObject>().Select(o => Chu(o.Get("x")) + "," + Chu(o.Get("y"))
-                + (o.Get("canh") != null ? "," + Chu(o.Get("canh")) + (o.Get("goc") != null ? "," + Chu(o.Get("goc")) : "") : "")));
+                + string.Concat(new[] { "canh", "goc", "cao" }.TakeWhile(k => o.Get(k) != null).Select(k => "," + Chu(o.Get(k))))));
         }
 
         /// <summary>Chữ gọn ケガキ → JSON [{x, y}]; sai → null + loi.</summary>
@@ -154,9 +154,9 @@ namespace TeamsTool.Core
             foreach (string p in (chu ?? "").Split(';', '\n').Select(x => x.Trim()).Where(x => x.Length > 0))
             {
                 var c = p.Split(',').Select(So).ToList();
-                if (c.Count < 2 || c.Count > 4 || c.Any(v => v == null)) { loi = "'" + p + "' phải là x,y (tam giác: x,y,cạnh,hướng)"; return null; }
+                if (c.Count < 2 || c.Count > 5 || c.Any(v => v == null)) { loi = "'" + p + "' phải là x,y (tam giác: x,y,đáy,hướng[,cao])"; return null; }
                 var o = new JsonObject();
-                string[] ten = { "x", "y", "canh", "goc" };
+                string[] ten = { "x", "y", "canh", "goc", "cao" };
                 for (int i = 0; i < c.Count; i++) o.Set(ten[i], new JsonNumber(F(c[i].Value)));
                 ds.Add(o);
             }

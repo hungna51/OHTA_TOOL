@@ -30,6 +30,7 @@ Xong khi: mỗi chi tiết **không rõ** đã được xác nhận, hoặc ngư
 ### 4. Viết khối mô tả — chỉ các chỗ chưa rõ
 Mỗi dòng một chỗ chưa rõ, gọn như ghi chú tay. Chi tiết **chắc** (in rõ, số rõ) → bỏ, không ghi. Hai loại dòng:
 - **Đã xác nhận**: `<chi tiết>: <giá trị đúng>` — số nhoè / đọc hai cách, nét cắt hay khắc, vị trí chỉ có mũi tên, nghĩa thuật ngữ dễ hiểu sai (vd "中抜きなし = chỉ khắc, không cắt"), chữ trên hình KHÔNG phải thông số ("bỏ qua số 90 — viết nhầm"). Chi tiết **tính được** mà AI dễ tính sai (dấu cách đều quanh tâm, đỉnh qua dim xiên…) → ghi luôn giá trị ô (mục *Ô dữ liệu*) để AI chép.
+- **Dim AI hay bỏ sót**: dim góc giữa các dấu / lỗ quanh tâm (vd 120°), dim Ø của tấm tròn → `Dim khách cần có: <loại số, chỗ đặt>` (dim góc ghi cả 3 điểm: điểm 1, đỉnh góc, điểm 2).
 - **Chưa rõ — hỏi khách**: `CHƯA RÕ <chi tiết>: <điều chưa biết> — không đoán, ghi chua_chac + hỏi khách`. AI vẽ chỗ hợp lý nhất, phần đó tô VÀNG và vào danh sách "Cần xác nhận" — không lặng lẽ chọn một số.
 Dạng khối code để người dùng chép nguyên.
 
@@ -45,7 +46,7 @@ Rồi trả khối + một dòng nói phần nào hệ thống chưa vẽ đư�
 - **Lỗ** `lo`: Ø + tâm từng lỗ `[x, y]`; lỗ giữa vành tròn cũng là lỗ.
 - **Khoét trong** `khoet`: `□rộngxcao R<bo> G<góc xoay> @ x,y`.
 - **Góc** `goc`: `trai_duoi C10; phai_tren R5` (đỉnh trước khi vát / bo).
-- **ケガキ** `ke_gaki`: `[x, y]` = chữ thập 10 mm tại tâm; `[x, y, cạnh, hướng]` = tam giác ĐỀU, (x, y) = **mũi** (chỗ khách dim tới), `hướng` = hướng mũi chỉ (0 phải, 90 lên, 180 trái, 270 xuống). Dấu cách đều quanh tâm tròn: toạ độ mũi VÀ hướng đều quay theo từng dấu (mũi chỉ vào tâm → hướng = góc từ mũi về tâm).
+- **ケガキ** `ke_gaki`: `[x, y]` = chữ thập 10 mm tại tâm; `[x, y, đáy, hướng, cao]` = tam giác / chữ V: (x, y) = **mũi** (chỗ khách dim tới), `hướng` = hướng mũi chỉ (0 phải, 90 lên, 180 trái, 270 xuống), `cao` = mũi → đáy (0 = tam giác đều). Đáy nằm trên mép tấm → `cao` tính để 2 góc đáy chạm mép (vành bán kính R, mũi cách tâm r: cao = √(R² − (đáy/2)²) − r); khi đó tool vẽ chữ **V** 2 nét như bản xưởng. Dấu cách đều quanh tâm tròn: toạ độ mũi VÀ hướng đều quay theo từng dấu (mũi chỉ vào tâm → hướng = góc từ mũi về tâm).
 - **スリット** `slit`: `[x1, y1, x2, y2]` — một nét cắt đơn (layer 4-SHT), vd cắt đứt vành theo bán kính.
 - **Dim**: kê các dim khách có (tổng X / Y, Ø, khoảng tâm → dấu…) — bản vẽ OHTA chép đúng các dim đó, chỉ thêm tổng X / Y nếu thiếu.
 
@@ -55,5 +56,4 @@ Rồi trả khối + một dòng nói phần nào hệ thống chưa vẽ đư�
 
 ## Giới hạn hiện tại (nói với người dùng khi gặp)
 
-- ケガキ tam giác chỉ vẽ được tam giác **đều**. Dấu tam giác cân (vd đáy 30 nằm trên vòng ngoài, mũi ở 95.5 → cao ≠ 0.866 × đáy): ghi đúng ý trong khối mô tả, chọn cạnh = bề rộng đáy, và báo người dùng 2 góc đáy có thể lệch khỏi mép ~1 mm, cần chỉnh tay trên CAD.
 - Tấm bẻ / cuộn: tab DXF ảnh mới chắc với tấm đơn (phẳng).

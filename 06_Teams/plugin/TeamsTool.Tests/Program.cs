@@ -228,14 +228,14 @@ namespace TeamsTool.Tests
             Kiem("schema: buoc 2 co dinh + diem, buoc 1 co diem", schDg.Contains("\"dinh\":") + "|" + schDg.Contains("\"diem\":") + "|" + sch1.Contains("\"diem\":"), "True|True|True");
             // 25/11: ケガキ tam giác [x, y, cạnh, hướng] + スリット [x1, y1, x2, y2] → lưu → viec.json
             var tSl = new TamAi { Tep = "s.png", KichThuoc = "242.6 x 242.6", TdX = "242.6", TdY = "242.6", KieuTd = "phang", LoJson = "[]" };
-            var ndSl = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse("{\"ke_gaki\":[[121.3,216.8,30,90],[50,50]],\"slit\":[[121.3,0,121.3,45.45]],\"lo\":[]}");
+            var ndSl = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse("{\"ke_gaki\":[[121.3,216.8,30,270,24.869],[50,50]],\"slit\":[[121.3,0,121.3,45.45]],\"lo\":[]}");
             var doiSl = PhongPhongTo.ApDung(tSl, ndSl);
             var tSl2 = PhongDocBanVe.Doc(PhongDocBanVe.Ghi(new ChiTiet { Tam = { tSl } })).Tam[0];
             var tkSl = PhongTrienKhai.TuTam(tSl2); tkSl.XPhang = 242.6; tkSl.YPhang = 242.6;
             string viecSl = System.Text.RegularExpressions.Regex.Replace(PhongTrienKhai.ViecVe("S", new List<(TamAi, TamTrienKhai)> { (tSl2, tkSl) }, "m", "r", new[] { "t" }), @"\s", "");
-            Kiem("slit + ke gaki tam giac: ap, luu, viec ve", string.Join(",", doiSl) + "|" + viecSl.Contains("\"ke_gaki\":[[121.3,216.8,30,90],[50,50]]") + "|" + viecSl.Contains("\"slit\":[[121.3,0,121.3,45.45]]"),
+            Kiem("slit + ke gaki tam giac: ap, luu, viec ve", string.Join(",", doiSl) + "|" + viecSl.Contains("\"ke_gaki\":[[121.3,216.8,30,270,24.87],[50,50]]") + "|" + viecSl.Contains("\"slit\":[[121.3,0,121.3,45.45]]"),
                  "ke_gaki,slit|True|True");
-            Kiem("ke gaki tam giac: chu <-> json", PhongGocKhoet.KeGakiChu(PhongGocKhoet.KeGakiJson("1,2; 3,4,30,90", out string _)) + "|" + (PhongGocKhoet.KeGakiJson("1,2,3,4,5", out string _) == null), "1,2; 3,4,30,90|True");
+            Kiem("ke gaki tam giac: chu <-> json", PhongGocKhoet.KeGakiChu(PhongGocKhoet.KeGakiJson("1,2; 3,4,30,90; 5,6,30,270,24.9", out string _)) + "|" + (PhongGocKhoet.KeGakiJson("1,2,3,4,5,6", out string _) == null), "1,2; 3,4,30,90; 5,6,30,270,24.9|True");
             Kiem("schema buoc 2 co slit", schDg.Contains("\"slit\":"), true);
             // 25/11: chua_chac — giá trị AI tự suy (khách không ghi số) → lưu, gửi viec.json (bỏ mục ô người đã sửa = đã xác nhận)
             var tCc = new TamAi { Tep = "c.png", KichThuoc = "455 x 370", TdX = "455", TdY = "370", KieuTd = "phang", LoJson = "[]" };
