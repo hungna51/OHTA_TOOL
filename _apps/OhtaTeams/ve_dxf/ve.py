@@ -687,11 +687,14 @@ def ve_tam(viec, t, mau, so_tay, co_anh):
     nen.dat_ti_le(float(t.get("x") or 0), float(t.get("y") or 0))  # tỉ lệ dim theo cỡ tấm — trước khi mẫu vẽ dim riêng
     mod.ve(nen, t)
     import goc_khoet
+    diem_goc = goc_khoet.diem_goc(nen, t)                             # đỉnh của ô goc trước khi vát — để tô vàng mục chưa chắc
     _, nhan_goc, canh_bao = goc_khoet.ap_dung(nen, t, lo_tron(t))   # vát / bo theo đỉnh + khoét trong (chung mọi mẫu)
     x0, y0, x1, y1 = mt.khung_bao(nen)
     if x1 <= x0 or y1 <= y0:
         raise ValueError("mẫu '%s' không vẽ viền cắt nào" % ten)
     thieu = them_chung(nen, t, x0, y0, x1, y1, chi_dim=bool(viec.get("chi_hinh")), nhan_goc=nhan_goc)  # chi_hinh: 🧪 Thử nhanh, không F-name / Khung_IN
+    import chua_chac
+    chua_chac.to_vang(nen, t, diem_goc)   # 25/11: phần vẽ từ giá trị AI tự suy (khách không ghi số) → vàng, chờ người xác nhận
     tep = ten_ra(viec["thu_muc_ra"], t["bango"], so_tay)
     nen.luu(tep)
     so_tay[os.path.basename(tep)] = ma_bam(tep)

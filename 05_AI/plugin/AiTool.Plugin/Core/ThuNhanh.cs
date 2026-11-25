@@ -33,6 +33,8 @@ namespace AiTool.Core
         public List<string> CanhBao = new List<string>();
         /// <summary>Hình chưa có mẫu biên dạng (chua_co / mẫu không có trong thư viện) → hiện nút ✨ AI viết mẫu.</summary>
         public bool CanMau;
+        /// <summary>Giá trị AI tự suy vì khách không ghi số — phần vẽ từ đó tô vàng trong DXF, người dùng xác nhận.</summary>
+        public List<string> CanXacNhan = new List<string>();
 
         public bool CoDxf => Dxf != null && File.Exists(Dxf);
 
@@ -56,6 +58,7 @@ namespace AiTool.Core
                 Loi = o.GetString("loi"),
                 CanhBao = (o.Get("canh_bao") as List<object>)?.OfType<string>().ToList() ?? new List<string>(),
                 CanMau = o.Get("can_mau") is bool b && b,
+                CanXacNhan = (o.Get("can_xac_nhan") as List<object>)?.OfType<string>().ToList() ?? new List<string>(),
             }).ToList();
         }
     }

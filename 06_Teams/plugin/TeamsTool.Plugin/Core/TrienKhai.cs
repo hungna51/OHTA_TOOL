@@ -262,6 +262,7 @@ namespace TeamsTool.Core
                 j.Set("ke_gaki", KeGaki(t).Select(k => (object)So(new[] { k.X, k.Y })).ToList());
                 j.Set("dim_khach", DsJson(t.DimKhachJson));
                 j.Set("dinh", DsJson(t.DinhJson)); // mẫu da_giac (25/11)
+                j.Set("chua_chac", PhongPhongTo.ChuaChacConLai(t)); // phần AI tự suy → ve.py tô vàng (25/11)
                 j.Set("lo", DsJson(t.LoJson)); // ve.py vẽ lỗ (phần chung mọi mẫu)
                 var ts = new JsonObject();
                 foreach (var kv in ThamSo(t.ThamSo)) ts.Set(kv.Key, new JsonNumber(F(kv.Value)));

@@ -13,6 +13,9 @@
 - Tấm toàn cạnh thẳng được dùng polyline kín (`nen.vien`, `nen.chu_nhat`).
 - Đường bẻ: LINE `0-KAKOU`, nét DASHED (`nen.duong_be`).
 
+## Phần AI tự suy — tô VÀNG (25/11, `chua_chac.py`)
+- Khách không ghi số mà AI lấy theo hình (vd R bo góc khoét, vị trí lỗ không có dim) → AI ghi `chua_chac` [{o, so, noi_dung}] + nghi vấn 🟡 hỏi khách. `ve.py` tô nét vẽ từ mục đó màu **vàng (ACI 2)** — `o` = lo / khoet / goc / dinh / ke_gaki, `so` = thứ tự mục (0 = cả ô), hậu tố `.r` = chỉ cung bo R. Ô người dùng đã sửa (✎) = đã xác nhận → không tô. Ô khác (kich_thuoc…) chỉ ghi chú.
+
 ## Dim
 - **Chân dim chạm đối tượng (25/11, `chan_dim.py`)**: mỗi chân gióng phải đặt vào đúng đối tượng dim đo — đỉnh / mút đoạn viền hoặc đường bẻ, cạnh thẳng đứng / ngang trùng đường gióng, điểm cực của cung, tâm lỗ, tâm ケガキ — sai số **0.05 mm**, chọn điểm gần đường dim nhất. Không có đối tượng nào → **không vẽ** dim đó, báo "chân dim không chạm hình" (dòng cam) để người vẽ xem. Áp cho mọi dim `ve.py` vẽ: dim khách, chuỗi tự dựng, dim tổng X / Y.
 - **Chỉ dim như khách + dim tổng X / Y**: ngang, dọc, R, Ø, **xiên** (`dim_khach.loai = "xien"`, `diem` = 2 đầu cạnh — dim theo cạnh, đường dim ra phía ngoài hình) và **góc** (`"goc"`, `diem` = [điểm cạnh 1, đỉnh, điểm cạnh 2]). Điểm không nằm trên hình, hoặc số đo lệch số khách (> 0.5 mm / 0.5°) → không vẽ, báo thiếu.

@@ -363,6 +363,26 @@ def kiem_khoet(ngoai, khoet, lo, t_day):
 
 # ---------- áp vào bản vẽ ----------
 
+def diem_goc(nen, t):
+    """Toạ độ đỉnh của từng mục t["goc"] TRƯỚC khi vát / bo (để tô vàng mục chưa chắc); không tìm được → None."""
+    goc = t.get("goc") or []
+    if not goc:
+        return []
+    try:
+        ngoai, khoet, trong = _vong_goc(nen, t)
+        ten = _danh_so(ngoai, khoet, trong)
+    except ValueError:
+        return [None] * len(goc)
+    kq = []
+    for g in goc:
+        try:
+            v, i = _tim(str(g.get("dinh", "")).strip().lower().replace(" ", ""), ngoai, khoet, trong, ten)
+            kq.append(v["seg"][i]["a"])
+        except ValueError:
+            kq.append(None)
+    return kq
+
+
 def ap_dung(nen, t, lo=()):
     """Vẽ khoét + vát / bo theo t["goc"], t["khoet"] sau khi mẫu vẽ viền. Sai đỉnh / quá khả năng → ValueError.
     → ([(nhãn "2-C10", điểm)], [(kiểu C / R, giá trị) đã ghi nhãn], [cảnh báo K3])."""

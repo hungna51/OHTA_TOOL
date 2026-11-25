@@ -143,11 +143,13 @@ namespace AiTool.ViewModels
         public bool CoLoi => !string.IsNullOrEmpty(Chon?.Loi);
         public string CanhBaoChon => Chon == null ? "" : string.Join("\n", Chon.CanhBao.Select(s => "⚠ " + s));
         public bool CoCanhBao => Chon != null && Chon.CanhBao.Count > 0;
+        public string XacNhanChon => Chon == null ? "" : "Cần xác nhận (AI tự suy — nét VÀNG trong DXF):\n" + string.Join("\n", Chon.CanXacNhan.Select(s => "• " + s));
+        public bool CoXacNhan => Chon != null && Chon.CanXacNhan.Count > 0;
 
         private void HienChon()
         {
             foreach (string p in new[] { nameof(CoChon), nameof(CoTheSua), nameof(CoDxf), nameof(TieuDeChon), nameof(ChiTietChon), nameof(AnhGoc),
-                                         nameof(AnhVe), nameof(LoiChon), nameof(CoLoi), nameof(CanhBaoChon), nameof(CoCanhBao), nameof(CanMau) })
+                                         nameof(AnhVe), nameof(LoiChon), nameof(CoLoi), nameof(CanhBaoChon), nameof(CoCanhBao), nameof(CanMau), nameof(XacNhanChon), nameof(CoXacNhan) })
                 OnChanged(p);
         }
 

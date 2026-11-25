@@ -54,6 +54,15 @@ HINH = [
     {"bango": "lo_4canh", "bien_dang": "4canh", "x": 300, "y": 150,
      "lo": [{"d": 10, "so_luong": 4, "vi_tri": [{"x": 20, "y": 20}, {"x": 280, "y": 20}, {"x": 20, "y": 130}, {"x": 280, "y": 130}]}],
      "dim_khach": [ng(0, 20, 180), ng(20, 280, 180), ng(280, 300, 180), doc(0, 20, 330), doc(20, 130, 330), doc(130, 150, 330)]},
+    # bản vẽ khách 25/11: khoét 240 × 240 có bo góc nhưng KHÔNG ghi R → AI lấy R10 theo hình, ghi chua_chac → 4 cung R10 tô vàng
+    {"bango": "khoet_r10", "bien_dang": "da_giac", "x": 455, "y": 370,
+     "dinh": [[100, 0], [355, 0], [455, 35], [455, 335], [355, 370], [100, 370], [0, 335], [0, 35]],
+     "lo": [{"d": 50, "so_luong": 1, "vi_tri": [{"x": 50, "y": 185}]}],
+     "khoet": [{"kieu": "chu_nhat", "rong": 240, "cao": 240, "goc_xoay": 0, "r": 10, "vi_tri": [[240, 185]]}],
+     "chua_chac": [{"o": "khoet.r", "so": 1, "noi_dung": "R10 bo góc khoét: khách không ghi số, lấy theo hình"}],
+     "vang": 4,
+     "dim_khach": [ng(0, 100, 420), ng(100, 355, 420), ng(355, 455, 420), ng(0, 120, 185), ng(120, 360, 185), ng(360, 455, 185),
+                   ng(0, 50, -30), doc(35, 335, 420), doc(0, 65, 230), doc(65, 305, 230), doc(305, 370, 230)]},
 ]
 
 
@@ -68,8 +77,9 @@ def kiem_tam(moi_truong, t, thu_muc):
     loi = ["thiếu dim: " + s for s in thieu]
     msp = ezdxf.readfile(tep).modelspace()
     vong = goc_khoet.doc_vien(_Nen(msp))
-    if len(vong) != 1:
-        loi.append("viền ngoài phải là 1 vòng kín, đang có %d" % len(vong))
+    can_vong = 1 + sum(len(k.get("vi_tri") or []) for k in t.get("khoet") or [])
+    if len(vong) != can_vong:
+        loi.append("cần %d vòng kín (viền + khoét), đang có %d" % (can_vong, len(vong)))
     hinh = chan_dim.hinh_tu_nen(_Nen(msp))
     so_dim = 0
     for d in msp.query("DIMENSION"):
@@ -84,6 +94,9 @@ def kiem_tam(moi_truong, t, thu_muc):
         for p in chan:
             if not chan_dim.tren_hinh(hinh, (p.x, p.y)):
                 loi.append("chân dim %s (%.2f) tại (%.3f, %.3f) không chạm hình" % (d.dxf.get("layer"), d.get_measurement(), p.x, p.y))
+    vang = [e for e in msp.query('*[layer=="0-KAKOU"]') if e.dxf.get("color") == 2]
+    if len(vang) != t.get("vang", 0) or any(e.dxftype() != "ARC" for e in vang):
+        loi.append("tô vàng %d nét (%s), cần %d cung" % (len(vang), ",".join(sorted({e.dxftype() for e in vang})), t.get("vang", 0)))
     can = len([x for x in t["dim_khach"] if x["loai"] != "r"])
     if so_dim < can:
         loi.append("chỉ có %d dim thẳng / góc, khách có %d" % (so_dim, can))

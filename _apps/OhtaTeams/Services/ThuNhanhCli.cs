@@ -141,6 +141,7 @@ namespace TeamsTool.Services
             o.Set("xem", xem != null && File.Exists(xem) ? xem : null);
             o.Set("dxf", dxf != null && File.Exists(dxf) ? dxf : null);
             o.Set("chi_tiet_json", AiDon.FileChiTiet(tm));
+            o.Set("can_xac_nhan", t == null ? new List<object>() : PhongPhongTo.CanXacNhan(t).Cast<object>().ToList()); // phần vẽ vàng (25/11)
             bool canMau = CanMau(tm, t);
             o.Set("can_mau", canMau);
             if (kv?.Loi != null) o.Set("loi", kv.Loi);

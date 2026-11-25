@@ -52,6 +52,8 @@ namespace AiTool.Tests
             Kiem("CoDxf: co duong dan nhung file khong ton tai -> false", l.CoDxf, false);
             Kiem("can_mau thieu -> false", l.CanMau, false);
             Kiem("can_mau true -> CanMau (hien nut AI viet mau)", LanThu.TuJson("{\"can_mau\": true}")[0].CanMau, true);
+            Kiem("can_xac_nhan thieu -> rong", l.CanXacNhan.Count, 0);
+            Kiem("can_xac_nhan doc du", string.Join(" / ", LanThu.TuJson("{\"can_xac_nhan\": [\"R10 bo góc khoét\", \"y lỗ Ø50\"]}")[0].CanXacNhan), "R10 bo góc khoét / y lỗ Ø50");
             Kiem("Mang 2 doi tuong", LanThu.TuJson("[" + mot + "," + mot + "]").Count, 2);
             Kiem("Mang rong", LanThu.TuJson("[]").Count, 0);
             Kiem("JSON hong -> rong, khong vang", LanThu.TuJson("{hong").Count, 0);
