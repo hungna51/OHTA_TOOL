@@ -70,7 +70,7 @@ def vung_muc(t, o, so, diem_goc=()):
     if o == "ke_gaki":
         import moi_truong as mt
         kg = _chon([mt.ke_gaki_so(k) for k in (t.get("ke_gaki") or [])], so)
-        return lambda p: any(math.hypot(p[0] - x, p[1] - y) <= max(5.0, c / math.sqrt(3.0)) + SAI_SO for x, y, c, _ in kg)
+        return lambda p: any(math.hypot(p[0] - x, p[1] - y) <= max(5.0, c) + SAI_SO for x, y, c, _ in kg)
     if o == "slit":
         sl = _chon([[float(v) for v in s[:4]] for s in (t.get("slit") or []) if isinstance(s, (list, tuple)) and len(s) >= 4], so)
         return lambda p: any(_tren_doan(p, (s[0], s[1]), (s[2], s[3])) for s in sl)

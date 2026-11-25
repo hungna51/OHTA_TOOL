@@ -3,7 +3,7 @@
 import math
 
 MO_TA = ("Tấm phẳng (không bẻ / cuộn) có viền ngoài bất kỳ gồm cạnh thẳng và cạnh cung: chữ T, L, U, hình thang, tam giác cụt, "
-         "dải có đầu bo / khoét cung, tấm có tai… — dùng cho MỌI tấm phẳng không phải hình chữ nhật (chữ nhật dùng 4canh). "
+         "dải có đầu bo / khoét cung, tấm có tai, TẤM TRÒN / VÀNH KHĂN (Øn: dinh [[0, n/2, n/2], [n, n/2, n/2]], lỗ giữa ở lo)… — dùng cho MỌI tấm phẳng không phải hình chữ nhật (chữ nhật dùng 4canh). "
          "Không có thông số mẫu: ghi đỉnh viền vào ô dinh [[x, y] hoặc [x, y, R]…] theo thứ tự đi vòng, gốc (0, 0) = góc trái dưới khung bao; "
          "R ở đỉnh i = cạnh từ đỉnh i tới đỉnh kế là cung bán kính |R| (R > 0 lồi ra ngoài, R < 0 lõm vào trong). "
          "Vát C / bo R tại góc vẫn ghi ở ô goc, lỗ ở lo, khoét trong ở khoet — không ghi vào đỉnh.")
@@ -16,8 +16,8 @@ SAI_SO = 0.05
 
 def doc_dinh(ds):
     """[[x, y] | [x, y, R]…] → [(x, y, R)]; bỏ đỉnh trùng liên tiếp và đỉnh cuối lặp đỉnh đầu. Sai dạng → ValueError."""
-    if not isinstance(ds, list) or len(ds) < 3:
-        raise ValueError("chưa có đỉnh viền (ô dinh cần ≥ 3 đỉnh [x, y]) — nhập ở ✎ Sửa thông số")
+    if not isinstance(ds, list) or len(ds) < 2:
+        raise ValueError("chưa có đỉnh viền (ô dinh cần ≥ 3 đỉnh [x, y], tấm tròn 2 đỉnh [x, y, R]) — nhập ở ✎ Sửa thông số")
     kq = []
     for i, p in enumerate(ds):
         if not isinstance(p, (list, tuple)) or len(p) < 2:
@@ -27,8 +27,8 @@ def doc_dinh(ds):
             kq.append(q)
     if len(kq) > 1 and math.hypot(kq[0][0] - kq[-1][0], kq[0][1] - kq[-1][1]) <= SAI_SO:
         kq.pop()
-    if len(kq) < 3:
-        raise ValueError("ô dinh chỉ còn %d đỉnh khác nhau — cần ≥ 3" % len(kq))
+    if len(kq) < 3 and not (len(kq) == 2 and all(abs(q[2]) > SAI_SO for q in kq)):   # 2 đỉnh + 2 cạnh cung = tấm tròn / bầu dục
+        raise ValueError("ô dinh chỉ còn %d đỉnh khác nhau — cần ≥ 3 (tấm tròn: 2 đỉnh đối nhau, cả hai có R)" % len(kq))
     return kq
 
 
@@ -73,9 +73,6 @@ def tam_cung(a, b, r, ngoai_ben_phai):
 def ve(nen, t):
     import moi_truong as mt
     pts = doc_dinh(t.get("dinh"))
-    x0, y0 = min(p[0] for p in pts), min(p[1] for p in pts)
-    if abs(x0) > SAI_SO or abs(y0) > SAI_SO:
-        raise ValueError("đỉnh phải tính từ góc trái dưới khung bao: x nhỏ nhất %g, y nhỏ nhất %g (cần 0)" % (x0, y0))
     cat = tu_cat(pts)
     if cat:
         raise ValueError("viền tự cắt: cạnh từ đỉnh %d cắt cạnh từ đỉnh %d — thứ tự đỉnh sai" % cat)
@@ -91,8 +88,8 @@ def ve(nen, t):
             nen.duong((a[0], a[1]), (b[0], b[1]))
     bx0, by0, bx1, by1 = mt.khung_bao(nen)
     x, y = float(t.get("x") or 0), float(t.get("y") or 0)
-    if bx0 < -SAI_SO or by0 < -SAI_SO:
-        raise ValueError("cung lồi vượt ra ngoài gốc (0, 0): khung bao bắt đầu (%g, %g) — đỉnh tính lại từ góc trái dưới của cả cung" % (bx0, by0))
+    if abs(bx0) > SAI_SO or abs(by0) > SAI_SO:   # xét trên viền đã vẽ (kể cả cung): tấm tròn có đỉnh ở y = R
+        raise ValueError("viền phải bắt đầu từ góc trái dưới khung bao (0, 0), đang ở (%g, %g) — tính lại đỉnh từ góc trái dưới của cả hình" % (bx0, by0))
     if x > 0 and y > 0 and (abs(bx1 - x) > SAI_SO or abs(by1 - y) > SAI_SO):
         raise ValueError("đỉnh không khớp kích thước %g × %g: viền vẽ ra %g × %g — kiểm ô dinh / kich_thuoc" % (x, y, bx1, by1))
     for v in t.get("be_x", []):
@@ -101,6 +98,7 @@ def ve(nen, t):
 
 # ---------- tự kiểm ----------
 assert doc_dinh([[0, 0], [10, 0], [10, 0], [10, 5], [0, 0]]) == [(0.0, 0.0, 0.0), (10.0, 0.0, 0.0), (10.0, 5.0, 0.0)]
+assert len(doc_dinh([[0, 250, 250], [500, 250, 250]])) == 2                              # tấm tròn Ø500: 2 nửa cung
 assert tu_cat([(0, 0, 0), (10, 10, 0), (10, 0, 0), (0, 10, 0)]) is not None          # hình nơ: thứ tự đỉnh sai
 assert tu_cat([(0, 0, 0), (10, 0, 0), (10, 10, 0), (0, 10, 0)]) is None
 _tam, _g0, _g1 = tam_cung((156, 252), (76, 252), 40, True)   # tai chữ T bo bán nguyệt R40 (đa giác ngược chiều kim đồng hồ, cạnh đi sang trái)

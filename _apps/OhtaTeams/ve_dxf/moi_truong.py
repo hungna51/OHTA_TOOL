@@ -141,17 +141,20 @@ class NenVe:
 
     def ke_gaki(self, x, y, canh=0.0, goc=90.0):
         """Dấu ケガキ trên 3-KEGAKI: canh = 0 → chữ thập 10 mm tâm (x, y); canh > 0 → tam giác đều cạnh canh,
-        trọng tâm (x, y), mũi chỉ hướng goc (độ, 90 = lên). → các đỉnh (chữ thập: [])."""
+        MŨI tại (x, y) (khách dim tới mũi), mũi chỉ hướng goc (độ, 90 = lên; dấu quanh tâm tròn thì chỉ vào tâm),
+        đáy lùi về phía sau mũi. → các đỉnh (chữ thập: [])."""
         self.diem_kegaki.append((x, y))
         if not canh or canh <= 0:
             self.msp.add_line((x, y - CO_KEGAKI), (x, y + CO_KEGAKI), dxfattribs={"layer": LOP_KEGAKI})
             self.msp.add_line((x - CO_KEGAKI, y), (x + CO_KEGAKI, y), dxfattribs={"layer": LOP_KEGAKI})
             return []
-        r = canh / math.sqrt(3.0)  # trọng tâm → đỉnh
-        dinh = [(x + r * math.cos(math.radians(goc + 120 * i)), y + r * math.sin(math.radians(goc + 120 * i))) for i in range(3)]
+        ux, uy = math.cos(math.radians(goc)), math.sin(math.radians(goc))
+        h = canh * math.sqrt(3.0) / 2.0                 # mũi → giữa đáy
+        bx, by = x - ux * h, y - uy * h
+        dinh = [(x, y), (bx - uy * canh / 2.0, by + ux * canh / 2.0), (bx + uy * canh / 2.0, by - ux * canh / 2.0)]
         for i in range(3):
             self.msp.add_line(dinh[i], dinh[(i + 1) % 3], dxfattribs={"layer": LOP_KEGAKI})
-        self.diem_kegaki += dinh
+        self.diem_kegaki += dinh[1:] + [(bx, by)]
         return dinh
 
     def leader(self, diem, noi_dung):
