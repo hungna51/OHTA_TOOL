@@ -91,6 +91,7 @@ namespace TeamsTool.Core
             sb.Append("(cú pháp: ").Append(PhongTrienKhai.HuongDanTd).Append(")\n");
             Ds(sb, "Bẻ / nhấn / cuộn", t.CanhJson); Ds(sb, "Lỗ", t.LoJson); Ds(sb, "ケガキ (toạ độ trên hình trải phẳng, gốc trái dưới)", t.KeGakiJson);
             Ds(sb, "Kích thước khách (phải có đủ trên bản vẽ OHTA)", t.DimKhachJson);
+            Ds(sb, "Đỉnh viền (mẫu da_giac: [x, y] hoặc [x, y, R], gốc trái dưới)", t.DinhJson);
             sb.Append("\n## Ghi chú đặc biệt\n");
             if (t.GhiChuJp.Trim().Length == 0 && t.GhiChuVi.Trim().Length == 0) sb.Append("(không có)\n");
             if (t.GhiChuJp.Trim().Length > 0) sb.Append("- JP: ").Append(t.GhiChuJp.Trim()).Append('\n');

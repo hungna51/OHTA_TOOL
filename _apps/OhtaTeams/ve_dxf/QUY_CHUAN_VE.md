@@ -14,6 +14,8 @@
 - Đường bẻ: LINE `0-KAKOU`, nét DASHED (`nen.duong_be`).
 
 ## Dim
+- **Chân dim chạm đối tượng (25/11, `chan_dim.py`)**: mỗi chân gióng phải đặt vào đúng đối tượng dim đo — đỉnh / mút đoạn viền hoặc đường bẻ, cạnh thẳng đứng / ngang trùng đường gióng, điểm cực của cung, tâm lỗ, tâm ケガキ — sai số **0.05 mm**, chọn điểm gần đường dim nhất. Không có đối tượng nào → **không vẽ** dim đó, báo "chân dim không chạm hình" (dòng cam) để người vẽ xem. Áp cho mọi dim `ve.py` vẽ: dim khách, chuỗi tự dựng, dim tổng X / Y.
+- **Chỉ dim như khách + dim tổng X / Y**: ngang, dọc, R, Ø, **xiên** (`dim_khach.loai = "xien"`, `diem` = 2 đầu cạnh — dim theo cạnh, đường dim ra phía ngoài hình) và **góc** (`"goc"`, `diem` = [điểm cạnh 1, đỉnh, điểm cạnh 2]). Điểm không nằm trên hình, hoặc số đo lệch số khách (> 0.5 mm / 0.5°) → không vẽ, báo thiếu.
 - **Vát / bo góc, khoét trong** (`goc_khoet.py`, chung mọi mẫu): vát = đoạn thẳng LINE `0-KAKOU`, bo = ARC thật, cùng layer viền; nhãn gom theo nhóm bằng leader `n-C10` / `n-R5` (không thêm dim R riêng — dim khách R trùng nhãn coi là đủ). Khoét = viền kín `0-KAKOU` (bo R mỗi góc nếu có); **không** thêm chuỗi dim riêng — chỉ dim như khách dim (`dim_khach`).
 - **Luôn đủ kích thước của khách**: mọi kích thước khách ghi trên bản vẽ còn đúng trên hình trải phẳng (`dim_khach`, AI đọc lúc đọc bản vẽ) phải có trên bản vẽ OHTA, cùng số. `ve.py` so với các dim đã vẽ: thiếu dim ngang / dọc → tự thêm một hàng dim (sau chuỗi dim, trước dim tổng); thiếu R → dim R chỉ khi bản vẽ có đúng cung R đó, không có thì báo **lệch** (không dim sai); còn lại (Ø lỗ, góc…) báo "còn thiếu dim của khách" để bổ sung trên CAD.
 - **Dim tổng** X (dưới cùng) và Y (bên phải): layer **`1-XY`**, kiểu `ISO-26` — `ve.py` tự thêm.

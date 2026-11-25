@@ -49,6 +49,8 @@ namespace TeamsTool.Core
         public string VungJson = "";
         /// <summary>Kích thước khách ghi trên bản vẽ còn đúng trên hình trải phẳng: [{loai, gia_tri, tu, den}] — bản vẽ phải dim đủ.</summary>
         public string DimKhachJson = "[]";
+        /// <summary>Mẫu da_giac (25/11): đỉnh viền ngoài [[x, y] | [x, y, R]…] mm, gốc góc trái dưới khung bao; R = cạnh tới đỉnh kế là cung (+ lồi / − lõm).</summary>
+        public string DinhJson = "[]";
         public HashSet<string> KhongChac = new HashSet<string>(); // ô AI không chắc / AI tự chọn
         public HashSet<string> DaSua = new HashSet<string>();     // ô người dùng đã sửa — chạy lại không ghi đè
         /// <summary>Đã qua lượt AI đọc phóng to ảnh cắt vùng tấm (đọc lại bản vẽ → tấm mới → phóng to lại).</summary>
@@ -182,6 +184,7 @@ namespace TeamsTool.Core
                 x.Set("ke_gaki", SafeParse(t.KeGakiJson));
                 if (!string.IsNullOrEmpty(t.VungJson)) x.Set("vung", SafeParse(t.VungJson));
                 x.Set("dim_khach", SafeParse(t.DimKhachJson));
+                x.Set("dinh", SafeParse(t.DinhJson));
                 x.Set("moi", t.Moi);
                 x.Set("da_phong_to", t.DaPhongTo);
                 x.Set("theo_tra_loi", t.TheoTraLoi.OrderBy(s => s).Cast<object>().ToList());
@@ -312,7 +315,7 @@ TIẾT DIỆN của mỗi tấm (để trải phẳng — KHÔNG tự tính tr�
 - khoet: khoét trong KHÔNG phải lỗ tròn / lỗ dài (ô vuông, chữ nhật, hình đa giác), chữ dạng ""□rộngxcao R<bo góc> G<góc xoay> @ x,y; x,y"" (tâm từng vị trí) hoặc đa giác ""[x,y x,y x,y …] @ x,y"" (đỉnh so với điểm đặt), các khoét cách nhau bằng |; toạ độ trên hình trải phẳng, gốc trái dưới. Không có → rỗng.
 - vung: [x0, y0, x1, y1] khung bao TRỌN hình vẽ của tấm trên trang PDF (mọi hình chiếu + dim + ghi chú của tấm, không gồm khung tên / ghi chú chung; tấm chỉ định bằng ô ghi chú có mũi tên / đường dẫn → vùng phải ôm cả KHUNG HÌNH mà mũi tên chỉ tới, không chỉ ô ghi chú), tỉ lệ 0–1 theo bề rộng / cao trang, gốc trái TRÊN (x0, y0 = góc trái trên; x1, y1 = góc phải dưới). DXF: theo khung bao bản vẽ.
 - mo_ta: tiếng Việt, mô tả CHI TIẾT hình tấm đủ để người khác vẽ lại không cần xem bản vẽ: hình dạng tổng thể, từng cạnh / cung (R, lõm / lồi, vị trí), lỗ (Ø, số, vị trí), ケガキ, chỗ bẻ (hướng, góc), chi tiết đặc biệt. Chỉ điều có trên bản vẽ, không suy đoán.
-- dim_khach: MỌI kích thước khách ghi trên bản vẽ của tấm mà còn đúng nguyên trên hình TRẢI PHẲNG (tấm phẳng: tất cả; tấm bẻ: kích thước nằm trong mặt phẳng tấm — song song đường bẻ, vị trí lỗ / ケガキ trên cùng một mặt; KHÔNG gồm kích thước ngoài qua chỗ bẻ, KHÔNG gồm dim của hình chi tiết phóng A, B… — đã ở kieu lỗ). Giữ đúng cách khách chia chuỗi: mỗi dim một mục với tu, den thật (vd lỗ trong dim từ đường tâm thì tu = toạ độ đường tâm). tai = toạ độ ĐƯỜNG DIM khách đặt trên hình trải phẳng (ngang: y của đường dim, doc: x của đường dim; dim nằm trong hình thì toạ độ trong tấm, ngoài thì ngoài — vd y > chiều cao tấm khi dim ở trên) để bản vẽ OHTA đặt dim đúng chỗ khách đặt; r / phi / goc: 0. loai: ngang (theo x) / doc (theo y) / r (bán kính) / phi (đường kính lỗ) / goc (độ); gia_tri đúng số khách ghi; tu, den = toạ độ hai đầu trên hình trải phẳng (ngang: x, doc: y, gốc góc trái dưới; r: tu, den = tâm x, y; phi / goc: 0). Bản vẽ OHTA phải dim đủ các kích thước này. Không ghi cạnh vát C (đã ở goc).
+- dim_khach: MỌI kích thước khách ghi trên bản vẽ của tấm mà còn đúng nguyên trên hình TRẢI PHẲNG (tấm phẳng: tất cả; tấm bẻ: kích thước nằm trong mặt phẳng tấm — song song đường bẻ, vị trí lỗ / ケガキ trên cùng một mặt; KHÔNG gồm kích thước ngoài qua chỗ bẻ, KHÔNG gồm dim của hình chi tiết phóng A, B… — đã ở kieu lỗ). Giữ đúng cách khách chia chuỗi: mỗi dim một mục với tu, den thật (vd lỗ trong dim từ đường tâm thì tu = toạ độ đường tâm). tai = toạ độ ĐƯỜNG DIM khách đặt trên hình trải phẳng (ngang: y của đường dim, doc: x của đường dim; dim nằm trong hình thì toạ độ trong tấm, ngoài thì ngoài — vd y > chiều cao tấm khi dim ở trên) để bản vẽ OHTA đặt dim đúng chỗ khách đặt; r / phi / goc: 0. loai: ngang (theo x) / doc (theo y) / r (bán kính) / phi (đường kính lỗ) / xien (cạnh xiên — đo chiều dài thật) / goc (độ): tu = den = tai = 0 và diem = các điểm THẬT trên hình trải phẳng mà chân dim khách chạm: xien [[x1, y1], [x2, y2]] hai đầu cạnh; goc [[điểm trên cạnh 1], [đỉnh góc], [điểm trên cạnh 2]]; loại khác diem = []; gia_tri đúng số khách ghi; tu, den = toạ độ hai đầu trên hình trải phẳng (ngang: x, doc: y, gốc góc trái dưới; r: tu, den = tâm x, y; phi / goc: 0). Bản vẽ OHTA phải dim đủ các kích thước này. Không ghi cạnh vát C (đã ở goc).
 - KHÔNG chọn mẫu vẽ ở lượt này (bước 2 đọc kỹ ảnh cắt từng tấm rồi mới chọn) — chỉ cần vung đúng để cắt ảnh.
 
 GHI CHÚ CHUNG (ghi_chu_don, cho cả tệp): lời nhắn / yêu cầu chung của khách không thuộc riêng tấm nào (vd ""t=12mm切り板～2枚"", ""下図の手配をお願いします"", yêu cầu đóng gói, hạn) — giữ chữ gốc, mỗi ý một dòng kèm dịch tiếng Việt ngắn trong ngoặc; không có → rỗng.
@@ -378,7 +381,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             foreach (string o in OTd.Except(new[] { "bien_dang", "mo_ta_bien_dang", "tham_so" })) tt.Add((o, s)); // mẫu vẽ + thông số mẫu: bước 2
             tt.Add(("ke_gaki", cap));
             tt.Add(("vung", Mang(n)));
-            tt.Add(("dim_khach", Mang(Obj(("loai", s), ("gia_tri", n), ("tu", n), ("den", n), ("tai", n))))); // tai: chỗ đặt đường dim (18/11)
+            tt.Add(("dim_khach", Mang(Obj(("loai", s), ("gia_tri", n), ("tu", n), ("den", n), ("tai", n), ("diem", cap))))); // tai: chỗ đặt đường dim (18/11); diem: xiên / góc (25/11)
             return Obj(("tam", Mang(Obj(tt.ToArray()))), ("van_de", Mang(PhongKiemTra.SchemaVanDe())), ("ghi_chu_don", s));
         }
 
@@ -473,6 +476,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             if (x.Get("tham_so") is List<object> tsAi) // AI trả mảng {ten, gia_tri} → chữ "r1=45; r2=38"
                 t.ThamSo = string.Join("; ", tsAi.OfType<JsonObject>().Where(o => (o.GetString("ten") ?? "").Trim().Length > 0).Select(o => o.GetString("ten").Trim() + "=" + Chu(o.Get("gia_tri"))));
             t.DimKhachJson = JsonLite.Serialize(x.Get("dim_khach") as List<object> ?? new List<object>());
+            t.DinhJson = JsonLite.Serialize(x.Get("dinh") as List<object> ?? new List<object>());
             if (t.KieuTd.Length > 0 && t.KieuTd != "phang" && t.KieuTd != "be" && t.KieuTd != "lam_tay") // schema không còn enum
             {
                 t.KieuTd = (t.TdX + t.TdY).Any(char.IsLetter) ? "be" : "phang";

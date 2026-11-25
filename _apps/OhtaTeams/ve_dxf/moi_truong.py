@@ -165,6 +165,19 @@ class NenVe:
         d.render()
         return d
 
+    def dim_xien(self, p1, p2, qua, lop=LOP_DIM):
+        """Dim theo cạnh xiên p1 → p2 (đo chiều dài thật), đường dim đi qua điểm qua (đặt phía ngoài hình)."""
+        goc = math.degrees(math.atan2(p2[1] - p1[1], p2[0] - p1[0]))
+        d = self.msp.add_linear_dim(base=qua, p1=p1, p2=p2, angle=goc, dimstyle=self.kieu_dim, override=self.ov(), dxfattribs={"layer": lop})
+        d.render()
+        return d
+
+    def dim_goc(self, dinh, p1, p2, qua, lop=LOP_DIM):
+        """Dim góc tại đỉnh giữa hai cạnh tới p1, p2; cung dim đi qua điểm qua."""
+        d = self.msp.add_angular_dim_3p(base=qua, center=dinh, p1=p1, p2=p2, dimstyle=self.kieu_dim, override=self.ov(), dxfattribs={"layer": lop})
+        d.render()
+        return d
+
     def dim_phi(self, x, y, d, goc=60.0, le=LE_DIM, chu="<>", chu_ngang=False):
         """Dim đường kính Ø một lỗ tròn, chữ ra ngoài theo góc goc (bản chuẩn 130996-3); chu "4-<>" = nhóm 4 lỗ (bản sửa 18/11)."""
         r, a = d / 2.0, math.radians(goc)
