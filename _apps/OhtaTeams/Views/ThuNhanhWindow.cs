@@ -199,7 +199,7 @@ namespace TeamsTool.Views
         }
 
         /// <summary>Ảnh khác PNG (jpg, bmp…) → PNG tạm (AI nhận ảnh PNG); PNG / PDF / DXF giữ nguyên.</summary>
-        private static string VePng(string f)
+        internal static string VePng(string f)
         {
             string ext = Path.GetExtension(f).ToLowerInvariant();
             if (ext == ".png" || ext == ".pdf" || ext == ".dxf") return f;

@@ -5,25 +5,30 @@
              FontFamily="Segoe UI, Meiryo UI, Yu Gothic UI"
              FontSize="12"
              UseLayoutRounding="True"
-             SnapsToDevicePixels="True">
-    <!-- Tab AI (ADR 0006): AI chi canh bao, khong sua ban ve -->
+             SnapsToDevicePixels="True"
+             AllowDrop="True" Focusable="True">
+    <!-- Tab "Tao du lieu DXF tu anh" (ADR 0006): OhtaTeams.exe (thu nhanh chay an) doc + ve, tab chi xem va chen DXF -->
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="HienKhi"/>
 
         <Style x:Key="Nut" TargetType="Button">
-            <Setter Property="Foreground" Value="#FFFFFF"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="8,7"/>
+            <Setter Property="Foreground" Value="#334E68"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#CBD2D9"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="Margin" Value="0,0,6,6"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
@@ -33,14 +38,11 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
-        <Style x:Key="NutPhu" TargetType="Button" BasedOn="{StaticResource Nut}">
-            <Setter Property="Foreground" Value="#323639"/>
-            <Setter Property="Background" Value="#E4E7EC"/>
-            <Setter Property="FontWeight" Value="Normal"/>
-            <Setter Property="Padding" Value="8,5"/>
+        <Style x:Key="NutChinh" TargetType="Button" BasedOn="{StaticResource Nut}">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
-
         <Style x:Key="The" TargetType="Border">
             <Setter Property="Background" Value="#FFFFFF"/>
             <Setter Property="BorderBrush" Value="#E1E4E8"/>
@@ -49,33 +51,35 @@
             <Setter Property="Padding" Value="10"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
+        <Style x:Key="TieuDeThe" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#52606D"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>   <!-- 0. Header -->
-            <RowDefinition Height="*"/>      <!-- 1. Noi dung (cuon) -->
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 0. Header: cung kieu tab Fname / Guro, nut cai dat nen trang banh rang to mau tab -->
+        <!-- Header: cung kieu tab Fname / Guro. Nut ⚙ mo cua so Thu nhanh cua OhtaTeams (thu vien mau, AI viet mau) -->
         <Border Grid.Row="0" Background="{Binding AccentBrush}" Padding="12,10">
             <DockPanel LastChildFill="True">
-                <Button DockPanel.Dock="Right" Command="{Binding CaiDatCmd}"
+                <Button DockPanel.Dock="Right" Command="{Binding ThuNhanhCmd}"
                         Width="30" Height="30" Margin="6,0,0,0" VerticalAlignment="Top" Cursor="Hand"
-                        ToolTip="Cài đặt AI: API key, file hướng dẫn AI chạy">
+                        ToolTip="Mở cửa sổ Thử nhanh của OhtaTeams: 📚 Thư viện mẫu, ✨ AI viết mẫu, ➕ Thêm vào thư viện (máy Admin). Cài đặt AI: OhtaTeams → ⚙ → 🤖 AI">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" Background="#FFFFFF" BorderBrush="#CFD8DC"
-                                    BorderThickness="1" CornerRadius="4">
+                            <Border x:Name="Bd" Background="#FFFFFF" BorderBrush="#CFD8DC" BorderThickness="1" CornerRadius="4">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="Bd" Property="Background" Value="#ECEFF1"/>
                                     <Setter TargetName="Bd" Property="BorderBrush" Value="#90A4AE"/>
-                                </Trigger>
-                                <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="#CFD8DC"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -87,216 +91,78 @@
                     </Rectangle>
                 </Button>
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="{Binding TieuDe}" Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold"
-                               TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding MoTa}" Foreground="#DDD6FE" FontSize="10.5" Margin="0,1,0,0"
-                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding TieuDe}" Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding MoTa}" Foreground="#DDD6FE" FontSize="10.5" Margin="0,1,0,0" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
             </DockPanel>
         </Border>
 
-    <ScrollViewer x:Name="KhungCuon" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                  Visibility="{Binding KhongChat, Converter={StaticResource HienKhi}}">
-        <StackPanel Margin="8">
-            <!-- Trang thai key: bam de mo cai dat -->
-            <Border Background="#FFF4E5" BorderBrush="#F9C97A" BorderThickness="1" CornerRadius="4" Padding="8,5" Margin="0,0,0,8"
-                    Cursor="Hand" MouseLeftButtonUp="MoCaiDat"
-                    Visibility="{Binding ChuaCoKey, Converter={StaticResource HienKhi}}">
-                <TextBlock Text="{Binding TrangThaiKey}" Foreground="#8A5300" TextWrapping="Wrap"/>
-            </Border>
+        <ScrollViewer x:Name="KhungCuon" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="8">
+                <!-- Nhan anh -->
+                <WrapPanel>
+                    <Button x:Name="NutDan" Style="{StaticResource NutChinh}" Content="📋 Dán ảnh (Ctrl+V)" Command="{Binding DanCmd}"
+                            IsEnabled="{Binding KhongChay}" ToolTip="Ảnh chụp MỘT hình (Win+Shift+S) hoặc tệp đã copy trong Explorer. Kéo thả tệp vào tab cũng được."/>
+                    <Button Style="{StaticResource Nut}" Content="📂 Chọn tệp" Command="{Binding ChonTepCmd}" IsEnabled="{Binding KhongChay}"
+                            ToolTip="Ảnh / PDF / DXF của MỘT hình"/>
+                    <Button Style="{StaticResource Nut}" Content="■ Huỷ" Command="{Binding HuyCmd}"
+                            Visibility="{Binding DangChay, Converter={StaticResource HienKhi}}"/>
+                </WrapPanel>
+                <TextBlock Text="{Binding Bao}" TextWrapping="Wrap" Foreground="#5B3FD1" Margin="2,0,0,8"/>
 
-            <!-- Chon che do + layer + model + dan nhan -->
-            <Border Style="{StaticResource The}">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition/>
-                        <RowDefinition/>
-                        <RowDefinition/>
-                        <RowDefinition/>
-                    </Grid.RowDefinitions>
-                    <TextBlock Text="Chế độ" VerticalAlignment="Center" Margin="0,0,8,6"/>
-                    <ComboBox Grid.Column="1" Margin="0,0,0,6"
-                              ItemsSource="{Binding DanhSachCheDo}"
-                              SelectedItem="{Binding CheDo}"/>
-                    <TextBlock Grid.Row="1" Text="Layer khung" VerticalAlignment="Center" Margin="0,0,8,6"/>
-                    <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,0,0,6" IsEditable="True"
-                              ItemsSource="{Binding DanhSachLayer}"
-                              Text="{Binding LayerKhung, UpdateSourceTrigger=LostFocus}"
-                              DropDownOpened="LayerMo"/>
-                    <TextBlock Grid.Row="2" Text="Model" VerticalAlignment="Center" Margin="0,0,8,6"/>
-                    <ComboBox Grid.Row="2" Grid.Column="1" Margin="0,0,0,6"
-                              ItemsSource="{Binding DanhSachModel}"
-                              SelectedItem="{Binding Model}"
-                              IsEnabled="{Binding CanClaudeModel}"/>
-                    <CheckBox Grid.Row="3" Grid.ColumnSpan="2"
-                              Content="Dán nhãn gia công ở góc trên-trái khung (layer AI-PHAN-LOAI)"
-                              IsChecked="{Binding DanNhanGocKhung}"
-                              ToolTip="Ghi nhãn [BE], [TAPU], [SARA], [CUON], [VAT], [PHANG] tỷ lệ theo chiều cao khung ở góc trên-trái"/>
-                </Grid>
-            </Border>
+                <!-- Lan thu dang chon -->
+                <Border Style="{StaticResource The}" Visibility="{Binding CoChon, Converter={StaticResource HienKhi}}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding TieuDeChon}" FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding ChiTietChon}" Foreground="#5F6B7A" TextWrapping="Wrap" Margin="0,2,0,6"/>
+                        <UniformGrid Columns="2">
+                            <Border BorderBrush="#E1E4E8" BorderThickness="1" Margin="0,0,4,0" ToolTip="Ảnh gửi vào (bấm mở to)" Cursor="Hand" MouseLeftButtonUp="MoAnhGoc">
+                                <Image Source="{Binding AnhGoc}" Stretch="Uniform" MaxHeight="220"/>
+                            </Border>
+                            <Border BorderBrush="#E1E4E8" BorderThickness="1" Margin="4,0,0,0" ToolTip="Hình phần mềm vẽ (bấm mở to)" Cursor="Hand" MouseLeftButtonUp="MoAnhVe">
+                                <Image Source="{Binding AnhVe}" Stretch="Uniform" MaxHeight="220"/>
+                            </Border>
+                        </UniformGrid>
+                        <TextBlock Text="{Binding LoiChon, StringFormat=✖ {0}}" Foreground="#B42318" TextWrapping="Wrap" Margin="0,6,0,0"
+                                   Visibility="{Binding CoLoi, Converter={StaticResource HienKhi}}"/>
+                        <TextBlock Text="{Binding CanhBaoChon}" Foreground="#B54708" TextWrapping="Wrap" Margin="0,6,0,0"
+                                   Visibility="{Binding CoCanhBao, Converter={StaticResource HienKhi}}"/>
+                        <WrapPanel Margin="0,8,0,0">
+                            <Button x:Name="NutChen" Style="{StaticResource NutChinh}" Content="📥 Chèn vào bản vẽ" Command="{Binding ChenCmd}"
+                                    IsEnabled="{Binding CoDxf}" ToolTip="Lệnh OHTADXFCHEN: bấm điểm đặt góc dưới trái biên dạng. Chỉ hình + dim — F-name tự thêm."/>
+                            <Button Style="{StaticResource Nut}" Content="🔁 Vẽ lại" Command="{Binding VeLaiCmd}" IsEnabled="{Binding CoTheSua}"
+                                    ToolTip="Vẽ lại từ thông số hiện tại (sau khi ✎ sửa) — không gọi AI"/>
+                            <Button Style="{StaticResource Nut}" Content="🤖 Đọc lại (AI)" Command="{Binding DocLaiCmd}" IsEnabled="{Binding CoTheSua}"
+                                    ToolTip="AI đọc lại hình rồi vẽ — tốn AI"/>
+                            <Button Style="{StaticResource Nut}" Content="✎ Sửa thông số" Command="{Binding SuaCmd}" IsEnabled="{Binding CoTheSua}"
+                                    ToolTip="Mở chi_tiet.json bằng Notepad: sửa bien_dang, kích thước, lo, ke_gaki, goc, khoet, dim_khach… rồi lưu và bấm 🔁 Vẽ lại"/>
+                            <Button Style="{StaticResource Nut}" Content="📁 Thư mục" Command="{Binding ThuMucCmd}" IsEnabled="{Binding CoChon}"/>
+                            <Button Style="{StaticResource Nut}" Content="🗑 Xoá" Command="{Binding XoaCmd}" IsEnabled="{Binding CoTheSua}"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
 
-            <!-- Nut chay -->
-            <Grid Margin="0,0,0,8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="6"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="6"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <Button x:Name="NutKiemTra" Style="{StaticResource Nut}" Content="▶ Kiểm tra" Command="{Binding KiemTraCmd}"
-                        IsEnabled="{Binding KhongChay}" ToolTip="Kiểm tra &amp; phân loại mọi khung trong bản vẽ (lệnh OHTAAI)"/>
-                <Button Grid.Column="2" Style="{StaticResource NutPhu}" Content="⬚ Chọn vùng" Command="{Binding ChonVungCmd}"
-                        IsEnabled="{Binding KhongChay}" ToolTip="Quét một vùng, chỉ kiểm &amp; phân loại các khung nằm trọn trong vùng (lệnh OHTAAIVUNG)"/>
-                <Button Grid.Column="4" Style="{StaticResource NutPhu}" Content="■ Dừng" Command="{Binding DungCmd}"
-                        Visibility="{Binding DangChay, Converter={StaticResource HienKhi}}"/>
-            </Grid>
-            <Button Style="{StaticResource NutPhu}" Content="📝 Xuất mô tả" Command="{Binding XuatMoTaCmd}" Margin="0,0,0,8"
-                    IsEnabled="{Binding KhongChay}" ToolTip="Quét chọn các khung in, ghi &lt;bản vẽ&gt;.ai.md + .ai.json vào OHTA_AI\mo-ta cạnh file bản vẽ để Kev / Claude đọc hiểu từng tấm (lệnh OHTAAIMOTA)"/>
-            <Button Style="{StaticResource NutPhu}" Content="💬 Chat với AI (Ling)" Command="{Binding MoChatCmd}" Margin="0,0,0,8"
-                    ToolTip="Chuyển sang màn hình chat với Ling. Cần key Ling (nút ⚙)."/>
-
-            <!-- Tien do + tong -->
-            <TextBlock Text="{Binding TienDo}" Foreground="#5B3FD1" FontWeight="SemiBold" Margin="2,0,0,4"
-                       Visibility="{Binding DangChay, Converter={StaticResource HienKhi}}"/>
-            <DockPanel Margin="2,0,0,6">
-                <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Content="Nhật ký" Padding="6,2"
-                        Command="{Binding MoNhatKyCmd}" Visibility="{Binding CoNhatKy, Converter={StaticResource HienKhi}}"/>
-                <TextBlock Text="{Binding Tong}" Foreground="#5F6B7A" TextWrapping="Wrap" VerticalAlignment="Center"/>
-            </DockPanel>
-
-            <!-- Thong ke phan loai gia cong -->
-            <Border Background="#EEF2FF" BorderBrush="#C7D2FE" BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="0,0,0,6"
-                    Visibility="{Binding CoThongKePhanLoai, Converter={StaticResource HienKhi}}">
-                <TextBlock Text="{Binding ThongKePhanLoai}" Foreground="#3730A3" FontWeight="SemiBold" TextWrapping="Wrap"/>
-            </Border>
-
-            <!-- Loi -->
-            <ItemsControl ItemsSource="{Binding Loi}" Margin="0,0,0,4">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Background="#FDECEC" BorderBrush="#F5C2C0" BorderThickness="1" CornerRadius="4" Padding="8,5" Margin="0,0,0,4">
-                            <TextBlock Text="{Binding}" Foreground="#B42318" TextWrapping="Wrap"/>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
-            <!-- Canh bao -->
-            <CheckBox Content="Chỉ hiện 🔴" IsChecked="{Binding ChiHienDo}" Margin="2,0,0,6"/>
-            <ItemsControl ItemsSource="{Binding CanhBaoHien}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Style="{StaticResource The}" Cursor="Hand" MouseLeftButtonUp="CanhBaoBam"
-                                ToolTip="Bấm để zoom tới khung">
-                            <StackPanel>
-                                <TextBlock FontWeight="SemiBold" TextWrapping="Wrap">
-                                    <Run Text="{Binding Icon, Mode=OneWay}"/>
-                                    <Run Text="{Binding TieuDe, Mode=OneWay}"/>
-                                </TextBlock>
-                                <TextBlock Text="{Binding LyDo}" TextWrapping="Wrap" Margin="0,3,0,0"/>
-                                <TextBlock TextWrapping="Wrap" Margin="0,3,0,0" Foreground="#1F7A4D"
-                                           Visibility="{Binding CoGoiY, Converter={StaticResource HienKhi}}">
-                                    <Run Text="Gợi ý: "/>
-                                    <Run Text="{Binding GoiY, Mode=OneWay}"/>
-                                </TextBlock>
-                            </StackPanel>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
-        </StackPanel>
-    </ScrollViewer>
-    <!-- 1b. Man hinh chat (thay cho man hinh kiem tra khi DangChat) -->
-    <Grid Grid.Row="1" Margin="8" DataContext="{Binding Chat}"
-          Visibility="{Binding DataContext.DangChat, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource HienKhi}}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        <DockPanel Margin="0,0,0,6">
-            <Button DockPanel.Dock="Left" Style="{StaticResource NutPhu}" Content="← Quay lại" Margin="0,0,6,0"
-                    Command="{Binding DataContext.QuayLaiCmd, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
-            <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Content="📁" Margin="6,0,0,0" Padding="6,5"
-                    Command="{Binding MoThuMucCmd}" ToolTip="Mở thư mục lưu chat (OHTA_AI\chat)"/>
-            <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Content="＋ Cuộc mới" Margin="6,0,0,0"
-                    Command="{Binding CuocMoiCmd}" IsEnabled="{Binding KhongGui}"/>
-            <ComboBox ItemsSource="{Binding DanhSachCuoc}" SelectedItem="{Binding CuocChon}" IsEnabled="{Binding KhongGui}"
-                      ToolTip="Mở lại cuộc chat cũ của bản vẽ này"/>
-        </DockPanel>
-
-        <ScrollViewer x:Name="ChatCuon" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl ItemsSource="{Binding Dong}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border CornerRadius="6" Padding="8,6" Margin="0,0,0,6" BorderThickness="1">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Background" Value="#FFFFFF"/>
-                                    <Setter Property="BorderBrush" Value="#E1E4E8"/>
-                                    <Setter Property="Margin" Value="0,0,24,6"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding LaNguoiDung}" Value="True">
-                                            <Setter Property="Background" Value="#EEF2FF"/>
-                                            <Setter Property="BorderBrush" Value="#C7D2FE"/>
-                                            <Setter Property="Margin" Value="24,0,0,6"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <StackPanel>
-                                <TextBlock Text="{Binding NhanDinhKem}" Foreground="#5B3FD1" FontSize="11" Margin="0,0,0,3"
-                                           Visibility="{Binding CoDinhKem, Converter={StaticResource HienKhi}}"/>
-                                <TextBox Text="{Binding SuyNghi, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0"
-                                         Background="Transparent" Foreground="#7B8794" FontStyle="Italic" FontSize="11" Margin="0,0,0,4"
-                                         Visibility="{Binding HienSuyNghiO, Converter={StaticResource HienKhi}}"/>
-                                <TextBox Text="{Binding NoiDung, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0"
-                                         Background="Transparent" Foreground="#1F2933"/>
-                            </StackPanel>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
-
-        <DockPanel Grid.Row="2" Margin="0,6,0,0" Visibility="{Binding CoDinhKem, Converter={StaticResource HienKhi}}">
-            <Button DockPanel.Dock="Right" Style="{StaticResource NutPhu}" Content="✕" Padding="6,2" Command="{Binding BoDinhKemCmd}"
-                    ToolTip="Bỏ đính kèm"/>
-            <TextBlock Text="{Binding NhanDinhKem}" Foreground="#5B3FD1" FontWeight="SemiBold" VerticalAlignment="Center"/>
-        </DockPanel>
-
-        <Grid Grid.Row="3" Margin="0,6,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBox x:Name="OCauHoi" Text="{Binding CauHoi, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True"
-                     TextWrapping="Wrap" MinHeight="54" MaxHeight="140" VerticalScrollBarVisibility="Auto" Padding="4"
-                     PreviewKeyDown="CauHoiPhim" ToolTip="Enter = gửi · Shift+Enter = xuống dòng"/>
-            <StackPanel Grid.Column="1" Margin="6,0,0,0">
-                <Button x:Name="NutGui" Style="{StaticResource Nut}" Content="Gửi ➤" Command="{Binding GuiCmd}" Margin="0,0,0,4"
-                        Visibility="{Binding KhongGui, Converter={StaticResource HienKhi}}"/>
-                <Button Style="{StaticResource NutPhu}" Content="■ Dừng" Command="{Binding DungCmd}" Margin="0,0,0,4"
-                        Visibility="{Binding DangGui, Converter={StaticResource HienKhi}}"/>
-                <Button Style="{StaticResource NutPhu}" Content="📎 Gửi khung" Command="{Binding GuiKhungCmd}"
-                        ToolTip="Quét chọn vùng trong CAD: mô tả các khung in trong vùng được gửi kèm câu hỏi kế tiếp"/>
+                <!-- Danh sach lan thu -->
+                <Border Style="{StaticResource The}">
+                    <StackPanel>
+                        <TextBlock Text="CÁC LẦN THỬ" Style="{StaticResource TieuDeThe}"/>
+                        <ListBox ItemsSource="{Binding DanhSach}" SelectedItem="{Binding DongChon}" BorderThickness="0" MaxHeight="360"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Image Source="{Binding AnhNho}" Width="60" Height="44" Stretch="Uniform" Margin="0,2,6,2"/>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Gio}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding MoTa}" Foreground="#5F6B7A" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                </Border>
             </StackPanel>
-        </Grid>
-
-        <DockPanel Grid.Row="4" Margin="2,4,0,0">
-            <CheckBox DockPanel.Dock="Right" Content="Hiện suy nghĩ" IsChecked="{Binding HienSuyNghi}" Margin="6,0,0,0"/>
-            <TextBlock DockPanel.Dock="Left" Text="{Binding TenModel}" Foreground="#5B3FD1" FontWeight="SemiBold" Margin="0,0,8,0"
-                       ToolTip="Model đang chat (đổi ở nút ⚙ → Ling API)"/>
-            <TextBlock Text="{Binding TrangThai}" Foreground="#5F6B7A" TextWrapping="Wrap"/>
-        </DockPanel>
-    </Grid>
+        </ScrollViewer>
     </Grid>
 </UserControl>

@@ -8,6 +8,10 @@ Từ 11/2026, tab **AI** (mục con `05_AI`, thiết kế ở [_docs/specs/2026-
 - **Chỉ mở cho các máy Admin (`adminOnly: true` trong `05_AI/module.json`)**: `release_ohta.ps1` đóng gói `05_AI` kèm `05_AI/bin/<ZwCAD|AutoCAD>/AITOOL.dll`, `05_AI/data/kev/*.md`, `05_AI/data/huong_dan_ai.md` và `05_AI/kev/*`. Trên bảng OHTA, `ModuleDiscovery.DiscoverModules(rootDir, includeAdminOnly: FnameSheetWriter.IsAdminMachine())` chỉ hiển thị tab **AI** trên các máy Admin (tên máy có trong tab `admin` trên Google Sheet hoặc máy chủ cài Kev local). Các máy Admin con trong mạng LAN tự động trỏ tới `may_chu_lan` (`http://NGUYEN-A-HUNG:8008`) và tự tải bộ file `.md` mới nhất từ máy chủ trước mỗi lần kiểm tra.
 - **Key** ở `05_AI\data\ai.key`, **nhật ký** ở `05_AI\log\` — cả hai trong `.gitignore` và loại trừ khỏi gói phát hành (repo public).
 
+## Cập nhật 25/11/2026 — tab thành "Tạo dữ liệu DXF từ ảnh"
+
+Bỏ toàn bộ chức năng cũ (phân loại, kiểm tra khung, Kev server + `05_AI\kev`, chat Ling, Xuất mô tả, cửa sổ cài đặt, `data\kev`, `huong_dan_ai.md`). Tab giờ là 🧪 Thử nhanh của OhtaTeams trong CAD: AITOOL.dll **không gọi AI**, mà chạy ẩn `OhtaTeams.exe --thu-nhanh-*` (`_apps\OhtaTeams\Services\ThuNhanhCli.cs`, giao thức dòng `@` / `#TM` / `#KQ` / `#LOI`) rồi chèn DXF bằng `Database.DxfIn` + `Database.Insert`. Lý do: một nguồn code đọc / vẽ / thư viện mẫu với OhtaTeams (link nguồn `AiDon` vào DLL CAD sẽ kéo theo cài đặt Teams, Graph, PdfSharp); CAD không treo khi chờ AI; lỗi Python / AI nằm ở tiến trình riêng. Các gạch đầu dòng trên về Kev / gọi Claude trực tiếp chỉ còn là lịch sử. `05_AI\data\ai.key` giữ nguyên (OhtaTeams dùng chung).
+
 ## Considered Options
 
 - **Viết trong OHTATOOL.dll** (như tab Fname): ít việc hơn nhưng code thử nghiệm nằm chung với lõi mà cả đội tự cập nhật. Không chọn.

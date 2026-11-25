@@ -3,11 +3,11 @@
   "enabled": true,
   "adminOnly": true,
   "order": 50,
-  "tabTitle": "AI",
-  "title": "AI kiểm tra & phân loại",
-  "version": "0.2",
+  "tabTitle": "DXF ảnh",
+  "title": "Tạo dữ liệu DXF từ ảnh",
+  "version": "0.3",
   "stage": "beta",
-  "description": "Kev-0.8B (LAN) + Claude · phân loại tấm gia công · kiểm tra F-name / CSV / ghi chú",
+  "description": "Dán ảnh một hình · AI đọc + chọn mẫu · chèn biên dạng vào bản vẽ",
   "accentColor": "#5B3FD1",
   "tools": []
 }

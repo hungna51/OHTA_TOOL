@@ -10,7 +10,7 @@ namespace OhtaTeams
     public static class Program
     {
         [STAThread]
-        public static int Main()
+        public static int Main(string[] args)
         {
             string thuMuc = TimThuMucTeams(AppDomain.CurrentDomain.BaseDirectory);
             if (thuMuc == null)
@@ -21,11 +21,18 @@ namespace OhtaTeams
             }
             CaiDatTeams.ThuMucModule = thuMuc;
 
+            // Tab "Tạo dữ liệu DXF từ ảnh" trên CAD gọi Thử nhanh chạy ẩn (ThuNhanhCli); "--thu-nhanh" mở cửa sổ Thử nhanh
+            bool moThuNhanh = args.Length > 0 && args[0] == "--thu-nhanh";
+            if (args.Length > 0 && args[0].StartsWith("--thu-nhanh-", StringComparison.Ordinal)) return ThuNhanhCli.Chay(args);
+
             var app = new Application();
             // Lỗi không bắt được → hiện chữ thay vì tắt im lặng
             app.DispatcherUnhandledException += (s, e) => { BaoLoi(e.Exception); e.Handled = true; };
             AppDomain.CurrentDomain.UnhandledException += (s, e) => BaoLoi(e.ExceptionObject as Exception);
             // Tạo màn hình trong Startup: lúc đó Dispatcher đã chạy nên các await (tải đơn ngay khi mở) quay về đúng luồng giao diện
+            if (moThuNhanh)
+                app.Startup += (s, e) => new ThuNhanhWindow(KieuTeams.Mau("#5B3FD1")).Show();
+            else
             app.Startup += (s, e) => new Window
             {
                 Title = "OHTA Teams",
