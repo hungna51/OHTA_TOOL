@@ -261,6 +261,7 @@ namespace TeamsTool.Core
                 j.Set("doan_x", So(tk.DoanPhangX)); j.Set("doan_y", So(tk.DoanPhangY));
                 j.Set("ke_gaki", KeGaki(t).Select(k => (object)So(k.Canh > 0 ? new[] { k.X, k.Y, k.Canh, k.Goc, k.Cao } : new[] { k.X, k.Y })).ToList());
                 j.Set("slit", DsJson(t.SlitJson)); // スリット: nét 4-SHT (25/11)
+                j.Set("duong_tam", DsJson(t.DuongTamJson)); // đường tâm khách dim từ đó (25/11)
                 j.Set("dim_khach", DsJson(t.DimKhachJson));
                 j.Set("dinh", DsJson(t.DinhJson)); // mẫu da_giac (25/11)
                 j.Set("chua_chac", PhongPhongTo.ChuaChacConLai(t)); // phần AI tự suy → ve.py tô vàng (25/11)

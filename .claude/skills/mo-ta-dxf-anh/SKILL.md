@@ -14,12 +14,13 @@ description: >
 
 ### 1. Kê mọi chi tiết trên ảnh
 Liệt kê (cho riêng mình) từng chi tiết của tấm: viền ngoài, lỗ, khoét trong, vát / bo góc, dấu khắc ケガキ / マーキング, スリット, đường bẻ, chữ ghi chú, số lượng, vật liệu. Với mỗi chi tiết ghi số khách viết tay / in trên hình.
+Soi kỹ các nét dễ bị bỏ: nét chạm / bị cắt ở mép ảnh, nét xiên song song đường tâm (thường là cạnh CẮT GÓC của viền, có dim khoảng cách tới đường tâm), nét mảnh ở góc tấm, chữ ghi chú khoanh tròn.
 Xong khi: mọi nét và mọi chữ trên ảnh đều thuộc một chi tiết trong danh sách, hoặc được xếp là ghi chú đơn (giá, hạn giao, người gửi…).
 
 ### 2. Xếp mỗi chi tiết vào một trong ba loại
 - **chắc**: khách ghi số đủ để vẽ.
 - **tính được**: suy ra bằng hình học từ số khách (vd toạ độ 3 dấu cách đều 120° từ bán kính và góc). Tự tính, ghi kết quả.
-- **không rõ**: thiếu số, chữ nhoè đọc hai cách, nét không rõ là cắt hay khắc, hai số mâu thuẫn, vị trí chỉ có mũi tên chỉ chung chung, hình không theo tỉ lệ nên không đo được.
+- **không rõ**: nét không chắc là viền / đường tâm / dấu, nét bị cắt khỏi mép ảnh, thiếu số, chữ nhoè đọc hai cách, nét không rõ là cắt hay khắc, hai số mâu thuẫn, vị trí chỉ có mũi tên chỉ chung chung, hình không theo tỉ lệ nên không đo được.
 
 Đọc hình theo số, không theo tỉ lệ — bản vẽ tay hầu như không đúng tỉ lệ.
 
@@ -47,6 +48,8 @@ Rồi trả khối + một dòng nói phần nào hệ thống chưa vẽ đư�
 - **Khoét trong** `khoet`: `□rộngxcao R<bo> G<góc xoay> @ x,y`.
 - **Góc** `goc`: `trai_duoi C10; phai_tren R5` (đỉnh trước khi vát / bo).
 - **ケガキ** `ke_gaki`: `[x, y]` = chữ thập 10 mm tại tâm; `[x, y, đáy, hướng, cao]` = tam giác / chữ V: (x, y) = **mũi** (chỗ khách dim tới), `hướng` = hướng mũi chỉ (0 phải, 90 lên, 180 trái, 270 xuống), `cao` = mũi → đáy (0 = tam giác đều). Đáy nằm trên mép tấm → `cao` tính để 2 góc đáy chạm mép (vành bán kính R, mũi cách tâm r: cao = √(R² − (đáy/2)²) − r); khi đó tool vẽ chữ **V** 2 nét như bản xưởng. Dấu cách đều quanh tâm tròn: toạ độ mũi VÀ hướng đều quay theo từng dấu (mũi chỉ vào tâm → hướng = góc từ mũi về tâm).
+- **Cạnh cắt góc xiên** (vd song song đường tâm 45°, cách đường tâm d): là một cạnh của `dinh` (mẫu `da_giac`) — tính 2 đầu cạnh trên 2 mép kề. Vd Drawing7: cung R40 tâm (25, 40), mép trái / trên cách tâm 25, cạnh xiên cách đường tâm 45° 25 → `dinh = [[0,8.78,40],[56.22,65],[14.64,65],[0,50.36]]`.
+- **Đường tâm khách dim từ đó** `duong_tam`: `[x1, y1, x2, y2]` — đường tâm xiên / ngang qua tâm lỗ làm gốc cho dim góc hay dim khoảng cách tới cạnh song song; điểm dim (`diem`) đặt trên đường này.
 - **スリット** `slit`: `[x1, y1, x2, y2]` — một nét cắt đơn (layer 4-SHT), vd cắt đứt vành theo bán kính.
 - **Dim**: kê các dim khách có (tổng X / Y, Ø, khoảng tâm → dấu…) — bản vẽ OHTA chép đúng các dim đó, chỉ thêm tổng X / Y nếu thiếu.
 

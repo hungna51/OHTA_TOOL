@@ -49,6 +49,9 @@
 - **Tấm tròn** (mọi đỉnh `dinh` trên vòng tâm khung bao, mọi cạnh là cung bán kính đó): dim tổng là **Ø** (1-XY) thay cho X / Y.
 - **Tấm tròn / vành khăn** (mẫu `da_giac`): 2 đỉnh đối nhau, cả hai có R — Øn: `[[0, n/2, n/2], [n, n/2, n/2]]`; lỗ giữa ở `lo`.
 
+## Đường tâm khách dim từ đó (25/11, Drawing7)
+- `duong_tam`: mỗi mục `[x1, y1, x2, y2]` = đường tâm (CENTER, `1-SUNPOU`) khách lấy làm gốc dim — vd đường tâm xiên 45° qua tâm lỗ, dim góc 45° và dim khoảng cách tới cạnh cắt góc song song. Chân dim chạm được đường này.
+
 ## スリット — layer `4-SHT` (25/11)
 - Nhãn leader `スリット` (nhiều nét: `n-スリット`) từ giữa nét đầu ra ngoài bên trái tấm.
 - `slit`: mỗi mục `[x1, y1, x2, y2]` = một nét cắt đơn (LINE `4-SHT`), vd vành tròn cắt đứt: từ mép trong tới mép ngoài theo bán kính. Chân dim chạm được hai mút. Khách không ghi vị trí → `chua_chac {o: "slit"}` → nét slit tô vàng.

@@ -9,7 +9,7 @@
     python ve.py VIEC.json              → {"ket_qua": [{"bango", "tep", "anh", "loi", "thieu_dim", "canh_bao"}]}
 
 VIEC.json (OhtaTeams ghi): {"moi_truong": dxf, "thu_muc_ra": dir, "thu_vien": [dir…], "chi_hinh": bỏ F-name + Khung_IN (tuỳ chọn),
-  "tam": [{"bango", "bien_dang", "x", "y", "tham_so": {tên: số}, "be_x", "be_y", "doan_x", "doan_y", "ke_gaki": [[x, y] | [x, y, cạnh đáy, hướng mũi °, cao]…], "slit": [[x1, y1, x2, y2]…] (nét 4-SHT), "dim_khach": [{"loai", "gia_tri", "tu", "den"}], "fname": [dòng], "ghi_chu": [dòng],
+  "tam": [{"bango", "bien_dang", "x", "y", "tham_so": {tên: số}, "be_x", "be_y", "doan_x", "doan_y", "ke_gaki": [[x, y] | [x, y, cạnh đáy, hướng mũi °, cao]…], "slit": [[x1, y1, x2, y2]…] (nét 4-SHT), "duong_tam": [[x1, y1, x2, y2]…] (đường tâm khách dim từ đó), "dim_khach": [{"loai", "gia_tri", "tu", "den"}], "fname": [dòng], "ghi_chu": [dòng],
   "goc": [{"dinh", "kieu" C/R, "gia_tri"}], "khoet": [{"kieu", "rong", "cao", "goc_xoay", "r", "dinh", "vi_tri"}], "t_day": số}]}  (xem goc_khoet.py)
 Mẫu biên dạng (thu_vien/<nhóm>/<ten>.py — nhóm: tam_don, tam_be, tam_cuon…): MO_TA + ve(nen, t) vẽ viền / đường bẻ / dim riêng của hình; ケガキ, chuỗi dim dưới / phải,
 dim tổng (1-XY), F-name, Khung_IN thêm ở đây (them_chung) theo bản chuẩn xưởng.
@@ -578,6 +578,9 @@ def them_chung(nen, t, x0, y0, x1, y1, chi_dim=False, nhan_goc=()):
     sl = [[float(v) for v in s[:4]] for s in (t.get("slit") or []) if isinstance(s, (list, tuple)) and len(s) >= 4]
     for s in sl:   # 25/11: スリット = nét cắt đơn 4-SHT
         nen.slit((s[0], s[1]), (s[2], s[3]))
+    for d in t.get("duong_tam") or []:   # 25/11: đường tâm khách dim từ đó (xiên 45°…) — Drawing7
+        if isinstance(d, (list, tuple)) and len(d) >= 4:
+            nen.duong_tam_khach_ve((float(d[0]), float(d[1])), (float(d[2]), float(d[3])))
     y_duoi = y0 - 10.0 * nen.ti_le if tren else None  # dim ở trên → nhãn leader xuống dưới
     if sl:         # nhãn スリット (bản đúng 25/11): leader từ giữa nét slit đầu ra ngoài bên trái tấm
         mx, my = (sl[0][0] + sl[0][2]) / 2.0, (sl[0][1] + sl[0][3]) / 2.0

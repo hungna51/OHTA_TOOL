@@ -73,6 +73,15 @@ HINH = [
      "vang_lop": ("4-SHT", 1), "ke_gaki_net": 6,
      "dim_khach": [{"loai": "phi", "gia_tri": 242.6, "tu": 0, "den": 0}, doc(121.3, 216.8, 140), ng(106.3, 136.3, 260),
                    {"loai": "goc", "gia_tri": 120, "tu": 0, "den": 0, "diem": [[121.3, 216.8], [121.3, 121.3], [204.006, 73.55]]}]},
+    # Drawing7 25/11: cung R40 tâm (25, 40) + mép trái / trên cách tâm 25, góc trái-trên CẮT XIÊN song song đường tâm 45° cách 25,
+    # lỗ vuông 20.2 xoay 45° R0.5 — AI từng bỏ cạnh xiên vì "chưa rõ"; dim 25 xiên + góc 45° đặt chân trên đường tâm xiên (duong_tam)
+    {"bango": "cung_cat_xien", "bien_dang": "da_giac", "x": 65, "y": 65,
+     "dinh": [[0, 8.775, 40], [56.225, 65], [14.645, 65], [0, 50.355]],
+     "khoet": [{"kieu": "chu_nhat", "rong": 20.2, "cao": 20.2, "goc_xoay": 45, "r": 0.5, "vi_tri": [[25, 40]]}],
+     "duong_tam": [[10, 25, 60, 75], [0, 40, 70, 40]],
+     "dim_khach": [ng(0, 25, 75), doc(40, 65, -10),
+                   {"loai": "xien", "gia_tri": 25, "tu": 0, "den": 0, "diem": [[25, 40], [7.3225, 57.6775]]},
+                   {"loai": "goc", "gia_tri": 45, "tu": 0, "den": 0, "diem": [[60, 40], [25, 40], [60, 75]]}]},
     # 25/11 12:41: tấm tròn Ø500 lỗ Ø245 — AI ghi 2 đỉnh (2 nửa cung R250), trước bị chặn "cần ≥ 3 đỉnh"
     {"bango": "tron", "bien_dang": "da_giac", "x": 500, "y": 500, "dinh": [[0, 250, 250], [500, 250, 250]],
      "lo": [{"d": 245, "so_luong": 1, "vi_tri": [{"x": 250, "y": 250}]}],

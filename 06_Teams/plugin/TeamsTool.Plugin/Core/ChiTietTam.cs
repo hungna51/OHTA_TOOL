@@ -47,6 +47,8 @@ namespace TeamsTool.Core
         public string KeGakiJson = "[]";
         /// <summary>スリット (25/11): [[x1, y1, x2, y2]…] — nét cắt đơn (4-SHT) trên hình trải phẳng, gốc trái dưới.</summary>
         public string SlitJson = "[]";
+        /// <summary>Đường tâm khách dim từ đó (25/11, Drawing7): [[x1, y1, x2, y2]…] — vd đường tâm xiên 45° làm gốc dim góc / dim tới cạnh song song.</summary>
+        public string DuongTamJson = "[]";
         /// <summary>Vùng của tấm trên trang (tỉ lệ 0–1, gốc trái trên): {"x0","y0","x1","y1"} — cắt ảnh tấm; "" = chưa có.</summary>
         public string VungJson = "";
         /// <summary>Kích thước khách ghi trên bản vẽ còn đúng trên hình trải phẳng: [{loai, gia_tri, tu, den}] — bản vẽ phải dim đủ.</summary>
@@ -194,6 +196,7 @@ namespace TeamsTool.Core
                 x.Set("dim_khach", SafeParse(t.DimKhachJson));
                 x.Set("dinh", SafeParse(t.DinhJson));
                 x.Set("slit", SafeParse(t.SlitJson));
+                x.Set("duong_tam", SafeParse(t.DuongTamJson));
                 x.Set("chua_chac", SafeParse(t.ChuaChacJson));
                 x.Set("ghi_chu_nguoi", t.GhiChuNguoi ?? "");
                 x.Set("mau_thuan", SafeParse(t.MauThuanJson));
@@ -490,6 +493,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             t.DimKhachJson = JsonLite.Serialize(x.Get("dim_khach") as List<object> ?? new List<object>());
             t.DinhJson = JsonLite.Serialize(x.Get("dinh") as List<object> ?? new List<object>());
             t.SlitJson = JsonLite.Serialize(x.Get("slit") as List<object> ?? new List<object>());
+            t.DuongTamJson = JsonLite.Serialize(x.Get("duong_tam") as List<object> ?? new List<object>());
             t.ChuaChacJson = JsonLite.Serialize(x.Get("chua_chac") as List<object> ?? new List<object>());
             t.GhiChuNguoi = x.Get("ghi_chu_nguoi") as string ?? "";
             t.MauThuanJson = JsonLite.Serialize(x.Get("mau_thuan") as List<object> ?? new List<object>());

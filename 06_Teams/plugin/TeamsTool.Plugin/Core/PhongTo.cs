@@ -20,12 +20,15 @@ namespace TeamsTool.Core
 @"Bạn là kỹ sư triển khai kim loại tấm của OHTA. Đầu vào: ẢNH PHÓNG TO vùng MỘT tấm cắt từ bản vẽ khách (có thể lẫn phần hình khác ở mép — chỉ xét tấm được mô tả) và dữ liệu lượt đọc cả trang (đọc trên ảnh nhỏ nên CÓ THỂ SAI: nhầm số, sót lỗ, sót kích thước).
 Đọc KỸ ảnh và trả lại bản ĐÚNG của các ô dưới đây (giữ đúng giá trị đầu vào nếu ảnh không cho thấy khác):
 - M, T, Q, kich_thuoc (""rộng x dài""), kieu_td (phang / be / lam_tay), td_x, td_y (LUÔN điền — tấm phẳng: td_x = chiều theo x / ngang, td_y = chiều theo y / dọc, vd ""635"" và ""460""; tiết diện dạng chữ: số = đoạn mm xen chỗ uốn b<góc> / a<góc>r<R> / c<cung>r<R> / p<góc>), mo_ta (mô tả chi tiết hình đủ để vẽ lại).
+- MẪU CHO TẤM PHẲNG: tấm phẳng (không bẻ / cuộn) hình chữ nhật → 4canh; MỌI hình phẳng khác (cung, cạnh xiên, góc cắt, tai, tròn…) → da_giac với ô dinh — KHÔNG chọn chua_co và không dùng mẫu riêng (kể cả mẫu thử) cho tấm phẳng mà da_giac vẽ được.
 - CHỌN MẪU VẼ: bien_dang = tên đúng MỘT mẫu trong ""Thư viện biên dạng"" (cuối phần người dùng, [nhóm] tam_don / tam_be / tam_cuon…) khớp hình TRẢI PHẲNG; làm tay (lam_tay) → rỗng; không mẫu nào khớp → ""chua_co"" và mo_ta_bien_dang = mô tả hình trải phẳng (viền, góc cắt, đường bẻ, lỗ / rãnh đặc biệt) đủ để viết mẫu vẽ mới (còn lại rỗng). tham_so: thông số riêng của mẫu đã chọn dạng ""r1=45; r2=38"" — đúng tên thông số của mẫu, số đọc từ ảnh; mẫu không có thông số riêng → rỗng; bắt buộc mà không đọc được → hỏi trong van_de. bien_dang người dùng đã sửa → giữ nguyên.
 - lo: mỗi nhóm lỗ {d, so_luong, taro, kieu ("""" tròn / ""sara D"" / ""dai RxL G"" / ""khoa D d k G nho"" = lỗ khoá / 変形孔 (hình ở chi tiết phóng A, B…): Ø lớn D + Ø nhỏ d, k = khoảng cách HAI TÂM; vi_tri = TÂM MÀ KHÁCH DIM TỚI (chuỗi dim trên hình chính), chữ cuối nho / lon = tâm đó là của Ø nhỏ hay Ø lớn; G = hướng từ tâm đó sang tâm kia (0 phải, 90 lên, 180 trái, 270 xuống) — MỌI lỗ cùng hướng như hình chi tiết. Vd chi tiết A ghi mép tấm → tâm Ø7 = 10, tâm Ø7 → tâm Ø12 = 6, Ø12 bên phải → ""khoa 12 7 6 0 nho"", vi_tri x = 10.), ghi_chu, cach_duong_be, vi_tri [[x, y], …] = TÂM từng lỗ trên hình TRẢI PHẲNG, gốc góc trái dưới của tấm, tính từ kích thước ghi trên bản vẽ (vd ""100P×5=500"" = 6 lỗ cách đều 100), noi_tam: true nếu bản vẽ khách VẼ đường tâm (nét chấm gạch) nối các lỗ của nhóm (vd khung chữ nhật qua tâm các lỗ chu vi), không vẽ → false.}.
 - goc: vát / bo góc viền ngoài ""<đỉnh> C10; <đỉnh> R5"" (đỉnh = trai_duoi / phai_duoi / phai_tren / trai_tren hoặc x,y). XEM TỪNG GÓC trên hình vẽ: khách thường chỉ ghi nhãn (C10) ở MỘT góc — góc khác vẽ vát / bo giống hệt cũng ghi vào goc cùng cỡ. khoet: khoét trong (không phải lỗ) ""□rộngxcao R<r> G<góc> @ x,y; x,y"" hoặc ""[x,y x,y …] @ x,y"", cách nhau |.
 - dinh: CHỈ khi bien_dang = da_giac (tấm phẳng không phải chữ nhật), còn lại []. Đỉnh viền NGOÀI theo thứ tự đi một vòng, mỗi đỉnh [x, y] mm trên hình trải phẳng, gốc (0, 0) = góc trái dưới KHUNG BAO (x nhỏ nhất = 0, y nhỏ nhất = 0, như vi_tri lỗ), tính từ dim khách; không lặp đỉnh đầu. Cạnh từ đỉnh này tới đỉnh kế là CUNG → [x, y, R] (R > 0 cung lồi ra ngoài, R < 0 lõm vào trong; R tính từ dim khách). Vát C / bo R nhỏ ở góc vẫn ghi ở goc (đỉnh là góc nhọn trước khi vát), lỗ ở lo, khoét trong ở khoet — không đưa vào dinh. Đỉnh phải tính qua dim xiên / góc (không có dim ngang / dọc trực tiếp) → thêm dinh vào khong_chac.
 - ke_gaki: [[x, y], …] tâm từng dấu khắc vạch (マーキング / ケガキ, 中抜きなし = chỉ khắc, KHÔNG cắt → không đưa vào khoet); dấu vẽ hình TAM GIÁC / chữ V → [x, y, đáy, hướng mũi °, cao]: x, y = MŨI (chỗ khách dim tới), hướng = hướng mũi chỉ (0 phải, 90 lên, 180 trái, 270 xuống), đáy = bề rộng đáy khách ghi, cao = mũi → đáy (0 = tam giác đều). Đáy nằm trên mép tấm (vd chữ V ở mép vành tròn bán kính R, mũi cách tâm r) → cao = √(R² − (đáy/2)²) − r để 2 góc đáy chạm mép; chương trình vẽ chữ V 2 nét. Dấu cách đều trên vòng tròn (vd 3ヶ所 120°): tính toạ độ TỪNG mũi bằng góc quay quanh tâm, và HƯỚNG của từng dấu cũng quay theo (mũi chỉ vào tâm → hướng = góc từ mũi về tâm, mỗi dấu khác nhau).
 - TẤM TRÒN / VÀNH KHĂN Øn: bien_dang da_giac, dinh = [[0, n/2, n/2], [n, n/2, n/2]] (2 nửa cung), lỗ giữa ghi ở lo; dim_khach có {loai phi, gia_tri n} (bản vẽ OHTA dim Ø thay cho X / Y). Dim góc giữa các dấu quanh tâm (vd 120°) → dim_khach goc, diem = [[mũi dấu 1], [tâm], [mũi dấu 2]].
+- NÉT CHƯA RÕ: mọi nét thấy trên ảnh mà chưa chắc là viền / lỗ / đường tâm / dấu, hoặc bị cắt khỏi mép ảnh — KHÔNG được bỏ qua. Vẽ theo cách hiểu hợp lý nhất (vd nét xiên song song đường tâm có dim tới nó → cạnh cắt góc của viền), ghi chua_chac {o: ô đã dùng} + khong_chac + van_de hỏi khách. Chỉ nói trong mo_ta là chưa đủ.
+- duong_tam: đường tâm khách dùng làm gốc dim mà không trùng cạnh nào (vd đường tâm xiên 45° qua tâm lỗ, dim góc 45° và dim 25 tới cạnh song song đo từ nó): mỗi đường [x1, y1, x2, y2], kéo dài qua hết phần dim cần; dim_khach xien / goc đặt diem trên đường này. Không có → [].
 - slit: スリット / 切込み / 割り — nét cắt đơn (không có bề rộng), mỗi nét [x1, y1, x2, y2] trên hình trải phẳng (vd vành tròn cắt đứt: từ mép trong tới mép ngoài theo bán kính). Bản vẽ ghi スリット有 mà không rõ vị trí / chiều dài → vẫn vẽ chỗ hợp lý nhất theo hình + chua_chac {o: slit} + hỏi khách. Không có → [].
 - dim_khach: MỌI kích thước khách ghi cho tấm {loai ngang / doc / r / phi / goc / xien, gia_tri, tu, den, diem} — xien (cạnh xiên — đo chiều dài thật) / goc (độ): tu = den = tai = 0 và diem = các điểm THẬT trên hình trải phẳng mà chân dim khách chạm: xien [[x1, y1], [x2, y2]] hai đầu cạnh; goc [[điểm trên cạnh 1], [đỉnh góc], [điểm trên cạnh 2]]; loại khác diem = []; — tu, den = toạ độ THẬT hai đầu (dim từ đường tâm thì tu = toạ độ tâm), giữ đúng cách khách chia chuỗi (bản vẽ OHTA chép lại từng chuỗi); không gồm dim của hình chi tiết phóng (đã ở kieu lỗ). tai = toạ độ ĐƯỜNG DIM khách đặt trên hình trải phẳng (ngang: y của đường dim, doc: x của đường dim; dim nằm trong hình thì toạ độ trong tấm, ngoài thì ngoài — vd y > chiều cao tấm khi dim ở trên) để bản vẽ OHTA đặt dim đúng chỗ khách đặt; r / phi / goc: 0.
 - ĐỐI CHIẾU ghi chú (vd ""140*600"", ""PL9"", ""数量2個"") với dim trên hình: khớp → dùng; KHÔNG khớp → để kich_thuoc theo ghi chú, thêm kich_thuoc vào khong_chac và tạo van_de muc do nhom khach nêu cả hai số.
@@ -40,7 +43,7 @@ Không bịa: không đọc được thì giữ đầu vào và đưa vào khong
             JsonObject s = Kieu("string"), n = Kieu("number"), cap = Mang(Mang(n));
             return Obj(("M", s), ("T", s), ("Q", s), ("kich_thuoc", s), ("kieu_td", s), ("td_x", s), ("td_y", s), ("bien_dang", s), ("mo_ta_bien_dang", s), ("tham_so", s), ("goc", s), ("khoet", s), ("mo_ta", s),
                        ("lo", Mang(Obj(("d", n), ("so_luong", n), ("taro", s), ("kieu", s), ("ghi_chu", s), ("cach_duong_be", n), ("vi_tri", cap), ("noi_tam", Kieu("boolean"))))),
-                       ("ke_gaki", cap), ("dim_khach", Mang(Obj(("loai", s), ("gia_tri", n), ("tu", n), ("den", n), ("tai", n), ("diem", cap)))), ("dinh", cap), ("slit", cap), ("chua_chac", Mang(Obj(("o", s), ("so", n), ("noi_dung", s)))), ("mau_thuan", Mang(s)),
+                       ("ke_gaki", cap), ("dim_khach", Mang(Obj(("loai", s), ("gia_tri", n), ("tu", n), ("den", n), ("tai", n), ("diem", cap)))), ("dinh", cap), ("slit", cap), ("duong_tam", cap), ("chua_chac", Mang(Obj(("o", s), ("so", n), ("noi_dung", s)))), ("mau_thuan", Mang(s)),
                        ("khong_chac", Mang(s)), ("van_de", Mang(PhongKiemTra.SchemaVanDe())), ("bo_nghi_van", Mang(n)));
         }
 
@@ -74,7 +77,7 @@ Không bịa: không đọc được thì giữ đầu vào và đưa vào khong
             sb.Append("Dữ liệu lượt đọc cả trang:\n");
             foreach (var (o, v) in new[] { ("M", t.M), ("T", t.T), ("Q", t.Q), ("kich_thuoc", t.KichThuoc), ("mat", t.Mat), ("kieu_td", t.KieuTd), ("td_x", t.TdX), ("td_y", t.TdY),
                                            ("bien_dang", t.BienDang), ("tham_so", t.ThamSo), ("goc", t.Goc), ("khoet", t.Khoet), ("mo_ta", t.MoTa),
-                                           ("ghi_chu_jp", t.GhiChuJp), ("lo", t.LoJson), ("ke_gaki", t.KeGakiJson), ("dim_khach", t.DimKhachJson), ("dinh", t.DinhJson), ("slit", t.SlitJson) })
+                                           ("ghi_chu_jp", t.GhiChuJp), ("lo", t.LoJson), ("ke_gaki", t.KeGakiJson), ("dim_khach", t.DimKhachJson), ("dinh", t.DinhJson), ("slit", t.SlitJson), ("duong_tam", t.DuongTamJson) })
                 sb.Append("- ").Append(o).Append(": ").Append(string.IsNullOrWhiteSpace(v) ? "(trống)" : v.Replace("\r", "").Replace("\n", " ")).Append('\n');
             if (t.DaSua.Count > 0) sb.Append("(Người dùng đã sửa — coi là đúng: ").Append(string.Join(", ", t.DaSua.OrderBy(x => x))).Append(")\n");
             sb.Append("\nNghi vấn đã có:\n");
@@ -176,6 +179,11 @@ Không bịa: không đọc được thì giữ đầu vào và đưa vào khong
                 string j = JsonLite.Serialize(sl);
                 if (j != t.SlitJson) { t.SlitJson = j; doi.Add("slit"); }
             }
+            if (!t.DaSua.Contains("duong_tam") && nd.Get("duong_tam") is List<object> dt && dt.Count > 0)
+            {
+                string j = JsonLite.Serialize(dt);
+                if (j != t.DuongTamJson) { t.DuongTamJson = j; doi.Add("duong_tam"); }
+            }
             if (nd.Get("mau_thuan") is List<object> mt)
             {
                 string j = JsonLite.Serialize(mt);
@@ -194,7 +202,7 @@ Không bịa: không đọc được thì giữ đầu vào và đưa vào khong
             if (nd.Get("khong_chac") is List<object> kc)
             {
                 // chỉ giữ tên ô (AI hay ghi cả câu / "lo.d"): "lo.vi_tri y…" → lo; câu không ra tên ô thì bỏ — giải thích đã ở van_de
-                var hopLe = new HashSet<string>(PhongDocBanVe.O.Concat(PhongDocBanVe.OTd).Concat(new[] { "lo", "ke_gaki", "dim_khach", "dinh", "slit", "tiet_dien", "canh" }));
+                var hopLe = new HashSet<string>(PhongDocBanVe.O.Concat(PhongDocBanVe.OTd).Concat(new[] { "lo", "ke_gaki", "dim_khach", "dinh", "slit", "duong_tam", "tiet_dien", "canh" }));
                 t.KhongChac.Clear();
                 foreach (string x in kc.Select(Chu))
                 {

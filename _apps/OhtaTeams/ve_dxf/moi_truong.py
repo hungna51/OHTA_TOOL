@@ -68,6 +68,7 @@ class NenVe:
             self.msp.delete_entity(e)
         self.moc_x, self.moc_y = [], []  # mốc thêm vào chuỗi dim dưới / phải (vd tâm cung có dim R)
         self.diem_kegaki = []            # tâm + đỉnh dấu ケガキ (chân dim được chạm)
+        self.duong_tam_khach = []        # đường tâm khách dim từ đó (vd đường tâm xiên 45°) — chân dim được chạm
         for ten in (LOP_CAT, LOP_DIM, LOP_FNAME, LOP_SLIT, LOP_KHUNG, LOP_XY, LOP_KEGAKI):
             if ten not in self.doc.layers:
                 self.doc.layers.add(ten)
@@ -127,6 +128,11 @@ class NenVe:
         nua_y = nua_x if nua_y is None else nua_y
         self.msp.add_line((x - nua_x, y), (x + nua_x, y), dxfattribs={"layer": LOP_DIM})
         self.msp.add_line((x, y - nua_y), (x, y + nua_y), dxfattribs={"layer": LOP_DIM})
+
+    def duong_tam_khach_ve(self, a, b):
+        """Đường tâm khách dùng làm gốc dim (dim góc / dim khoảng cách tới cạnh song song): vẽ như duong_tam + nhớ để chân dim chạm được."""
+        self.duong_tam_khach.append((tuple(a), tuple(b)))
+        return self.duong_tam(a, b)
 
     def duong_tam(self, a, b):
         """Đường tâm (nét CENTER) trên 1-SUNPOU — chỉ để đọc, không cắt / không khắc."""

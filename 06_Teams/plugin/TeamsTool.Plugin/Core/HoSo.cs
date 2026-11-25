@@ -93,6 +93,7 @@ namespace TeamsTool.Core
             Ds(sb, "Kích thước khách (phải có đủ trên bản vẽ OHTA)", t.DimKhachJson);
             Ds(sb, "Đỉnh viền (mẫu da_giac: [x, y] hoặc [x, y, R], gốc trái dưới)", t.DinhJson);
             Ds(sb, "スリット (nét 4-SHT [x1, y1, x2, y2])", t.SlitJson);
+            Ds(sb, "Đường tâm khách dim từ đó ([x1, y1, x2, y2])", t.DuongTamJson);
             Ds(sb, "Cần xác nhận — AI tự suy vì khách không ghi số (vẽ VÀNG)", JsonLite.Serialize(PhongPhongTo.ChuaChacConLai(t)));
             Dong(sb, "Thông tin bổ sung của người dùng (gửi kèm ảnh)", t.GhiChuNguoi);
             Ds(sb, "Ghi chú khác hình (đã làm theo ghi chú)", t.MauThuanJson);

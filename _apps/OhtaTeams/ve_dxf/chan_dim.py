@@ -103,6 +103,12 @@ def hinh_tu_nen(nen):
     for e in nen.msp.query('*[layer=="%s" | layer=="%s"]' % (mt.LOP_CAT, mt.LOP_SLIT)):
         them(e)
     # ケガキ: NenVe nhớ tâm (+ đỉnh tam giác); bản vẽ đọc lại từ tệp thì chữ thập 2 nét → tâm = trung điểm nét, tam giác → đỉnh
+    if hasattr(nen, "duong_tam_khach"):
+        kq += [("doan", a, b) for a, b in nen.duong_tam_khach]
+    else:   # tệp đọc lại: đường tâm (CENTER, 1-SUNPOU) coi như chạm được
+        for e in nen.msp.query('LINE[layer=="%s"]' % mt.LOP_DIM):
+            if str(e.dxf.get("linetype", "")).upper() == "CENTER":
+                kq.append(("doan", (e.dxf.start.x, e.dxf.start.y), (e.dxf.end.x, e.dxf.end.y)))
     if hasattr(nen, "diem_kegaki"):
         kq += [("diem", p) for p in nen.diem_kegaki]
     else:
