@@ -4,6 +4,8 @@
 
 Tab là **🧪 Thử nhanh của OhtaTeams đặt trong CAD**: dán ảnh chụp MỘT hình → AI đọc kỹ + chọn mẫu trong thư viện `_apps\OhtaTeams\ve_dxf\thu_vien` → vẽ **chỉ hình + dim** (không F-name, không Khung_IN) → **📥 Chèn vào bản vẽ** đang mở. F-name người dùng tự thêm (tab Fname).
 
+> **Luật của mục:** [rules/00-muc-luc-ai.md](rules/00-muc-luc-ai.md) — đọc [rules/01-schema-ai.md](rules/01-schema-ai.md) **trước khi thêm / đổi ô AI trả về** (schema quá lớn → API lỗi "compiled grammar too large", cả lượt đọc hỏng).
+
 ## Dùng
 
 1. `OHTA` → tab **DXF ảnh**.

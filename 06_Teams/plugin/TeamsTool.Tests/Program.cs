@@ -239,6 +239,9 @@ namespace TeamsTool.Tests
             var tCh = new TamAi { Tep = "c.png", LoJson = "[]" };
             PhongPhongTo.ApDung(tCh, (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse("{\"dinh\":\"[[0,0],[10,0],[10,5]]\",\"slit\":\"[[0,1,2,1]]\",\"ke_gaki\":\"[]\",\"duong_tam\":\"hong\",\"lo\":[]}"));
             Kiem("4 o hinh hoc dang chuoi JSON (schema gon) -> mang", System.Text.RegularExpressions.Regex.Replace(tCh.DinhJson + "|" + tCh.SlitJson + "|" + tCh.DuongTamJson, @"\s", ""), "[[0,0],[10,0],[10,5]]|[[0,1,2,1]]|[]");
+            // 05_AI/rules/01-schema-ai.md: mảng-số-lồng làm grammar structured output phình (API 400 "compiled grammar is too large", 25/11) — đo: 6 lỗi, 4 qua
+            int soCap = System.Text.RegularExpressions.Regex.Matches(schDg, System.Text.RegularExpressions.Regex.Escape("{\"type\":\"array\",\"items\":{\"type\":\"array\",\"items\":{\"type\":\"number\"}}}")).Count;
+            Kiem("schema buoc 2: ngan sach grammar (mang so long <= 4, o moi -> chuoi)", soCap >= 1 && soCap <= 4, true);
             Kiem("schema buoc 2 co slit + duong_tam", schDg.Contains("\"slit\":") && schDg.Contains("\"duong_tam\":"), true);
             Kiem("prompt: net chua ro khong bo + tam phang uu tien da_giac", PhongPhongTo.LoiDan.Contains("NÉT CHƯA RÕ") && PhongPhongTo.LoiDan.Contains("MẪU CHO TẤM PHẲNG"), true);
             // 25/11: chua_chac — giá trị AI tự suy (khách không ghi số) → lưu, gửi viec.json (bỏ mục ô người đã sửa = đã xác nhận)
