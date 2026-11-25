@@ -69,6 +69,7 @@ namespace AiTool.ViewModels
             ChenCmd = new Lenh(() => GuiLenh("OHTADXFCHEN "));
             VeLaiCmd = new Lenh(() => ChayLan("--thu-nhanh-ve", "Đang vẽ lại (không gọi AI)…"));
             DocLaiCmd = new Lenh(() => ChayLan("--thu-nhanh-doc-lai", "AI đang đọc lại hình…"));
+            VietMauCmd = new Lenh(() => ChayLan("--thu-nhanh-viet-mau", "AI đang viết mẫu vẽ cho hình này (1–2 phút)…"));
             SuaCmd = new Lenh(() => { if (Chon?.ChiTietJson != null) Mo("notepad.exe", "\"" + Chon.ChiTietJson + "\""); });
             ThuMucCmd = new Lenh(() => { if (Chon != null) Mo("explorer.exe", "\"" + Chon.ThuMuc + "\""); });
             XoaCmd = new Lenh(Xoa);
@@ -101,6 +102,7 @@ namespace AiTool.ViewModels
         public ICommand ChenCmd { get; }
         public ICommand VeLaiCmd { get; }
         public ICommand DocLaiCmd { get; }
+        public ICommand VietMauCmd { get; }
         public ICommand SuaCmd { get; }
         public ICommand ThuMucCmd { get; }
         public ICommand XoaCmd { get; }
@@ -125,6 +127,8 @@ namespace AiTool.ViewModels
         public bool KhongChay => !_dangChay;
         public bool CoChon => Chon != null;
         public bool CoTheSua => CoChon && !_dangChay;
+        /// <summary>Hình chưa có mẫu biên dạng → nút ✨ AI viết mẫu (mẫu thử của lần thử này; thêm vào thư viện ở ⚙ Thử nhanh).</summary>
+        public bool CanMau => Chon != null && Chon.CanMau;
         public bool CoDxf => DxfDangChon != null && !_dangChay;
 
         private string _bao = "Dán ảnh chụp MỘT hình (Ctrl+V) hoặc chọn tệp ảnh / PDF / DXF.";
@@ -143,7 +147,7 @@ namespace AiTool.ViewModels
         private void HienChon()
         {
             foreach (string p in new[] { nameof(CoChon), nameof(CoTheSua), nameof(CoDxf), nameof(TieuDeChon), nameof(ChiTietChon), nameof(AnhGoc),
-                                         nameof(AnhVe), nameof(LoiChon), nameof(CoLoi), nameof(CanhBaoChon), nameof(CoCanhBao) })
+                                         nameof(AnhVe), nameof(LoiChon), nameof(CoLoi), nameof(CanhBaoChon), nameof(CoCanhBao), nameof(CanMau) })
                 OnChanged(p);
         }
 
@@ -206,7 +210,7 @@ namespace AiTool.ViewModels
             {
                 DangChay = false;
                 string chonLai = kq?.ThuMuc ?? thuMuc ?? thamSo;
-                NapDs(chonLai);
+                NapDs(chonLai, kq); // kq vừa chạy có lỗi vẽ cụ thể (vd thiếu thông số mẫu) mà danh sách không biết
                 if (t.IsCanceled) Bao = "Đã huỷ.";
                 else if (t.IsFaulted) Bao = "Lỗi: " + t.Exception?.GetBaseException().Message;
                 else if (loi != null) Bao = "✖ " + loi;
@@ -217,7 +221,7 @@ namespace AiTool.ViewModels
         }
 
         /// <summary>Nạp danh sách lần thử (--thu-nhanh-ds), chọn lại thư mục chonLai (null = giữ lần đang chọn, không có thì lần mới nhất).</summary>
-        public void NapDs(string chonLai = null)
+        public void NapDs(string chonLai = null, LanThu moi = null)
         {
             string giu = chonLai ?? Chon?.ThuMuc;
             List<LanThu> ds = null;
@@ -233,7 +237,11 @@ namespace AiTool.ViewModels
                 if (loi != null) { Bao = "✖ " + loi; return; }
                 DanhSach.Clear();
                 foreach (LanThu l in ds ?? new List<LanThu>())
-                    DanhSach.Add(new DongLanThu { L = l, AnhNho = l.Anh == null ? null : NapAnh(l.Anh, 60) });
+                    DanhSach.Add(new DongLanThu
+                    {
+                        L = moi != null && string.Equals(moi.ThuMuc, l.ThuMuc, StringComparison.OrdinalIgnoreCase) ? moi : l,
+                        AnhNho = l.Anh == null ? null : NapAnh(l.Anh, 60),
+                    });
                 DongChon = DanhSach.FirstOrDefault(d => string.Equals(d.L.ThuMuc, giu, StringComparison.OrdinalIgnoreCase)) ?? DanhSach.FirstOrDefault();
                 HienChon(); // cùng thư mục nhưng dữ liệu mới (vừa vẽ lại)
             })));

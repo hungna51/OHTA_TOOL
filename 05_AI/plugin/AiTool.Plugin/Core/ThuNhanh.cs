@@ -31,6 +31,8 @@ namespace AiTool.Core
     {
         public string ThuMuc, Gio = "", MoTa = "", ChiTiet = "", Anh, Xem, Dxf, ChiTietJson, Loi;
         public List<string> CanhBao = new List<string>();
+        /// <summary>Hình chưa có mẫu biên dạng (chua_co / mẫu không có trong thư viện) → hiện nút ✨ AI viết mẫu.</summary>
+        public bool CanMau;
 
         public bool CoDxf => Dxf != null && File.Exists(Dxf);
 
@@ -53,6 +55,7 @@ namespace AiTool.Core
                 ChiTietJson = o.GetString("chi_tiet_json"),
                 Loi = o.GetString("loi"),
                 CanhBao = (o.Get("canh_bao") as List<object>)?.OfType<string>().ToList() ?? new List<string>(),
+                CanMau = o.Get("can_mau") is bool b && b,
             }).ToList();
         }
     }

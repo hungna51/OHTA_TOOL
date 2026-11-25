@@ -50,6 +50,8 @@ namespace AiTool.Tests
             Kiem("loi", l.Loi, "Chưa có mẫu");
             Kiem("canh_bao 2 dong", l.CanhBao.Count, 2);
             Kiem("CoDxf: co duong dan nhung file khong ton tai -> false", l.CoDxf, false);
+            Kiem("can_mau thieu -> false", l.CanMau, false);
+            Kiem("can_mau true -> CanMau (hien nut AI viet mau)", LanThu.TuJson("{\"can_mau\": true}")[0].CanMau, true);
             Kiem("Mang 2 doi tuong", LanThu.TuJson("[" + mot + "," + mot + "]").Count, 2);
             Kiem("Mang rong", LanThu.TuJson("[]").Count, 0);
             Kiem("JSON hong -> rong, khong vang", LanThu.TuJson("{hong").Count, 0);

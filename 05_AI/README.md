@@ -10,8 +10,9 @@ Tab là **🧪 Thử nhanh của OhtaTeams đặt trong CAD**: dán ảnh chụp
 2. **📋 Dán ảnh (Ctrl+V)** — ảnh chụp vùng bản vẽ (Win+Shift+S) hoặc tệp đã copy; hoặc **📂 Chọn tệp** / kéo thả tệp ảnh, PDF, DXF vào tab. Đợi AI đọc + vẽ (dòng chữ tím báo tiến độ; **■ Huỷ** để dừng).
 3. Xem **ảnh gửi vào** và **hình phần mềm vẽ** cạnh nhau (bấm ảnh mở to); dòng đỏ = chưa vẽ được, dòng cam = thiếu dim khách / cảnh báo khoét.
 4. **📥 Chèn vào bản vẽ** (lệnh `OHTADXFCHEN`) → bấm điểm đặt **góc dưới trái biên dạng**. Layer / kiểu trùng tên giữ bản của bản vẽ.
-5. Sai số / sai mẫu: **✎ Sửa thông số** (Notepad mở `chi_tiet.json`) → lưu → **🔁 Vẽ lại** (không gọi AI), hoặc **🤖 Đọc lại (AI)**. **📁 Thư mục**, **🗑 Xoá** lần thử.
-6. Nút **⚙** mở cửa sổ **Thử nhanh của OhtaTeams**: 📚 Thư viện mẫu, ✨ AI viết mẫu khi "chưa có mẫu", ➕ Thêm vào thư viện (máy Admin).
+5. **Chưa có mẫu** (AI ghi `chua_co` — thư viện chưa có loại hình này, vd hình thang vát): bấm **✨ AI viết mẫu** → AI viết mẫu Python làm *mẫu thử* của lần thử này rồi vẽ lại (tốn AI). Dùng tốt thì vào ⚙ → **➕ Thêm vào thư viện** (máy Admin) để lần sau AI chọn được luôn.
+6. Sai số / sai mẫu: **✎ Sửa thông số** (Notepad mở `chi_tiet.json`) → lưu → **🔁 Vẽ lại** (không gọi AI), hoặc **🤖 Đọc lại (AI)**. **📁 Thư mục**, **🗑 Xoá** lần thử.
+7. Nút **⚙** mở cửa sổ **Thử nhanh của OhtaTeams**: 📚 Thư viện mẫu, ✨ AI viết mẫu khi "chưa có mẫu", ➕ Thêm vào thư viện (máy Admin).
 
 **Các lần thử** dùng chung thư mục `%LOCALAPPDATA%\OHTA_TOOL\thu_nhanh` với cửa sổ Thử nhanh — làm bên nào cũng thấy bên kia.
 
@@ -24,6 +25,7 @@ CAD không tự gọi AI: tab chạy ẩn `_apps\OhtaTeams\bin\OhtaTeams.exe` �
 | `--thu-nhanh-moi TEP` | tạo lần thử, AI đọc + chọn mẫu, vẽ |
 | `--thu-nhanh-doc-lai TM` | AI đọc lại rồi vẽ |
 | `--thu-nhanh-ve TM` | vẽ lại từ `chi_tiet.json` (không AI) |
+| `--thu-nhanh-viet-mau TM` | AI viết mẫu thử cho hình chưa có mẫu rồi vẽ |
 | `--thu-nhanh-ds` | liệt kê các lần thử |
 | `--thu-nhanh` | mở cửa sổ Thử nhanh |
 

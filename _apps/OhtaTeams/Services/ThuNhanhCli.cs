@@ -39,6 +39,8 @@ namespace TeamsTool.Services
                         return KetQua(DocLaiVaVe(CanTs(ts)).GetAwaiter().GetResult());
                     case "--thu-nhanh-ve":
                         return KetQua(Ve(CanTs(ts)).GetAwaiter().GetResult());
+                    case "--thu-nhanh-viet-mau":
+                        return KetQua(VietMau(CanTs(ts)).GetAwaiter().GetResult());
                     default:
                         In("#LOI Lệnh không hiểu: " + lenh);
                         return 1;
@@ -91,7 +93,28 @@ namespace TeamsTool.Services
             return kq;
         }
 
+        /// <summary>✨ AI viết mẫu Python cho hình chưa có mẫu (lưu là mẫu thử của lần thử này, như nút trong ThuNhanhWindow) rồi vẽ lại.</summary>
+        private static async Task<JsonObject> VietMau(string tm)
+        {
+            var (ct, kq, ds, _) = await AiDon.VeThuNhanh(tm, Bao, CancellationToken.None);
+            if (ds.Count == 0) throw new InvalidOperationException("Không có tấm nào để viết mẫu — ✎ Sửa thông số.");
+            Bao("AI đang viết mẫu vẽ cho hình này…");
+            PhongTrienKhai.MauMoi m = await AiDon.DeXuatMau(ct, ds[0].Tam, ds[0].Tk, kq, tm, AiDon.TenThuNhanh, Bao, CancellationToken.None);
+            if (m.Loi != null) throw new InvalidOperationException("AI chưa viết được mẫu: " + m.Loi);
+            Bao("AI đã viết mẫu '" + m.Ten + "' — đang vẽ…");
+            return await Ve(tm);
+        }
+
         private static string Bango => PhongTrienKhai.Bango(AiDon.TenThuNhanh, 1);
+
+        /// <summary>Biên dạng của tấm chưa có mẫu vẽ: chua_co, trống, hoặc tên không có trong thư viện chung lẫn mẫu thử của lần thử.</summary>
+        private static bool CanMau(string tm, TamAi t)
+        {
+            if (t == null || !t.DaPhongTo) return false;
+            string bd = t.BienDang ?? "";
+            return bd.Length == 0 || bd == PhongTrienKhai.ChuaCoMau
+                || (AiDon.TepMauChung(bd) == null && !File.Exists(Path.Combine(AiDon.ThuVienThu(tm), bd + ".py")));
+        }
 
         /// <summary>Một lần thử dạng JSON cho CAD: thư mục, giờ, mô tả, ảnh gửi vào, ảnh hình vẽ, DXF, lỗi / cảnh báo.</summary>
         public static JsonObject MoTa(string tm, AiDon.KetQuaVe kv)
@@ -118,7 +141,11 @@ namespace TeamsTool.Services
             o.Set("xem", xem != null && File.Exists(xem) ? xem : null);
             o.Set("dxf", dxf != null && File.Exists(dxf) ? dxf : null);
             o.Set("chi_tiet_json", AiDon.FileChiTiet(tm));
+            bool canMau = CanMau(tm, t);
+            o.Set("can_mau", canMau);
             if (kv?.Loi != null) o.Set("loi", kv.Loi);
+            // danh sách (chưa vẽ lần này) vẫn phải nói vì sao không có hình
+            else if (o.Get("dxf") == null && canMau) o.Set("loi", "Chưa có mẫu biên dạng cho hình này — bấm ✨ AI viết mẫu (hoặc ✎ Sửa thông số: bien_dang).");
             var cb = new List<object>();
             foreach (string s in kv?.ThieuDim ?? new List<string>()) cb.Add("Thiếu dim khách: " + s);
             foreach (string s in kv?.CanhBao ?? new List<string>()) cb.Add(s);

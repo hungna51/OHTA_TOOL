@@ -130,6 +130,9 @@
                         <WrapPanel Margin="0,8,0,0">
                             <Button x:Name="NutChen" Style="{StaticResource NutChinh}" Content="📥 Chèn vào bản vẽ" Command="{Binding ChenCmd}"
                                     IsEnabled="{Binding CoDxf}" ToolTip="Lệnh OHTADXFCHEN: bấm điểm đặt góc dưới trái biên dạng. Chỉ hình + dim — F-name tự thêm."/>
+                            <Button Style="{StaticResource Nut}" Content="✨ AI viết mẫu" Command="{Binding VietMauCmd}" IsEnabled="{Binding CoTheSua}"
+                                    Visibility="{Binding CanMau, Converter={StaticResource HienKhi}}"
+                                    ToolTip="Thư viện chưa có mẫu cho hình này: AI viết mẫu Python (mẫu thử của lần thử này) rồi vẽ lại — tốn AI. Thêm vào thư viện chung ở ⚙ (máy Admin)."/>
                             <Button Style="{StaticResource Nut}" Content="🔁 Vẽ lại" Command="{Binding VeLaiCmd}" IsEnabled="{Binding CoTheSua}"
                                     ToolTip="Vẽ lại từ thông số hiện tại (sau khi ✎ sửa) — không gọi AI"/>
                             <Button Style="{StaticResource Nut}" Content="🤖 Đọc lại (AI)" Command="{Binding DocLaiCmd}" IsEnabled="{Binding CoTheSua}"
