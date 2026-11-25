@@ -9,7 +9,7 @@
     python ve.py VIEC.json              → {"ket_qua": [{"bango", "tep", "anh", "loi", "thieu_dim", "canh_bao"}]}
 
 VIEC.json (OhtaTeams ghi): {"moi_truong": dxf, "thu_muc_ra": dir, "thu_vien": [dir…], "chi_hinh": bỏ F-name + Khung_IN (tuỳ chọn),
-  "tam": [{"bango", "bien_dang", "x", "y", "tham_so": {tên: số}, "be_x", "be_y", "doan_x", "doan_y", "ke_gaki": [[x, y]…], "dim_khach": [{"loai", "gia_tri", "tu", "den"}], "fname": [dòng], "ghi_chu": [dòng],
+  "tam": [{"bango", "bien_dang", "x", "y", "tham_so": {tên: số}, "be_x", "be_y", "doan_x", "doan_y", "ke_gaki": [[x, y] | [x, y, cạnh tam giác, hướng mũi °]…], "slit": [[x1, y1, x2, y2]…] (nét 4-SHT), "dim_khach": [{"loai", "gia_tri", "tu", "den"}], "fname": [dòng], "ghi_chu": [dòng],
   "goc": [{"dinh", "kieu" C/R, "gia_tri"}], "khoet": [{"kieu", "rong", "cao", "goc_xoay", "r", "dinh", "vi_tri"}], "t_day": số}]}  (xem goc_khoet.py)
 Mẫu biên dạng (thu_vien/<nhóm>/<ten>.py — nhóm: tam_don, tam_be, tam_cuon…): MO_TA + ve(nen, t) vẽ viền / đường bẻ / dim riêng của hình; ケガキ, chuỗi dim dưới / phải,
 dim tổng (1-XY), F-name, Khung_IN thêm ở đây (them_chung) theo bản chuẩn xưởng.
@@ -566,12 +566,15 @@ def them_chung(nen, t, x0, y0, x1, y1, chi_dim=False, nhan_goc=()):
     le, buoc = max(10.0, le * nen.ti_le), max(8.0, buoc * nen.ti_le)  # tỉ lệ dim theo cỡ tấm (18/11)
     ck_x, ck_y = chuoi_khach(t, "ngang", x0, x1), chuoi_khach(t, "doc", y0, y1)
     tren = bool(ck_x or ck_y)  # dim theo khách
-    kg = sorted(([float(k[0]), float(k[1])] for k in t.get("ke_gaki", [])), key=lambda k: k[0])
-    for kx, ky in kg:
-        nen.ke_gaki(kx, ky)
+    kg = sorted((mt.ke_gaki_so(k) for k in t.get("ke_gaki", [])), key=lambda k: k[0])
+    for kx, ky, canh, huong in kg:
+        nen.ke_gaki(kx, ky, canh, huong)
+    for s in t.get("slit") or []:   # 25/11: スリット = nét cắt đơn 4-SHT
+        if isinstance(s, (list, tuple)) and len(s) >= 4:
+            nen.slit((float(s[0]), float(s[1])), (float(s[2]), float(s[3])))
     y_duoi = y0 - 10.0 * nen.ti_le if tren else None  # dim ở trên → nhãn leader xuống dưới
     if kg:
-        gx, gy = kg[len(kg) // 2]
+        gx, gy = kg[len(kg) // 2][:2]
         yk = y1 + 53 * nen.ti_le if not tren else y_duoi - 53 * nen.ti_le
         nen.leader([(gx, gy), (gx + 23 * nen.ti_le, yk), (gx + 24 * nen.ti_le, yk)], "%d-ケガキ" % len(kg))
     lo_x, lo_y, lo_phi, thieu_lo = ve_lo(nen, t, y1, 1 if kg else 0, le, y_duoi)

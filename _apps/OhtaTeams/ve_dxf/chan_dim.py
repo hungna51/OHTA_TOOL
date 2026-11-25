@@ -102,9 +102,20 @@ def hinh_tu_nen(nen):
 
     for e in nen.msp.query('*[layer=="%s" | layer=="%s"]' % (mt.LOP_CAT, mt.LOP_SLIT)):
         them(e)
-    # ケガキ: chữ thập 2 nét → tâm là giao điểm (trung điểm nét)
-    for e in nen.msp.query('LINE[layer=="%s"]' % mt.LOP_KEGAKI):
-        kq.append(("diem", ((e.dxf.start.x + e.dxf.end.x) / 2.0, (e.dxf.start.y + e.dxf.end.y) / 2.0)))
+    # ケガキ: NenVe nhớ tâm (+ đỉnh tam giác); bản vẽ đọc lại từ tệp thì chữ thập 2 nét → tâm = trung điểm nét, tam giác → đỉnh
+    if hasattr(nen, "diem_kegaki"):
+        kq += [("diem", p) for p in nen.diem_kegaki]
+    else:
+        canh = set()
+        for e in nen.msp.query('LINE[layer=="%s"]' % mt.LOP_KEGAKI):
+            a, b = (round(e.dxf.start.x, 3), round(e.dxf.start.y, 3)), (round(e.dxf.end.x, 3), round(e.dxf.end.y, 3))
+            kq.append(("diem", ((a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0)))
+            kq.append(("diem", a))
+            canh |= {(a, b), (b, a)}
+        for a, b in canh:   # 3 nét khép kín = tam giác → trọng tâm
+            for c in {q for p, q in canh if p == b and q != a}:
+                if (c, a) in canh:
+                    kq.append(("diem", ((a[0] + b[0] + c[0]) / 3.0, (a[1] + b[1] + c[1]) / 3.0)))
     return kq
 
 

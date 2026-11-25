@@ -15,7 +15,7 @@ LOP_FNAME = "2-F-NAME"    # F-name
 LOP_SLIT = "4-SHT"        # slit
 LOP_KHUNG = "Khung_IN"    # khung in bao tấm
 LOP_XY = "1-XY"           # dim tổng X, Y (bản chuẩn xưởng 12/11)
-LOP_KEGAKI = "3-KEGAKI"   # dấu khắc vạch ケガキ (chữ thập)
+LOP_KEGAKI = "3-KEGAKI"   # dấu khắc vạch ケガキ (chữ thập / tam giác)
 NET_BE = "DASHED"
 KIEU_CHU = "Text"         # MS PGothic: chữ Nhật + Việt
 KIEU_DIM = "ISO-26"
@@ -37,6 +37,17 @@ TI_LE_KHUNG = 2 ** 0.5
 CO_KEGAKI = 5.0           # nửa cạnh chữ thập ケガキ (10 mm)
 
 
+def ke_gaki_so(k):
+    """Một dấu ケガキ: [x, y] | [x, y, cạnh, hướng] | {x, y, canh, goc} → (x, y, cạnh (0 = chữ thập), hướng mũi tam giác °)."""
+    if isinstance(k, dict):
+        k = [k.get("x"), k.get("y"), k.get("canh"), k.get("goc")]
+    k = list(k) + [None, None]
+    return float(k[0]), float(k[1]), float(k[2] or 0), float(90 if k[3] is None else k[3])
+
+
+assert ke_gaki_so([1, 2]) == (1.0, 2.0, 0.0, 90.0) and ke_gaki_so({"x": 1, "y": 2, "canh": 30, "goc": 0}) == (1.0, 2.0, 30.0, 0.0)
+
+
 class NenVe:
     """Một bản vẽ: môi trường + Model để vẽ. Toạ độ mm, tấm đặt từ gốc (0, 0)."""
 
@@ -46,6 +57,7 @@ class NenVe:
         for e in list(self.msp):  # môi trường phải trống; còn sót gì thì bỏ
             self.msp.delete_entity(e)
         self.moc_x, self.moc_y = [], []  # mốc thêm vào chuỗi dim dưới / phải (vd tâm cung có dim R)
+        self.diem_kegaki = []            # tâm + đỉnh dấu ケガキ (chân dim được chạm)
         for ten in (LOP_CAT, LOP_DIM, LOP_FNAME, LOP_SLIT, LOP_KHUNG, LOP_XY, LOP_KEGAKI):
             if ten not in self.doc.layers:
                 self.doc.layers.add(ten)
@@ -127,10 +139,20 @@ class NenVe:
         """Lỗ tròn cắt: CIRCLE trên 0-KAKOU (lệnh TMT / GRO nhận Ø)."""
         return self.msp.add_circle((x, y), d / 2.0, dxfattribs={"layer": LOP_CAT})
 
-    def ke_gaki(self, x, y):
-        """Dấu ケガキ: chữ thập 10 mm trên 3-KEGAKI."""
-        self.msp.add_line((x, y - CO_KEGAKI), (x, y + CO_KEGAKI), dxfattribs={"layer": LOP_KEGAKI})
-        self.msp.add_line((x - CO_KEGAKI, y), (x + CO_KEGAKI, y), dxfattribs={"layer": LOP_KEGAKI})
+    def ke_gaki(self, x, y, canh=0.0, goc=90.0):
+        """Dấu ケガキ trên 3-KEGAKI: canh = 0 → chữ thập 10 mm tâm (x, y); canh > 0 → tam giác đều cạnh canh,
+        trọng tâm (x, y), mũi chỉ hướng goc (độ, 90 = lên). → các đỉnh (chữ thập: [])."""
+        self.diem_kegaki.append((x, y))
+        if not canh or canh <= 0:
+            self.msp.add_line((x, y - CO_KEGAKI), (x, y + CO_KEGAKI), dxfattribs={"layer": LOP_KEGAKI})
+            self.msp.add_line((x - CO_KEGAKI, y), (x + CO_KEGAKI, y), dxfattribs={"layer": LOP_KEGAKI})
+            return []
+        r = canh / math.sqrt(3.0)  # trọng tâm → đỉnh
+        dinh = [(x + r * math.cos(math.radians(goc + 120 * i)), y + r * math.sin(math.radians(goc + 120 * i))) for i in range(3)]
+        for i in range(3):
+            self.msp.add_line(dinh[i], dinh[(i + 1) % 3], dxfattribs={"layer": LOP_KEGAKI})
+        self.diem_kegaki += dinh
+        return dinh
 
     def leader(self, diem, noi_dung):
         """Leader 1-SUNPOU: mũi tên diem[0] (mép lỗ / điểm chỉ) → gãy tại diem[1] → đoạn ngang dài bằng chữ làm GẠCH CHÂN (bản sửa 18/11);

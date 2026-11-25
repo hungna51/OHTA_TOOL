@@ -45,6 +45,11 @@
 - Mỗi dấu: chữ thập 10 mm (2 LINE) tại tâm dấu (`ke_gaki` của bảng tấm, toạ độ trên hình trải phẳng, gốc góc trái dưới).
 - Một leader `1-SUNPOU` từ dấu giữa chéo lên trên-phải (≈ +23, cao hơn mép trên 53), chữ **`n-ケガキ`**. Bản khách ghi `マーキング` / `罫書き` vẫn ghi `ケガキ`.
 
+- **Dấu tam giác (25/11)**: `ke_gaki` mục `[x, y, cạnh, hướng]` → tam giác đều cạnh `cạnh`, trọng tâm (x, y), mũi chỉ `hướng` độ (0 phải, 90 lên); `[x, y]` vẫn là chữ thập 10 mm. Chân dim chạm được trọng tâm và 3 đỉnh.
+
+## スリット — layer `4-SHT` (25/11)
+- `slit`: mỗi mục `[x1, y1, x2, y2]` = một nét cắt đơn (LINE `4-SHT`), vd vành tròn cắt đứt: từ mép trong tới mép ngoài theo bán kính. Chân dim chạm được hai mút. Khách không ghi vị trí → `chua_chac {o: "slit"}` → nét slit tô vàng.
+
 ## F-name — layer `2-F-NAME`
 - TEXT cao 24, kiểu chữ `Text` (MS PGothic), dòng cách 40; đặt **dưới tấm**, cách mép trái 100, dòng đầu dưới đường dim tổng X ≈ 98.
 - `N=` (số bản vẽ / tên; không có thì bango tạm `<mã>-<số>`), `M=`, `T=` (luôn có phần thập phân: 12.0, 1.6), `Q=`, các dòng `V=` / ấn 1 lần, `Z=`.

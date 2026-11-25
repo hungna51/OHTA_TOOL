@@ -63,6 +63,15 @@ HINH = [
      "vang": 4,
      "dim_khach": [ng(0, 100, 420), ng(100, 355, 420), ng(355, 455, 420), ng(0, 120, 185), ng(120, 360, 185), ng(360, 455, 185),
                    ng(0, 50, -30), doc(35, 335, 420), doc(0, 65, 230), doc(65, 305, 230), doc(305, 370, 230)]},
+    # fax 25/11: vành Ø242.6 / Ø151.7, 3 マーキング tam giác cạnh 30 cách tâm 95.5 (120°), スリット cắt đứt vành ở dưới (chưa chắc)
+    {"bango": "vanh_slit", "bien_dang": "da_giac", "x": 242.6, "y": 242.6,
+     "dinh": [[121.3, 0, 121.3], [242.6, 121.3, 121.3], [121.3, 242.6, 121.3], [0, 121.3, 121.3]],
+     "lo": [{"d": 151.7, "so_luong": 1, "vi_tri": [{"x": 121.3, "y": 121.3}]}],
+     "ke_gaki": [[121.3, 216.8, 30, 90], [38.594, 73.55, 30, 210], [204.006, 73.55, 30, 330]],
+     "slit": [[121.3, 0, 121.3, 45.45]],
+     "chua_chac": [{"o": "slit", "so": 1, "noi_dung": "スリット: khách không ghi vị trí / bề rộng"}],
+     "vang_lop": ("4-SHT", 1), "ke_gaki_net": 9,
+     "dim_khach": [ng(0, 242.6, 300), doc(0, 242.6, 300), doc(121.3, 216.8, 140)]},
 ]
 
 
@@ -94,6 +103,14 @@ def kiem_tam(moi_truong, t, thu_muc):
         for p in chan:
             if not chan_dim.tren_hinh(hinh, (p.x, p.y)):
                 loi.append("chân dim %s (%.2f) tại (%.3f, %.3f) không chạm hình" % (d.dxf.get("layer"), d.get_measurement(), p.x, p.y))
+    if "ke_gaki_net" in t and len(msp.query('LINE[layer=="3-KEGAKI"]')) != t["ke_gaki_net"]:
+        loi.append("ケガキ: %d nét, cần %d" % (len(msp.query('LINE[layer=="3-KEGAKI"]')), t["ke_gaki_net"]))
+    if "slit" in t and len(msp.query('LINE[layer=="4-SHT"]')) != len(t["slit"]):
+        loi.append("slit: %d nét 4-SHT, cần %d" % (len(msp.query('LINE[layer=="4-SHT"]')), len(t["slit"])))
+    if "vang_lop" in t:
+        lp, n = t["vang_lop"]
+        if len([e for e in msp.query('*[layer=="%s"]' % lp) if e.dxf.get("color") == 2]) != n:
+            loi.append("cần %d nét vàng trên %s" % (n, lp))
     vang = [e for e in msp.query('*[layer=="0-KAKOU"]') if e.dxf.get("color") == 2]
     if len(vang) != t.get("vang", 0) or any(e.dxftype() != "ARC" for e in vang):
         loi.append("tô vàng %d nét (%s), cần %d cung" % (len(vang), ",".join(sorted({e.dxftype() for e in vang})), t.get("vang", 0)))

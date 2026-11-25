@@ -43,8 +43,10 @@ namespace TeamsTool.Core
         /// <summary>Khoét trong dạng chữ gọn "□40x60 R5 @ 100,50 | [0,0 40,0 40,20] @ 10,10" (PhongGocKhoet) — chung mọi mẫu.</summary>
         public string Khoet = "";
         public string CanhJson = "[]", LoJson = "[]";
-        /// <summary>Dấu khắc vạch ケガキ / マーキング: [{x, y}] mm trên hình trải phẳng, gốc góc trái dưới.</summary>
+        /// <summary>Dấu khắc vạch ケガキ / マーキング: [{x, y}] mm trên hình trải phẳng, gốc góc trái dưới; dấu tam giác thêm canh (cạnh) + goc (hướng mũi °).</summary>
         public string KeGakiJson = "[]";
+        /// <summary>スリット (25/11): [[x1, y1, x2, y2]…] — nét cắt đơn (4-SHT) trên hình trải phẳng, gốc trái dưới.</summary>
+        public string SlitJson = "[]";
         /// <summary>Vùng của tấm trên trang (tỉ lệ 0–1, gốc trái trên): {"x0","y0","x1","y1"} — cắt ảnh tấm; "" = chưa có.</summary>
         public string VungJson = "";
         /// <summary>Kích thước khách ghi trên bản vẽ còn đúng trên hình trải phẳng: [{loai, gia_tri, tu, den}] — bản vẽ phải dim đủ.</summary>
@@ -191,6 +193,7 @@ namespace TeamsTool.Core
                 if (!string.IsNullOrEmpty(t.VungJson)) x.Set("vung", SafeParse(t.VungJson));
                 x.Set("dim_khach", SafeParse(t.DimKhachJson));
                 x.Set("dinh", SafeParse(t.DinhJson));
+                x.Set("slit", SafeParse(t.SlitJson));
                 x.Set("chua_chac", SafeParse(t.ChuaChacJson));
                 x.Set("ghi_chu_nguoi", t.GhiChuNguoi ?? "");
                 x.Set("mau_thuan", SafeParse(t.MauThuanJson));
@@ -319,7 +322,7 @@ TIẾT DIỆN của mỗi tấm (để trải phẳng — KHÔNG tự tính tr�
   · Bẻ / ấn: đoạn là kích thước NGOÀI (tới giao điểm cạnh ngoài) như ghi trên bản vẽ. Cuộn: đoạn kề là phần thẳng tiếp tuyến (0 nếu không có).
   · Hướng không uốn: một số = chiều dài phẳng theo hướng đó. Tấm phẳng: td_x = ""dài"", td_y = ""rộng"". Hộp 3–4 cạnh: td_x và td_y đều có chỗ uốn (thành – đáy – thành).
 - ghi_chu_td: tiếng Việt, ngắn (hướng bẻ V / N, chỗ chưa chắc). Không đọc được tiết diện → để rỗng, ghi lý do, thêm tiet_dien vào khong_chac.
-- ke_gaki: mỗi dấu khắc vạch (マーキング / ケガキ / 罫書き — dấu vạch, KHÔNG phải lỗ) một cặp [x, y] = toạ độ tâm (mm) trên hình TRẢI PHẲNG, gốc ở góc trái dưới của tấm, x theo hướng td_x; không có → rỗng. Bản vẽ chỉ ghi số dấu mà thiếu vị trí → để rỗng và hỏi trong van_de.
+- ke_gaki: mỗi dấu khắc vạch (マーキング / ケガキ / 罫書き — dấu vạch, KHÔNG phải lỗ; 中抜きなし = không cắt thủng) một mục [x, y] = toạ độ tâm (mm) — dấu vẽ hình TAM GIÁC thì [x, y, cạnh, hướng mũi °] (x, y = trọng tâm; hướng 0 phải, 90 lên, 180 trái, 270 xuống) — trên hình TRẢI PHẲNG, gốc ở góc trái dưới của tấm, x theo hướng td_x; không có → rỗng. Bản vẽ chỉ ghi số dấu mà thiếu vị trí → để rỗng và hỏi trong van_de.
 - goc: vát C / bo R ở GÓC VIỀN NGOÀI, chữ dạng ""<đỉnh> C<số>; <đỉnh> R<số>"" — đỉnh là tên góc khung bao trai_duoi / phai_duoi / phai_tren / trai_tren hoặc toạ độ ""x,y"" trên hình TRẢI PHẲNG (gốc trái dưới); vd ""trai_duoi C10; phai_duoi C10"". XEM TỪNG GÓC trên hình vẽ: khách thường chỉ ghi nhãn (C10) ở MỘT góc — góc khác vẽ vát / bo giống hệt cũng ghi vào goc cùng cỡ. Không có → rỗng. (Không ghi vát mép chiều dày 面取り ở đây — đó là ghi chú gia công.)
 - khoet: khoét trong KHÔNG phải lỗ tròn / lỗ dài (ô vuông, chữ nhật, hình đa giác), chữ dạng ""□rộngxcao R<bo góc> G<góc xoay> @ x,y; x,y"" (tâm từng vị trí) hoặc đa giác ""[x,y x,y x,y …] @ x,y"" (đỉnh so với điểm đặt), các khoét cách nhau bằng |; toạ độ trên hình trải phẳng, gốc trái dưới. Không có → rỗng.
 - vung: [x0, y0, x1, y1] khung bao TRỌN hình vẽ của tấm trên trang PDF (mọi hình chiếu + dim + ghi chú của tấm, không gồm khung tên / ghi chú chung; tấm chỉ định bằng ô ghi chú có mũi tên / đường dẫn → vùng phải ôm cả KHUNG HÌNH mà mũi tên chỉ tới, không chỉ ô ghi chú), tỉ lệ 0–1 theo bề rộng / cao trang, gốc trái TRÊN (x0, y0 = góc trái trên; x1, y1 = góc phải dưới). DXF: theo khung bao bản vẽ.
@@ -486,6 +489,7 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
                 t.ThamSo = string.Join("; ", tsAi.OfType<JsonObject>().Where(o => (o.GetString("ten") ?? "").Trim().Length > 0).Select(o => o.GetString("ten").Trim() + "=" + Chu(o.Get("gia_tri"))));
             t.DimKhachJson = JsonLite.Serialize(x.Get("dim_khach") as List<object> ?? new List<object>());
             t.DinhJson = JsonLite.Serialize(x.Get("dinh") as List<object> ?? new List<object>());
+            t.SlitJson = JsonLite.Serialize(x.Get("slit") as List<object> ?? new List<object>());
             t.ChuaChacJson = JsonLite.Serialize(x.Get("chua_chac") as List<object> ?? new List<object>());
             t.GhiChuNguoi = x.Get("ghi_chu_nguoi") as string ?? "";
             t.MauThuanJson = JsonLite.Serialize(x.Get("mau_thuan") as List<object> ?? new List<object>());
@@ -540,6 +544,8 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
                 if (!(p is List<object> c) || c.Count < 2) continue;
                 var d = new JsonObject();
                 d.Set("x", c[0]); d.Set("y", c[1]);
+                if (c.Count >= 3) d.Set("canh", c[2]); // ケガキ tam giác: cạnh + hướng mũi
+                if (c.Count >= 4) d.Set("goc", c[3]);
                 kq.Add(d);
             }
             return kq;

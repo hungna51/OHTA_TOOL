@@ -137,12 +137,13 @@ namespace TeamsTool.Core
             return (object)o;
         }).ToList();
 
-        /// <summary>ケガキ JSON [{x, y}] → chữ gọn "120,27.5; 180,27.5" (ô sửa ở phòng 2).</summary>
+        /// <summary>ケガキ JSON [{x, y[, canh, goc]}] → chữ gọn "120,27.5; 180,27.5,30,90" (ô sửa ở phòng 2; 4 số = tam giác cạnh, hướng mũi).</summary>
         public static string KeGakiChu(string json)
         {
             List<object> l;
             try { l = JsonLite.Parse(string.IsNullOrWhiteSpace(json) ? "[]" : json) as List<object> ?? new List<object>(); } catch (Exception) { return json ?? ""; }
-            return string.Join("; ", l.OfType<JsonObject>().Select(o => Chu(o.Get("x")) + "," + Chu(o.Get("y"))));
+            return string.Join("; ", l.OfType<JsonObject>().Select(o => Chu(o.Get("x")) + "," + Chu(o.Get("y"))
+                + (o.Get("canh") != null ? "," + Chu(o.Get("canh")) + (o.Get("goc") != null ? "," + Chu(o.Get("goc")) : "") : "")));
         }
 
         /// <summary>Chữ gọn ケガキ → JSON [{x, y}]; sai → null + loi.</summary>
@@ -152,10 +153,11 @@ namespace TeamsTool.Core
             var ds = new List<object>();
             foreach (string p in (chu ?? "").Split(';', '\n').Select(x => x.Trim()).Where(x => x.Length > 0))
             {
-                var c = Cap(p);
-                if (c == null) { loi = "'" + p + "' phải là x,y"; return null; }
+                var c = p.Split(',').Select(So).ToList();
+                if (c.Count < 2 || c.Count > 4 || c.Any(v => v == null)) { loi = "'" + p + "' phải là x,y (tam giác: x,y,cạnh,hướng)"; return null; }
                 var o = new JsonObject();
-                o.Set("x", new JsonNumber(F(c.Value.X))); o.Set("y", new JsonNumber(F(c.Value.Y)));
+                string[] ten = { "x", "y", "canh", "goc" };
+                for (int i = 0; i < c.Count; i++) o.Set(ten[i], new JsonNumber(F(c[i].Value)));
                 ds.Add(o);
             }
             return JsonLite.Serialize(ds);

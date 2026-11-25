@@ -68,9 +68,12 @@ def vung_muc(t, o, so, diem_goc=()):
         a, b, c = dinh[so - 2], dinh[so - 1], dinh[so % len(dinh)]   # hai cạnh kề đỉnh so
         return lambda p: _tren_doan(p, a, b) or _tren_doan(p, b, c) or _gan_cung(p, a, b) or _gan_cung(p, b, c)
     if o == "ke_gaki":
-        kg = [(float(k[0]), float(k[1])) for k in (t.get("ke_gaki") or [])]
-        kg = _chon(kg, so)
-        return lambda p: any(math.hypot(p[0] - x, p[1] - y) <= 5.0 + SAI_SO for x, y in kg)
+        import moi_truong as mt
+        kg = _chon([mt.ke_gaki_so(k) for k in (t.get("ke_gaki") or [])], so)
+        return lambda p: any(math.hypot(p[0] - x, p[1] - y) <= max(5.0, c / math.sqrt(3.0)) + SAI_SO for x, y, c, _ in kg)
+    if o == "slit":
+        sl = _chon([[float(v) for v in s[:4]] for s in (t.get("slit") or []) if isinstance(s, (list, tuple)) and len(s) >= 4], so)
+        return lambda p: any(_tren_doan(p, (s[0], s[1]), (s[2], s[3])) for s in sl)
     return None
 
 
@@ -93,7 +96,8 @@ def to_vang(nen, t, diem_goc=()):
     muc = [m for m in (t.get("chua_chac") or []) if isinstance(m, dict)]
     if not muc:
         return 0
-    net = [e for e in nen.msp.query('*[layer=="%s" | layer=="%s"]' % (mt.LOP_CAT, mt.LOP_KEGAKI))]
+    net = [e for e in nen.msp.query('*[layer=="%s" | layer=="%s" | layer=="%s"]' % (mt.LOP_CAT, mt.LOP_KEGAKI, mt.LOP_SLIT))]
+    lop = {"ke_gaki": mt.LOP_KEGAKI, "slit": mt.LOP_SLIT}
     da = 0
     for m in muc:
         o = str(m.get("o") or "").strip().lower()
@@ -107,7 +111,7 @@ def to_vang(nen, t, diem_goc=()):
         if thuoc is None:
             continue
         for e in net:
-            if (o == "ke_gaki") != (e.dxf.layer == mt.LOP_KEGAKI):
+            if e.dxf.layer != lop.get(o, mt.LOP_CAT):
                 continue
             if chi_r and e.dxftype() != "ARC":
                 continue
@@ -124,4 +128,6 @@ _t = {"khoet": [{"kieu": "chu_nhat", "rong": 240, "cao": 240, "goc_xoay": 0, "r"
 assert vung_muc(_t, "khoet", 1)((125, 70)) and not vung_muc(_t, "khoet", 1)((10, 185))       # mép khoét / mép tấm
 assert vung_muc(_t, "lo", 1)((75, 185)) and not vung_muc(_t, "lo", 1)((120, 185))
 assert vung_muc(_t, "dinh", 3)((60, 75)) and vung_muc(_t, "dinh", 3)((110, 155)) and not vung_muc(_t, "dinh", 3)((5, 0))
+assert vung_muc({"slit": [[0, 0, 0, 40]]}, "slit", 1)((0, 20)) and not vung_muc({"slit": [[0, 0, 0, 40]]}, "slit", 1)((1, 20))
+assert vung_muc({"ke_gaki": [[0, 0, 30, 90]]}, "ke_gaki", 0)((0, 17.3)) and not vung_muc({"ke_gaki": [[0, 0]]}, "ke_gaki", 0)((0, 17.3))
 assert vung_muc(_t, "kich_thuoc", 0) is None                                                    # ô khác: chỉ ghi chú
