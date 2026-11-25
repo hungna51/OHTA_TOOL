@@ -27,6 +27,7 @@ namespace TeamsTool.Core
 - ke_gaki: [[x, y], …] tâm từng dấu khắc vạch. dim_khach: MỌI kích thước khách ghi cho tấm {loai ngang / doc / r / phi / goc / xien, gia_tri, tu, den, diem} — xien (cạnh xiên — đo chiều dài thật) / goc (độ): tu = den = tai = 0 và diem = các điểm THẬT trên hình trải phẳng mà chân dim khách chạm: xien [[x1, y1], [x2, y2]] hai đầu cạnh; goc [[điểm trên cạnh 1], [đỉnh góc], [điểm trên cạnh 2]]; loại khác diem = []; — tu, den = toạ độ THẬT hai đầu (dim từ đường tâm thì tu = toạ độ tâm), giữ đúng cách khách chia chuỗi (bản vẽ OHTA chép lại từng chuỗi); không gồm dim của hình chi tiết phóng (đã ở kieu lỗ). tai = toạ độ ĐƯỜNG DIM khách đặt trên hình trải phẳng (ngang: y của đường dim, doc: x của đường dim; dim nằm trong hình thì toạ độ trong tấm, ngoài thì ngoài — vd y > chiều cao tấm khi dim ở trên) để bản vẽ OHTA đặt dim đúng chỗ khách đặt; r / phi / goc: 0.
 - ĐỐI CHIẾU ghi chú (vd ""140*600"", ""PL9"", ""数量2個"") với dim trên hình: khớp → dùng; KHÔNG khớp → để kich_thuoc theo ghi chú, thêm kich_thuoc vào khong_chac và tạo van_de muc do nhom khach nêu cả hai số.
 - chua_chac: MỌI giá trị bạn TỰ SUY vì khách KHÔNG ghi số (vd góc khoét / góc tấm thấy bo tròn trên hình mà không có R, lỗ không có dim vị trí, đỉnh lấy theo tỉ lệ hình): vẫn ghi giá trị hợp lý nhất vào ô tương ứng để vẽ được, nhưng thêm một mục {o: tên ô (lo / khoet / goc / dinh / ke_gaki / kich_thuoc…; thêm "".r"" nếu chỉ phần bo R chưa chắc, vd ""khoet.r""), so: thứ tự mục trong ô (1, 2…; 0 = cả ô), noi_dung: tiếng Việt ngắn nêu giá trị đã lấy + vì sao (vd ""R10 bo 4 góc khoét — khách không ghi R, lấy theo hình"")}; đồng thời đưa ô đó vào khong_chac và thêm một van_de muc vang nhom khach hỏi khách xác nhận. Phần vẽ từ các mục này được tô VÀNG chờ người xác nhận. Không có → [].
+- GHI CHÚ CỦA NGƯỜI DÙNG (nếu có, cuối phần người dùng): thông tin bổ sung người dùng tự gõ vì bản vẽ khó nhìn / thiếu — ĐÚNG HƠN HÌNH: làm theo ghi chú; điều ghi chú đã nói thì KHÔNG đưa vào chua_chac / khong_chac. Ghi chú khác điều thấy trên hình → vẫn làm theo ghi chú, thêm vào mau_thuan một câu tiếng Việt ngắn (vd ""Ghi chú R5, hình như R10 — đã vẽ R5"") và một van_de muc info nhom noi_bo cùng nội dung. Không có mâu thuẫn → mau_thuan [].
 - khong_chac: các ô vẫn chưa chắc sau khi xem ảnh. van_de: vấn đề MỚI thấy trên ảnh (cùng cách viết: tam, muc do / vang / info, nhom tu_xu_ly / noi_bo / khach, muc_qc, noi_dung một ý ~20 từ, lien_lac).
 - bo_nghi_van: SỐ THỨ TỰ các ""Nghi vấn đã có"" mà ảnh phóng to đã trả lời được (vd đã đọc được vị trí lỗ) — để bỏ.
 Không bịa: không đọc được thì giữ đầu vào và đưa vào khong_chac.";
@@ -36,7 +37,7 @@ Không bịa: không đọc được thì giữ đầu vào và đưa vào khong
             JsonObject s = Kieu("string"), n = Kieu("number"), cap = Mang(Mang(n));
             return Obj(("M", s), ("T", s), ("Q", s), ("kich_thuoc", s), ("kieu_td", s), ("td_x", s), ("td_y", s), ("bien_dang", s), ("mo_ta_bien_dang", s), ("tham_so", s), ("goc", s), ("khoet", s), ("mo_ta", s),
                        ("lo", Mang(Obj(("d", n), ("so_luong", n), ("taro", s), ("kieu", s), ("ghi_chu", s), ("cach_duong_be", n), ("vi_tri", cap), ("noi_tam", Kieu("boolean"))))),
-                       ("ke_gaki", cap), ("dim_khach", Mang(Obj(("loai", s), ("gia_tri", n), ("tu", n), ("den", n), ("tai", n), ("diem", cap)))), ("dinh", cap), ("chua_chac", Mang(Obj(("o", s), ("so", n), ("noi_dung", s)))),
+                       ("ke_gaki", cap), ("dim_khach", Mang(Obj(("loai", s), ("gia_tri", n), ("tu", n), ("den", n), ("tai", n), ("diem", cap)))), ("dinh", cap), ("chua_chac", Mang(Obj(("o", s), ("so", n), ("noi_dung", s)))), ("mau_thuan", Mang(s)),
                        ("khong_chac", Mang(s)), ("van_de", Mang(PhongKiemTra.SchemaVanDe())), ("bo_nghi_van", Mang(n)));
         }
 
@@ -51,6 +52,13 @@ Không bịa: không đọc được thì giữ đầu vào và đưa vào khong
         /// <summary>Câu "cần xác nhận" của các mục chua_chac còn hiệu lực (hiện ở tab DXF ảnh / hồ sơ).</summary>
         public static List<string> CanXacNhan(TamAi t) =>
             ChuaChacConLai(t).OfType<JsonObject>().Select(m => (m.GetString("noi_dung") ?? "").Trim()).Where(s => s.Length > 0).ToList();
+
+        /// <summary>Câu "ghi chú khác hình" AI báo (đã làm theo ghi chú).</summary>
+        public static List<string> MauThuan(TamAi t)
+        {
+            try { return (JsonLite.Parse(t.MauThuanJson ?? "[]") as List<object> ?? new List<object>()).OfType<string>().Where(s => s.Trim().Length > 0).ToList(); }
+            catch (Exception) { return new List<string>(); }
+        }
 
         /// <summary>Tấm còn phải qua bước 2: chưa đọc kỹ và mẫu chưa có / người tự chọn (đơn đọc kiểu cũ đã có mẫu AI chọn → coi như xong).</summary>
         public static bool CanBuoc2(TamAi t) => t.Moi && !t.DaPhongTo && (t.BienDang.Length == 0 || t.DaSua.Contains("bien_dang"));
@@ -69,6 +77,8 @@ Không bịa: không đọc được thì giữ đầu vào và đưa vào khong
             sb.Append("\nNghi vấn đã có:\n");
             if (nghiVan.Count == 0) sb.Append("(không có)\n");
             for (int i = 0; i < nghiVan.Count; i++) sb.Append(i + 1).Append(". ").Append(nghiVan[i].NoiDung).Append('\n');
+            if (!string.IsNullOrWhiteSpace(t.GhiChuNguoi))
+                sb.Append("\nGHI CHÚ CỦA NGƯỜI DÙNG (thông tin bổ sung — đúng hơn hình, làm theo; khác hình thì ghi mau_thuan):\n").Append(t.GhiChuNguoi.Trim()).Append('\n');
             sb.Append("\nThư viện biên dạng (bien_dang = tên):\n");
             var tv = (thuVien ?? Enumerable.Empty<(string, string)>()).ToList();
             if (tv.Count == 0) sb.Append("(trống — máy chưa có Python / ezdxf: để bien_dang rỗng)\n");
@@ -157,6 +167,11 @@ Không bịa: không đọc được thì giữ đầu vào và đưa vào khong
             {
                 string j = JsonLite.Serialize(dn);
                 if (j != t.DinhJson) { t.DinhJson = j; doi.Add("dinh"); }
+            }
+            if (nd.Get("mau_thuan") is List<object> mt)
+            {
+                string j = JsonLite.Serialize(mt);
+                if (j != t.MauThuanJson) { t.MauThuanJson = j; doi.Add("mau_thuan"); }
             }
             if (nd.Get("chua_chac") is List<object> cc) // [] cũng ghi: lượt đọc mới thấy không còn gì tự suy
             {

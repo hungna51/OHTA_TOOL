@@ -68,7 +68,10 @@ namespace AiTool.ViewModels
             HuyCmd = new Lenh(() => _huy?.Cancel());
             ChenCmd = new Lenh(() => GuiLenh("OHTADXFCHEN "));
             VeLaiCmd = new Lenh(() => ChayLan("--thu-nhanh-ve", "Đang vẽ lại (không gọi AI)…"));
-            DocLaiCmd = new Lenh(() => ChayLan("--thu-nhanh-doc-lai", "AI đang đọc lại hình…"));
+            DocLaiCmd = new Lenh(DocLai);
+            GuiCmd = new Lenh(Gui);
+            HuyNhapCmd = new Lenh(() => { _choTep = _choDocLai = null; DangNhap = false; Bao = "Đã huỷ — chưa gửi AI."; });
+            _batGhiChu = DocReg("ghi_chu_bo_sung") == "1";
             VietMauCmd = new Lenh(() => ChayLan("--thu-nhanh-viet-mau", "AI đang viết mẫu vẽ cho hình này (1–2 phút)…"));
             SuaCmd = new Lenh(() => { if (Chon?.ChiTietJson != null) Mo("notepad.exe", "\"" + Chon.ChiTietJson + "\""); });
             ThuMucCmd = new Lenh(() => { if (Chon != null) Mo("explorer.exe", "\"" + Chon.ThuMuc + "\""); });
@@ -102,6 +105,8 @@ namespace AiTool.ViewModels
         public ICommand ChenCmd { get; }
         public ICommand VeLaiCmd { get; }
         public ICommand DocLaiCmd { get; }
+        public ICommand GuiCmd { get; }
+        public ICommand HuyNhapCmd { get; }
         public ICommand VietMauCmd { get; }
         public ICommand SuaCmd { get; }
         public ICommand ThuMucCmd { get; }
@@ -145,11 +150,31 @@ namespace AiTool.ViewModels
         public bool CoCanhBao => Chon != null && Chon.CanhBao.Count > 0;
         public string XacNhanChon => Chon == null ? "" : "Cần xác nhận (AI tự suy — nét VÀNG trong DXF):\n" + string.Join("\n", Chon.CanXacNhan.Select(s => "• " + s));
         public bool CoXacNhan => Chon != null && Chon.CanXacNhan.Count > 0;
+        public string GhiChuChon => Chon == null || Chon.GhiChuNguoi.Length == 0 ? "" : "📝 Thông tin bổ sung đã gửi AI: " + Chon.GhiChuNguoi;
+        public bool CoGhiChu => GhiChuChon.Length > 0;
+        public string MauThuanChon => Chon == null ? "" : string.Join("\n", Chon.MauThuan.Select(s => "⚠ Ghi chú khác hình: " + s));
+        public bool CoMauThuan => Chon != null && Chon.MauThuan.Count > 0;
+
+        // ----- Thông tin bổ sung (25/11): bật → dán ảnh / Đọc lại chưa gửi ngay, hiện khung nhập -----
+        private bool _batGhiChu;
+        public bool BatGhiChu { get => _batGhiChu; set { if (Dat(ref _batGhiChu, value)) GhiReg("ghi_chu_bo_sung", value ? "1" : "0"); } }
+
+        private bool _dangNhap;
+        public bool DangNhap { get => _dangNhap; private set => Dat(ref _dangNhap, value); }
+
+        private string _ghiChuNhap = "";
+        public string GhiChuNhap { get => _ghiChuNhap; set => Dat(ref _ghiChuNhap, value ?? ""); }
+
+        private ImageSource _anhCho;
+        public ImageSource AnhCho { get => _anhCho; private set => Dat(ref _anhCho, value); }
+
+        private string _choTep, _choDocLai; // đang chờ gửi: tệp mới / thư mục lần thử đọc lại
 
         private void HienChon()
         {
             foreach (string p in new[] { nameof(CoChon), nameof(CoTheSua), nameof(CoDxf), nameof(TieuDeChon), nameof(ChiTietChon), nameof(AnhGoc),
-                                         nameof(AnhVe), nameof(LoiChon), nameof(CoLoi), nameof(CanhBaoChon), nameof(CoCanhBao), nameof(CanMau), nameof(XacNhanChon), nameof(CoXacNhan) })
+                                         nameof(AnhVe), nameof(LoiChon), nameof(CoLoi), nameof(CanhBaoChon), nameof(CoCanhBao), nameof(CanMau), nameof(XacNhanChon), nameof(CoXacNhan),
+                                         nameof(GhiChuChon), nameof(CoGhiChu), nameof(MauThuanChon), nameof(CoMauThuan) })
                 OnChanged(p);
         }
 
@@ -181,7 +206,41 @@ namespace AiTool.ViewModels
         public void Nhan(string f)
         {
             if (!DuoiNhan.Contains(Path.GetExtension(f).ToLowerInvariant())) { Bao = "Chỉ nhận ảnh, PDF hoặc DXF: " + Path.GetFileName(f); return; }
-            Chay("Đang gửi " + Path.GetFileName(f) + "…", "--thu-nhanh-moi", f);
+            if (!BatGhiChu) { Chay("Đang gửi " + Path.GetFileName(f) + "…", "--thu-nhanh-moi", f); return; }
+            _choTep = f; _choDocLai = null;
+            GhiChuNhap = "";
+            AnhCho = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff" }.Contains(Path.GetExtension(f).ToLowerInvariant()) ? NapAnh(f, 0) : null;
+            DangNhap = true;
+            Bao = "Nhập thông tin bổ sung cho AI (tuỳ chọn) rồi bấm ▶ Gửi AI (Ctrl+Enter).";
+        }
+
+        /// <summary>🤖 Đọc lại: bật thông tin bổ sung → khung nhập điền sẵn ghi chú cũ; tắt → đọc lại luôn với ghi chú đã lưu.</summary>
+        private void DocLai()
+        {
+            if (Chon == null || DangChay) return;
+            if (!BatGhiChu) { ChayLan("--thu-nhanh-doc-lai", "AI đang đọc lại hình…"); return; }
+            _choDocLai = Chon.ThuMuc; _choTep = null;
+            GhiChuNhap = Chon.GhiChuNguoi;
+            AnhCho = Chon.Anh == null ? null : NapAnh(Chon.Anh, 0);
+            DangNhap = true;
+            Bao = "Sửa thông tin bổ sung rồi bấm ▶ Gửi AI để AI đọc lại.";
+        }
+
+        /// <summary>▶ Gửi AI: ghi chú ra tệp tạm (nhiều dòng, khỏi lo ký tự đặc biệt trên dòng lệnh) → --ghi-chu-tep.</summary>
+        private void Gui()
+        {
+            if (!DangNhap || DangChay) return;
+            string tep = Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "dxf_tu_anh_ghi_chu.txt");
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(tep));
+                File.WriteAllText(tep, GhiChuNhap ?? "", new System.Text.UTF8Encoding(false));
+            }
+            catch (Exception ex) { Bao = "Không ghi được ghi chú: " + ex.Message; return; }
+            DangNhap = false;
+            if (_choTep != null) Chay("Đang gửi " + Path.GetFileName(_choTep) + " kèm thông tin bổ sung…", "--thu-nhanh-moi", _choTep, "--ghi-chu-tep", tep);
+            else if (_choDocLai != null) Chay("AI đang đọc lại hình kèm thông tin bổ sung…", "--thu-nhanh-doc-lai", _choDocLai, "--ghi-chu-tep", tep);
+            _choTep = _choDocLai = null;
         }
 
         private void ChayLan(string lenh, string bao)
@@ -190,7 +249,7 @@ namespace AiTool.ViewModels
         }
 
         /// <summary>Chạy exe nền; dòng tiến độ lên ô báo, #KQ → nạp lại danh sách và chọn lần thử đó.</summary>
-        private void Chay(string bao, string lenh, string thamSo)
+        private void Chay(string bao, string lenh, string thamSo, params string[] them)
         {
             if (DangChay) return;
             DangChay = true;
@@ -198,7 +257,7 @@ namespace AiTool.ViewModels
             _huy = new CancellationTokenSource();
             string thuMuc = null, loi = null;
             LanThu kq = null;
-            ChayExe.Chay(Exe, DuongDan.ThamSo(lenh, thamSo), dong =>
+            ChayExe.Chay(Exe, DuongDan.ThamSo(new[] { lenh, thamSo }.Concat(them).ToArray()), dong =>
             {
                 var (loai, chu) = DongExe.Doc(dong);
                 switch (loai)
@@ -278,6 +337,20 @@ namespace AiTool.ViewModels
         {
             try { Process.Start(exe, thamSo); }
             catch (Exception ex) { Bao = "Không mở được: " + ex.Message; }
+        }
+
+        private const string KhoaReg = @"Software\OFT_Lisp\OhtaTool\AI";
+
+        private static string DocReg(string ten)
+        {
+            try { using (var k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(KhoaReg)) return k?.GetValue(ten) as string; }
+            catch (Exception) { return null; }
+        }
+
+        private static void GhiReg(string ten, string gt)
+        {
+            try { using (var k = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(KhoaReg)) k?.SetValue(ten, gt ?? ""); }
+            catch (Exception) { }
         }
 
         /// <summary>Ảnh nạp hẳn vào bộ nhớ (OnLoad) để không khoá tệp — xoá / vẽ lại được.</summary>

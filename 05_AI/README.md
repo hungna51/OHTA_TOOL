@@ -8,6 +8,7 @@ Tab là **🧪 Thử nhanh của OhtaTeams đặt trong CAD**: dán ảnh chụp
 
 1. `OHTA` → tab **DXF ảnh**.
 2. **📋 Dán ảnh (Ctrl+V)** — ảnh chụp vùng bản vẽ (Win+Shift+S) hoặc tệp đã copy; hoặc **📂 Chọn tệp** / kéo thả tệp ảnh, PDF, DXF vào tab. Đợi AI đọc + vẽ (dòng chữ tím báo tiến độ; **■ Huỷ** để dừng).
+2b. ☐ **Thông tin bổ sung** (tab nhớ): bật thì dán ảnh / chọn tệp / 🤖 Đọc lại **chưa gửi ngay** — hiện khung ảnh + ô nhập (đọc lại: điền sẵn ghi chú cũ) → **▶ Gửi AI** (Ctrl+Enter) / Huỷ. Ghi chú đi kèm ảnh, **thắng hình**: AI làm theo, không tô vàng / hỏi lại điều đã ghi; chỗ ghi chú khác hình → dòng cam **⚠ Ghi chú khác hình** (AI vẫn vẽ theo ghi chú). Ghi chú lưu trong lần thử (`ghi_chu_nguoi`), hiện 📝 dưới mô tả. Exe: `--ghi-chu-tep TEP` (UTF-8) cho `--thu-nhanh-moi` / `--thu-nhanh-doc-lai`.
 3. Ô vàng **Cần xác nhận**: chỗ khách không ghi số mà AI lấy theo hình (vd R10 bo góc khoét) — nét đó trong DXF **tô vàng**. Đúng → đổi nét về ByLayer sau khi chèn; sai → ✎ Sửa thông số rồi 🔁 Vẽ lại (ô đã sửa coi là đã xác nhận, hết vàng).
 3b. Xem **ảnh gửi vào** và **hình phần mềm vẽ** cạnh nhau (bấm ảnh mở to); dòng đỏ = chưa vẽ được, dòng cam = thiếu dim khách / cảnh báo khoét.
 4. **📥 Chèn vào bản vẽ** (lệnh `OHTADXFCHEN`) → bấm điểm đặt **góc dưới trái biên dạng**. Layer / kiểu trùng tên giữ bản của bản vẽ.

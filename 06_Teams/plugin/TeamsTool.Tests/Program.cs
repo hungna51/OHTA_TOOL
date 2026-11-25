@@ -240,6 +240,16 @@ namespace TeamsTool.Tests
             Kiem("chua chac: viec bo muc o nguoi da sua", viecCc.Contains("\"o\":\"lo\"") + "|" + viecCc.Contains("khoet.r") + "|" + string.Join(" / ", PhongPhongTo.CanXacNhan(tCc2)),
                  "True|False|vị trí y lỗ Ø50 lấy giữa");
             Kiem("schema buoc 2: co chua_chac", System.Text.RegularExpressions.Regex.Replace(OhtaTool.Plugin.Core.JsonLite.Serialize(PhongPhongTo.Schema()), @"\s", "").Contains("\"chua_chac\":"), true);
+            // 25/11: ghi chú người dùng gửi kèm ảnh (thắng hình) + mâu thuẫn ghi chú ↔ hình
+            var tGc = new TamAi { Tep = "g.png", KichThuoc = "300 x 200", GhiChuNguoi = "Bo R5 tất cả góc khoét" };
+            Kiem("ghi chu nguoi: vao dau vao AI", PhongPhongTo.DauVao(tGc, new List<(string, string)>(), new List<VanDe>()).Contains("Bo R5 tất cả góc khoét"), true);
+            Kiem("ghi chu nguoi: khong co thi khong in muc", PhongPhongTo.DauVao(new TamAi(), new List<(string, string)>(), new List<VanDe>()).Contains("GHI CHÚ CỦA NGƯỜI DÙNG"), false);
+            var ndGc = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse("{\"lo\":[],\"ke_gaki\":[],\"dim_khach\":[],\"mau_thuan\":[\"Ghi chú R5, hình như R10 — đã vẽ R5\"]}");
+            var doiGc = PhongPhongTo.ApDung(tGc, ndGc);
+            var tGc2 = PhongDocBanVe.Doc(PhongDocBanVe.Ghi(new ChiTiet { Tam = { tGc } })).Tam[0];
+            Kiem("ghi chu nguoi + mau thuan: ap + luu", doiGc.Contains("mau_thuan") + "|" + tGc2.GhiChuNguoi + "|" + string.Join(" / ", PhongPhongTo.MauThuan(tGc2)),
+                 "True|Bo R5 tất cả góc khoét|Ghi chú R5, hình như R10 — đã vẽ R5");
+            Kiem("schema buoc 2: co mau_thuan", System.Text.RegularExpressions.Regex.Replace(OhtaTool.Plugin.Core.JsonLite.Serialize(PhongPhongTo.Schema()), @"\s", "").Contains("\"mau_thuan\":"), true);
             Kiem("phong to: body co anh png", PhongPhongTo.Body("claude-opus-5-5", "q", "QUJD", "dv").Contains("\"media_type\":\"image/png\"")
                  || System.Text.RegularExpressions.Regex.Replace(PhongPhongTo.Body("claude-opus-5-5", "q", "QUJD", "dv"), @"\s", "").Contains("\"media_type\":\"image/png\""), true);
             // 18/11: luồng suy nghĩ — body streaming + ghép SSE thành phản hồi thường (đọc được bằng bộ đọc cũ)

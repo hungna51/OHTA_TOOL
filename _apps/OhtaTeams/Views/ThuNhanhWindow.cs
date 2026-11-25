@@ -33,6 +33,13 @@ namespace TeamsTool.Views
         private string _tm;
         private CancellationTokenSource _huy;
 
+        private readonly TextBox _ghiChu = new TextBox
+        {
+            AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 44, MaxHeight = 120,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new Thickness(0, 0, 0, 6),
+            ToolTip = "Vd: bo R5 tất cả góc khoét · lỗ Ø18 cách mép 25 · số trong ngoặc là tham khảo — AI làm theo, khác hình thì báo ⚠",
+        };
+
         public ThuNhanhWindow(Brush mau)
         {
             _mau = mau;
@@ -55,7 +62,7 @@ namespace TeamsTool.Views
                 return b;
             }
             Them("🔁 Vẽ lại", () => Chay(VeLai), "Vẽ lại từ thông số hiện tại (sau khi sửa chi_tiet.json hoặc mã mẫu) — không gọi AI");
-            Them("🤖 Đọc lại (AI)", () => Chay(async (bao, huy) => { await AiDon.DocLaiThuNhanh(_tm, bao, huy); await VeLai(bao, huy); NapDs(); }),
+            Them("🤖 Đọc lại (AI)", () => Chay(async (bao, huy) => { AiDon.DatGhiChuThuNhanh(_tm, _ghiChu.Text); await AiDon.DocLaiThuNhanh(_tm, bao, huy); await VeLai(bao, huy); NapDs(); }),
                  "AI đọc lại hình của lần thử này (tốn một lượt AI) rồi vẽ lại — ô bạn đã sửa trong chi_tiet.json giữ nguyên");
             Them("✎ Sửa thông số", () => MoNotepad(AiDon.FileChiTiet(_tm)), "Mở chi_tiet.json bằng Notepad: sửa bien_dang, kích thước, lo, ke_gaki, goc, khoet, dim_khach… rồi lưu và bấm 🔁 Vẽ lại");
             Them("📁 Thư mục", () => Mo(_tm), "Mở thư mục thử (ai\\ban_ve: DXF, ai\\ho_so\\TN-1: ảnh cắt, sơ đồ đỉnh)");
@@ -70,6 +77,8 @@ namespace TeamsTool.Views
                      + "Chưa ưng: sửa thông số (✎) hoặc mã mẫu (📄) rồi 🔁 Vẽ lại — không tốn AI. Chưa có mẫu: ✨ AI viết mẫu.",
                 TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6),
             });
+            dau.Children.Add(new TextBlock { Text = "Thông tin bổ sung cho AI (tuỳ chọn — đúng hơn hình; gửi kèm khi dán ảnh / 🤖 Đọc lại):", Foreground = KieuTeams.ChuPhu, Margin = new Thickness(0, 0, 0, 2) });
+            dau.Children.Add(_ghiChu);
             dau.Children.Add(nut);
             dau.Children.Add(_bao);
             var khung = new DockPanel();
@@ -93,11 +102,12 @@ namespace TeamsTool.Views
                 if (_dangNapDs || !(_lanThu.SelectedItem is ListBoxItem it) || !(it.Tag is string tm) || tm == _tm || _huy != null) return;
                 _tm = tm;
                 _ds.Children.Clear();
+                try { _ghiChu.Text = AiDon.DocChiTiet(tm)?.Tam.FirstOrDefault()?.GhiChuNguoi ?? ""; } catch (Exception) { _ghiChu.Text = ""; }
                 Chay(VeLai); // vẽ lại trên máy để xem — không gọi AI
             };
             Loaded += (s, e) => NapDs();
 
-            KeyDown += (s, e) => { if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control) { Dan(); e.Handled = true; } };
+            KeyDown += (s, e) => { if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control && !_ghiChu.IsKeyboardFocusWithin) { Dan(); e.Handled = true; } };
             Drop += (s, e) => { if (e.Data.GetData(DataFormats.FileDrop) is string[] f && f.Length > 0) Nhan(f[0]); };
             Closed += (s, e) => _huy?.Cancel();
             _bao.Text = "Chưa có bản vẽ.";
@@ -132,6 +142,7 @@ namespace TeamsTool.Views
             {
                 bao("Đang chuẩn bị " + Path.GetFileName(f) + "…");
                 _tm = await AiDon.TaoThuNhanh(VePng(f), huy);
+                AiDon.DatGhiChuThuNhanh(_tm, _ghiChu.Text);
                 _ds.Children.Clear();
                 NapDs();
                 await AiDon.DocThuNhanh(_tm, bao, huy);
@@ -261,6 +272,8 @@ namespace TeamsTool.Views
                     : "✖ Chưa vẽ: chưa có kích thước trải phẳng (kich_thuoc / td_x, td_y trống) — ✎ Sửa thông số rồi 🔁 Vẽ lại.", "#B42318"));
                 foreach (string s in kv?.ThieuDim ?? new List<string>()) the.Children.Add(Chu("Thiếu dim khách: " + s, "#B54708"));
                 foreach (string s in kv?.CanhBao ?? new List<string>()) the.Children.Add(Chu("⚠ " + s, "#B54708"));
+                foreach (string s in PhongPhongTo.MauThuan(tam)) the.Children.Add(Chu("⚠ Ghi chú khác hình: " + s, "#B54708"));
+                foreach (string s in PhongPhongTo.CanXacNhan(tam)) the.Children.Add(Chu("● Cần xác nhận (nét vàng): " + s, "#8A6100"));
 
                 var nut = new WrapPanel { Margin = new Thickness(0, 4, 0, 0) };
                 if (kv?.Tep != null) nut.Children.Add(KieuTeams.Nut("📐 Mở DXF", _mau, (s, e) => Mo(kv.Tep), chinh: false));

@@ -16,7 +16,13 @@ namespace AiTool.Views
             InitializeComponent();
             _vm = vm;
             DataContext = vm;
-            NutDan.Background = NutChen.Background = vm.AccentBrush;
+            NutDan.Background = NutChen.Background = NutGui.Background = vm.AccentBrush;
+            // khung thông tin bổ sung mở → đưa con trỏ vào ô nhập
+            vm.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(AiTabViewModel.DangNhap) && vm.DangNhap)
+                    Dispatcher.BeginInvoke(new Action(() => { OGhiChu.Focus(); OGhiChu.CaretIndex = OGhiChu.Text.Length; }), System.Windows.Threading.DispatcherPriority.Input);
+            };
             // Ctrl+V trên tab (PaletteSet chuyển phím khi tab có focus) + kéo thả tệp
             PreviewKeyDown += (s, e) =>
             {

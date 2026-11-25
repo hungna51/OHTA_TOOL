@@ -53,6 +53,10 @@ namespace TeamsTool.Core
         public string DinhJson = "[]";
         /// <summary>Giá trị AI TỰ SUY vì khách không ghi số (25/11): [{o, so, noi_dung}] — vẽ vàng + hỏi xác nhận; mục của ô người đã sửa coi là đã xác nhận.</summary>
         public string ChuaChacJson = "[]";
+        /// <summary>Thông tin bổ sung người dùng gõ gửi kèm ảnh (25/11) — đúng hơn hình, AI làm theo.</summary>
+        public string GhiChuNguoi = "";
+        /// <summary>Chỗ ghi chú người dùng khác hình mà AI đã làm theo ghi chú: ["câu"…].</summary>
+        public string MauThuanJson = "[]";
         public HashSet<string> KhongChac = new HashSet<string>(); // ô AI không chắc / AI tự chọn
         public HashSet<string> DaSua = new HashSet<string>();     // ô người dùng đã sửa — chạy lại không ghi đè
         /// <summary>Đã qua lượt AI đọc phóng to ảnh cắt vùng tấm (đọc lại bản vẽ → tấm mới → phóng to lại).</summary>
@@ -188,6 +192,8 @@ namespace TeamsTool.Core
                 x.Set("dim_khach", SafeParse(t.DimKhachJson));
                 x.Set("dinh", SafeParse(t.DinhJson));
                 x.Set("chua_chac", SafeParse(t.ChuaChacJson));
+                x.Set("ghi_chu_nguoi", t.GhiChuNguoi ?? "");
+                x.Set("mau_thuan", SafeParse(t.MauThuanJson));
                 x.Set("moi", t.Moi);
                 x.Set("da_phong_to", t.DaPhongTo);
                 x.Set("theo_tra_loi", t.TheoTraLoi.OrderBy(s => s).Cast<object>().ToList());
@@ -481,6 +487,8 @@ noi_dung: tiếng Việt, MỘT ý, tối đa ~20 từ, đúng trọng tâm: ch�
             t.DimKhachJson = JsonLite.Serialize(x.Get("dim_khach") as List<object> ?? new List<object>());
             t.DinhJson = JsonLite.Serialize(x.Get("dinh") as List<object> ?? new List<object>());
             t.ChuaChacJson = JsonLite.Serialize(x.Get("chua_chac") as List<object> ?? new List<object>());
+            t.GhiChuNguoi = x.Get("ghi_chu_nguoi") as string ?? "";
+            t.MauThuanJson = JsonLite.Serialize(x.Get("mau_thuan") as List<object> ?? new List<object>());
             if (t.KieuTd.Length > 0 && t.KieuTd != "phang" && t.KieuTd != "be" && t.KieuTd != "lam_tay") // schema không còn enum
             {
                 t.KieuTd = (t.TdX + t.TdY).Any(char.IsLetter) ? "be" : "phang";

@@ -93,6 +93,8 @@ namespace TeamsTool.Core
             Ds(sb, "Kích thước khách (phải có đủ trên bản vẽ OHTA)", t.DimKhachJson);
             Ds(sb, "Đỉnh viền (mẫu da_giac: [x, y] hoặc [x, y, R], gốc trái dưới)", t.DinhJson);
             Ds(sb, "Cần xác nhận — AI tự suy vì khách không ghi số (vẽ VÀNG)", JsonLite.Serialize(PhongPhongTo.ChuaChacConLai(t)));
+            Dong(sb, "Thông tin bổ sung của người dùng (gửi kèm ảnh)", t.GhiChuNguoi);
+            Ds(sb, "Ghi chú khác hình (đã làm theo ghi chú)", t.MauThuanJson);
             sb.Append("\n## Ghi chú đặc biệt\n");
             if (t.GhiChuJp.Trim().Length == 0 && t.GhiChuVi.Trim().Length == 0) sb.Append("(không có)\n");
             if (t.GhiChuJp.Trim().Length > 0) sb.Append("- JP: ").Append(t.GhiChuJp.Trim()).Append('\n');

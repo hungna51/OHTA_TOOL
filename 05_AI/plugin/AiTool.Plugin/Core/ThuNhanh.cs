@@ -35,6 +35,9 @@ namespace AiTool.Core
         public bool CanMau;
         /// <summary>Giá trị AI tự suy vì khách không ghi số — phần vẽ từ đó tô vàng trong DXF, người dùng xác nhận.</summary>
         public List<string> CanXacNhan = new List<string>();
+        /// <summary>Thông tin bổ sung người dùng gửi kèm ảnh (thắng hình) và chỗ AI thấy ghi chú khác hình.</summary>
+        public string GhiChuNguoi = "";
+        public List<string> MauThuan = new List<string>();
 
         public bool CoDxf => Dxf != null && File.Exists(Dxf);
 
@@ -59,6 +62,8 @@ namespace AiTool.Core
                 CanhBao = (o.Get("canh_bao") as List<object>)?.OfType<string>().ToList() ?? new List<string>(),
                 CanMau = o.Get("can_mau") is bool b && b,
                 CanXacNhan = (o.Get("can_xac_nhan") as List<object>)?.OfType<string>().ToList() ?? new List<string>(),
+                GhiChuNguoi = o.GetString("ghi_chu_nguoi") ?? "",
+                MauThuan = (o.Get("mau_thuan") as List<object>)?.OfType<string>().ToList() ?? new List<string>(),
             }).ToList();
         }
     }

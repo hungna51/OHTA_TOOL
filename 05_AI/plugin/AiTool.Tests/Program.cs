@@ -54,6 +54,10 @@ namespace AiTool.Tests
             Kiem("can_mau true -> CanMau (hien nut AI viet mau)", LanThu.TuJson("{\"can_mau\": true}")[0].CanMau, true);
             Kiem("can_xac_nhan thieu -> rong", l.CanXacNhan.Count, 0);
             Kiem("can_xac_nhan doc du", string.Join(" / ", LanThu.TuJson("{\"can_xac_nhan\": [\"R10 bo góc khoét\", \"y lỗ Ø50\"]}")[0].CanXacNhan), "R10 bo góc khoét / y lỗ Ø50");
+            var lg = LanThu.TuJson("{\"ghi_chu_nguoi\": \"Bo R5 mọi góc\", \"mau_thuan\": [\"Ghi chú R5, hình như R10\"]}")[0];
+            Kiem("ghi_chu_nguoi + mau_thuan doc du", lg.GhiChuNguoi + "|" + string.Join(" / ", lg.MauThuan), "Bo R5 mọi góc|Ghi chú R5, hình như R10");
+            Kiem("ghi_chu_nguoi thieu -> rong", l.GhiChuNguoi + "|" + l.MauThuan.Count, "|0");
+            Kiem("Tham so kem ghi chu tep", DuongDan.ThamSo("--thu-nhanh-moi", @"C:\a.png", "--ghi-chu-tep", @"C:\t b\g.txt"), @"--thu-nhanh-moi C:\a.png --ghi-chu-tep ""C:\t b\g.txt""");
             Kiem("Mang 2 doi tuong", LanThu.TuJson("[" + mot + "," + mot + "]").Count, 2);
             Kiem("Mang rong", LanThu.TuJson("[]").Count, 0);
             Kiem("JSON hong -> rong, khong vang", LanThu.TuJson("{hong").Count, 0);

@@ -108,13 +108,36 @@
                     <Button Style="{StaticResource Nut}" Content="■ Huỷ" Command="{Binding HuyCmd}"
                             Visibility="{Binding DangChay, Converter={StaticResource HienKhi}}"/>
                 </WrapPanel>
+                <CheckBox Content="Thông tin bổ sung — dán ảnh / Đọc lại thì nhập thêm thông tin trước khi gửi AI" IsChecked="{Binding BatGhiChu}"
+                          Margin="2,0,0,6" ToolTip="Bản vẽ khó nhìn / thiếu số: gõ thêm (vd bo R5 mọi góc khoét, lỗ cách mép 25). AI làm theo ghi chú, khác hình thì báo ⚠."/>
                 <TextBlock Text="{Binding Bao}" TextWrapping="Wrap" Foreground="#5B3FD1" Margin="2,0,0,8"/>
+
+                <!-- Khung nhap thong tin bo sung truoc khi gui AI -->
+                <Border Style="{StaticResource The}" BorderBrush="#5B3FD1" Visibility="{Binding DangNhap, Converter={StaticResource HienKhi}}">
+                    <StackPanel>
+                        <TextBlock Text="THÔNG TIN BỔ SUNG CHO AI" Style="{StaticResource TieuDeThe}"/>
+                        <Image Source="{Binding AnhCho}" Stretch="Uniform" MaxHeight="160" HorizontalAlignment="Left" Margin="0,0,0,6"/>
+                        <TextBox x:Name="OGhiChu" Text="{Binding GhiChuNhap, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap"
+                                 MinHeight="70" MaxHeight="200" VerticalScrollBarVisibility="Auto"
+                                 ToolTip="Vd: bo R5 tất cả góc khoét · lỗ Ø18 cách mép 25 · số trong ngoặc là tham khảo. Ctrl+Enter = gửi.">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding GuiCmd}"/>
+                            </TextBox.InputBindings>
+                        </TextBox>
+                        <WrapPanel Margin="0,8,0,0">
+                            <Button x:Name="NutGui" Style="{StaticResource NutChinh}" Content="▶ Gửi AI" Command="{Binding GuiCmd}"/>
+                            <Button Style="{StaticResource Nut}" Content="Huỷ" Command="{Binding HuyNhapCmd}"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
 
                 <!-- Lan thu dang chon -->
                 <Border Style="{StaticResource The}" Visibility="{Binding CoChon, Converter={StaticResource HienKhi}}">
                     <StackPanel>
                         <TextBlock Text="{Binding TieuDeChon}" FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap"/>
                         <TextBlock Text="{Binding ChiTietChon}" Foreground="#5F6B7A" TextWrapping="Wrap" Margin="0,2,0,6"/>
+                        <TextBlock Text="{Binding GhiChuChon}" Foreground="#334E68" TextWrapping="Wrap" Margin="0,0,0,6"
+                                   Visibility="{Binding CoGhiChu, Converter={StaticResource HienKhi}}"/>
                         <UniformGrid Columns="2">
                             <Border BorderBrush="#E1E4E8" BorderThickness="1" Margin="0,0,4,0" ToolTip="Ảnh gửi vào (bấm mở to)" Cursor="Hand" MouseLeftButtonUp="MoAnhGoc">
                                 <Image Source="{Binding AnhGoc}" Stretch="Uniform" MaxHeight="220"/>
@@ -127,6 +150,8 @@
                                    Visibility="{Binding CoLoi, Converter={StaticResource HienKhi}}"/>
                         <TextBlock Text="{Binding CanhBaoChon}" Foreground="#B54708" TextWrapping="Wrap" Margin="0,6,0,0"
                                    Visibility="{Binding CoCanhBao, Converter={StaticResource HienKhi}}"/>
+                        <TextBlock Text="{Binding MauThuanChon}" Foreground="#B54708" TextWrapping="Wrap" Margin="0,6,0,0"
+                                   Visibility="{Binding CoMauThuan, Converter={StaticResource HienKhi}}"/>
                         <Border Background="#FEF7C3" BorderBrush="#EAAA08" BorderThickness="1" CornerRadius="4" Padding="8,5" Margin="0,6,0,0"
                                 Visibility="{Binding CoXacNhan, Converter={StaticResource HienKhi}}"
                                 ToolTip="Khách không ghi số các chỗ này — AI lấy theo hình. Kiểm / hỏi khách; đúng thì đổi nét vàng về ByLayer, sai thì ✎ Sửa thông số rồi 🔁 Vẽ lại.">

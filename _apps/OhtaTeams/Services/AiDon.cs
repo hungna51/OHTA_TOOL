@@ -973,6 +973,16 @@ namespace TeamsTool.Services
             new[] { ThuMucThuNhanh, ThuMucThuNhanhCu }.Where(Directory.Exists).SelectMany(Directory.GetDirectories)
                 .Where(d => File.Exists(FileChiTiet(d))).OrderByDescending(Path.GetFileName, StringComparer.Ordinal).ToList();
 
+        /// <summary>Thông tin bổ sung người dùng gõ cho lần thử (25/11) — gửi kèm ảnh ở lượt đọc, thắng hình. null = không đổi.</summary>
+        public static void DatGhiChuThuNhanh(string tm, string ghiChu)
+        {
+            if (ghiChu == null) return;
+            ChiTiet ct = DocChiTiet(tm);
+            if (ct == null || ct.Tam.Count == 0) return;
+            ct.Tam[0].GhiChuNguoi = ghiChu.Trim();
+            Ghi(tm, ct);
+        }
+
         /// <summary>AI đọc lại hình của lần thử (bước 2 cho đúng tấm đó, kể cả đã đọc) — ô người đã sửa giữ nguyên.</summary>
         public static async Task<ChiTiet> DocLaiThuNhanh(string tm, Action<string> bao, CancellationToken huy)
         {

@@ -17,10 +17,12 @@ namespace TeamsTool.Services
     /// (AiDon.TaoThuNhanh → DocThuNhanh → VeThuNhanh, cùng thư mục lần thử). Giao thức stdout UTF-8, mỗi dòng:
     ///   "@ chữ"   tiến độ · "#TM thư mục" lần thử vừa tạo · "#KQ json" kết quả · "#LOI chữ" lỗi (mã thoát 1).
     /// Lệnh: --thu-nhanh-moi TEP · --thu-nhanh-doc-lai TM · --thu-nhanh-ve TM · --thu-nhanh-ds.
+    /// Thêm "--ghi-chu-tep TEP" (moi / doc-lai): tệp UTF-8 chứa thông tin bổ sung người dùng gõ — gửi kèm ảnh, thắng hình (25/11).
     /// </summary>
     public static class ThuNhanhCli
     {
         private static StreamWriter _ra;
+        private static string _ghiChu; // null = giữ ghi chú đã lưu
 
         public static int Chay(string[] args)
         {
@@ -28,6 +30,8 @@ namespace TeamsTool.Services
             try
             {
                 string lenh = args[0], ts = args.Length > 1 ? args[1] : null;
+                int iGc = Array.IndexOf(args, "--ghi-chu-tep");
+                _ghiChu = iGc > 0 && iGc + 1 < args.Length ? File.ReadAllText(args[iGc + 1], Encoding.UTF8) : null;
                 switch (lenh)
                 {
                     case "--thu-nhanh-ds":
@@ -70,6 +74,7 @@ namespace TeamsTool.Services
             Bao("Đang chuẩn bị " + Path.GetFileName(tep) + "…");
             string tm = await AiDon.TaoThuNhanh(ThuNhanhWindow.VePng(tep), CancellationToken.None);
             In("#TM " + tm);
+            AiDon.DatGhiChuThuNhanh(tm, _ghiChu);
             await AiDon.DocThuNhanh(tm, Bao, CancellationToken.None);
             Bao("AI đã đọc hình — đang vẽ…");
             return await Ve(tm);
@@ -77,6 +82,7 @@ namespace TeamsTool.Services
 
         private static async Task<JsonObject> DocLaiVaVe(string tm)
         {
+            AiDon.DatGhiChuThuNhanh(tm, _ghiChu);
             await AiDon.DocLaiThuNhanh(tm, Bao, CancellationToken.None);
             return await Ve(tm);
         }
@@ -141,6 +147,8 @@ namespace TeamsTool.Services
             o.Set("xem", xem != null && File.Exists(xem) ? xem : null);
             o.Set("dxf", dxf != null && File.Exists(dxf) ? dxf : null);
             o.Set("chi_tiet_json", AiDon.FileChiTiet(tm));
+            o.Set("ghi_chu_nguoi", t?.GhiChuNguoi ?? "");
+            o.Set("mau_thuan", t == null ? new List<object>() : PhongPhongTo.MauThuan(t).Cast<object>().ToList());
             o.Set("can_xac_nhan", t == null ? new List<object>() : PhongPhongTo.CanXacNhan(t).Cast<object>().ToList()); // phần vẽ vàng (25/11)
             bool canMau = CanMau(tm, t);
             o.Set("can_mau", canMau);
