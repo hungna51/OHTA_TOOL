@@ -12666,7 +12666,7 @@
                                (cons 1 (gro--xep-cum-ten-nhom (nth 0 lbl)))
                                '(50 . 0.0)
                                '(62 . 3)
-                               (cons 7 (or style-bg "Standard"))
+                               (cons 7 (cond (style-bg) ("Standard"))) ; muc 234: AutoCAD (or ...) tra T, khong tra gia tri -> (7 . T)
                          )
                 )
               )

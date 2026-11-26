@@ -86,6 +86,7 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 | 231 | **Cặp 本図/逆図 viết kiểu dấu nhân không ra số lượng** (131203-2, tấm 54, 20/11/2026): `本図 ｔ6*2` + `逆図 ｔ6*2` ghép cặp xong thì 逆図 thành dòng phụ, nhánh dòng phụ (TH1) của `gro--so-luong` chỉ tìm số trước 枚 → Q rỗng, `Error Q!!! 0-2-54 Q=`. Sửa: dòng phụ và dòng chính không có 枚 thì thử `gro--tim-nhan` (số sau `*`/`＊`/`×`) như TH3; dòng phụ có quy cách `FB<số>*<số>` (`FB6*50`, `FB 6*50`, `gro--co-fb-p`) thì không lấy. **231b**: bản đầu dùng `(or ...)` để lấy số → AutoLISP `or` chỉ trả **T** → `incorrect type - T` (bước "gan tam CPL", `itoa`). Luật: lấy giá trị dự phòng dùng `cond`, không dùng `or`. **Chưa kiểm trên CAD.** | [10-csv.md](10-csv.md) |
 | 232 | **Cặp `ｔ9*本図1本` / `ｔ9*逆図1本` không ghép đối xứng** (131203-1, tấm 83/84, 20/11/2026): `gro--it-loai-sl` coi chữ 本 đứng lẻ là 本図 — phép kiểm "本 không có số trước" chỉ xét danh sách 1 ký tự nên luôn đúng → dòng 逆図 có đơn vị đếm `1本` bị nhận là HONZU, 2 dòng đều HONZU, không gộp (mục 130), 本図 thành ghi chú không hình. Sửa: 本 đứng lẻ chỉ tính 本図 khi dòng không phải 逆図 (`gro--gyaku-p`). **Chưa kiểm trên CAD.** | [09-vi-tri-dau-ra.md](09-vi-tri-dau-ra.md) |
 | 233 | **Khắc chữ đổi thiếu: chữ `C` và `C3` không sang 3-KEGAKI** (131304-1: đổi A B D, A3 B3 D3; sót C tấm 20, C3 tấm 10). `gro--text-kich-thuoc-p` loại chuỗi chỉ gồm ký tự kiểu kích thước (số, R, C, M, t, x…) → "C"/"C3" giống vát mép bị bỏ qua. Người dùng chốt (24/11): **KHÔNG loại nữa** — C3, R… có thể đứng riêng vẫn là chữ khắc. Nay đổi MỌI text trong hình của tấm khắc chữ; text giống kích thước (có chữ số + chỉ ký tự kiểu kích thước) báo **nghi vấn**: dòng lệnh `!!! Khac chu bango N: text [C3] GIONG TEXT KICH THUOC`, tab Thông Tin `!!! Khac chu: k text giong kich thuoc (nghi van) - kiem tra: bango …`, cờ XData `KC_NGHI_KT` → cột Ghi chú bảng DST. Bango trong dòng tổng (cả dòng ngoài hình / chạm nét) đã lọc trùng; dòng lệnh gộp 1 dòng / tấm kèm danh sách chữ (bản đầu in `bango 6, 6, 6, …` mỗi chữ 1 lần). Hệ quả: dim thật nằm trong hình tấm khắc chữ cũng bị đổi — dựa vào cảnh báo để sửa tay. **Chưa chạy GRO trên ZWCAD** | [08-sap-xep-va-vung.md](08-sap-xep-va-vung.md) |
+| 234 | **AutoCAD: GRO dừng ở "xep cum: C#" với `bad DXF group: (7 . T)`** (báo lỗi DESKTOP-3SMLDFQ 26/11/2026, 131396-S, v1.4.4): nhãn nhóm `GRO_XEP_NHOM` tạo bằng `(cons 7 (or style-bg "Standard"))`. `or` của AutoLISP AutoCAD chỉ trả `T`/`nil`, không trả giá trị — ZWCAD lại trả giá trị nên chạy được. Sửa: `(cond (style-bg) ("Standard"))`. Đã rà cả thư mục: không còn chỗ nào dùng `(or x giá-trị)` để lấy giá trị. **Luật:** lấy giá trị mặc định luôn dùng `(cond (x) (mặc-định))`, không dùng `or`. **Chưa chạy lại trên AutoCAD** | [11-api-zwcad.md](11-api-zwcad.md) |
 | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) | Hộp thoại DCL + **bản .NET** (dialog `gro`, bảng DST), **tab Guro** | 18, 19, 20, 52, 55, 56, 64, 86, 192, 193, 194, 195, 196, 197 |
 | [06-encoding-chuoi.md](06-encoding-chuoi.md) | Encoding và xử lý chuỗi (CP932 / Unicode) | 2, 9, 15, 16, 50, 57 |
 | [07-tach-du-lieu.md](07-tach-du-lieu.md) | Tách độ dày, số lượng, mã khắc, **ghép dòng số lượng** | 10, 11, 17, 23, 24, 32, 43, 54, 168 |
@@ -101,14 +102,14 @@ Mục lục các file rule của mục con [03_Guro](../README.md): lisp `lisp/g
 
 ## Mục lục mục lỗi
 
-1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–233 tại đây.
+1–88 chi tiết tại đây, 89–167 ở bảng chung, 168–234 tại đây.
 
 > ### ⚠ SỐ MỤC LÀ CỐ ĐỊNH, KHÔNG ĐƯỢC ĐÁNH SỐ LẠI
 > Mã nguồn `.lsp` tham chiếu tới chúng ở **17 chỗ** (`CLAUDE.md muc 13`, `muc 29`, `muc 85`, `muc 86`, …) và các file rule tham chiếu chéo nhau ở **59 chỗ**. Đổi số là hỏng cả 59 chỗ đó cùng lúc.
 >
 > Thêm mục mới thì **nối tiếp số lớn nhất hiện có + 1**, bỏ vào file theo chủ đề, rồi cập nhật bảng dưới.
 >
-> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **233**.
+> **Mục 89–167 được ghi ở bảng chung** [`laptrinhlisp/rules/12-danh-muc-66-loi-va-bai-hoc.md`](../../../rules/12-danh-muc-66-loi-va-bai-hoc.md), không lặp lại ở đây. Bảng dưới chỉ liệt kê mục 1–88 và các mục mới có ghi chi tiết trong thư mục này. Số lớn nhất hiện có: **234**.
 
 > ### Lệnh chẩn đoán cũ
 > `grosort` / `grodbg` / `growp` / `grostyle` / `bgdbg` thuộc bản đầy đủ cũ `guro ZWCAD(BG MK FN).lsp`, không có trong `guro_gro.lsp`. Các mục bên dưới nhắc tới chúng là ghi chép lịch sử. Lịch sử thay đổi lisp nay nằm trong git của OHTA_TOOL.
