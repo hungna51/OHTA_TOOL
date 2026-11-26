@@ -37,5 +37,8 @@ _backup/
 # Quy chuan noi bo cong ty (repo PUBLIC) - gui rieng, khong len GitHub
 _apps/OhtaTeams/data/quy_chuan/
 
+# Ma nguon + ghi chu web tinh tien (price-calc): co dia chi may chu, mat khau trang cai dat - chi de tren may (OneDrive)
+07_CSV/_web_price_calc/
+
 # Python tu sinh khi chay thu vien ve DXF (phong 4)
 __pycache__/
