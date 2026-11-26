@@ -293,11 +293,21 @@ namespace CsvTool.Core
             foreach (var r in hoi("SELECT \"tenLoai\",\"heSo\" FROM \"HeSoGiaVL\" ORDER BY id"))
                 if (!b.HeSoVL.ContainsKey(r[0])) b.HeSoVL[r[0]] = S(r[1]);
             foreach (var r in hoi("SELECT \"tenLoai\",\"heSo\" FROM \"HeSoGiaCong\" ORDER BY id"))
-                if (!b.HeSoGiaCong.ContainsKey(r[0])) b.HeSoGiaCong[r[0]] = S(r[1]);
+            {
+                string ten = (r[0] ?? "").Trim().Normalize();   // "Nón lệch" gõ trên web có thể ở dạng dấu tổ hợp
+                if (!b.HeSoGiaCong.ContainsKey(ten)) b.HeSoGiaCong[ten] = S(r[1]);
+            }
             foreach (var r in hoi("SELECT \"loai\",\"heSo\" FROM \"HeSoPitchiKakumaru\" ORDER BY \"thuTu\",id"))
                 (r[0] == "trong_luong" ? b.PitchiTrongLuong : r[0] == "chieu_dai" ? b.PitchiChieuDai : new List<double>()).Add(S(r[1]));
             foreach (var r in hoi("SELECT \"heSo\" FROM \"HeSoCuon\" ORDER BY id")) b.HeSoCuon.Add(S(r[0]));
             if (b.Dong.Count == 0) throw new InvalidOperationException("Bảng giá trên database đang trống.");
+            // không có số mặc định: thiếu bảng / thiếu số thì báo, không tính giá
+            List<string[]> cd;
+            try { cd = hoi("SELECT \"giaToiThieu\",\"buToiDa\" FROM \"CaiDatGia\" ORDER BY id LIMIT 1"); }
+            // máy chủ trả lỗi SQL (thiếu bảng / cột) ≠ mất mạng: không để NguonGiaCoDem quay sang bản sao
+            catch (IOException ex) when (ex.Message.StartsWith("Database báo lỗi")) { throw new InvalidOperationException(BangGia.LoiThieuCaiDat); }
+            if (cd.Count == 0 || cd[0][0] == null || cd[0][1] == null || (b.GiaToiThieu = S(cd[0][0])) <= 0 || (b.BuToiDa = S(cd[0][1])) <= 0)
+                throw new InvalidOperationException(BangGia.LoiThieuCaiDat);
             return b;
         }
     }

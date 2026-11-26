@@ -51,6 +51,8 @@ namespace CsvTool.Tests
                 sql.Contains("\"CongTy\"") ? new List<string[]> { new[] { "UD", "t", "ユーディー" }, new[] { "UD", "f", "別" }, new[] { "TH", "f", null } } :
                 sql.Contains("\"HeSoGiaVL\"") ? new List<string[]> { new[] { "Ưu đãi SS", "1.15" } } :
                 sql.Contains("\"HeSoPitchiKakumaru\"") ? new List<string[]> { new[] { "trong_luong", "0.8" }, new[] { "chieu_dai", "0.75" } } :
+                sql.Contains("\"HeSoGiaCong\"") ? new List<string[]> { new[] { "No\u0301n le\u0302\u0323ch ", "1.5" } } :
+                sql.Contains("\"CaiDatGia\"") ? new List<string[]> { new[] { "250", "5000" } } :
                 sql.Contains("\"HeSoCuon\"") ? new List<string[]> { new[] { "0.4" } } : new List<string[]>());
             Kiem("DocBang: ten tieng Nhat, ten trung lay dong dau, NULL = rong", bang.TenNhat["UD"] + "|" + bang.TenNhat["TH"], "ユーディー|");
             Kiem("DocBang: map cot, ten trung lay dong dau", bang.Dong[0].GiaTappu + "|" + bang.CongTyUuDai["UD"] + "|" + bang.DacBiet["DB"].SoSanhGiaThuong + "|" + bang.PitchiTrongLuong[0] + "|" + bang.PitchiChieuDai[0],
@@ -58,6 +60,14 @@ namespace CsvTool.Tests
             var khoiPhuc = BangGia.TuByte(bang.ThanhByte());
             Kiem("BangGia: khu hoi ban sao", khoiPhuc.Dong[0].TyTrong + "|" + khoiPhuc.HeSoVL["Ưu đãi SS"] + "|" + khoiPhuc.DacBiet["DB"].DonGiaTamGiaCong, "7.85|1.15|330");
             KiemNemBatKy("DocBang: bang gia trong -> bao loi", () => NguonPostgres.DocBang(sql => new List<string[]>()));
+            Kiem("DocBang: gia toi thieu / bu toi da, ten he so dau to hop -> dung san", bang.GiaToiThieu + "|" + bang.BuToiDa + "|" + bang.HeSoGiaCong.ContainsKey("Nón lệch") + "|" + khoiPhuc.BuToiDa, "250|5000|True|5000");
+            Func<string, List<string[]>> CoBang(Func<string, List<string[]>> caiDat) => sql =>
+                sql.Contains("\"CaiDatGia\"") ? caiDat(sql) : sql.Contains("\"BangGiaVL\"") ? new List<string[]> { new[] { "SS400", "6", "140", "900", "7", "45", "150", "1700", "7.85" } } : new List<string[]>();
+            string LoiDoc(Func<string, List<string[]>> h) { try { NguonPostgres.DocBang(h); return "khong loi"; } catch (Exception ex) { return ex.Message; } }
+            Kiem("DocBang: chua co bang CaiDatGia -> bao loi, khong lay mac dinh", LoiDoc(CoBang(s => throw new IOException("Database báo lỗi: relation \"CaiDatGia\" does not exist"))), BangGia.LoiThieuCaiDat);
+            Kiem("DocBang: CaiDatGia trong -> bao loi", LoiDoc(CoBang(s => new List<string[]>())), BangGia.LoiThieuCaiDat);
+            Kiem("DocBang: thieu 1 so -> bao loi", LoiDoc(CoBang(s => new List<string[]> { new[] { "250", null } })), BangGia.LoiThieuCaiDat);
+            Kiem("DocBang: mat mang khi doc CaiDatGia -> van la loi mang", LoiDoc(CoBang(s => throw new IOException("Database đóng kết nối giữa chừng."))), "Database đóng kết nối giữa chừng.");
         }
 
         private static string VoiMayGia(KieuGia kieu, string matKhau, Func<PostgresDoc, string> lam)

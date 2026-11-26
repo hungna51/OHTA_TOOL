@@ -20,7 +20,7 @@ Giá một tấm = **tiền vật liệu** + **tiền cắt** + **tiền gia cô
    - Làm tròn tới 10 ¥.
    - Một số khách đặc biệt được tính theo **đơn giá mỗi kg**.
    - Khách tự mang vật liệu hoặc chỉ nhờ gia công thì chỉ thu **15 % tiền vật liệu**.
-   - Có thể đặt **giá tối thiểu 250 ¥ / tấm**.
+   - **Giá tối thiểu 250 ¥ / tấm**, phần thu thêm mỗi dòng tấm không quá 5 000 ¥.
 5. **Thành tiền** = giá 1 tấm × số lượng. **Tổng đơn** = cộng thành tiền của mọi tấm.
 
 ---
@@ -41,7 +41,7 @@ Giá một tấm = **tiền vật liệu** + **tiền cắt** + **tiền gia cô
 | **Lỗ nhỏ / lỗ lớn** | Lỗ đường kính đến 30 mm là lỗ nhỏ, lớn hơn là lỗ lớn. |
 | **Bẻ** (曲げ) | Chấn / uốn tấm thành góc theo một đường thẳng. |
 | **Nhấn 1 lần** (発押し) | Kiểu bẻ ép một nhát; mỗi đường tính tiền **gấp đôi** đường bẻ thường. |
-| **Pitchi** (bẻ bước, 曲げ角度) | Bẻ nhiều nhát nhỏ liên tiếp để tạo thành cung tròn. Có nhiều kiểu: Pitchi, Non, Non lệch, Kakumaru, Kakumaru lệch. |
+| **Pitchi** (bẻ bước, 曲げ角度) | Bẻ nhiều nhát nhỏ liên tiếp để tạo thành cung tròn. Có nhiều kiểu: Pitchi, Nón, Nón lệch, Kakumaru, Kakumaru lệch. |
 | **Cuộn** | Lốc tấm thành cung tròn (**nửa hình**) hoặc thành ống tròn kín (**cả hình**). |
 | **Tapu** (タップ) | Taro ren trong lỗ để bắt vít (M3, M5, M12…). |
 | **Sara** (皿モミ) | Khoét loe miệng lỗ để đầu vít chìm vào mặt tấm. |
@@ -142,7 +142,7 @@ Hệ số theo cân (giá trị thường dùng): dưới 20 kg: 0.8 · 20–40 
 
 Hệ số theo chiều dài pitchi (giá trị thường dùng): dưới 0.83 m: 0.75 · 0.83–1.66: 1 · 1.66–2.49: 1.25 · 2.49–3.32: 1.5 · 3.32–4.15: 1.75 · 4.15–4.98: 2 · 4.98–5.81: 2.25 · từ 5.81 m: 2.5.
 
-Kiểu pitchi (Pitchi, Non, Non lệch, Kakumaru, Kakumaru lệch) có hệ số riêng; kiểu khó hơn có hệ số cao hơn.
+Kiểu pitchi (Pitchi, Nón, Nón lệch, Kakumaru, Kakumaru lệch) có hệ số riêng (bảng `HeSoGiaCong` trên database); kiểu khó hơn có hệ số cao hơn.
 
 ### Bước 7 — Tiền cuộn
 ```
@@ -202,8 +202,14 @@ Nếu tự tính được tiền vật liệu của 1 tấm (ví dụ vật li�
 - Chế độ Chỉ gia công: giá = số nhập + tiền gia công (không cắt, không lỗ, không áp quy tắc 55 % / 68 %).
 - Không nhân hệ số vật liệu, không áp giá theo kg.
 
-### Bước 15 — Giá tối thiểu 250 ¥
-Khi bật, tấm nào có giá dưới 250 ¥ được tính **250 ¥**. Có thể bật cho cả đơn, hoặc bật / tắt riêng từng tấm.
+### Bước 15 — Giá tối thiểu 250 ¥, thu thêm không quá 5 000 ¥
+Luôn áp dụng (trừ giá sửa tay). Tấm có giá dưới 250 ¥:
+```
+Giá 1 tấm = Giá thật + 5 000 ÷ Số lượng   → không vượt quá 250 ¥   → làm tròn xuống 10 ¥
+```
+Đơn ít tấm thì giá vẫn lên 250 ¥. Đơn nhiều tấm thì chỉ cộng thêm phần 5 000 ¥ chia đều, nên phần thu thêm của cả dòng tấm không quá 5 000 ¥ và số lượng tăng thì tổng tiền luôn tăng. Ví dụ tấm 120 ¥: 10 cái → 250 ¥; 39 cái → 240 ¥; 100 cái → 170 ¥; 500 cái → 130 ¥.
+
+250 ¥ và 5 000 ¥ là cài đặt trên web price-calc (bảng `CaiDatGia`). Trên OHTA TOOL có ô **Không áp dụng giá tối thiểu cho tấm tính theo KG** (riêng của OHTA TOOL): tích thì tấm tính theo khối lượng × đơn giá (khách đặc biệt) giữ nguyên giá.
 
 ### Bước 16 — Thành tiền và tổng đơn
 ```
@@ -217,7 +223,7 @@ Cân phôi → Tiền vật liệu → Tiền cắt → Lỗ / Tapu / Sara → B
 → Cộng → Quy tắc 55 % / 68 % → Làm tròn 10 ¥
 → (Khách đặc biệt: giá theo kg)
 → (Chế độ Chỉ gia công / Tự nhập tiền vật liệu / Vật liệu khách cấp)
-→ Giá tối thiểu 250 ¥ (nếu bật) → × Số lượng
+→ Giá tối thiểu 250 ¥ (bù tối đa 5 000 ¥ / dòng tấm) → × Số lượng
 ```
 
 ---
@@ -330,7 +336,7 @@ Tổng cân giúp nhìn nhanh quy mô đơn hàng:
 
 ## 10. Câu hỏi thường gặp
 
-**Giá một tấm gồm những gì?** Tiền vật liệu + tiền cắt + tiền gia công (lỗ, Tapu, Sara, bẻ, pitchi, cuộn, vát), sau đó áp quy tắc 55 % / 68 %, làm tròn 10 ¥, có thể đổi sang giá theo kg (khách đặc biệt) hoặc theo chế độ tính, cuối cùng giá tối thiểu 250 ¥ nếu bật.
+**Giá một tấm gồm những gì?** Tiền vật liệu + tiền cắt + tiền gia công (lỗ, Tapu, Sara, bẻ, pitchi, cuộn, vát), sau đó áp quy tắc 55 % / 68 %, làm tròn 10 ¥, có thể đổi sang giá theo kg (khách đặc biệt) hoặc theo chế độ tính, cuối cùng giá tối thiểu 250 ¥ (phần thu thêm mỗi dòng tấm không quá 5 000 ¥).
 
 **Vì sao phôi cộng thêm 10 mm?** Đó là phần vật liệu hao hụt quanh tấm khi cắt laser.
 

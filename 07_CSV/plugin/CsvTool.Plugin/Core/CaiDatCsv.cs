@@ -16,6 +16,7 @@ namespace CsvTool.Core
         public string LopKhung = LopKhungMacDinh, LopDim = LopDimMacDinh, LopTapu = LopTapuMacDinh;
         public double BuocSpline = 1.0, DungSaiKheHo = 0.01;
         public int CheDoTinh;
+        public bool KhongToiThieuKg;   // tấm tính theo kg (khối lượng × đơn giá) không áp giá tối thiểu; chỉ lưu trên máy, web để riêng
 
         /// <summary>Lớp thực dùng khi chạy (bật "ưu tiên layer mặc định" thì bỏ qua lớp đã lưu).</summary>
         public string LopKhungDung => DungLopMacDinh ? LopKhungMacDinh : LopKhung;
@@ -35,6 +36,7 @@ namespace CsvTool.Core
                 c.BuocSpline = SoThuc(docMoi("BuocSpline"), 1.0);
                 c.DungSaiKheHo = SoThuc(docMoi("DungSaiKheHo"), 0.01);
                 c.CheDoTinh = SoNguyen(docMoi("CheDoTinh"), 0);
+                c.KhongToiThieuKg = SoNguyen(docMoi("KhongToiThieuKg"), 0) == 1;
                 return c;
             }
             c.SapXep = SapXepHopLe(SoNguyen(docCu("csvmode"), 1));
@@ -58,6 +60,7 @@ namespace CsvTool.Core
             ghiMoi("BuocSpline", BuocSpline.ToString(CultureInfo.InvariantCulture));
             ghiMoi("DungSaiKheHo", DungSaiKheHo.ToString(CultureInfo.InvariantCulture));
             ghiMoi("CheDoTinh", CheDoTinh);
+            ghiMoi("KhongToiThieuKg", KhongToiThieuKg ? 1 : 0);
         }
 
         private static KieuSapXep SapXepHopLe(int n) => n >= 1 && n <= 3 ? (KieuSapXep)n : KieuSapXep.TraiSangPhai;

@@ -32,9 +32,12 @@ namespace CsvTool.Core
         [DataMember] public Dictionary<string, string> TenNhat = new Dictionary<string, string>();        // tên → tên tiếng Nhật
         [DataMember] public Dictionary<string, CongTyDacBiet> DacBiet = new Dictionary<string, CongTyDacBiet>();
         [DataMember] public Dictionary<string, double> HeSoVL = new Dictionary<string, double>();         // "Ưu đãi SS", "Không ưu đãi SUS"...
-        [DataMember] public Dictionary<string, double> HeSoGiaCong = new Dictionary<string, double>();    // Pitchi, Non, NonLech, Kakumaru...
+        [DataMember] public Dictionary<string, double> HeSoGiaCong = new Dictionary<string, double>();    // tên trên database: Pitchi, Nón, Nón lệch, Kakumaru, Kakumaru lệch
         [DataMember] public List<double> PitchiTrongLuong = new List<double>(), PitchiChieuDai = new List<double>();   // theo thuTu
         [DataMember] public List<double> HeSoCuon = new List<double>();
+        [DataMember] public double GiaToiThieu, BuToiDa;   // bảng CaiDatGia: 250 ¥ / 5 000 ¥; 0 = database chưa có (bản sao cũ)
+
+        public const string LoiThieuCaiDat = "Database chưa có cài đặt giá tối thiểu / bù tối đa (bảng CaiDatGia). Thêm trên web price-calc trước.";
 
         private static DataContractJsonSerializer BoDoc() =>
             new DataContractJsonSerializer(typeof(BangGia), new DataContractJsonSerializerSettings { UseSimpleDictionaryFormat = true });

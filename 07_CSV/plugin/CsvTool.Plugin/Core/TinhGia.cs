@@ -12,7 +12,7 @@ namespace CsvTool.Core
         public List<(double SoDuong, double Dai)> Be = new List<(double, double)>();
         public int CheDoTinh;   // 0 thường, 1 chỉ gia công (15% VL, không cắt, không lỗ), 2 vật liệu khách cấp
         public double? TienVLTay;   // tiền vật liệu 1 tấm do người dùng tự tính: giá = số này + cắt + gia công
-        public bool LamTron250;
+        public bool KhongToiThieuKg;   // tick trên OHTA TOOL: tấm tính theo kg không áp giá tối thiểu
     }
 
     public sealed class KetQuaGia
@@ -37,6 +37,10 @@ namespace CsvTool.Core
     public static class TinhGia
     {
         public static readonly string[] DsLoaiPitchi = { "Pitchi", "Non", "NonLech", "Kakumaru", "KakumaruLech" };
+        /// <summary>Tên loại pitchi lưu trong data → tên dòng bảng HeSoGiaCong trên database ("Nón", "Nón lệch", "Kakumaru lệch").</summary>
+        public static string TenHeSoPitchi(string loai) =>
+            loai == "Non" ? "Nón" : loai == "NonLech" ? "Nón lệch" : loai == "KakumaruLech" ? "Kakumaru lệch" : string.IsNullOrEmpty(loai) ? "Pitchi" : loai;
+
         public static readonly string[] DsLoaiCuon = { "Không", "Nửa hình", "Cả hình" };
         public const double GiaCuonNuaHinh = 6000, GiaCuonCaHinh = 12000;   // 2 mức cố định trong form của web
 
@@ -78,7 +82,7 @@ namespace CsvTool.Core
             double m = v.PitchiDai / 1000;
             double hsCD = m < 0.83 ? Hs(c, 0, 0.75) : m < 1.66 ? Hs(c, 1, 1) : m < 2.49 ? Hs(c, 2, 1.25) : m < 3.32 ? Hs(c, 3, 1.5)
                         : m < 4.15 ? Hs(c, 4, 1.75) : m < 4.98 ? Hs(c, 5, 2) : m < 5.81 ? Hs(c, 6, 2.25) : Hs(c, 7, 2.5);
-            double heGC = Hs(b.HeSoGiaCong, string.IsNullOrEmpty(v.LoaiPitchi) ? "Pitchi" : v.LoaiPitchi, 1);
+            double heGC = Hs(b.HeSoGiaCong, TenHeSoPitchi(v.LoaiPitchi), 1);
             double phut = Math.Max(hsTL, hsCD) * heGC * 2 * v.PitchiSoLan;
             return TronJs(v.SoLuong <= 5 ? 1500 / v.SoLuong + 100 * phut : 1500.0 / 5 + 100 * phut);
         }
@@ -155,10 +159,17 @@ namespace CsvTool.Core
                 kq.TienVL *= 0.15;
                 kq.Gia1Tam = Tron10(kq.TienVL + kq.TienCat + kq.TongGiaCong);
             }
-            if (v.LamTron250 && kq.Gia1Tam < 250) kq.Gia1Tam = 250;
+            if (!(kq.DonGiaKg > 0 && v.KhongToiThieuKg)) kq.Gia1Tam = ApToiThieu(kq.Gia1Tam, v.SoLuong, b.GiaToiThieu, b.BuToiDa);
             kq.AllIn = kq.Gia1Tam * v.SoLuong;
             return (kq, null);
         }
+
+        /// <summary>
+        /// Giá tối thiểu (bảng CaiDatGia của web): giá dưới toiThieu được nâng lên, nhưng phần thu thêm của cả dòng tấm
+        /// (× số lượng) không quá buToiDa: min(toiThieu, giá + buToiDa ÷ SL), làm tròn xuống 10 ¥.
+        /// </summary>
+        public static double ApToiThieu(double gia, double soLuong, double toiThieu, double buToiDa) =>
+            gia >= toiThieu || soLuong <= 0 ? gia : Math.Min(toiThieu, Math.Floor((gia + buToiDa / soLuong) / 10 + 1e-9) * 10);
 
         /// <summary>Vật liệu thô quá 55% tổng (không inox) / 68% (inox) thì giá = vật liệu thô ÷ 0,55 / 0,68.</summary>
         static double LuatTiTrong(double vlTho, double tong, bool laInox)
@@ -175,13 +186,14 @@ namespace CsvTool.Core
         /// Tổng cân theo đúng cách đã tính tiền từng tấm: tấm tính theo kg của công ty đặc biệt dùng (X+6)(Y+6),
         /// tấm còn lại (kể cả giá tay) dùng (X+10)(Y+10). Tấm thiếu số hoặc vật liệu chưa có trong bảng → ChuaCoKg.
         /// </summary>
-        public static TongCan TongKg(IEnumerable<TamXuat> ds, GiaDon don, BangGia b)
+        public static TongCan TongKg(IEnumerable<TamXuat> ds, GiaDon don, BangGia b, bool khongToiThieuKg = false)
         {
             var r = new TongCan { DacBiet = b.DacBiet.ContainsKey(don.CongTy ?? "") };
             foreach (TamXuat t in ds)
             {
                 GiaTam g = don.Tam.TryGetValue(t.N ?? "", out GiaTam gt) ? gt : null;
                 var (v, loi) = TaoDauVao(t, g, don.CongTy);
+                if (v != null) v.KhongToiThieuKg = khongToiThieuKg;
                 KetQuaGia kq = loi == null ? Tinh(v, b).Kq : null;
                 if (kq == null) { r.ChuaCoKg++; continue; }
                 bool giaTay = !string.IsNullOrEmpty(t.Tt.GiaBaoGia) && g?.TuDong != true;
@@ -227,7 +239,7 @@ namespace CsvTool.Core
                 VatLieu = t.M, CongTy = congTy, LoaiPitchi = g?.LoaiPitchi ?? "Pitchi", DoDay = doDay, X = x, Y = y, SoLuong = q,
                 LoNho = t.Tt.LoNho, LoLon = t.Tt.LoLon, Tappu = t.Tt.Tappu, Sara = t.Tt.Sara,
                 PitchiSoLan = t.Tt.PitchiSoLan, PitchiDai = t.Tt.PitchiDai, VatMm = t.Tt.Vat,
-                DonGiaCuon = DonGiaCuonCua(t, g), LamTron250 = g?.LamTron250 ?? false, CheDoTinh = cheDo,
+                DonGiaCuon = DonGiaCuonCua(t, g), CheDoTinh = cheDo,
                 TienVLTay = SoTien(t.Tt.TienVatLieu, out double tay) && tay >= 0 ? tay : (double?)null,
             };
             v.Be.AddRange(t.Tt.DuongBe.Select(b => ((double)b.SoLuong, (double)b.Dai)));
@@ -238,7 +250,7 @@ namespace CsvTool.Core
         /// Tính lại mọi tấm không phải giá tay. Giá đã có mà không được đánh dấu tự động là giá tay, không bị đè.
         /// Tấm không tính được thì xoá giá tự động cũ để không xuất nhầm. Trả về tên tấm → lý do.
         /// </summary>
-        public static Dictionary<string, string> ApDung(IEnumerable<TamXuat> ds, GiaDon don, BangGia b)
+        public static Dictionary<string, string> ApDung(IEnumerable<TamXuat> ds, GiaDon don, BangGia b, bool khongToiThieuKg = false)
         {
             var canhBao = new Dictionary<string, string>();
             foreach (TamXuat t in ds)
@@ -246,7 +258,7 @@ namespace CsvTool.Core
                 GiaTam g = don.Lay(t.N);
                 var (v, loi) = TaoDauVao(t, g, don.CongTy);
                 KetQuaGia kq = null;
-                if (v != null) v.LamTron250 = don.Tron250(g);
+                if (v != null) v.KhongToiThieuKg = khongToiThieuKg;
                 if (loi == null) loi = LoiGiaVlBang0(v, b);
                 if (loi == null) (kq, loi) = Tinh(v, b);
                 g.TienVlHienTai = kq?.TienVL ?? 0;

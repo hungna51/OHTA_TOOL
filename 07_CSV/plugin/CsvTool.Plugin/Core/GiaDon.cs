@@ -13,8 +13,6 @@ namespace CsvTool.Core
         [DataMember] public bool TuDong;          // giá hiện tại do tool tính; false + có giá = giá sửa tay
         [DataMember] public string LoaiPitchi = "Pitchi";
         [DataMember] public double DonGiaCuon;    // 0 = theo r1/r2, âm = chọn Không, dương = đơn giá đã chọn
-        [DataMember] public bool LamTron250;
-        [DataMember] public bool TatTron250;      // tắt riêng tấm này khi cả đơn đang bật làm tròn 250
         [DataMember] public bool CheDoRieng;      // chế độ tính chọn riêng: quét lại, đổi chế độ đơn không đè
         public double TienVlHienTai;              // tiền vật liệu 1 tấm của lần tính gần nhất, chỉ để hiện, không lưu
     }
@@ -26,7 +24,6 @@ namespace CsvTool.Core
         [DataMember] public string CongTy = "";
         [DataMember] public bool KhongTinhSauQuet;   // mặc định có tính giá sau quét
         [DataMember] public int? CheDoTinh;
-        [DataMember] public bool LamTron250;         // giá dưới 250 tính thành 250 cho cả đơn
         [DataMember] public Dictionary<string, GiaTam> Tam = new Dictionary<string, GiaTam>();
 
         public GiaTam Lay(string ten)
@@ -34,8 +31,6 @@ namespace CsvTool.Core
             if (!Tam.TryGetValue(ten, out GiaTam g)) Tam[ten] = g = new GiaTam();
             return g;
         }
-
-        public bool Tron250(GiaTam g) => g?.TatTron250 != true && (LamTron250 || g?.LamTron250 == true);
 
         /// <summary>Quét lại: chỉ giữ chế độ tính chọn riêng; ô Cuộn chọn tay về theo r1 / r2 vừa nhận từ hình.</summary>
         public void GiuSuaTay(string ten, ThongTinTam moi, ThongTinTam cu)

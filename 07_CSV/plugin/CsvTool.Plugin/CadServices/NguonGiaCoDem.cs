@@ -30,6 +30,7 @@ namespace CsvTool.CadServices
             {
                 BangGia dem = DocDem();
                 if (dem == null) throw;
+                if (dem.GiaToiThieu <= 0 || dem.BuToiDa <= 0) throw new InvalidOperationException(BangGia.LoiThieuCaiDat);   // bản sao từ trước khi có CaiDatGia
                 GhiChu = "Không nối được database, đang dùng bảng giá lúc " + dem.CapNhat.ToString("dd/MM HH:mm") + ".";
                 return dem;
             }

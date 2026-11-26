@@ -258,12 +258,6 @@ namespace CsvTool.ViewModels
                 SuaGia(g => g.DonGiaCuon = d);
             }
         }
-        public bool LamTron250
-        {
-            get => Tam != null && _vm.Tron250Cua(Tam.N);
-            set => SuaGia(g => { g.LamTron250 = value; g.TatTron250 = !value && _vm.LamTron250Don; });
-        }
-
         private void SuaGia(System.Action<GiaTam> doi)
         {
             if (Tam != null && BiKhoa()) return;
@@ -276,7 +270,7 @@ namespace CsvTool.ViewModels
             Bao(null);
         }
 
-        public void BaoGia() { Bao(nameof(GiaTien)); Bao(nameof(LaGiaTay)); Bao(nameof(NhanGia)); Bao(nameof(LamTron250)); Bao(nameof(CheDoChon)); Bao(nameof(TienVl)); Bao(nameof(LaVlTay)); Bao(nameof(ChoSuaTienVl)); Bao(nameof(GhiChuGia)); Bao(nameof(CoGhiChuGia)); }
+        public void BaoGia() { Bao(nameof(GiaTien)); Bao(nameof(LaGiaTay)); Bao(nameof(NhanGia)); Bao(nameof(CheDoChon)); Bao(nameof(TienVl)); Bao(nameof(LaVlTay)); Bao(nameof(ChoSuaTienVl)); Bao(nameof(GhiChuGia)); Bao(nameof(CoGhiChuGia)); }
 
         public string MaMage => Tam == null ? "" : CsvXuat.MaMage(Tam.Tt.LoaiGiaCong);
 

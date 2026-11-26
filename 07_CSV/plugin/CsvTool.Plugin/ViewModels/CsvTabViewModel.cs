@@ -263,13 +263,12 @@ namespace CsvTool.ViewModels
             }
         }
 
-        public bool LamTron250Don
+        /// <summary>Tấm tính theo kg (khối lượng × đơn giá) không áp giá tối thiểu. Lưu trên máy, chung mọi đơn.</summary>
+        public bool KhongToiThieuKg
         {
-            get => _giaDon?.LamTron250 == true;
-            set { if (value != LamTron250Don) SuaThietLap(() => _giaDon.LamTron250 = value); }
+            get => CaiDat.KhongToiThieuKg;
+            set { if (value != CaiDat.KhongToiThieuKg) SuaThietLap(() => { CaiDat.KhongToiThieuKg = value; Luu(); }); }
         }
-
-        internal bool Tron250Cua(string ten) => _giaDon != null && _giaDon.Tron250(XemGia(ten));
 
         public bool CheDo0 { get => _cheDo == 0; set { if (value) DoiCheDo(0); } }
         public bool CheDo1 { get => _cheDo == 1; set { if (value) DoiCheDo(1); } }
@@ -326,7 +325,7 @@ namespace CsvTool.ViewModels
         {
             DongBoTenCongTy();
             foreach (string t in new[] { nameof(TinhGiaBat), nameof(CongTy), nameof(CoGiaDon), nameof(CheDo0), nameof(CheDo1), nameof(CheDo2),
-                                         nameof(MoTaCheDo), nameof(LamTron250Don), nameof(NhanBanVe), nameof(NhanKhung) }) Bao(t);
+                                         nameof(MoTaCheDo), nameof(KhongToiThieuKg), nameof(NhanBanVe), nameof(NhanKhung) }) Bao(t);
             BaoNhanTab();
         }
 
@@ -588,7 +587,7 @@ namespace CsvTool.ViewModels
                 if (_bangGia == null || _giaDon == null) return "";
                 var ds = _tatCa.Where(d => d.Tam != null && !d.BoQua).Select(d => d.Tam).ToList();
                 if (ds.Count == 0) return "";
-                TongCan c = TinhGia.TongKg(ds, _giaDon, BangDung);
+                TongCan c = TinhGia.TongKg(ds, _giaDon, BangDung, CaiDat.KhongToiThieuKg);
                 string Kg(double x) => x.ToString("#,0.0", CultureInfo.InvariantCulture);
                 string Yen(double x) => x.ToString("#,0", CultureInfo.InvariantCulture) + " ¥";
                 string s = "Tổng KG: " + Kg(c.KgDon + c.KgGiaCong) + " kg · tấm đơn " + Kg(c.KgDon) + " · gia công " + Kg(c.KgGiaCong) +
@@ -751,7 +750,7 @@ namespace CsvTool.ViewModels
 
         private void ApDungGia()
         {
-            var canhBao = TinhGia.ApDung(_tatCa.Where(d => d.Tam != null && !d.BoQua).Select(d => d.Tam), _giaDon, BangDung);
+            var canhBao = TinhGia.ApDung(_tatCa.Where(d => d.Tam != null && !d.BoQua).Select(d => d.Tam), _giaDon, BangDung, CaiDat.KhongToiThieuKg);
             foreach (DongTam d in _tatCa)
             {
                 d.CanhBaoGia = d.Tam != null && canhBao.TryGetValue(d.Tam.N, out string s) ? s : null;

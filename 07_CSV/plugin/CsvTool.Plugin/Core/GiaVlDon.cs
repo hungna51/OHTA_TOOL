@@ -33,6 +33,7 @@ namespace CsvTool.Core
         {
             CapNhat = b.CapNhat, CongTyUuDai = b.CongTyUuDai, TenNhat = b.TenNhat, DacBiet = b.DacBiet, HeSoVL = b.HeSoVL,
             HeSoGiaCong = b.HeSoGiaCong, PitchiTrongLuong = b.PitchiTrongLuong, PitchiChieuDai = b.PitchiChieuDai, HeSoCuon = b.HeSoCuon,
+            GiaToiThieu = b.GiaToiThieu, BuToiDa = b.BuToiDa,
             Dong = b.Dong.Select(x =>
             {
                 DongBangGia t = Tim(x.VatLieu, x.DoDay);
