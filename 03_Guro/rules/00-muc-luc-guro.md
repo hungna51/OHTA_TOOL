@@ -209,6 +209,7 @@ Chi tiết đầy đủ quy trình port chung xem tại skill [`.claude/skills/z
 | 89–167 | Xem bảng chung `../../rules/12-danh-muc-66-loi-va-bai-hoc.md` | — |
 | 168 | Ghép dòng số lượng theo **bảng ứng viên**: dòng bị nhiều ghi chú tranh về ghi chú **gần hơn** (tâm–tâm), mỗi ghi chú tối đa **2** dòng, cặp `本図`+`逆図` xếp dọc đi chung không bị xé. Sửa lỗi ghi chú dài lấy mất dòng `本図` của tấm bên cạnh → bị tách 2 tấm / coi là cụm mirror, tấm kia mất số lượng | [07-tach-du-lieu.md](07-tach-du-lieu.md) |
 | 169 | Dim kích thước có **đường dim chính bị tách thành nhiều LINE thẳng hàng nối tiếp** (vd `700.8` = 2 đoạn ~350 nối ở giữa) không được nhận là Dim → cả chữ U bị giữ làm nét cắt `0-KAKOU`. Nay ghép chuỗi LINE thẳng hàng (`gro--chuoi-thang-hang`) rồi so tổng chiều dài | [04-du-lieu-va-layer.md](04-du-lieu-va-layer.md) |
+| 235 | Gộp tab **DST/DSN** vào tab **Guro** (kiểu CSV 3 tab `Home \| Tấm \| Error`), bỏ palette rời; thêm kiểm tra kín hở + `ByLayer` theo từng tấm (`0.0001` mm), thử lại tỷ lệ mã khắc tuỳ chỉnh, bỏ màu cứng `(cons 62 1)` của MTEXT mã khắc `3-KEGAKI`, lệnh **`KT`** quét chọn đối tượng kiểm tra kín hở ở tab `More` | [05-hop-thoai-dcl.md](05-hop-thoai-dcl.md) |
 
 ## Quy ước bảo trì
 

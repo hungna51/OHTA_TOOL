@@ -4,8 +4,8 @@
   "order": 30,
   "tabTitle": "Guro",
   "title": "GURO",
-  "version": "1.6.4",
-  "description": "Đánh số tấm, mã khắc, F-name, CSV, in PDF.",
+  "version": "1.7",
+  "description": "Đánh số tấm, mã khắc, F-name, CSV, in PDF, kiểm tra kín hở.",
   "accentColor": "#323639",
   "tools": [
     {

@@ -6,29 +6,31 @@
              FontSize="12"
              UseLayoutRounding="True"
              SnapsToDevicePixels="True">
-    <!-- Muc 192/194: mat tab chi chon layer cho ban ve dang mo; cai dat chung o nut cai dat -->
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="HienKhi"/>
+        <SolidColorBrush x:Key="Mau" Color="#323639"/>
 
-        <Style x:Key="NutChinh" TargetType="Button">
+        <Style x:Key="Nut" TargetType="Button">
             <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Padding" Value="8,7"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
-                                CornerRadius="5" Padding="{TemplateBinding Padding}">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.90"/>
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.78"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -36,27 +38,119 @@
             </Setter>
         </Style>
 
-        <Style x:Key="The" TargetType="Border">
+        <Style x:Key="NutPhu" TargetType="Button" BasedOn="{StaticResource Nut}">
+            <Setter Property="Foreground" Value="#323639"/>
+            <Setter Property="Background" Value="#E4E7EC"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Cursor" Value="Arrow"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="NutLuu" TargetType="Button" BasedOn="{StaticResource NutPhu}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Dst.HasUnsavedChanges}" Value="True">
+                    <Setter Property="Background" Value="#2E7D32"/>
+                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="TheKhung" TargetType="Border">
             <Setter Property="Background" Value="#FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#D9E2EC"/>
+            <Setter Property="BorderBrush" Value="#E1E4E8"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Padding" Value="10,8"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Margin" Value="8,8,8,0"/>
         </Style>
 
-        <Style x:Key="TieuDeThe" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#486581"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
+        <!-- 3 tab con ngang chia deu chieu rong -->
+        <Style TargetType="TabItem">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="Bd" Background="#ECEFF1" BorderBrush="#CFD8DC" BorderThickness="0,0,0,2" Padding="2,5">
+                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#F5F7FA"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FFFFFF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Mau}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
-        <Style x:Key="GiaiThich" TargetType="TextBlock">
+        <Style x:Key="TenTab" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#323F4B"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="DemTab" TargetType="TextBlock">
             <Setter Property="FontSize" Value="10.5"/>
-            <Setter Property="Foreground" Value="#7B8794"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
+            <Setter Property="Foreground" Value="#607D8B"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="Foreground" Value="#C62828"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="DemTabXanh" TargetType="TextBlock" BasedOn="{StaticResource DemTab}">
+            <Setter Property="Foreground" Value="#2E7D32"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="Foreground" Value="#C62828"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="TieuMuc" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#1F4E79"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="ChipLayer" TargetType="Button">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="#334155"/>
+            <Setter Property="FontSize" Value="10.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="6,3"/>
+            <Setter Property="Margin" Value="0,0,4,2"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="#CBD5E1"
+                                BorderThickness="1" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#F1F5F9"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#64748B"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style TargetType="CheckBox">
@@ -65,29 +159,26 @@
         </Style>
 
         <Style TargetType="ComboBox">
-            <Setter Property="Height" Value="24"/>
+            <Setter Property="Height" Value="25"/>
         </Style>
     </UserControl.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>   <!-- 0. Header -->
-            <RowDefinition Height="*"/>      <!-- 1. Chon layer (cuon) -->
-            <RowDefinition Height="Auto"/>   <!-- 2. Nut chay -->
-            <RowDefinition Height="Auto"/>   <!-- 3. Trang thai -->
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 0. Header: nut cai dat cung kieu cac tab khac -->
-        <Border Grid.Row="0" Background="{Binding AccentBrush}" Padding="12,10">
+        <!-- Header giong tab CSV -->
+        <Border Grid.Row="0" Background="{Binding AccentBrush}" Padding="12,9">
             <DockPanel LastChildFill="True">
-                <!-- Nen trang nhu nut cai dat Fname; banh rang to theo mau tab -->
                 <Button DockPanel.Dock="Right" Command="{Binding CaiDatCommand}"
-                        Width="30" Height="30" Margin="6,0,0,0" VerticalAlignment="Top" Cursor="Hand"
-                        ToolTip="Cài đặt GURO: khung tấm, in PDF, xếp cụm, mã khắc, xử lý nét">
+                        Width="28" Height="28" Margin="6,0,0,0" VerticalAlignment="Top" Cursor="Hand"
+                        ToolTip="Cài đặt GURO: khung tấm, in PDF, xếp cụm, mã khắc, xử lý nét, từ điển">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" Background="#FFFFFF" BorderBrush="#CFD8DC"
-                                    BorderThickness="1" CornerRadius="4">
+                            <Border x:Name="Bd" Background="#FFFFFF" BorderBrush="#CFD8DC" BorderThickness="1" CornerRadius="4">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <ControlTemplate.Triggers>
@@ -101,98 +192,743 @@
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Button.Template>
-                    <Rectangle Width="18" Height="18" Fill="{Binding AccentBrush}">
+                    <Rectangle Width="17" Height="17" Fill="{Binding AccentBrush}">
                         <Rectangle.OpacityMask>
                             <ImageBrush ImageSource="{Binding SettingsLogo}" Stretch="Uniform"/>
                         </Rectangle.OpacityMask>
                     </Rectangle>
                 </Button>
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="{Binding TieuDe}" Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold"
-                               TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding MoTa}" Foreground="#CFD8DC" FontSize="10.5" Margin="0,1,0,0"
-                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding TieuDe}" Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding MoTa}" Foreground="#CFD8DC" FontSize="10.5" Margin="0,1,0,0" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
             </DockPanel>
         </Border>
 
-        <!-- 1. Layer cho ban ve dang mo -->
-        <ScrollViewer x:Name="KhungCuon" Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled" Padding="8,8,8,0">
-            <StackPanel>
-                <Border Style="{StaticResource The}">
-                    <StackPanel>
-                        <TextBlock Text="LAYER KHUNG BAO" Style="{StaticResource TieuDeThe}"/>
-                        <TextBlock Style="{StaticResource GiaiThich}"
-                                   Text="Polyline chữ nhật bao vùng bản vẽ cần đánh số. GRO chỉ lấy chữ nằm trong khung."/>
-                        <ComboBox ItemsSource="{Binding DsKhung}" SelectedItem="{Binding ChonKhung}"
-                                  PreviewMouseLeftButtonDown="OChon_PreviewMouseLeftButtonDown"/>
-                    </StackPanel>
-                </Border>
+        <!-- Khung 3 tab con ngang -->
+        <Border Grid.Row="1" Style="{StaticResource TheKhung}" ClipToBounds="True">
+            <TabControl SelectedIndex="{Binding SubTabIndex}" BorderThickness="0" Padding="0" Background="Transparent">
+                <TabControl.Template>
+                    <ControlTemplate TargetType="TabControl">
+                        <DockPanel>
+                            <UniformGrid DockPanel.Dock="Top" Rows="1" IsItemsHost="True"/>
+                            <ContentPresenter x:Name="PART_SelectedContentHost" ContentSource="SelectedContent"/>
+                        </DockPanel>
+                    </ControlTemplate>
+                </TabControl.Template>
 
-                <Border Style="{StaticResource The}">
-                    <StackPanel>
-                        <CheckBox IsChecked="{Binding UseVung}" Margin="0,0,0,4">
-                            <TextBlock Text="ĐÁNH SỐ THEO VÙNG" FontSize="11" FontWeight="Bold" Foreground="#486581"/>
-                        </CheckBox>
-                        <TextBlock Style="{StaticResource GiaiThich}"
-                                   Text="Polyline kín chia khung bao thành nhiều vùng. GRO đánh số xong vùng này mới sang vùng khác."/>
-                        <ComboBox ItemsSource="{Binding DsVung}" SelectedItem="{Binding ChonVung}"
-                                  IsEnabled="{Binding UseVung}"
-                                  PreviewMouseLeftButtonDown="OChon_PreviewMouseLeftButtonDown"/>
-                    </StackPanel>
-                </Border>
+                <!-- ===================== TAB 0: HOME ===================== -->
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource TenTab}" Text="Home"/>
+                            <TextBlock Style="{StaticResource DemTab}" Text="{Binding NhanTabHome}"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <ScrollViewer x:Name="HomeScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Margin="10,9">
+                            <TextBlock Text="{Binding TenBanVe}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding TomTat}" FontSize="10.5" Foreground="#607D8B" Margin="0,1,0,8" TextTrimming="CharacterEllipsis"
+                                       ToolTip="Đổi cài đặt ở nút ⚙ trên đầu tab"/>
+                            <Border Height="1" Background="#E1E4E8" Margin="0,0,0,8"/>
 
-                <Border Style="{StaticResource The}" Visibility="{Binding UseXln, Converter={StaticResource HienKhi}}">
-                    <StackPanel>
-                        <TextBlock Text="LAYER GỐC" Style="{StaticResource TieuDeThe}"/>
-                        <TextBlock Style="{StaticResource GiaiThich}"
-                                   Text="Layer chứa nét vẽ gốc cần chuyển (Continuous → 0-KAKOU, Center1 → 3-KEGAKI)."/>
-                        <ComboBox ItemsSource="{Binding DsXln}" SelectedItem="{Binding ChonXln}"
-                                  PreviewMouseLeftButtonDown="OChon_PreviewMouseLeftButtonDown"/>
-                    </StackPanel>
-                </Border>
+                            <TextBlock Text="Layer khung bao" Style="{StaticResource TieuMuc}" Margin="0,0,0,4"/>
+                            <ComboBox ItemsSource="{Binding DsKhung}" SelectedItem="{Binding ChonKhung}" Margin="0,0,0,8"
+                                      PreviewMouseLeftButtonDown="OChon_PreviewMouseLeftButtonDown" PreviewMouseWheel="ComboKhongLan"/>
 
-                <TextBlock Text="{Binding TomTat}" Foreground="#486581" FontSize="11" TextWrapping="Wrap"
-                           Margin="2,0,2,8" ToolTip="Đổi ở nút ⚙ trên đầu tab"/>
-            </StackPanel>
-        </ScrollViewer>
+                            <CheckBox IsChecked="{Binding UseVung}" Margin="0,0,0,4">
+                                <TextBlock Text="Đánh số theo vùng" Style="{StaticResource TieuMuc}"/>
+                            </CheckBox>
+                            <ComboBox ItemsSource="{Binding DsVung}" SelectedItem="{Binding ChonVung}" IsEnabled="{Binding UseVung}" Margin="0,0,0,8"
+                                      PreviewMouseLeftButtonDown="OChon_PreviewMouseLeftButtonDown" PreviewMouseWheel="ComboKhongLan"/>
 
-        <!-- 2. Nut chay -->
-        <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#CFD8DC" BorderThickness="0,1,0,0" Padding="8,7">
-            <StackPanel>
-                <!-- Muc 225: tien do GRO - nhay theo tung buoc (CAD dang chay mot buoc thi thanh dung im) -->
-                <Border Margin="0,0,0,7" Visibility="{Binding DangChay, Converter={StaticResource HienKhi}}" Background="#FFFFFF"
-                        BorderBrush="#CFD8DC" BorderThickness="1" CornerRadius="5" Padding="9,7">
-                    <StackPanel>
-                        <TextBlock Text="{Binding TienDoChu}" Foreground="#323639" FontSize="11.5" FontWeight="SemiBold"
-                                   TextTrimming="CharacterEllipsis"/>
-                        <ProgressBar Height="10" Margin="0,6,0,0" Minimum="0" Maximum="100" Value="{Binding TienDo, Mode=OneWay}"
-                                     Foreground="{Binding AccentBrush}" Background="#ECEFF1" BorderThickness="0"/>
-                    </StackPanel>
-                </Border>
-                <Button Style="{StaticResource NutChinh}" Background="#323639" Content="▶  Chạy GRO"
-                        Command="{Binding ChayGroCommand}" Margin="0,0,0,5"
-                        ToolTip="Đánh số tấm với layer và cài đặt trên tab (lệnh GROCHAY)"/>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="6"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Button Grid.Column="0" Style="{StaticResource NutChinh}" Background="#546E7A" Content="GI — In lại PDF"
-                            Command="{Binding ChayGiCommand}"
-                            ToolTip="Chọn vùng, in lại PDF như cuối lệnh GRO"/>
-                    <Button Grid.Column="2" Style="{StaticResource NutChinh}" Background="#546E7A" Content="DST — Danh sách"
-                            Command="{Binding MoDstCommand}"
-                            ToolTip="Xem, sửa tấm và nét chưa đổi"/>
-                </Grid>
-            </StackPanel>
+                            <StackPanel Visibility="{Binding UseXln, Converter={StaticResource HienKhi}}" Margin="0,0,0,8">
+                                <TextBlock Text="Layer gốc (xử lý nét)" Style="{StaticResource TieuMuc}" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding DsXln}" SelectedItem="{Binding ChonXln}"
+                                          PreviewMouseLeftButtonDown="OChon_PreviewMouseLeftButtonDown" PreviewMouseWheel="ComboKhongLan"/>
+                            </StackPanel>
+
+                            <Border Margin="0,0,0,8" Visibility="{Binding DangChay, Converter={StaticResource HienKhi}}"
+                                    Background="#F8FAFC" BorderBrush="#CFD8DC" BorderThickness="1" CornerRadius="5" Padding="8,6">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding TienDoChu}" Foreground="#323639" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                    <ProgressBar Height="8" Margin="0,5,0,0" Minimum="0" Maximum="100" Value="{Binding TienDo, Mode=OneWay}"
+                                                 Foreground="{Binding AccentBrush}" Background="#ECEFF1" BorderThickness="0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Grid Margin="0,2,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1.45*"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Style="{StaticResource Nut}" Background="{Binding AccentBrush}" Margin="0" Padding="6,8"
+                                        Content="▶  Chạy GRO" Command="{Binding ChayGroCommand}"
+                                        ToolTip="Đánh số tấm với layer và cài đặt trên tab (lệnh GROCHAY)"/>
+                                <Button Grid.Column="2" Style="{StaticResource NutPhu}" Margin="0" Padding="6,8" FontWeight="SemiBold"
+                                        Content="GI · In lại PDF" Command="{Binding ChayGiCommand}"
+                                        ToolTip="Chọn vùng, in lại PDF như cuối lệnh GRO"/>
+                            </Grid>
+
+                            <!-- Bao cao ngan ngay ben duoi -->
+                            <StackPanel Visibility="{Binding CoBaoCaoNgan, Converter={StaticResource HienKhi}}" Margin="0,10,0,0">
+                                <Border Height="1" Background="#E1E4E8" Margin="0,0,0,8"/>
+                                <DockPanel Margin="0,0,0,6">
+                                    <Button DockPanel.Dock="Right" Content="Sao chép" Command="{Binding Dst.CopyThongTinCommand}"
+                                            Background="Transparent" BorderThickness="0" Foreground="#52606D" FontSize="11" Cursor="Hand"
+                                            Visibility="{Binding CoBaoCaoChiTiet, Converter={StaticResource HienKhi}}"/>
+                                    <TextBlock Text="{Binding TieuDeBaoCao}" Style="{StaticResource TieuMuc}"/>
+                                </DockPanel>
+
+                                <!-- 4 o so lieu thu nho -->
+                                <Grid Margin="0,0,0,7">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition/><ColumnDefinition Width="4"/>
+                                        <ColumnDefinition/><ColumnDefinition Width="4"/>
+                                        <ColumnDefinition/><ColumnDefinition Width="4"/>
+                                        <ColumnDefinition/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Background="#F8FAFC" BorderBrush="#E1E4E8" BorderThickness="1" CornerRadius="4" Padding="2,4"
+                                            Cursor="Hand" MouseLeftButtonUp="MoTamBam" ToolTip="Mở tab Tấm">
+                                        <StackPanel>
+                                            <TextBlock Text="Tấm" FontSize="9.5" Foreground="#607D8B" TextAlignment="Center"/>
+                                            <TextBlock Text="{Binding OSoTam}" FontSize="12.5" FontWeight="Bold" Foreground="#1F2933" TextAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="2" Background="#F8FAFC" BorderBrush="#E1E4E8" BorderThickness="1" CornerRadius="4" Padding="2,4">
+                                        <StackPanel>
+                                            <TextBlock Text="Nét đổi" FontSize="9.5" Foreground="#607D8B" TextAlignment="Center"/>
+                                            <TextBlock Text="{Binding OSoNetDoi}" FontSize="12.5" FontWeight="Bold" Foreground="#2E7D32" TextAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="4" CornerRadius="4" BorderThickness="1" Padding="2,4" Cursor="Hand"
+                                            MouseLeftButtonUp="MoErrorBam" ToolTip="Mở tab Error">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#E8F5E9"/>
+                                                <Setter Property="BorderBrush" Value="#A5D6A7"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding CoNetChuaDoi}" Value="True">
+                                                        <Setter Property="Background" Value="#FFF8E1"/>
+                                                        <Setter Property="BorderBrush" Value="#FFCA28"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel>
+                                            <TextBlock Text="Chưa đổi" FontSize="9.5" TextAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="#2E7D32"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding CoNetChuaDoi}" Value="True">
+                                                                <Setter Property="Foreground" Value="#B45309"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding OSoChuaDoi}" FontSize="12.5" FontWeight="Bold" TextAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="#2E7D32"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding CoNetChuaDoi}" Value="True">
+                                                                <Setter Property="Foreground" Value="#B45309"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="6" CornerRadius="4" BorderThickness="1" Padding="2,4" Cursor="Hand"
+                                            MouseLeftButtonUp="MoErrorBam" ToolTip="Mở tab Error">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#E8F5E9"/>
+                                                <Setter Property="BorderBrush" Value="#A5D6A7"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding CoLoiCd}" Value="True">
+                                                        <Setter Property="Background" Value="#FDECEA"/>
+                                                        <Setter Property="BorderBrush" Value="#EF9A9A"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel>
+                                            <TextBlock Text="Lỗi/CĐ" FontSize="9.5" TextAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="#2E7D32"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding CoLoiCd}" Value="True">
+                                                                <Setter Property="Foreground" Value="#C62828"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding OSoLoiCd}" FontSize="12.5" FontWeight="Bold" TextAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="#2E7D32"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding CoLoiCd}" Value="True">
+                                                                <Setter Property="Foreground" Value="#C62828"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Cac dong tom tat ngan -->
+                                <Border Background="#F8FAFC" BorderBrush="#E1E4E8" BorderThickness="1" CornerRadius="4" Padding="8,5" Margin="0,0,0,7"
+                                        Visibility="{Binding CoBaoCaoChiTiet, Converter={StaticResource HienKhi}}">
+                                    <ItemsControl ItemsSource="{Binding DongTomTatNgan}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <DockPanel Margin="0,2">
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding GiaTri}" FontFamily="Cascadia Mono, Consolas"
+                                                               FontSize="11" Foreground="#607D8B" Margin="6,0,0,0"/>
+                                                    <TextBlock x:Name="Ic" DockPanel.Dock="Left" Text="✓ " Foreground="#2E7D32" FontWeight="Bold" FontSize="11"/>
+                                                    <TextBlock Text="{Binding Nhan}" FontSize="11" Foreground="#334155" TextTrimming="CharacterEllipsis"/>
+                                                </DockPanel>
+                                                <DataTemplate.Triggers>
+                                                    <DataTrigger Binding="{Binding Dat}" Value="False">
+                                                        <Setter TargetName="Ic" Property="Text" Value="⚠ "/>
+                                                        <Setter TargetName="Ic" Property="Foreground" Value="#D97706"/>
+                                                    </DataTrigger>
+                                                </DataTemplate.Triggers>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Border>
+
+                                <!-- Thanh nhac Error -->
+                                <Border CornerRadius="3" Padding="8,6" Cursor="Hand" MouseLeftButtonUp="MoErrorBam">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#E8F5E9"/>
+                                            <Setter Property="BorderBrush" Value="#2E7D32"/>
+                                            <Setter Property="BorderThickness" Value="3,0,0,0"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TabErrorDo}" Value="True">
+                                                    <Setter Property="Background" Value="#FDECEA"/>
+                                                    <Setter Property="BorderBrush" Value="#C62828"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" Text="Mở Error →" FontSize="11" FontWeight="SemiBold" Foreground="#1565C0"
+                                                   Visibility="{Binding TabErrorDo, Converter={StaticResource HienKhi}}"/>
+                                        <TextBlock FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="✓ Không còn lỗi hay nét chưa đổi."/>
+                                                    <Setter Property="Foreground" Value="#2E7D32"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding TabErrorDo}" Value="True">
+                                                            <Setter Property="Text" Value="{Binding NhacMoError}"/>
+                                                            <Setter Property="Foreground" Value="#C62828"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </DockPanel>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <!-- ===================== TAB 1: TAM (DST 6 COT) ===================== -->
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource TenTab}" Text="Tấm"/>
+                            <TextBlock Style="{StaticResource DemTab}" Text="{Binding NhanTabTam}" Tag="{Binding TabTamDo}"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <DockPanel>
+                        <Border DockPanel.Dock="Top" Background="#F8FAFC" BorderBrush="#E1E4E8" BorderThickness="0,0,0,1" Padding="8,7">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Style="{StaticResource NutPhu}" Padding="7,4" Margin="0,0,4,0" FontSize="11"
+                                            Content="⟳ Mới" Command="{Binding Dst.RefreshCommand}"
+                                            ToolTip="Quét lại bản vẽ và đồng bộ CSV"/>
+                                    <Button Grid.Column="1" Style="{StaticResource NutLuu}" Padding="7,4" Margin="0,0,6,0" FontSize="11"
+                                            Content="💾 Lưu" Command="{Binding Dst.SaveCommand}"
+                                            IsEnabled="{Binding Dst.HasUnsavedChanges}"
+                                            ToolTip="Lưu thay đổi vào bản vẽ và CSV"/>
+                                    <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#B0BEC5" BorderThickness="1" CornerRadius="4" Height="25">
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Left" Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="11"
+                                                       Foreground="#78909C" Margin="6,0,4,0" VerticalAlignment="Center"/>
+                                            <Button DockPanel.Dock="Right" Content="×" Width="18" Foreground="#607D8B" Cursor="Hand"
+                                                    Focusable="False" Click="XoaTimTam" Background="Transparent" BorderThickness="0">
+                                                <Button.Style>
+                                                    <Style TargetType="Button">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Dst.SearchText}" Value="">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                            <Grid>
+                                                <TextBlock Text="Tìm bango, M, T..." Foreground="#90A4AE" FontSize="11"
+                                                           VerticalAlignment="Center" IsHitTestVisible="False">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Dst.SearchText}" Value="">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBox x:Name="OTimTam" Text="{Binding Dst.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                         Background="Transparent" BorderThickness="0" Padding="0" FontSize="11.5"
+                                                         VerticalContentAlignment="Center" PreviewKeyDown="TimTamPhim"/>
+                                            </Grid>
+                                        </DockPanel>
+                                    </Border>
+                                </Grid>
+
+                                <WrapPanel Orientation="Horizontal">
+                                    <CheckBox Content="Chỉ lỗi" IsChecked="{Binding Dst.FilterOrphansOnly}" FontSize="11"
+                                              Foreground="#C62828" FontWeight="SemiBold" Margin="0,0,10,0"/>
+                                    <CheckBox Content="Chính/nghịch" IsChecked="{Binding Dst.HienBanChinhNghich}" FontSize="11"
+                                              Margin="0,0,10,0"/>
+                                    <CheckBox Content="Chỉ SHT" IsChecked="{Binding Dst.LocChiTamSht}" FontSize="11"
+                                              Foreground="#0891B2" FontWeight="SemiBold"/>
+                                </WrapPanel>
+
+                                <Border Background="#FFF8E1" BorderBrush="#F59E0B" BorderThickness="1" CornerRadius="4"
+                                        Padding="6,4" Margin="0,6,0,0" Visibility="{Binding Dst.LechBanVe, Converter={StaticResource HienKhi}}">
+                                    <TextBlock Text="{Binding Dst.ThongBaoLechBanVe}" Foreground="#92400E" FontSize="11" TextWrapping="Wrap"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <Border DockPanel.Dock="Bottom" Background="#F8FAFC" BorderBrush="#E1E4E8" BorderThickness="0,1,0,0" Padding="8,5">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock VerticalAlignment="Center" Text="{Binding Dst.ThongKe}" ToolTip="{Binding Dst.ThongKeChiTiet}"
+                                           Foreground="#334155" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                <Button Grid.Column="1" Style="{StaticResource NutPhu}" Margin="0" Padding="7,3" FontSize="11"
+                                        Foreground="#C62828" FontWeight="SemiBold" Content="→ Lỗi tiếp" Command="{Binding Dst.NextOrphanCommand}"/>
+                            </Grid>
+                        </Border>
+
+                        <DataGrid x:Name="PlatesDataGrid"
+                                  ItemsSource="{Binding Dst.FilteredPlates}"
+                                  SelectedItem="{Binding Dst.SelectedPlate, Mode=TwoWay}"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  CanUserDeleteRows="False"
+                                  SelectionMode="Single"
+                                  GridLinesVisibility="Horizontal"
+                                  HorizontalGridLinesBrush="#E5E7EB"
+                                  BorderThickness="0"
+                                  Background="#FFFFFF"
+                                  MinRowHeight="26"
+                                  AlternatingRowBackground="#F9FAFB"
+                                  HeadersVisibility="Column"
+                                  ScrollViewer.VerticalScrollBarVisibility="Visible"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                  BeginningEdit="PlatesDataGrid_BeginningEdit"
+                                  SelectionChanged="PlatesDataGrid_SelectionChanged">
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="ToolTip" Value="{Binding Note}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding MucDo}" Value="2">
+                                            <Setter Property="Background" Value="#FDECEA"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Setter Property="BorderBrush" Value="#C62828"/>
+                                            <Setter Property="BorderThickness" Value="3,0,0,0"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding MucDo}" Value="1">
+                                            <Setter Property="Background" Value="#FFF8E1"/>
+                                            <Setter Property="BorderBrush" Value="#F59E0B"/>
+                                            <Setter Property="BorderThickness" Value="3,0,0,0"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.RowStyle>
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="#F1F5F9"/>
+                                    <Setter Property="Foreground" Value="#374151"/>
+                                    <Setter Property="FontSize" Value="11"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="Padding" Value="3,5"/>
+                                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                    <Setter Property="BorderBrush" Value="#CBD5E1"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="BG" Binding="{Binding Bango, UpdateSourceTrigger=LostFocus}" Width="40">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                            <Setter Property="Foreground" Value="#DC2626"/>
+                                            <Setter Property="FontSize" Value="11.5"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                    <DataGridTextColumn.EditingElementStyle>
+                                        <Style TargetType="TextBox">
+                                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                        </Style>
+                                    </DataGridTextColumn.EditingElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Q" Binding="{Binding Quantity, UpdateSourceTrigger=LostFocus}" Width="28">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Setter Property="FontSize" Value="11.5"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                    <DataGridTextColumn.EditingElementStyle>
+                                        <Style TargetType="TextBox">
+                                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.EditingElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="M" Binding="{Binding Material, UpdateSourceTrigger=LostFocus}" Width="52">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                            <Setter Property="FontSize" Value="11"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                    <DataGridTextColumn.EditingElementStyle>
+                                        <Style TargetType="TextBox">
+                                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.EditingElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="T" Binding="{Binding Thickness, UpdateSourceTrigger=LostFocus}" Width="34">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                            <Setter Property="FontSize" Value="11.5"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                    <DataGridTextColumn.EditingElementStyle>
+                                        <Style TargetType="TextBox">
+                                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.EditingElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="GC" Binding="{Binding GC, UpdateSourceTrigger=LostFocus}" Width="26">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                            <Setter Property="Foreground" Value="#2563EB"/>
+                                            <Setter Property="FontSize" Value="11.5"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                    <DataGridTextColumn.EditingElementStyle>
+                                        <Style TargetType="TextBox">
+                                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                            <Setter Property="ToolTip" Value="Để trống = tấm đơn; m = bẻ, k = vát, * = >=2 loại, s = sara, t = tapu, r = cuộn"/>
+                                        </Style>
+                                    </DataGridTextColumn.EditingElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTemplateColumn Header="Ghi chú" Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,2">
+                                                <Ellipse Width="7" Height="7" Fill="{Binding StatusColor}" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                                <Border Background="#0891B2" CornerRadius="3" Padding="3,0" Margin="0,0,4,0" VerticalAlignment="Center"
+                                                        Visibility="{Binding LaXuLySht, Converter={StaticResource HienKhi}}">
+                                                    <TextBlock Text="4-SHT" Foreground="#FFFFFF" FontSize="9.5" FontWeight="Bold"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Note}" Foreground="{Binding StatusColor}" FontSize="11"
+                                                           FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </TabItem>
+
+                <!-- ===================== TAB 2: ERROR ===================== -->
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource TenTab}" Text="Error"/>
+                            <TextBlock Text="{Binding NhanTabError}" FontSize="10.5" TextAlignment="Center" TextTrimming="CharacterEllipsis">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#2E7D32"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding TabErrorXam}" Value="True">
+                                                <Setter Property="Foreground" Value="#607D8B"/>
+                                                <Setter Property="FontWeight" Value="Normal"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding TabErrorDo}" Value="True">
+                                                <Setter Property="Foreground" Value="#C62828"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <DockPanel>
+                        <Border DockPanel.Dock="Top" Background="#F8FAFC" BorderBrush="#E1E4E8" BorderThickness="0,0,0,1" Padding="8,7">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,5">
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
+                                                ToolTip="Sai số tối đa khi kiểm tra kín hở biên dạng (mm)">
+                                        <TextBlock Text="Sai số:" FontSize="11" Foreground="#52606D" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                        <TextBox Text="{Binding SaiSoText, UpdateSourceTrigger=LostFocus}" Width="62" Height="23"
+                                                 TextAlignment="Center" VerticalContentAlignment="Center" FontFamily="Cascadia Mono, Consolas"
+                                                 FontSize="11" BorderBrush="#B0BEC5" Background="#FFFFFF" PreviewKeyDown="SaiSoPhim"/>
+                                    </StackPanel>
+                                    <Button Style="{StaticResource Nut}" Background="{Binding AccentBrush}" Margin="0" Padding="10,4"
+                                            FontSize="11.5" Content="⟳ Kiểm tra lại" Command="{Binding KiemTraLaiCmd}" HorizontalAlignment="Left"/>
+                                </DockPanel>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding DemErrorNgan}" FontSize="10.5" Foreground="#52606D"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <CheckBox Content="Gồm tấm gia công" IsChecked="{Binding GomTamGiaCong}" FontSize="11"
+                                              ToolTip="Mặc định chỉ check kín hở cho tấm đơn (GC trống); tích để check cả tấm gia công"/>
+                                </DockPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <ScrollViewer x:Name="ErrorScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Margin="9">
+                                <!-- Khoi 1: Net chua doi -->
+                                <DockPanel Margin="0,0,0,5">
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding DemDoiTuongChuaDoi}" FontSize="10.5" Foreground="#607D8B"/>
+                                    <TextBlock Text="{Binding TieuDeNetChuaDoi}" Style="{StaticResource TieuMuc}" TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                                <Border Background="#F1F5F9" BorderBrush="#94A3B8" BorderThickness="3,0,0,0" CornerRadius="2"
+                                        Padding="8,6" Margin="0,0,0,8" Visibility="{Binding ChuaCoTam, Converter={StaticResource HienKhi}}">
+                                    <TextBlock Text="Danh sách tấm đang là 0 — chưa có dữ liệu hoặc không phải đơn Guro nên chặn quét nét."
+                                               Foreground="#475569" FontSize="11" TextWrapping="Wrap"/>
+                                </Border>
+                                <Border Background="#E8F5E9" BorderBrush="#2E7D32" BorderThickness="3,0,0,0" CornerRadius="2"
+                                        Padding="8,6" Margin="0,0,0,8" Visibility="{Binding KhongCoNetChuaDoi, Converter={StaticResource HienKhi}}">
+                                    <TextBlock Text="✓ Đã đổi hết nét trên layer gốc." Foreground="#2E7D32" FontSize="11.5" FontWeight="SemiBold"/>
+                                </Border>
+                                <ItemsControl ItemsSource="{Binding Dsn.Groups}" Margin="0,0,0,6">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#FFF8E1" BorderBrush="#F59E0B" BorderThickness="3,0,0,0" CornerRadius="2"
+                                                    Padding="8,6" Margin="0,0,0,5">
+                                                <StackPanel>
+                                                    <DockPanel Cursor="Hand" MouseLeftButtonUp="NhomNetBam" ToolTip="Bấm để Zoom và chọn nhóm nét này trên CAD">
+                                                        <TextBlock DockPanel.Dock="Right" Text="Zoom" Foreground="#1565C0" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding Linetype}" FontWeight="Bold" FontSize="12" Foreground="#263238" VerticalAlignment="Center"/>
+                                                            <Border Background="#FEF3C7" BorderBrush="#FCD34D" BorderThickness="1" CornerRadius="8" Padding="6,0" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding Count, StringFormat={}{0} nét}" FontSize="10.5" FontWeight="SemiBold" Foreground="#B45309"/>
+                                                            </Border>
+                                                        </StackPanel>
+                                                    </DockPanel>
+                                                    <WrapPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                        <Button Style="{StaticResource ChipLayer}" CommandParameter="{Binding}"
+                                                                Command="{Binding DataContext.Dsn.ConvertToKakouCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                ToolTip="Chuyển sang 0-KAKOU (ByLayer)">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <Ellipse Width="7" Height="7" Fill="#FFFFFF" Stroke="#1E293B" StrokeThickness="1.2" Margin="0,0,4,0"/>
+                                                                <TextBlock Text="0-KAKOU"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button Style="{StaticResource ChipLayer}" CommandParameter="{Binding}"
+                                                                Command="{Binding DataContext.Dsn.ConvertToKegakiCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                ToolTip="Chuyển sang 3-KEGAKI (ByLayer)">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <Ellipse Width="7" Height="7" Fill="#EF4444" Margin="0,0,4,0"/>
+                                                                <TextBlock Text="3-KEGAKI"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button Style="{StaticResource ChipLayer}" CommandParameter="{Binding}"
+                                                                Command="{Binding DataContext.Dsn.ConvertToShtCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                ToolTip="Chuyển sang 4-SHT (ByLayer)">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <Ellipse Width="7" Height="7" Fill="#00BCD4" Margin="0,0,4,0"/>
+                                                                <TextBlock Text="4-SHT"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button Style="{StaticResource ChipLayer}" CommandParameter="{Binding}"
+                                                                Command="{Binding DataContext.Dsn.ConvertToZeroCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                ToolTip="Chuyển sang layer 0 (không cắt, ByLayer)">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <Ellipse Width="7" Height="7" Fill="#E2E8F0" Stroke="#64748B" StrokeThickness="1" Margin="0,0,4,0"/>
+                                                                <TextBlock Text="0"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </WrapPanel>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <Border Height="1" Background="#E1E4E8" Margin="0,2,0,8"/>
+
+                                <!-- Khoi 2: Loi & Canh bao -->
+                                <DockPanel Margin="0,0,0,5">
+                                    <TextBlock DockPanel.Dock="Right" Text="Kín hở · ByLayer · GRO" FontSize="10.5" Foreground="#607D8B"/>
+                                    <TextBlock Text="LỖI &amp; CẢNH BÁO" Style="{StaticResource TieuMuc}"/>
+                                </DockPanel>
+                                <Border Background="#F1F5F9" BorderBrush="#94A3B8" BorderThickness="3,0,0,0" CornerRadius="2"
+                                        Padding="8,6" Margin="0,0,0,6" Visibility="{Binding HienChuaCoTamLoi, Converter={StaticResource HienKhi}}">
+                                    <TextBlock Text="Chưa có dữ liệu tấm (0 tấm) để kiểm tra kín hở &amp; thuộc tính."
+                                               Foreground="#475569" FontSize="11" TextWrapping="Wrap"/>
+                                </Border>
+                                <Border Background="#E8F5E9" BorderBrush="#2E7D32" BorderThickness="3,0,0,0" CornerRadius="2"
+                                        Padding="8,6" Margin="0,0,0,6" Visibility="{Binding KhongCoLoiKhac, Converter={StaticResource HienKhi}}">
+                                    <TextBlock Text="✓ Không có lỗi hay cảnh báo nào." Foreground="#2E7D32" FontSize="11.5" FontWeight="SemiBold"/>
+                                </Border>
+
+                                <ItemsControl ItemsSource="{Binding DsMucError}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border x:Name="BdMuc" Background="#FFF8E1" BorderBrush="#FFCA28" BorderThickness="3,0,0,0"
+                                                    CornerRadius="2" Padding="8,6" Margin="0,0,0,5" Cursor="Hand" MouseLeftButtonUp="MucErrorBam"
+                                                    ToolTip="Bấm để zoom tới vị trí lỗi (Cloud đỏ), bấm tiếp sang vị trí kế">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <StackPanel DockPanel.Dock="Right" Margin="6,0,0,0" HorizontalAlignment="Right">
+                                                            <TextBlock Text="{Binding NhanViTri}" Foreground="#1565C0" FontSize="11" FontWeight="SemiBold"
+                                                                       TextAlignment="Right" Visibility="{Binding CoViTri, Converter={StaticResource HienKhi}}"/>
+                                                            <Button Style="{StaticResource Nut}" Background="#1E7F4F" Margin="0,2,0,0" Padding="7,2" FontSize="10.5"
+                                                                    Content="Đưa về ByLayer" Tag="{Binding}" Click="DuaVeByLayerBam"
+                                                                    Visibility="{Binding LaByLayer, Converter={StaticResource HienKhi}}"/>
+                                                            <Button Style="{StaticResource NutPhu}" Margin="0,2,0,0" Padding="7,2" FontSize="10.5"
+                                                                    Content="Danh sách" Tag="{Binding}" Click="XemTamTuErrorBam"
+                                                                    Visibility="{Binding CoNutDanhSach, Converter={StaticResource HienKhi}}"/>
+                                                            <Button Style="{StaticResource NutPhu}" Margin="0,2,0,0" Padding="7,2" FontSize="10.5"
+                                                                    Content="Từ điển" Click="MoTuDienErrorBam"
+                                                                    Visibility="{Binding CoNutTuDien, Converter={StaticResource HienKhi}}"/>
+                                                            <Button Style="{StaticResource NutPhu}" Margin="0,2,0,0" Padding="7,2" FontSize="10.5"
+                                                                    Content="Chọn &amp; Zoom" Tag="{Binding}" Click="ChonZoomErrorBam"
+                                                                    Visibility="{Binding CoNutChonZoom, Converter={StaticResource HienKhi}}"/>
+                                                            <Button Margin="0,2,0,0" Padding="6,2" FontSize="10.5" Content="✓ Đã xử lý"
+                                                                    Background="#E8F5E9" Foreground="#1B5E20" BorderBrush="#A5D6A7" BorderThickness="1"
+                                                                    Cursor="Hand" Tag="{Binding}" Click="DanhDauXuLyBam"
+                                                                    Visibility="{Binding ChoDanhDau, Converter={StaticResource HienKhi}}"/>
+                                                        </StackPanel>
+                                                        <StackPanel>
+                                                            <TextBlock x:Name="TieuDeMuc" Text="{Binding TieuDe}" Foreground="#92400E" FontSize="11.5"
+                                                                       FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                            <TextBlock Text="{Binding ChiTiet}" Foreground="#37474F" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                                        </StackPanel>
+                                                    </DockPanel>
+
+                                                    <!-- Thu ty le ma khac neu 0.5 chua duoc -->
+                                                    <StackPanel Visibility="{Binding LaMaKhacChuaDat, Converter={StaticResource HienKhi}}"
+                                                                MouseLeftButtonUp="ChanBam" Cursor="Arrow">
+                                                        <Border Height="1" Background="#F5C2C0" Margin="0,6,0,5"/>
+                                                        <WrapPanel Orientation="Horizontal">
+                                                            <Button Style="{StaticResource NutPhu}" Background="#FFFFFF" Margin="0,0,5,0" Padding="7,2" FontSize="10.5"
+                                                                    Content="Scale 0.5" Tag="{Binding}" Click="Scale05Bam"/>
+                                                            <TextBlock Text="Tỷ lệ:" FontSize="10.5" Foreground="#52606D" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                            <TextBox Text="{Binding ScaleInput, UpdateSourceTrigger=PropertyChanged}" Width="44" Height="22"
+                                                                     TextAlignment="Center" VerticalContentAlignment="Center" FontFamily="Cascadia Mono, Consolas"
+                                                                     FontSize="11" BorderBrush="#B0BEC5" Background="#FFFFFF" Margin="0,0,5,0"
+                                                                     Tag="{Binding}" PreviewKeyDown="ScalePhim"/>
+                                                            <Button Style="{StaticResource Nut}" Background="#323639" Margin="0" Padding="7,2" FontSize="10.5"
+                                                                    Content="Thử lại" Tag="{Binding}" Click="ThuScaleBam"/>
+                                                        </WrapPanel>
+                                                        <TextBlock Text="{Binding ScaleThongBao}" Foreground="#B45309" FontSize="10.5" FontWeight="SemiBold"
+                                                                   TextWrapping="Wrap" Margin="0,4,0,0"
+                                                                   Visibility="{Binding CoScaleThongBao, Converter={StaticResource HienKhi}}"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Border>
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding LaLoi}" Value="True">
+                                                    <Setter TargetName="BdMuc" Property="Background" Value="#FDECEA"/>
+                                                    <Setter TargetName="BdMuc" Property="BorderBrush" Value="#C62828"/>
+                                                    <Setter TargetName="TieuDeMuc" Property="Foreground" Value="#B91C1C"/>
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- Da xac nhan xu ly -->
+                                <StackPanel Visibility="{Binding CoMucDaXuLy, Converter={StaticResource HienKhi}}" Margin="0,4,0,0">
+                                    <TextBlock Text="{Binding TieuDeDaXuLy}" FontSize="10.5" FontWeight="SemiBold" Foreground="#607D8B" Margin="0,0,0,4"/>
+                                    <ItemsControl ItemsSource="{Binding DsMucDaXuLy}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="#F8FAFC" BorderBrush="#94A3B8" BorderThickness="3,0,0,0"
+                                                        CornerRadius="2" Padding="7,4" Margin="0,0,0,3" Opacity="0.8">
+                                                    <DockPanel>
+                                                        <Button DockPanel.Dock="Right" Content="Hoàn tác" Foreground="#1565C0" Background="Transparent"
+                                                                BorderThickness="0" FontSize="10.5" Cursor="Hand" Tag="{Binding}" Click="HoanTacXuLyBam"/>
+                                                        <TextBlock Text="{Binding TieuDe}" FontSize="11" Foreground="#64748B"
+                                                                   TextDecorations="Strikethrough" TextTrimming="CharacterEllipsis"/>
+                                                    </DockPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </DockPanel>
+                </TabItem>
+            </TabControl>
         </Border>
 
-        <!-- 3. Trang thai -->
-        <Border Grid.Row="3" Background="#ECEFF1" BorderBrush="#CFD8DC" BorderThickness="0,1,0,0" Padding="10,4">
-            <TextBlock Text="{Binding TrangThai}" Foreground="#455A64" FontSize="11" TextTrimming="CharacterEllipsis"/>
+        <!-- Thanh chan co dinh 3 nut giong CSV -->
+        <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#E1E4E8" BorderThickness="0,1,0,0" Padding="9,7,9,8" Margin="0,8,0,0">
+            <StackPanel>
+                <TextBlock Text="{Binding TrangThai}" Foreground="#52606D" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,0,0,6"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/><ColumnDefinition Width="5"/>
+                        <ColumnDefinition/><ColumnDefinition Width="5"/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+                    <Button Style="{StaticResource NutPhu}" Margin="0" Padding="4,5" FontSize="11.5" Content="File CSV" Command="{Binding MoFileCsvCmd}"/>
+                    <Button Grid.Column="2" Style="{StaticResource NutPhu}" Margin="0" Padding="4,5" FontSize="11.5" Content="Thư mục" Command="{Binding MoThuMucCmd}"/>
+                    <Button Grid.Column="4" Style="{StaticResource NutPhu}" Margin="0" Padding="4,5" FontSize="11.5" Content="PDF" Command="{Binding MoPdfCmd}"/>
+                </Grid>
+            </StackPanel>
         </Border>
     </Grid>
 </UserControl>

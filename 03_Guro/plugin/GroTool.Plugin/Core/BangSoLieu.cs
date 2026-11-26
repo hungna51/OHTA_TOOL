@@ -206,10 +206,15 @@ namespace ZwCadPlugin.Core
             canhBao = new List<string>();
             ghiChu = new List<string>();
             if (string.IsNullOrEmpty(co)) return;
-            Func<string, bool> co_ = k => co.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0;
+            var tokens = co.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+            bool co_(string k) => tokens.Any(t => string.Equals(t.Trim(), k, StringComparison.OrdinalIgnoreCase));
             if (co_("MK_CHUA_DAT")) canhBao.Add("[!] Mã khắc chưa vào hình — move thủ công");
             if (co_("MK_DE_KEGAKI")) canhBao.Add("Mã khắc đè ケガキ");
-            if (co_("MK_THU_NHO")) ghiChu.Add("Mã khắc thu nhỏ 1/2");
+            string thuNho = tokens.FirstOrDefault(t => t.Trim().StartsWith("MK_THU_NHO:", StringComparison.OrdinalIgnoreCase));
+            if (thuNho != null)
+                ghiChu.Add("Mã khắc thu nhỏ " + thuNho.Trim().Substring("MK_THU_NHO:".Length));
+            else if (co_("MK_THU_NHO"))
+                ghiChu.Add("Mã khắc thu nhỏ 1/2");
             // Mục 190: chữ khắc (tấm 文字ケガキ, mục 156/189) đã đổi sang ケガキ nhưng cần kiểm tra
             if (co_("KC_NGOAI_HINH")) canhBao.Add("Chữ khắc nằm một phần ngoài hình — kiểm tra");
             if (co_("KC_CHAM_NET")) canhBao.Add("Chữ khắc chạm nét cắt 0-KAKOU — kiểm tra");

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 #if ZWCAD
 using ZwSoft.ZwCAD.ApplicationServices;
 using ZwSoft.ZwCAD.DatabaseServices;
@@ -14,6 +15,7 @@ using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
 #endif
 using ZwCadPlugin.Core;
+using ZwCadPlugin.Models;
 
 namespace ZwCadPlugin.CadServices
 {
@@ -29,6 +31,14 @@ namespace ZwCadPlugin.CadServices
         private const string AppChup = "GRO_CHUP_COPY";
         private static readonly string[] LayerNet = { "0-KAKOU", "3-KEGAKI", "TAPU_TMT" };
 
+        private sealed class CacheLanChay
+        {
+            public List<DatMaKhac.DongTam> Dong;
+            public List<Hop> VatCan;
+        }
+        private static readonly Dictionary<string, CacheLanChay> _cacheTheoBanVe =
+            new Dictionary<string, CacheLanChay>(StringComparer.OrdinalIgnoreCase);
+
         /// <summary>Chạy cả bước. Trả chuỗi báo cáo cho lisp (null = không có tấm nào).</summary>
         public static string Chay(Document doc, IEnumerable<string> duLieu)
         {
@@ -39,6 +49,7 @@ namespace ZwCadPlugin.CadServices
             DatMaKhac.DocDuLieu(duLieu, dong, vatCan, out int loi);
             if (loi > 0) ed.WriteMessage("\n[GRO .NET] Dat ma khac: bo qua " + loi + " dong du lieu hong tu lisp.");
             if (dong.Count == 0) return null;
+            _cacheTheoBanVe[doc.Name ?? ""] = new CacheLanChay { Dong = dong, VatCan = vatCan };
 
             var sw = Stopwatch.StartNew();
             var tams = new List<TamCanDat>();
@@ -344,6 +355,243 @@ namespace ZwCadPlugin.CadServices
                 ent.XData = nb;
             }
             catch { }
+        }
+
+        private static void CapNhatCo(Transaction tr, ObjectId id, Func<string, string> bienDoi)
+        {
+            if (id.IsNull || bienDoi == null) return;
+            try
+            {
+                var ent = tr.GetObject(id, OpenMode.ForWrite) as Entity;
+                ResultBuffer rb = ent?.GetXDataForApplication(AppMeta);
+                if (rb == null) return;
+                var vals = new List<string>();
+                foreach (TypedValue tv in rb)
+                    if (tv.TypeCode == (short)DxfCode.ExtendedDataAsciiString) vals.Add(tv.Value as string ?? "");
+                while (vals.Count < 4) vals.Add("");
+                string moi = bienDoi(vals[3]);
+                if (moi == vals[3]) return;
+                var nb = new ResultBuffer(new TypedValue((int)DxfCode.ExtendedDataRegAppName, AppMeta));
+                for (int i = 0; i < 4; i++)
+                    nb.Add(new TypedValue((int)DxfCode.ExtendedDataAsciiString, i == 3 ? moi : vals[i]));
+                ent.XData = nb;
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// Thử đặt lại mã khắc + F-name vào hình với tỷ lệ mới (ví dụ 0.5 hoặc 0.3) cho các tấm đang có cờ MK_CHUA_DAT.
+        /// Dùng cache của lần chạy GRO gần nhất nếu có, hoặc dựng trực tiếp từ hình học trong khung tấm.
+        /// </summary>
+        public static void ThuDatLaiTheoTiLe(Document doc, IList<PlateItem> plates, double tiLe, out List<string> datDuoc, out List<string> chuaDuoc)
+        {
+            datDuoc = new List<string>();
+            chuaDuoc = new List<string>();
+            if (doc == null || plates == null || tiLe <= 0 || tiLe > 1.0) return;
+
+            var canThu = plates.Where(p => !p.IsOrphan && !p.BangoTextId.IsNull && CoCo(doc.Database, p.BangoTextId, DatMaKhac.CoChuaDat)).ToList();
+            if (canThu.Count == 0) return;
+
+            _cacheTheoBanVe.TryGetValue(doc.Name ?? "", out CacheLanChay cache);
+            Database db = doc.Database;
+            using (doc.LockDocument())
+            {
+                var danhSach = new List<(PlateItem Plate, TamCanDat Tam, List<string> HandleCum)>();
+                using (Transaction tr = db.TransactionManager.StartTransaction())
+                {
+                    foreach (PlateItem p in canThu)
+                    {
+                        TamCanDat tam = null;
+                        var handles = new List<string>();
+
+                        DatMaKhac.DongTam dongCu = cache?.Dong?.FirstOrDefault(d => string.Equals(d.Tam.Bango, p.Bango, StringComparison.Ordinal));
+                        if (dongCu != null)
+                        {
+                            Hop bbCumMoi = DocHopCum(tr, db, dongCu.HandleCum);
+                            if (bbCumMoi != null)
+                            {
+                                tam = new TamCanDat { Bango = p.Bango, BbHinh = dongCu.Tam.BbHinh, BbCum = bbCumMoi };
+                                handles.AddRange(dongCu.HandleCum);
+                            }
+                        }
+                        if (tam == null && p.FrameBoundingBox.HasValue)
+                        {
+                            var cumIds = new List<ObjectId>();
+                            if (!p.MaKhacTextId.IsNull) cumIds.Add(p.MaKhacTextId);
+                            cumIds.AddRange(p.FnameTextIds.Where(id => !id.IsNull));
+                            Hop bbHinh = TimHopKakouTrongKhung(tr, db, p.FrameBoundingBox.Value);
+                            Hop bbCumMoi = DocHopIds(tr, cumIds);
+                            if (bbHinh != null && bbCumMoi != null)
+                            {
+                                foreach (ObjectId id in cumIds) handles.Add(id.Handle.ToString());
+                                tam = new TamCanDat { Bango = p.Bango, BbHinh = bbHinh, BbCum = bbCumMoi };
+                            }
+                        }
+
+                        if (tam != null && handles.Count > 0) danhSach.Add((p, tam, handles));
+                        else chuaDuoc.Add(p.Bango);
+                    }
+                    tr.Commit();
+                }
+
+                if (danhSach.Count == 0) return;
+                List<NetMau> net = QuetNet(db, danhSach.Select(x => x.Tam).ToList());
+                var daDat = new List<Doan>();
+                if (cache?.VatCan != null)
+                    foreach (Hop b in cache.VatCan) daDat.InsertRange(0, DatMaKhac.HopThanhDoan(b));
+
+                using (Transaction tr = db.TransactionManager.StartTransaction())
+                {
+                    foreach (var item in danhSach)
+                    {
+                        KetQuaTam r = DatMaKhac.DatMotTamVoiTiLe(net, item.Tam.BbHinh, item.Tam.BbCum.W, item.Tam.BbCum.H, daDat, tiLe);
+                        if (r.Dat)
+                        {
+                            ApCum(tr, db, item.HandleCum, item.Tam.BbCum, r);
+                            daDat.InsertRange(0, DatMaKhac.HcnThanhDoan(r.Cx, r.Cy, r.Th, r.Hw, r.Hh));
+                            string nhanTiLe = KiemTraKinHo.DinhDangSaiSo(tiLe);
+                            CapNhatCo(tr, item.Plate.BangoTextId, fl =>
+                            {
+                                string s = DatMaKhac.XoaCo(fl, DatMaKhac.CoChuaDat);
+                                s = DatMaKhac.XoaCo(s, DatMaKhac.CoThuNho);
+                                if (tiLe < 0.999) s = DatMaKhac.ThemCo(s, DatMaKhac.CoThuNho + ":" + nhanTiLe);
+                                if (r.BoKeg) s = DatMaKhac.ThemCo(s, DatMaKhac.CoDeKegaki);
+                                return s;
+                            });
+                            datDuoc.Add(item.Plate.Bango);
+                        }
+                        else
+                        {
+                            chuaDuoc.Add(item.Plate.Bango);
+                        }
+                    }
+                    tr.Commit();
+                }
+                doc.Editor?.UpdateScreen();
+            }
+        }
+
+        /// <summary>
+        /// Khi bấm Kiểm tra lại: nếu người dùng đã MOVE tay mã khắc vào trong hộp hình cắt của tấm,
+        /// tự gỡ cờ MK_CHUA_DAT trên XData để lỗi biến mất.
+        /// </summary>
+        public static int DongBoCoMaKhacDaVaoHinh(Document doc, IList<PlateItem> plates)
+        {
+            if (doc == null || plates == null) return 0;
+            Database db = doc.Database;
+            int soGỡ = 0;
+            using (doc.LockDocument())
+            using (Transaction tr = db.TransactionManager.StartTransaction())
+            {
+                foreach (PlateItem p in plates)
+                {
+                    if (p.IsOrphan || p.BangoTextId.IsNull || p.MaKhacTextId.IsNull || !p.FrameBoundingBox.HasValue) continue;
+                    if (!CoCo(tr, p.BangoTextId, DatMaKhac.CoChuaDat)) continue;
+                    Hop bbHinh = TimHopKakouTrongKhung(tr, db, p.FrameBoundingBox.Value);
+                    Hop bbMk = DocHopIds(tr, new[] { p.MaKhacTextId });
+                    if (bbHinh != null && bbMk != null && bbHinh.Chua(bbMk))
+                    {
+                        CapNhatCo(tr, p.BangoTextId, fl => DatMaKhac.XoaCo(fl, DatMaKhac.CoChuaDat));
+                        soGỡ++;
+                    }
+                }
+                tr.Commit();
+            }
+            return soGỡ;
+        }
+
+        private static bool CoCo(Database db, ObjectId id, string co)
+        {
+            using (Transaction tr = db.TransactionManager.StartTransaction())
+            {
+                bool kq = CoCo(tr, id, co);
+                tr.Commit();
+                return kq;
+            }
+        }
+
+        private static bool CoCo(Transaction tr, ObjectId id, string co)
+        {
+            if (id.IsNull || id.IsErased) return false;
+            try
+            {
+                var ent = tr.GetObject(id, OpenMode.ForRead, false) as Entity;
+                ResultBuffer rb = ent?.GetXDataForApplication(AppMeta);
+                if (rb == null) return false;
+                foreach (TypedValue tv in rb)
+                {
+                    if (tv.TypeCode == (short)DxfCode.ExtendedDataAsciiString &&
+                        (tv.Value as string ?? "").IndexOf(co, StringComparison.OrdinalIgnoreCase) >= 0)
+                        return true;
+                }
+            }
+            catch { }
+            return false;
+        }
+
+        private static Hop DocHopCum(Transaction tr, Database db, IEnumerable<string> handles)
+        {
+            var ids = new List<ObjectId>();
+            foreach (string h in handles)
+            {
+                ObjectId id = LayId(db, h);
+                if (!id.IsNull) ids.Add(id);
+            }
+            return DocHopIds(tr, ids);
+        }
+
+        private static Hop DocHopIds(Transaction tr, IEnumerable<ObjectId> ids)
+        {
+            double x1 = double.MaxValue, y1 = double.MaxValue, x2 = double.MinValue, y2 = double.MinValue;
+            bool co = false;
+            foreach (ObjectId id in ids)
+            {
+                if (id.IsNull || id.IsErased) continue;
+                try
+                {
+                    if (tr.GetObject(id, OpenMode.ForRead, false) is Entity e)
+                    {
+                        Extents3d ext = e.GeometricExtents;
+                        if (ext.MinPoint.X < x1) x1 = ext.MinPoint.X;
+                        if (ext.MinPoint.Y < y1) y1 = ext.MinPoint.Y;
+                        if (ext.MaxPoint.X > x2) x2 = ext.MaxPoint.X;
+                        if (ext.MaxPoint.Y > y2) y2 = ext.MaxPoint.Y;
+                        co = true;
+                    }
+                }
+                catch { }
+            }
+            return co ? new Hop(x1, y1, x2, y2) : null;
+        }
+
+        private static Hop TimHopKakouTrongKhung(Transaction tr, Database db, Extents3d khung)
+        {
+            double x1 = double.MaxValue, y1 = double.MaxValue, x2 = double.MinValue, y2 = double.MinValue;
+            bool co = false;
+            var ms = (BlockTableRecord)tr.GetObject(((BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead))[BlockTableRecord.ModelSpace], OpenMode.ForRead);
+            foreach (ObjectId id in ms)
+            {
+                if (id.IsErased) continue;
+                if (!(tr.GetObject(id, OpenMode.ForRead, false) is Curve cv) || !cv.Visible) continue;
+                if (!string.Equals(cv.Layer, "0-KAKOU", StringComparison.OrdinalIgnoreCase)) continue;
+                if (cv is Line && (cv.Linetype ?? "").StartsWith("DASHED", StringComparison.OrdinalIgnoreCase)) continue;
+                try
+                {
+                    if (cv.GetXDataForApplication(AppChup) != null) continue;
+                    Extents3d ext = cv.GeometricExtents;
+                    if (ext.MinPoint.X >= khung.MinPoint.X - 1e-6 && ext.MaxPoint.X <= khung.MaxPoint.X + 1e-6 &&
+                        ext.MinPoint.Y >= khung.MinPoint.Y - 1e-6 && ext.MaxPoint.Y <= khung.MaxPoint.Y + 1e-6)
+                    {
+                        if (ext.MinPoint.X < x1) x1 = ext.MinPoint.X;
+                        if (ext.MinPoint.Y < y1) y1 = ext.MinPoint.Y;
+                        if (ext.MaxPoint.X > x2) x2 = ext.MaxPoint.X;
+                        if (ext.MaxPoint.Y > y2) y2 = ext.MaxPoint.Y;
+                        co = true;
+                    }
+                }
+                catch { }
+            }
+            return co ? new Hop(x1, y1, x2, y2) : null;
         }
 
         /// <summary>

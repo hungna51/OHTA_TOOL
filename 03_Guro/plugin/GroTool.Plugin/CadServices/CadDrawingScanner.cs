@@ -169,6 +169,8 @@ namespace ZwCadPlugin.CadServices
                         coXData.Add(p);
                         if (xd.noShape) p.NoCuttingShape = true;
                         // Mục 117: cờ mã khắc (chưa vào hình / đè ケガキ / thu nhỏ) -> cột Ghi chú
+                        if (!string.IsNullOrEmpty(xd.flags) && xd.flags.IndexOf(DatMaKhac.CoChuaDat, StringComparison.OrdinalIgnoreCase) >= 0)
+                            p.CoMkChuaDat = true;
                         BangSoLieu.DocCoMaKhac(xd.flags, out var cbMk, out var gcMk);
                         foreach (string cb in cbMk) p.ThemCanhBao(cb);
                         if (gcMk.Count > 0) p.GhiChuThem = string.Join("; ", gcMk);

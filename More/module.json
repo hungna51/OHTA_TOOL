@@ -4,17 +4,32 @@
   "order": 90,
   "tabTitle": "More",
   "title": "More",
-  "version": "1.0",
+  "version": "1.1",
   "description": "Bổ sung các lisp tùy chỉnh",
   "accentColor": "#EF6C00",
   "startupLisp": [
     "lisp/Catdim_CD_BD.lsp",
-    "lisp/FnameMoveTextKe.LSP"
+    "lisp/FnameMoveTextKe.LSP",
+    "lisp/lispcuonv2.2(fix)(CN).LSP",
+    "lisp/ke.lsp",
+    "lisp/SegmentCurveV1-1.lsp",
+    "lisp/kiem_tra_kin_ho.lsp"
   ],
   "groups": [
-    "Dim"
+    "Xử lý nét",
+    "Dim",
+    "Gia công"
   ],
   "tools": [
+    {
+      "id": "m02_kiem_tra_kin_ho",
+      "category": "Xử lý nét",
+      "name": "Kiểm tra kín hở",
+      "badge": "KT",
+      "command": "KT",
+      "lispFile": "lisp/kiem_tra_kin_ho.lsp",
+      "description": "Kiểm tra nét kín hở và thuộc tính của các nét cắt."
+    },
     {
       "id": "m02_cat_chan_dim",
       "category": "Dim",
@@ -40,6 +55,32 @@
       "command": "FMK",
       "lispFile": "lisp/FnameMoveTextKe.LSP",
       "description": "Move fname vào mã khắc"
+    },
+    {
+      "id": "u_cn",
+      "category": "Gia công",
+      "name": "CN",
+      "badge": "CN",
+      "command": "CN",
+      "lispFile": "lisp/lispcuonv2.2(fix)(CN).LSP",
+      "icon": "icons/94dbc305cb145caff577e5b8d0a90273.png",
+      "description": "lisp làm nhanh tấm gia công cuộn"
+    },
+    {
+      "id": "u_kee",
+      "name": "tạo dấu cộng ケガキ",
+      "badge": "KEE",
+      "command": "KEE",
+      "lispFile": "lisp/ke.lsp",
+      "description": "Chuyển hình tròn thành dấu cộng ケガキ"
+    },
+    {
+      "id": "u_segs",
+      "name": "SegmentCurveV1.1",
+      "badge": "SEGS",
+      "command": "SEGS",
+      "lispFile": "lisp/SegmentCurveV1-1.lsp",
+      "description": "chia cung thành các đoạn line nối liền"
     }
   ]
 }

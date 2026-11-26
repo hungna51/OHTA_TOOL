@@ -71,20 +71,45 @@ namespace ZwCadPlugin.ViewModels
         }
 
         public ICommand RefreshCommand { get; }
+        public ICommand ZoomNhomCommand { get; }
         public ICommand ConvertToKakouCommand { get; }
         public ICommand ConvertToKegakiCommand { get; }
-        public ICommand ConvertToSunpouCommand { get; }
         public ICommand ConvertToShtCommand { get; }
         public ICommand ConvertToZeroCommand { get; }
+
+        public Action SauKhiChuyenLayer { get; set; }
 
         public DsnViewModel()
         {
             RefreshCommand = new RelayCommand(RefreshFromDrawing);
-            ConvertToKakouCommand = new RelayCommand(() => ChuyenLayer("0-KAKOU"), () => SelectedGroup != null && SelectedGroup.EntityIds.Count > 0);
-            ConvertToKegakiCommand = new RelayCommand(() => ChuyenLayer("3-KEGAKI"), () => SelectedGroup != null && SelectedGroup.EntityIds.Count > 0);
-            ConvertToSunpouCommand = new RelayCommand(() => ChuyenLayer("1-SUNPOU"), () => SelectedGroup != null && SelectedGroup.EntityIds.Count > 0);
-            ConvertToShtCommand = new RelayCommand(() => ChuyenLayer("4-SHT"), () => SelectedGroup != null && SelectedGroup.EntityIds.Count > 0);
-            ConvertToZeroCommand = new RelayCommand(() => ChuyenLayer("0"), () => SelectedGroup != null && SelectedGroup.EntityIds.Count > 0);
+            ZoomNhomCommand = new RelayCommand(p => ZoomNhom(p as UnconvertedGroupItem ?? SelectedGroup));
+            ConvertToKakouCommand = new RelayCommand(p => ChuyenNhom(p as UnconvertedGroupItem ?? SelectedGroup, "0-KAKOU"),
+                p => ((p as UnconvertedGroupItem) ?? SelectedGroup)?.EntityIds.Count > 0);
+            ConvertToKegakiCommand = new RelayCommand(p => ChuyenNhom(p as UnconvertedGroupItem ?? SelectedGroup, "3-KEGAKI"),
+                p => ((p as UnconvertedGroupItem) ?? SelectedGroup)?.EntityIds.Count > 0);
+            ConvertToShtCommand = new RelayCommand(p => ChuyenNhom(p as UnconvertedGroupItem ?? SelectedGroup, "4-SHT"),
+                p => ((p as UnconvertedGroupItem) ?? SelectedGroup)?.EntityIds.Count > 0);
+            ConvertToZeroCommand = new RelayCommand(p => ChuyenNhom(p as UnconvertedGroupItem ?? SelectedGroup, "0"),
+                p => ((p as UnconvertedGroupItem) ?? SelectedGroup)?.EntityIds.Count > 0);
+        }
+
+        public void ZoomNhom(UnconvertedGroupItem grp)
+        {
+            if (grp == null || grp.EntityIds.Count == 0) return;
+            SelectedGroup = grp;
+            CloudLoiCad.Xoa();
+            CadViewService.ZoomToExtents(grp.BoundingBox, 0.25);
+            CadViewService.HighlightEntities(grp.EntityIds);
+        }
+
+        public void DatChanQuet()
+        {
+            _selectedGroup = null;
+            OnPropertyChanged(nameof(SelectedGroup));
+            Groups.Clear();
+            TotalUnconvertedCount = 0;
+            CurrentLayerName = "—";
+            ThongKe = "Đã chặn quét (0 tấm)";
         }
 
         public void RefreshFromDrawing()
@@ -199,17 +224,19 @@ namespace ZwCadPlugin.ViewModels
                 SelectedGroup = null;
         }
 
-        private void ChuyenLayer(string layerDich)
+        private void ChuyenNhom(UnconvertedGroupItem grp, string layerDich)
         {
-            if (SelectedGroup == null || SelectedGroup.EntityIds.Count == 0) return;
+            if (grp == null || grp.EntityIds.Count == 0) return;
             var doc = Application.DocumentManager.MdiActiveDocument;
             if (doc == null) return;
 
-            int doi = LineScanner.ChuyenLayerNhom(doc, SelectedGroup.EntityIds, layerDich);
-            doc.Editor.WriteMessage($"\n[DSN] Đã chuyển {doi} đối tượng nhóm \"{SelectedGroup.Linetype}\" sang layer {layerDich} (ByLayer).\n");
+            CloudLoiCad.Xoa();
+            int doi = LineScanner.ChuyenLayerNhom(doc, grp.EntityIds, layerDich);
+            doc.Editor.WriteMessage($"\n[DSN] Da chuyen {doi} doi tuong nhom \"{grp.Linetype}\" sang layer {layerDich} (ByLayer).\n");
 
             // Quét lại để cập nhật danh sách
             QuetLayerHienTai();
+            SauKhiChuyenLayer?.Invoke();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

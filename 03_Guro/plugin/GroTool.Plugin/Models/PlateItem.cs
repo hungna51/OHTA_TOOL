@@ -126,6 +126,9 @@ namespace ZwCadPlugin.Models
         /// <summary>Tấm có ghi chú yêu cầu xử lý đổi nét sang layer 4-SHT.</summary>
         public bool LaXuLySht => JapanNoteTranslator.LaXuLySht(_customerNote);
 
+        /// <summary>Tấm đang có cờ MK_CHUA_DAT trong XData GRO_METADATA.</summary>
+        public bool CoMkChuaDat { get; set; }
+
         private string _ghiChuThem = string.Empty;
 
         /// <summary>Ghi chú thường (không phải cảnh báo) thêm vào cột Ghi chú — vd "Mã khắc thu nhỏ 1/2" (mục 117).</summary>

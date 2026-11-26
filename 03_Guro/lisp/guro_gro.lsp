@@ -1022,7 +1022,12 @@
            (not (vl-catch-all-error-p (setq kq (vl-catch-all-apply 'ohta_net_tab '("guro")))))
            kq
       )
-    (gro--princ "\nGRO: chon layer va cai dat tren tab Guro, bam \"Chay GRO\" de danh so.")
+    (progn
+      (if (vl-symbol-value 'gro_net_home)
+        (vl-catch-all-apply 'gro_net_home nil)
+      )
+      (gro--princ "\nGRO: chon layer va cai dat tren tab Guro, bam \"Chay GRO\" de danh so.")
+    )
     (gro--princ
       (strcat "\nLoi: khong mo duoc tab Guro tren bang OHTA (chua nap OHTATOOL.dll hoac"
               "\n     thieu tab Guro). Go OHTA de mo bang roi bam \"Chay GRO\"."
@@ -6967,11 +6972,15 @@
 
 (defun c:cln () (c:xln))
 
-;; Lenh DSN duoc hop nhat vao lenh DST (Tab 2 cua Palette).
-;; Nguoi dung chi can go DST, hoac go DSN se tu dong goi DST.
-(defun c:dsn () 
-  (gro--princ "\n[DST] Mo bang quan ly tam va net (DST)...")
-  (c:dst)
+;; Lenh DSN duoc hop nhat vao tab Error cua tab Guro trong OHTA TOOL.
+(defun c:dsn ()
+  (gro--princ "\n[DSN] Mo tab Error trong Guro (OHTA TOOL)...")
+  (cond
+    ((vl-symbol-value 'gro_net_dsn)
+     (gro_net_dsn)
+    )
+    (T (c:dst))
+  )
   (princ)
 )
 
@@ -15209,7 +15218,6 @@
               (list (cons 0 "MTEXT") 
                     (cons 100 "AcDbEntity")
                     (cons 8 "3-KEGAKI")
-                    (cons 62 1)
                     (cons 100 "AcDbMText")
                     (cons 10 p-bango)
                     (cons 40 10.0)

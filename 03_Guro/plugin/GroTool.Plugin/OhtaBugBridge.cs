@@ -19,6 +19,28 @@ namespace ZwCadPlugin
     {
         private static MethodInfo _report;
         private static MethodInfo _log;
+        private static MethodInfo _moTab;
+
+        /// <summary>Mở bảng OHTA TOOL và chuyển sang tab Guro qua phản chiếu. Trả false nếu OHTATOOL chưa nạp.</summary>
+        public static bool MoTabGuro()
+        {
+            try
+            {
+                if (_moTab == null)
+                {
+                    Assembly ohta = AppDomain.CurrentDomain.GetAssemblies()
+                        .FirstOrDefault(a => string.Equals(a.GetName().Name, "OHTATOOL", StringComparison.OrdinalIgnoreCase));
+                    _moTab = ohta?.GetType("OhtaTool.Plugin.OhtaPaletteCommands")
+                        ?.GetMethod("ActivateModuleTab", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(string) }, null);
+                }
+                if (_moTab == null) return false;
+                return _moTab.Invoke(null, new object[] { "guro" }) is bool b && b;
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         /// <summary>
         /// Ghi exception vào nhật ký báo lỗi của OHTATOOL (OhtaTool.Plugin.Core.BugLog.Write(string, Exception)).

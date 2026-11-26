@@ -801,6 +801,8 @@ namespace ZwCadPlugin.Tests
             BangSoLieu.DocCoMaKhac("NO_SHAPE;MK_THU_NHO;MK_DE_KEGAKI", out var cbMk, out var gcMk);
             Kiem("co ma khac: canh bao + ghi chu", string.Join("|", cbMk) + "#" + string.Join("|", gcMk),
                  "Mã khắc đè ケガキ#Mã khắc thu nhỏ 1/2");
+            BangSoLieu.DocCoMaKhac("MK_THU_NHO:0.3", out cbMk, out gcMk);
+            Kiem("co ma khac: thu nho tuy chinh 0.3", string.Join("|", gcMk), "Mã khắc thu nhỏ 0.3");
             BangSoLieu.DocCoMaKhac("MK_CHUA_DAT", out cbMk, out gcMk);
             Kiem("co ma khac: chua dat", string.Join("|", cbMk), "[!] Mã khắc chưa vào hình — move thủ công");
             // muc 190: co chu khac -> cot Ghi chu
@@ -928,6 +930,7 @@ namespace ZwCadPlugin.Tests
             TestChiaNetCat();
             TestDongKhung();
             TestGuroTabLayer();
+            TestKiemTraKinHo();
 
             Console.WriteLine();
             Console.WriteLine("=== Giai ma CP932 cho lisp kieu byte (muc 203) ===");
@@ -1813,7 +1816,16 @@ namespace ZwCadPlugin.Tests
             Kiem("them co vao flags rong", DatMaKhac.ThemCo("", "MK_THU_NHO"), "MK_THU_NHO");
             Kiem("them co noi bang ;", DatMaKhac.ThemCo("A", "MK_THU_NHO"), "A;MK_THU_NHO");
             Kiem("co da co -> giu nguyen", DatMaKhac.ThemCo("MK_THU_NHO", "MK_THU_NHO"), "MK_THU_NHO");
+            Kiem("xoa co MK_CHUA_DAT", DatMaKhac.XoaCo("A;MK_CHUA_DAT;MK_THU_NHO", "MK_CHUA_DAT"), "A;MK_THU_NHO");
             Kiem("noi ds toi da 2 + ...", DatMaKhac.NoiDs(new List<string> { "1", "2", "3" }, 2), "1, 2, ...");
+
+            // 14. Cum 210x60 khong vua o 0.5 trong tam nho 90x40 -> thu lai voi ti le 0.3
+            Hop hopNho = new Hop(0, 0, 90, 40);
+            var netNho = new List<NetMau> { ChuNhat(0, 0, 90, 40) };
+            KetQuaTam r05 = DatMaKhac.DatMotTamVoiTiLe(netNho, hopNho, 210, 60, new List<Doan>(), 0.5);
+            KetQuaTam r03 = DatMaKhac.DatMotTamVoiTiLe(netNho, hopNho, 210, 60, new List<Doan>(), 0.3);
+            Kiem("cum 210x60 trong 90x40 o ti le 0.5 -> khong vua", r05.Dat, false);
+            Kiem("cum 210x60 trong 90x40 o ti le 0.3 -> dat duoc", r03.Dat && Math.Abs(r03.TiLe - 0.3) < 1e-6, true);
         }
 
         private static void TestGuroTabLayer()
@@ -1842,6 +1854,106 @@ namespace ZwCadPlugin.Tests
             Kiem("ten hop le -> khong loi", TenKhungTam.Loi("KHUNG-TAM_1") == null, true);
             Kiem("co dau * -> loi", TenKhungTam.Loi("A*B") != null, true);
             Kiem("co dau , -> loi", TenKhungTam.Loi("A,B") != null, true);
+        }
+
+        private static void TestKiemTraKinHo()
+        {
+            Console.WriteLine();
+            Console.WriteLine("=== Kiem tra kin ho & ByLayer (muc 235) ===");
+
+            NetKiem Doan(long h, double x1, double y1, double x2, double y2) => new NetKiem
+            {
+                Handle = h,
+                Loai = "LINE",
+                Kin = false,
+                DoDai = Math.Sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)),
+                Diem = new List<(double X, double Y)> { (x1, y1), (x2, y2) }
+            };
+
+            List<NetKiem> HinhChuNhat(long h0, double x1, double y1, double x2, double y2, double ho = 0) => new List<NetKiem>
+            {
+                Doan(h0, x1, y1, x2, y1),
+                Doan(h0 + 1, x2, y1, x2, y2),
+                Doan(h0 + 2, x2, y2, x1, y2),
+                Doan(h0 + 3, x1, y2, x1 + ho, y1 + ho)
+            };
+
+            // 1. Sai so
+            Kiem("ChuanHoaSaiSo '0.0001' -> true", KiemTraKinHo.ChuanHoaSaiSo("0.0001", out double tol1) && Math.Abs(tol1 - 0.0001) < 1e-9, true);
+            Kiem("ChuanHoaSaiSo '0,005' -> 0.005", KiemTraKinHo.ChuanHoaSaiSo("0,005", out double tol2) && Math.Abs(tol2 - 0.005) < 1e-9, true);
+            Kiem("ChuanHoaSaiSo '-1' -> false", KiemTraKinHo.ChuanHoaSaiSo("-1", out _), false);
+            Kiem("DinhDangSaiSo 0.0001", KiemTraKinHo.DinhDangSaiSo(0.0001), "0.0001");
+
+            // 2. ByLayer tren 4 layer + bo qua layer 0 + giu linetype DASHED cho LINE 0-KAKOU
+            Kiem("ByLayer 0-KAKOU dung -> true", KiemTraKinHo.LaDungByLayer("0-KAKOU", "LINE", true, "ByLayer", true), true);
+            Kiem("ByLayer 0-KAKOU LINE DASHED2 -> true", KiemTraKinHo.LaDungByLayer("0-KAKOU", "LINE", true, "DASHED2", true), true);
+            Kiem("ByLayer 0-KAKOU LINE DASHED2 sai mau -> false", KiemTraKinHo.LaDungByLayer("0-KAKOU", "LINE", false, "DASHED2", true), false);
+            Kiem("ByLayer 3-KEGAKI sai linetype -> false", KiemTraKinHo.LaDungByLayer("3-KEGAKI", "MTEXT", true, "DASHED", true), false);
+            Kiem("ByLayer 4-SHT sai lineweight -> false", KiemTraKinHo.LaDungByLayer("4-SHT", "LINE", true, "ByLayer", false), false);
+            Kiem("ByLayer 2-F-NAME sai mau -> false", KiemTraKinHo.LaDungByLayer("2-F-NAME", "TEXT", false, "ByLayer", true), false);
+            Kiem("Layer 0 khong bi bat ByLayer", KiemTraKinHo.LaDungByLayer("0", "LINE", false, "Continuous", false), true);
+
+            // 3. Kiem tra 1 tam kin + lo ben trong -> 0 loi
+            var tamKin = new DuLieuTamKiem { Bango = "1", NetKakou = HinhChuNhat(1, 0, 0, 100, 50) };
+            tamKin.NetKakou.AddRange(HinhChuNhat(10, 20, 10, 40, 30));
+            tamKin.NetPhu.Add(new NetPhuKiem
+            {
+                Lop = "3-KEGAKI",
+                Diem = new List<(double, double)> { (10, 5), (90, 5) },
+                Hop = (10, 5, 90, 5)
+            });
+            Kiem("Tam kin + lo + KEGAKI ben trong -> 0 loi", KiemTraKinHo.KiemTraTamKhung(tamKin, KiemTraKinHo.SaiSoMacDinh).Count, 0);
+
+            // 4. Ho 0.002mm: voi tol=0.0001 bao HO_NET, voi tol=0.005 khong bao
+            var tamHo = new DuLieuTamKiem { Bango = "2", NetKakou = HinhChuNhat(20, 0, 0, 100, 50, 0.002) };
+            var loiHoNho = KiemTraKinHo.KiemTraTamKhung(tamHo, 0.0001);
+            var loiHoLon = KiemTraKinHo.KiemTraTamKhung(tamHo, 0.005);
+            Kiem("Ho 0.002mm voi tol=0.0001 -> bao ho", loiHoNho.Any(l => l.Ma == "HO_NET" || l.Ma == "HO_VONG"), true);
+            Kiem("Ho 0.002mm voi tol=0.005 -> hop le", loiHoLon.Count, 0);
+
+            // 5. Net dai 0 & tu cat
+            var tam0 = new DuLieuTamKiem { Bango = "3", NetKakou = HinhChuNhat(30, 0, 0, 100, 50) };
+            tam0.NetKakou.Add(Doan(39, 50, 25, 50, 25));
+            Kiem("Net dai 0 -> bao NET_0", KiemTraKinHo.KiemTraTamKhung(tam0, 0.0001).Any(l => l.Ma == "NET_0"), true);
+
+            var tamTuCat = new DuLieuTamKiem
+            {
+                Bango = "4",
+                NetKakou = new List<NetKiem>
+                {
+                    Doan(41, 0, 0, 100, 50),
+                    Doan(42, 100, 50, 100, 0),
+                    Doan(43, 100, 0, 0, 50),
+                    Doan(44, 0, 50, 0, 0)
+                }
+            };
+            Kiem("Hinh no -> bao TU_CAT", KiemTraKinHo.KiemTraTamKhung(tamTuCat, 0.0001).Any(l => l.Ma == "TU_CAT"), true);
+
+            // 6. Net 3-KEGAKI / 4-SHT nam ngoai hinh chinh
+            var tamNgoai = new DuLieuTamKiem { Bango = "5", NetKakou = HinhChuNhat(50, 0, 0, 100, 50) };
+            tamNgoai.NetPhu.Add(new NetPhuKiem
+            {
+                Lop = "4-SHT",
+                Diem = new List<(double, double)> { (120, 10), (140, 10) },
+                Hop = (120, 10, 140, 10)
+            });
+            Kiem("4-SHT ngoai hinh -> bao NGOAI_HINH_4-SHT", KiemTraKinHo.KiemTraTamKhung(tamNgoai, 0.0001).Any(l => l.Ma == "NGOAI_HINH_4-SHT"), true);
+
+            // 7. KiemTraToanBanVe (KT): 2 tam tach roi OK; 2 vong giao nhau bao GIAO_NHAU
+            var ktOk = new List<NetKiem>();
+            ktOk.AddRange(HinhChuNhat(60, 0, 0, 100, 50));
+            ktOk.AddRange(HinhChuNhat(70, 200, 0, 300, 50));
+            Kiem("Toan ban ve 2 tam roi -> 0 loi", KiemTraKinHo.KiemTraToanBanVe(ktOk, null, 0.0001).Count, 0);
+
+            var ktGiao = new List<NetKiem>();
+            ktGiao.AddRange(HinhChuNhat(80, 0, 0, 100, 50));
+            ktGiao.AddRange(HinhChuNhat(90, 50, 10, 150, 60));
+            Kiem("Toan ban ve 2 vong giao nhau -> bao GIAO_NHAU",
+                 KiemTraKinHo.KiemTraToanBanVe(ktGiao, null, 0.0001).Any(l => l.Ma == "GIAO_NHAU"), true);
+
+            // 8. TaoCloud gop 2 hop gan nhau thanh 1 cloud co bulge
+            var clouds = KiemTraKinHo.TaoCloud(new[] { (0.0, 0.0, 1.0, 1.0), (1.5, 0.0, 2.5, 1.0) }, 100.0);
+            Kiem("TaoCloud 2 hop gan nhau gop thanh 1", clouds.Count == 1 && clouds[0].Count >= 4 && clouds[0].All(pt => Math.Abs(pt.Bulge) > 0), true);
         }
     }
 }

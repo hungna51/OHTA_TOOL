@@ -16,6 +16,7 @@ Thư mục này đóng vai trò là **Mục con số 02** trên giao diện Tool
 | Lệnh CAD | Tên nút trên Tab | File thực thi | Chức năng |
 |---|---|---|---|
 | `OHTAM2` | Lệnh Thử Nghiệm Nhóm 02 | [`lisp/ohta_m02_demo.lsp`](lisp/ohta_m02_demo.lsp) | Kiểm tra luồng bấm nút trên Tab 02 → tự nạp LISP → thực thi lệnh trên ZWCAD & AutoCAD |
+| `KT` | Kiểm tra kín hở | [`lisp/kiem_tra_kin_ho.lsp`](lisp/kiem_tra_kin_ho.lsp) | Quét chọn đối tượng để kiểm tra kín hở `0-KAKOU` và kiểm tra `ByLayer` cho `0-KAKOU`, `3-KEGAKI`, `4-SHT`, `2-F-NAME` (không báo đối tượng ngoài hình chính) |
 
 ---
 

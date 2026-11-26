@@ -29,7 +29,8 @@ Tất cả nằm trong **một file** `guro ZWCAD(BG MK FN).lsp` (gộp từ 4 f
 | `oi` | ~6420 | polyline layer `Khung_IN` (kín, 4 đỉnh) | — | in **từng khung** ra PDF (tên kèm `-YYYYMMDD`), gộp bằng Ghostscript, mở file (mục 66, 67) |
 | `GI` | ~6544 | — | — | in **toàn bộ extents** ra một PDF rồi mở (mục 66) |
 | `ocsv` | 1048 | — | — | mở file CSV bằng ứng dụng mặc định |
-| `dst` / `grods` / `ds` | ~8503 | — | sửa bango / T / Q / M ngay trong bảng | bảng danh sách tấm: palette .NET nếu đã nạp DLL, không thì DCL. Bản .NET ghi ngược vào bản vẽ (mục 81, 86) — **không** sửa CSV |
+| `dst` / `grods` / `ds` | ~8503 | — | sửa bango / T / Q / M ngay trong bảng | bảng danh sách tấm: từ bản 1.7 gộp thẳng vào sub-tab **Tấm** trên tab **Guro** của bảng OHTA (`DSN` mở sub-tab **Error** — không còn palette DST rời). Bản .NET ghi ngược vào bản vẽ (mục 81, 86, 235) — **không** sửa CSV |
+| `kt` *(tab `More`)* | `GRO_NET_KT` | quét chọn đối tượng cần kiểm tra | sửa `Sai số` hoặc bấm `⬚ Chọn lại` nếu cần | mở cửa sổ **Kiểm tra kín hở** cho vùng chọn (`KtWindow`, không chuyển tab Guro): kiểm tra `0-KAKOU` + `ByLayer` 4 layer (`0-KAKOU`, `3-KEGAKI`, `4-SHT`, `2-F-NAME`), không báo đối tượng ngoài hình chính (mục 235) |
 | `netdst` | ~8532 | — | — | NETLOAD **`GROZWCAD.dll`** (ưu tiên `C:/GROZWCAD/`, mục 179 — tên cũ `ZwCadPlugin.dll`) rồi mở bảng .NET. Từ mục 179 lisp tự nạp DLL ngay khi file `.lsp` được nạp. **Không cần gõ nữa**: `gro` tự nạp DLL và tự mở + làm mới bảng cuối lệnh (mục 86) |
 
 > **`bgdbg` KHÔNG còn chẩn đoán đúng cho `gro`.** `bgdbg` chạy `bg--fields`, còn `gro` nay

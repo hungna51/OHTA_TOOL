@@ -1,0 +1,134 @@
+<Window x:Class="ZwCadPlugin.Views.KtWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="KT — Kiểm tra kín hở &amp; thuộc tính nét cắt"
+        Width="425" Height="480" MinWidth="370" MinHeight="340"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize"
+        ShowInTaskbar="True"
+        Topmost="{Binding GhimTrenCung}"
+        Background="#F5F7FA"
+        FontFamily="Segoe UI, Meiryo UI, Yu Gothic UI"
+        FontSize="12"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="HienKhi"/>
+        <Style x:Key="Nut" TargetType="Button">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Tieu de -->
+        <Border Grid.Row="0" Background="#323639" Padding="12,9">
+            <DockPanel>
+                <CheckBox DockPanel.Dock="Right" Content="📌 Ghim" IsChecked="{Binding GhimTrenCung}"
+                          Foreground="#ECEFF1" FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0" Cursor="Hand"
+                          ToolTip="Giữ bảng KT luôn nổi trên màn hình CAD (bỏ tích để chuyển qua lại bằng icon KT dưới thanh Taskbar)"/>
+                <StackPanel>
+                    <TextBlock Text="KT — Kiểm tra kín hở &amp; thuộc tính nét cắt" Foreground="#FFFFFF" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding TenBanVe}" Foreground="#CFD8DC" FontSize="10.5" Margin="0,1,0,0" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Thanh cong cu -->
+        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#E1E4E8" BorderThickness="0,0,0,1" Padding="10,7">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding NhanDem}" FontSize="11.5" FontWeight="SemiBold" VerticalAlignment="Center">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="#C62828"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding MauXanhDem}" Value="True">
+                                    <Setter Property="Foreground" Value="#2E7D32"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding DaChon}" Value="False">
+                                    <Setter Property="Foreground" Value="#607D8B"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource Nut}" Background="#1565C0" Content="⬚ Chọn lại" Command="{Binding ChonLaiCmd}" Margin="0,0,6,0"
+                            ToolTip="Quét chọn lại đối tượng trên bản vẽ"/>
+                    <Button Style="{StaticResource Nut}" Background="#323639" Content="⟳ Kiểm tra lại" Command="{Binding KiemTraLaiCmd}" Margin="0,0,10,0"/>
+                    <TextBlock Text="Sai số:" FontSize="11" Foreground="#52606D" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <TextBox Text="{Binding SaiSoText, UpdateSourceTrigger=LostFocus}" Width="62" Height="23"
+                             TextAlignment="Center" VerticalContentAlignment="Center" FontFamily="Cascadia Mono, Consolas"
+                             FontSize="11" BorderBrush="#B0BEC5" Background="#FFFFFF" PreviewKeyDown="SaiSoPhim"
+                             ToolTip="Sai số tối đa khi kiểm tra kín hở (mm). Nhấn Enter để áp dụng."/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Danh sach loi -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="10">
+                <Border Background="#E8F5E9" BorderBrush="#2E7D32" BorderThickness="3,0,0,0" CornerRadius="2"
+                        Padding="10,8" Visibility="{Binding HienSachLoi, Converter={StaticResource HienKhi}}">
+                    <TextBlock Text="✓ Các đối tượng đã chọn sạch lỗi kín hở &amp; thuộc tính ByLayer!" Foreground="#2E7D32" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                </Border>
+
+                <ItemsControl ItemsSource="{Binding DsLoi}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="#FDECEA" BorderBrush="#C62828" BorderThickness="3,0,0,0"
+                                    CornerRadius="2" Padding="9,7" Margin="0,0,0,6" Cursor="Hand" MouseLeftButtonUp="LoiBam"
+                                    ToolTip="Bấm để zoom tới lỗi (Cloud đỏ), bấm tiếp sang vị trí kế">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Right" Margin="8,0,0,0" HorizontalAlignment="Right">
+                                        <TextBlock Text="{Binding NhanViTri}" Foreground="#1565C0" FontSize="11" FontWeight="SemiBold"
+                                                   TextAlignment="Right" Visibility="{Binding CoViTri, Converter={StaticResource HienKhi}}"/>
+                                        <Button Style="{StaticResource Nut}" Background="#1E7F4F" Margin="0,3,0,0" Padding="7,2" FontSize="10.5"
+                                                Content="Đưa về ByLayer" Tag="{Binding}" Click="DuaVeByLayerBam"
+                                                Visibility="{Binding LaByLayer, Converter={StaticResource HienKhi}}"/>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding TieuDe}" Foreground="#B91C1C" FontSize="11.5" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding ChiTiet}" Foreground="#37474F" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Chan bang -->
+        <Border Grid.Row="3" Background="#ECEFF1" BorderBrush="#CFD8DC" BorderThickness="0,1,0,0" Padding="10,6">
+            <StackPanel>
+                <TextBlock Text="{Binding TrangThai}" Foreground="#334155" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="• Chỉ check biên dạng nội tại (không kiểm đối tượng ngoài hình chính) · Esc / Đóng để xoá Cloud đỏ."
+                           Foreground="#607D8B" FontSize="10.5" Margin="0,2,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

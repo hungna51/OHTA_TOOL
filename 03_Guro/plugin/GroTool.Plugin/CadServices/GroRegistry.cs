@@ -60,6 +60,57 @@ namespace ZwCadPlugin.CadServices
             catch { return GroSettings.KhungTamMacDinh; }
         }
 
+        public static double DocSaiSoKinHo()
+        {
+            try
+            {
+                using (WinReg.RegistryKey k = WinReg.Registry.CurrentUser.OpenSubKey(Khoa))
+                {
+                    string v = k?.GetValue("kin_ho_sai_so") as string;
+                    return KiemTraKinHo.ChuanHoaSaiSo(v, out double tol) ? tol : KiemTraKinHo.SaiSoMacDinh;
+                }
+            }
+            catch { return KiemTraKinHo.SaiSoMacDinh; }
+        }
+
+        public static void GhiSaiSoKinHo(double v)
+        {
+            try { Ghi("kin_ho_sai_so", KiemTraKinHo.DinhDangSaiSo(v)); }
+            catch { }
+        }
+
+        public static bool DocGomTamGc()
+        {
+            try
+            {
+                using (WinReg.RegistryKey k = WinReg.Registry.CurrentUser.OpenSubKey(Khoa))
+                    return (k?.GetValue("err_gom_tam_gc") as string) == "1";
+            }
+            catch { return false; }
+        }
+
+        public static void GhiGomTamGc(bool v)
+        {
+            try { Ghi("err_gom_tam_gc", v); }
+            catch { }
+        }
+
+        public static bool DocGhimKt()
+        {
+            try
+            {
+                using (WinReg.RegistryKey k = WinReg.Registry.CurrentUser.OpenSubKey(Khoa))
+                    return (k?.GetValue("kt_ghim_noi") as string) == "1";
+            }
+            catch { return false; }
+        }
+
+        public static void GhiGhimKt(bool v)
+        {
+            try { Ghi("kt_ghim_noi", v); }
+            catch { }
+        }
+
         public static void Ghi(string ten, bool giaTri) => Ghi(ten, giaTri ? "1" : "0");
 
         public static void Ghi(string ten, string giaTri)

@@ -18,8 +18,8 @@
 
 ## 3. Checklist Khi Thêm Lệnh Mới Vào Nhóm 02
 
-- [ ] Đặt file `.lsp` (ASCII thuần) vào `More/lisp/`.
-- [ ] Khai báo nút bấm mới trong `More/module.json`.
-- [ ] Cập nhật bảng tra cứu lệnh trong `More/README.md`.
+- [x] Đặt file `.lsp` (ASCII thuần) vào `More/lisp/` (`kiem_tra_kin_ho.lsp`, `autoload.lsp`).
+- [x] Khai báo nút bấm mới trong `More/module.json` (`KT` — Kiểm tra kín hở, nhóm `Xử lý nét`).
+- [x] Cập nhật bảng tra cứu lệnh trong `More/README.md`.
 - [ ] Gõ `OHTARELOAD` trên CAD để kiểm tra nút mới trên Tab 02.
 

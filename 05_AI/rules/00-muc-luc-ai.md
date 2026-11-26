@@ -7,3 +7,4 @@ Tab chạy pipeline Thử nhanh của OhtaTeams (`_apps/OhtaTeams`, code chung `
 | Tình huống | Đọc file nào |
 |---|---|
 | **Sắp thêm / đổi ô AI trả về** (schema `Schema()` của PhongTo, ChiTietTam, KiemTra, TrienKhai…) | [01-schema-ai.md](01-schema-ai.md) |
+| **Thiết kế / sửa giao diện Tab AI, cửa sổ nổi Photo to DXF, chọn icon nút bấm** | [../../rules/05-icon-va-ui.md](../../rules/05-icon-va-ui.md) |

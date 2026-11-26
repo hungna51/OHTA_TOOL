@@ -85,19 +85,25 @@ namespace ZwCadPlugin.ViewModels
         public ICommand CopyThongTinCommand { get; }
         public ICommand XemDanhSachCommand { get; }
 
+        public Action YeuCauMoTabTam { get; set; }
+        public Action YeuCauMoTabError { get; set; }
+        public Action SauKhiLamMoi { get; set; }
+        public string GioBaoCao { get; private set; } = string.Empty;
+
         /// <summary>Nhận báo cáo từ lisp (hàm GRO_NET_THONG_TIN), thay báo cáo cũ.</summary>
         public void DatThongTin(string baoCao, string tenBanVe)
         {
+            string gio = DateTime.Now.ToString("HH:mm");
             string nguon = DateTime.Now.ToString("HH:mm:ss")
                            + (string.IsNullOrEmpty(tenBanVe) ? "" : "  —  " + tenBanVe);
             // Nhớ theo TỪNG bản vẽ: đổi qua lại giữa các bản vẽ thì tab hiện đúng báo cáo của bản vẽ đó (mục 114)
-            _baoCaoTheoBanVe[CadViewService.TenBanVeHienHanh() ?? string.Empty] = Tuple.Create(baoCao ?? string.Empty, nguon);
-            HienThongTin(baoCao, nguon);
+            _baoCaoTheoBanVe[CadViewService.TenBanVeHienHanh() ?? string.Empty] = Tuple.Create(baoCao ?? string.Empty, nguon, gio);
+            HienThongTin(baoCao, nguon, gio);
         }
 
         // ---------- Palette dùng chung cho mọi bản vẽ đang mở (mục 114) ----------
-        private readonly Dictionary<string, Tuple<string, string>> _baoCaoTheoBanVe =
-            new Dictionary<string, Tuple<string, string>>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, Tuple<string, string, string>> _baoCaoTheoBanVe =
+            new Dictionary<string, Tuple<string, string, string>>(StringComparer.OrdinalIgnoreCase);
         /// <summary>Bản vẽ của dữ liệu đang nằm trong bảng (lúc quét).</summary>
         private string _banVeDuLieu;
 
@@ -123,16 +129,18 @@ namespace ZwCadPlugin.ViewModels
         {
             string moi = CadViewService.TenBanVeHienHanh() ?? string.Empty;
             if (_baoCaoTheoBanVe.TryGetValue(moi, out var bc))
-                HienThongTin(bc.Item1, bc.Item2);
+                HienThongTin(bc.Item1, bc.Item2, bc.Item3);
             else
-                HienThongTin(string.Empty, string.Empty);
+                HienThongTin(string.Empty, string.Empty, string.Empty);
             OnPropertyChanged(nameof(LechBanVe));
             OnPropertyChanged(nameof(ThongBaoLechBanVe));
             return !HasUnsavedChanges;
         }
 
-        private void HienThongTin(string baoCao, string nguon)
+        private void HienThongTin(string baoCao, string nguon, string gio = "")
         {
+            GioBaoCao = gio ?? string.Empty;
+            OnPropertyChanged(nameof(GioBaoCao));
             var dong = ThongTinGro.PhanDong(baoCao ?? string.Empty);
             // Nút Sao chép chép đúng bản ĐÃ DỊCH đang hiển thị (mục 107).
             _thongTinVanBan = string.Join("\n", dong.Select(d => d.Text));
@@ -181,6 +189,12 @@ namespace ZwCadPlugin.ViewModels
         private int _demDongBaoCao;
 
         private int SoNetSong => Dsn.Groups.Sum(g => g.Count);
+
+        public void DatChuaQuetNet()
+        {
+            _daQuetNet = false;
+            CapNhatThongTinSong();
+        }
 
         public string TheChuaDoi => _daQuetNet ? SoNetSong.ToString()
                                   : _baoCao.Net == null || _baoCao.Net.KhongTimThay ? "—" : _baoCao.Net.ConLai.ToString();
@@ -292,6 +306,7 @@ namespace ZwCadPlugin.ViewModels
                     FilterOrphansOnly = true;
                 }
                 SelectedTabIndex = TabDanhSach;
+                YeuCauMoTabTam?.Invoke();
             });
         }
 
@@ -351,6 +366,7 @@ namespace ZwCadPlugin.ViewModels
             if (nhom.Count == 0)
             {
                 SelectedTabIndex = TabNet;
+                YeuCauMoTabError?.Invoke();
                 return;
             }
             var hop = nhom[0].BoundingBox;
@@ -540,7 +556,7 @@ namespace ZwCadPlugin.ViewModels
                     _selectedTabIndex = value;
                     OnPropertyChanged();
 
-                    if (_selectedTabIndex == TabNet && Dsn.Groups.Count == 0)
+                    if (_selectedTabIndex == TabNet && Dsn.Groups.Count == 0 && TotalCount > 0)
                     {
                         Dsn.RefreshFromDrawing();
                     }
@@ -604,6 +620,7 @@ namespace ZwCadPlugin.ViewModels
             UpdateStatistics();
             HasUnsavedChanges = false;
             _filteredPlates.Refresh();
+            SauKhiLamMoi?.Invoke();
         }
 
         /// <summary>

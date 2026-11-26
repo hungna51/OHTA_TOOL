@@ -580,6 +580,13 @@ namespace ZwCadPlugin.Core
         /// làm lại từ đầu BỎ QUA KEGAKI. daDat = cụm các tấm đã đặt + text khắc chữ (vật cản).
         /// </summary>
         public static KetQuaTam DatMotTam(IList<NetMau> net, Hop bb, double w, double h, IList<Doan> daDat)
+            => DatMotTamTheoDsTiLe(net, bb, w, h, daDat, new[] { 1.0, 0.5 });
+
+        /// <summary>Thử đặt 1 tấm với 1 tỷ lệ thu nhỏ cụ thể (dùng khi 0.5 vẫn không vừa).</summary>
+        public static KetQuaTam DatMotTamVoiTiLe(IList<NetMau> net, Hop bb, double w, double h, IList<Doan> daDat, double tiLe)
+            => DatMotTamTheoDsTiLe(net, bb, w, h, daDat, new[] { tiLe });
+
+        private static KetQuaTam DatMotTamTheoDsTiLe(IList<NetMau> net, Hop bb, double w, double h, IList<Doan> daDat, double[] dsTiLe)
         {
             var kq = new KetQuaTam();
             double nho = Math.Min(bb.W, bb.H);
@@ -605,8 +612,9 @@ namespace ZwCadPlugin.Core
             foreach (bool boKeg in new[] { false, true })
             {
                 if (boKeg && cmK == null) cmK = new ChiMuc(kakou.Concat(daDat).ToList(), bb.Y1, bb.Y2);
-                foreach (double s in new[] { 1.0, 0.5 })
+                foreach (double s in dsTiLe)
                 {
+                    if (s <= 0) continue;
                     foreach (double th in new[] { 0.0, Math.PI / 2.0, Math.PI / 4.0 })
                     {
                         double hw = w * s * 0.5, hh = h * s * 0.5;
@@ -737,8 +745,20 @@ namespace ZwCadPlugin.Core
         public static string ThemCo(string flags, string co)
         {
             flags = flags ?? "";
-            if (flags.Contains(co)) return flags;
-            return flags.Length == 0 ? co : flags + ";" + co;
+            var parts = flags.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+            if (parts.Any(p => string.Equals(p, co, StringComparison.OrdinalIgnoreCase))) return flags;
+            parts.Add(co);
+            return string.Join(";", parts);
+        }
+
+        /// <summary>Xoá một cờ (hoặc cờ kèm hậu tố "co:...") khỏi chuỗi flags.</summary>
+        public static string XoaCo(string flags, string co)
+        {
+            if (string.IsNullOrEmpty(flags) || string.IsNullOrEmpty(co)) return flags ?? "";
+            var parts = flags.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                             .Where(p => !string.Equals(p, co, StringComparison.OrdinalIgnoreCase) &&
+                                         !p.StartsWith(co + ":", StringComparison.OrdinalIgnoreCase));
+            return string.Join(";", parts);
         }
 
         // ---------------------------------------------------------------------------

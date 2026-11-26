@@ -25,6 +25,7 @@ Dự án **OHTA TOOL** được thiết kế theo kiến trúc **Module Phân T�
 | Viết C# (`.NET`) hoặc AutoLISP chạy chung cho cả **ZWCAD 2026** và **AutoCAD** | [02-da-nen-tang-zwcad-autocad.md](rules/02-da-nen-tang-zwcad-autocad.md) |
 | Thêm mục con mới, khai báo nút bấm trong `module.json`, hoặc nhúng giao diện WPF riêng vào Tab | [03-giao-thuc-module-va-palette.md](rules/03-giao-thuc-module-va-palette.md) |
 | Kiểm tra lỗi Encoding (CP932 / UTF-8 / ASCII), khai báo biến cục bộ, `*error*`, Unit Test | [04-encoding-va-checklist-an-toan.md](rules/04-encoding-va-checklist-an-toan.md) |
+| Thiết kế giao diện WPF / HTML xem trước, chọn & nhúng icon vector kiểu phác tay (`koboyo.com`) | [05-icon-va-ui.md](rules/05-icon-va-ui.md) |
 | Gặp thuật ngữ nghiệp vụ (tấm, hình, khung tấm, bango, F-name…) | [GLOSSARY.md](GLOSSARY.md) |
 | Định đổi cấu trúc DLL / mục con, hoặc thắc mắc "sao lại làm thế này" | [_docs/adr/](_docs/adr/) |
 
