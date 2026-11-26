@@ -38,8 +38,8 @@ namespace CsvTool.Tests
                 var conLai = khung.Where(k => PhanTichKhung.CoFname(k) && !PhanTichKhung.LaKhungChuThich(k)).ToList();
                 Kiem("Vang_" + don + ": bo khung chu thich -> moi khung tam doc duoc F-name + dim (" + conLai.Count + "/" + khung.Count + ")",
                      string.Join(" | ", conLai.Select(k => PhanTichKhung.DocFnameDim(k, CaiDatCsv.LopDimMacDinh, dimzin).Loi).Where(l => l != null)), "");
-                string[] mau = Encoding.UTF8.GetString(DxfThuGon.DocChiaSe(csv)).TrimStart('﻿').Split(new[] { "\r\n" }, StringSplitOptions.None);
-                if (mau[0] != CsvXuat.TieuDe35)
+                string[] mauGoc = Encoding.UTF8.GetString(DxfThuGon.DocChiaSe(csv)).TrimStart('﻿').Split(new[] { "\r\n" }, StringSplitOptions.None), mau = mauGoc;
+                if (mauGoc[0] != CsvXuat.TieuDe35)
                 {
                     Console.WriteLine("  BO QUA Vang_" + don + " (file " + don + ".csv khong con la CSV lisp 35 cot - da bi ghi de?)");
                     continue;
@@ -47,7 +47,9 @@ namespace CsvTool.Tests
                 string khop = null, khacDau = null;
                 foreach (KieuSapXep kieu in new[] { KieuSapXep.TraiSangPhai, KieuSapXep.TrenXuongDuoi, KieuSapXep.ChuCai })
                 {
-                    var ra = new[] { CsvXuat.TieuDe35 }.Concat(CsvXuat.SapXep(tam, kieu).Select(CsvXuat.Dong35)).Concat(new[] { "" }).ToArray();
+                    // file mẫu là CSV lisp 35 cột: so với bản đã chuyển sang 34 cột; mã gia công so theo cách lisp (m(pitchi) → m)
+                    var ra = new[] { CsvXuat.TieuDe34 }.Concat(CsvXuat.SapXep(tam, kieu).Select(x => NhuLisp(CsvXuat.Dong34(x)))).ToArray();
+                    mau = CsvXuat.ChuyenDataCu(string.Join("\r\n", mauGoc), null).Select(NhuLisp).ToArray();
                     if (ra.SequenceEqual(mau)) { khop = kieu.ToString(); break; }
                     // 125953: DXF ghi "T=6.0" nhưng lisp đã xuất "6" — F-name bị chuẩn hoá lại sau khi xuất CSV
                     // (DXF lưu sau CSV 2 giây). Chỉ cột Độ dày được phép lệch dạng số, mọi cột khác phải khớp.
@@ -62,6 +64,15 @@ namespace CsvTool.Tests
                 Kiem("Vang_" + don + " (" + khung.Count + " khung, " + tam.Count + " tam" + (loi.Count > 0 ? ", loi: " + string.Join(" / ", loi.Distinct()) : "") + ")",
                      khop ?? khacDau, khop ?? "khop tung dong");
             }
+        }
+
+        private static string NhuLisp(string dong)
+        {
+            if (dong == CsvXuat.TieuDe34) return dong;
+            var o = CsvXuat.TachO(dong);
+            o[12] = PhanTichKhung.ChuanHoaGiaCong(o[12]);
+            o[o.Count - 1] = "0";   // lisp không có cột giá tay
+            return string.Join(",", o.Select(CsvXuat.O));
         }
 
         private static bool CungTruDoDay(string a, string b)

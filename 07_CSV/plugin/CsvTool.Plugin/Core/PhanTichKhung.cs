@@ -69,7 +69,7 @@ namespace CsvTool.Core
 
         /// <summary>
         /// Quét lại: bẻ, cuộn, Tapu, Sara lấy hoàn toàn theo bản vẽ (người dùng không phải nhớ số nào là sửa tay).
-        /// Chỉ giữ số không đo được từ hình: pitchi, vát, giá, tiền vật liệu, ưu đãi.
+        /// Chỉ giữ số không đo được từ hình: pitchi (cả loại pitchi), vát, giá, cờ giá tay, tiền vật liệu.
         /// </summary>
         private static ThongTinTam GiuGiaTriNhapTay(ThongTinTam moi, ThongTinTam cu)
         {
@@ -77,8 +77,10 @@ namespace CsvTool.Core
             moi.PitchiSoLan = cu.PitchiSoLan;
             moi.PitchiDai = cu.PitchiDai;
             moi.GiaBaoGia = cu.GiaBaoGia;
+            moi.GiaTay = cu.GiaTay;
             moi.TienVatLieu = cu.TienVatLieu;
-            moi.UuDai = cu.UuDai;
+            if (CsvXuat.CoPitchi(moi.LoaiGiaCong) && CsvXuat.CoPitchi(cu.LoaiGiaCong))
+                moi.LoaiGiaCong = CsvXuat.DatLoaiPitchi(moi.LoaiGiaCong, CsvXuat.LoaiPitchiCua(cu.LoaiGiaCong));
             if (moi.Vat == 0) moi.Vat = cu.Vat;
             return moi;
         }
@@ -191,15 +193,15 @@ namespace CsvTool.Core
         /// <summary>Có gia công k mà chưa có vát / m(pitchi) mà thiếu số lần hoặc chiều dài → lời cảnh báo.</summary>
         public static string KiemTra(ThongTinTam tt)
         {
-            string gc = (tt.LoaiGiaCong ?? "").ToUpperInvariant();
-            if (gc.Contains("K") && tt.Vat <= 0)
+            // so từng mã: m(kakumaru) có chữ k nhưng không phải vát
+            if (CsvXuat.TachMa(tt.LoaiGiaCong).Any(x => x.Equals("k", StringComparison.OrdinalIgnoreCase)) && tt.Vat <= 0)
                 return "Có gia công vát (k), chưa nhập chiều dài vát.";
-            if (gc.Contains("PITCHI") && (tt.PitchiSoLan <= 0 || tt.PitchiDai <= 0))
+            if (CsvXuat.CoPitchi(tt.LoaiGiaCong) && (tt.PitchiSoLan <= 0 || tt.PitchiDai <= 0))
                 return LoiThieuPitchi;
             return null;
         }
 
-        /// <summary>Như lisp trước khi ghi CSV: m(pitchi) → m, bỏ loại trùng. Gọi lại nhiều lần vẫn ra như nhau.</summary>
+        /// <summary>Như lisp trước khi ghi CSV: m(pitchi) → m, bỏ loại trùng (chỉ còn để so với CSV lisp cũ trong test).</summary>
         public static string ChuanHoaGiaCong(string gc) =>
             string.Join(", ", (gc ?? "").Replace("m(pitchi)", "m").Split(new[] { ", " }, StringSplitOptions.None).Distinct()).Trim(' ');
 

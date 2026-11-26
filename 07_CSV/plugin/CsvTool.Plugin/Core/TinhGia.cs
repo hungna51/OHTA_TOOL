@@ -44,14 +44,9 @@ namespace CsvTool.Core
         public static readonly string[] DsLoaiCuon = { "Không", "Nửa hình", "Cả hình" };
         public const double GiaCuonNuaHinh = 6000, GiaCuonCaHinh = 12000;   // 2 mức cố định trong form của web
 
-        /// <summary>
-        /// Đơn giá cuộn của tấm: đã chọn trên thẻ thì theo đó (âm = chọn Không), chưa chọn thì suy từ
-        /// loại gia công: r1 (cung tròn) = nửa hình, r2 (ống tròn) = cả hình.
-        /// </summary>
-        public static double DonGiaCuonCua(TamXuat t, GiaTam g)
+        /// <summary>Đơn giá cuộn theo mã gia công (ô Cuộn chọn tay cũng ghi vào đây): r1 = nửa hình, r2 = cả hình.</summary>
+        public static double DonGiaCuonCua(TamXuat t)
         {
-            double chon = g?.DonGiaCuon ?? 0;
-            if (chon != 0) return Math.Max(chon, 0);
             string loai = CsvXuat.LoaiCuon(t.Tt.LoaiGiaCong);
             return loai == "2" ? GiaCuonCaHinh : loai == "1" ? GiaCuonNuaHinh : 0;
         }
@@ -191,12 +186,11 @@ namespace CsvTool.Core
             var r = new TongCan { DacBiet = b.DacBiet.ContainsKey(don.CongTy ?? "") };
             foreach (TamXuat t in ds)
             {
-                GiaTam g = don.Tam.TryGetValue(t.N ?? "", out GiaTam gt) ? gt : null;
-                var (v, loi) = TaoDauVao(t, g, don.CongTy);
+                var (v, loi) = TaoDauVao(t, don.CongTy);
                 if (v != null) v.KhongToiThieuKg = khongToiThieuKg;
                 KetQuaGia kq = loi == null ? Tinh(v, b).Kq : null;
                 if (kq == null) { r.ChuaCoKg++; continue; }
-                bool giaTay = !string.IsNullOrEmpty(t.Tt.GiaBaoGia) && g?.TuDong != true;
+                bool giaTay = !string.IsNullOrEmpty(t.Tt.GiaBaoGia) && t.Tt.GiaTay;
                 bool theoKg = kq.DonGiaKg > 0 && !giaTay, gc = CoGiaCong(v);
                 double kg = (theoKg ? kq.KlThucTe : kq.KlThuong) * v.SoLuong;
                 if (gc) r.KgGiaCong += kg; else r.KgDon += kg;
@@ -229,17 +223,17 @@ namespace CsvTool.Core
         /// <summary>Giá người dùng gõ có thể có dấu phẩy ngăn nghìn ("12,000").</summary>
         public static bool SoTien(string s, out double d) => So((s ?? "").Replace(",", ""), out d);
 
-        public static (DauVaoGia V, string Loi) TaoDauVao(TamXuat t, GiaTam g, string congTy)
+        public static (DauVaoGia V, string Loi) TaoDauVao(TamXuat t, string congTy)
         {
             if (!So(t.T, out double doDay) || !So(t.X, out double x) || !So(t.Y, out double y) || !So(t.Q, out double q))
                 return (null, "Độ dày, kích thước hoặc số lượng không phải số.");
             int.TryParse(t.Tt.CheDoTinh, out int cheDo);
             var v = new DauVaoGia
             {
-                VatLieu = t.M, CongTy = congTy, LoaiPitchi = g?.LoaiPitchi ?? "Pitchi", DoDay = doDay, X = x, Y = y, SoLuong = q,
+                VatLieu = t.M, CongTy = congTy, LoaiPitchi = CsvXuat.LoaiPitchiCua(t.Tt.LoaiGiaCong), DoDay = doDay, X = x, Y = y, SoLuong = q,
                 LoNho = t.Tt.LoNho, LoLon = t.Tt.LoLon, Tappu = t.Tt.Tappu, Sara = t.Tt.Sara,
                 PitchiSoLan = t.Tt.PitchiSoLan, PitchiDai = t.Tt.PitchiDai, VatMm = t.Tt.Vat,
-                DonGiaCuon = DonGiaCuonCua(t, g), CheDoTinh = cheDo,
+                DonGiaCuon = DonGiaCuonCua(t), CheDoTinh = cheDo,
                 TienVLTay = SoTien(t.Tt.TienVatLieu, out double tay) && tay >= 0 ? tay : (double?)null,
             };
             v.Be.AddRange(t.Tt.DuongBe.Select(b => ((double)b.SoLuong, (double)b.Dai)));
@@ -256,22 +250,22 @@ namespace CsvTool.Core
             foreach (TamXuat t in ds)
             {
                 GiaTam g = don.Lay(t.N);
-                var (v, loi) = TaoDauVao(t, g, don.CongTy);
+                var (v, loi) = TaoDauVao(t, don.CongTy);
                 KetQuaGia kq = null;
                 if (v != null) v.KhongToiThieuKg = khongToiThieuKg;
                 if (loi == null) loi = LoiGiaVlBang0(v, b);
                 if (loi == null) (kq, loi) = Tinh(v, b);
                 g.TienVlHienTai = kq?.TienVL ?? 0;
-                if (!string.IsNullOrEmpty(t.Tt.GiaBaoGia) && !g.TuDong) continue;   // giá tay: không đè, không cảnh báo
+                if (!string.IsNullOrEmpty(t.Tt.GiaBaoGia) && t.Tt.GiaTay) continue;   // giá tay: không đè, không cảnh báo
                 if (kq == null)
                 {
                     t.Tt.GiaBaoGia = "";
-                    g.TuDong = false;
+                    t.Tt.GiaTay = false;
                     canhBao[t.N] = loi;
                     continue;
                 }
                 t.Tt.GiaBaoGia = kq.Gia1Tam.ToString("0", CultureInfo.InvariantCulture);
-                g.TuDong = true;
+                t.Tt.GiaTay = false;
             }
             return canhBao;
         }

@@ -12,8 +12,9 @@ namespace CsvTool.Core
     {
         public int LoNho, LoLon, Tappu, Sara, PitchiSoLan, PitchiDai, Vat;
         public List<(int Dai, int SoLuong)> DuongBe = new List<(int, int)>();
-        // 5 trường giữ nguyên chuỗi người dùng gõ (không ép số)
-        public string LoaiGiaCong = "", CheDoTinh = "", GiaBaoGia = "", TienVatLieu = "", UuDai = "";
+        // 4 trường giữ nguyên chuỗi người dùng gõ (không ép số). LoaiGiaCong: "m, m(non), r1, t, s, k" — loại pitchi và cuộn nằm ở đây
+        public string LoaiGiaCong = "", CheDoTinh = "", GiaBaoGia = "", TienVatLieu = "";
+        public bool GiaTay;   // GiaBaoGia là giá sửa tay: tính lại không đè
     }
 
     /// <summary>Tách dòng MText và chuẩn hoá chuỗi, chép hành vi CSV--mtext-plain của lisp.</summary>

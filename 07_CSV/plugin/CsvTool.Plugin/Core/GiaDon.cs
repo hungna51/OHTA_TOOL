@@ -6,13 +6,15 @@ using System.Text;
 
 namespace CsvTool.Core
 {
-    /// <summary>Thông tin tính giá của 1 tấm mà 35 cột data CSV không có chỗ lưu.</summary>
+    /// <summary>Thông tin tính giá chỉ OHTA TOOL dùng, data CSV chung với web không có chỗ lưu.</summary>
     [DataContract]
     public sealed class GiaTam
     {
-        [DataMember] public bool TuDong;          // giá hiện tại do tool tính; false + có giá = giá sửa tay
-        [DataMember] public string LoaiPitchi = "Pitchi";
-        [DataMember] public double DonGiaCuon;    // 0 = theo r1/r2, âm = chọn Không, dương = đơn giá đã chọn
+        // 3 trường của -gia.json cũ, giờ nằm trong data CSV (cột Gia tay, mã m(...), r1 / r2).
+        // Chỉ đọc để chuyển file cũ; XoaThongTinCu xoá đi, giá trị mặc định thì không ghi ra file.
+        [DataMember(EmitDefaultValue = false)] public bool TuDong;
+        [DataMember(EmitDefaultValue = false)] public string LoaiPitchi;
+        [DataMember(EmitDefaultValue = false)] public double DonGiaCuon;
         [DataMember] public bool CheDoRieng;      // chế độ tính chọn riêng: quét lại, đổi chế độ đơn không đè
         public double TienVlHienTai;              // tiền vật liệu 1 tấm của lần tính gần nhất, chỉ để hiện, không lưu
     }
@@ -32,11 +34,16 @@ namespace CsvTool.Core
             return g;
         }
 
-        /// <summary>Quét lại: chỉ giữ chế độ tính chọn riêng; ô Cuộn chọn tay về theo r1 / r2 vừa nhận từ hình.</summary>
+        /// <summary>Đã chuyển data cũ sang 34 cột: bỏ 3 trường cũ khỏi json.</summary>
+        public void XoaThongTinCu()
+        {
+            foreach (GiaTam g in Tam.Values) { g.TuDong = false; g.LoaiPitchi = null; g.DonGiaCuon = 0; }
+        }
+
+        /// <summary>Quét lại: chỉ giữ chế độ tính chọn riêng (cuộn theo r1 / r2 vừa nhận từ hình).</summary>
         public void GiuSuaTay(string ten, ThongTinTam moi, ThongTinTam cu)
         {
             if (moi == cu || !Tam.TryGetValue(ten, out GiaTam g)) return;
-            g.DonGiaCuon = 0;
             // tấm đã rời danh sách rồi quét lại: không còn số sửa tay để giữ, bỏ dấu cũ
             if (cu == null) { g.CheDoRieng = false; return; }
             if (g.CheDoRieng) moi.CheDoTinh = cu.CheDoTinh;
@@ -62,7 +69,6 @@ namespace CsvTool.Core
                 var d = (GiaDon)BoDoc().ReadObject(s);
                 d.CongTy = d.CongTy ?? "";
                 d.Tam = d.Tam ?? new Dictionary<string, GiaTam>();
-                foreach (GiaTam g in d.Tam.Values) g.LoaiPitchi = g.LoaiPitchi ?? "Pitchi";
                 return d;
             }
         }

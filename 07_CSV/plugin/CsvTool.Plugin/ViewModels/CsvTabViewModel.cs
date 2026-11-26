@@ -223,6 +223,7 @@ namespace CsvTool.ViewModels
                 catch (Exception) { LoiThietLap = "File " + _maDon + "-gia.json bị hỏng, chưa tính giá được."; }
                 try { _giaVl = GiaVlDon.DocFile(CsvXuat.DuongGiaVl(_thuMuc, _maDon)); }
                 catch (Exception) { LoiThietLap = "File " + _maDon + "-giavl.csv bị hỏng, chưa nhập được giá tạm."; }
+                ChuyenDataCu();
             }
             _cheDo = _giaDon?.CheDoTinh ?? CaiDat.CheDoTinh;
             NhanBanVe = "Bản vẽ " + Path.GetFileNameWithoutExtension(doc.Name);
@@ -478,13 +479,14 @@ namespace CsvTool.ViewModels
             File10 = File.Exists(fCuoi) ? fCuoi : null;
             File35 = File.Exists(fData) ? fData : null;
 
-            Dictionary<string, ThongTinTam> cu;
-            try { cu = File.Exists(fData) ? CsvXuat.DocData(DocChiaSe(fData)) : new Dictionary<string, ThongTinTam>(); }
-            catch (Exception ex) { TrangThai = "Không đọc được " + fData + ": " + ex.Message; return false; }
-
             string loiGia = null;
             try { _giaDon = GiaDon.DocFile(CsvXuat.DuongGia(_thuMuc, _maDon)); }
             catch (Exception) { _giaDon = null; loiGia = " File " + _maDon + "-gia.json bị hỏng, chưa tính giá được."; }
+
+            // file data còn dạng cũ (chưa chuyển được lúc mở bản vẽ): đọc kèm json cũ để không mất cờ giá tay
+            Dictionary<string, ThongTinTam> cu;
+            try { cu = File.Exists(fData) ? CsvXuat.DocData(DocChiaSe(fData), _giaDon) : new Dictionary<string, ThongTinTam>(); }
+            catch (Exception ex) { TrangThai = "Không đọc được " + fData + ": " + ex.Message; return false; }
             try { _giaVl = GiaVlDon.DocFile(CsvXuat.DuongGiaVl(_thuMuc, _maDon)); }
             catch (Exception) { _giaVl = null; loiGia += " File " + _maDon + "-giavl.csv bị hỏng, chưa dùng được giá tạm."; }
             CapNhatDsCongTy();
@@ -831,10 +833,32 @@ namespace CsvTool.ViewModels
         {
             if (!ChoPhepSua()) return;
             if (_bangGia == null || _giaDon == null || _giaDon.CongTy == "") { TrangThai = "Chưa có bảng giá. Tích Tính giá ở tab Home rồi quét."; return; }
-            GiaCua(d.Tam.N).TuDong = true;
+            d.Tam.Tt.GiaTay = false;
             ApDungGia();
             DanhGiaLai();
             if (LuuData()) SauThayDoi();
+        }
+
+        /// <summary>
+        /// File data dạng cũ (35 cột, còn Loại cuộn / Ưu đãi) → 34 cột chung với web. Cờ giá tay, loại pitchi, cuộn chọn tay
+        /// lấy từ -gia.json rồi xoá khỏi json. Bản cũ giữ ở data\&lt;đơn&gt;-data.cu.csv. File đang mở thì để lần sau.
+        /// </summary>
+        private void ChuyenDataCu()
+        {
+            string f = CsvXuat.DuongData(_thuMuc, _maDon), fGia = CsvXuat.DuongGia(_thuMuc, _maDon);
+            if (_giaDon == null || !File.Exists(f)) return;
+            try
+            {
+                string noi = DocChiaSe(f);
+                if (!CsvXuat.LaDataCu(noi)) return;
+                if (CsvXuat.TepDangMo(f, fGia) != null) { TrangThai = "File data " + _maDon + " còn dạng cũ, đang mở ở chương trình khác: đóng rồi mở lại bản vẽ để chuyển."; return; }
+                File.Copy(f, CsvXuat.DuongDataCu(_thuMuc, _maDon), true);
+                CsvXuat.GhiDataDaChuyen(_thuMuc, _maDon, CsvXuat.ChuyenDataCu(noi, _giaDon));
+                _giaDon.XoaThongTinCu();
+                _giaDon.GhiFile(fGia);
+                TrangThai = "Đã chuyển file data " + _maDon + " sang dạng mới (34 cột), bản cũ: data\\" + _maDon + "-data.cu.csv.";
+            }
+            catch (Exception ex) { TrangThai = "Chưa chuyển được file data cũ: " + ex.Message; }
         }
 
         private static string DocChiaSe(string f)

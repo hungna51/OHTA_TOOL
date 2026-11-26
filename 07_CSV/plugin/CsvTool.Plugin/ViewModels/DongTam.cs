@@ -185,10 +185,8 @@ namespace CsvTool.ViewModels
                 string moi = v == "" ? "" : d.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), cu = Tam.Tt.TienVatLieu ?? "";
                 if (moi == cu) { Bao(null); return; }
                 if (BiKhoa()) return;
-                GiaTam g = _vm.GiaCua(Tam.N);
-                if (g == null) { _vm.BaoLoi("Chưa đọc được dữ liệu giá của đơn, quét lại."); Bao(null); return; }
-                bool tuDongCu = g.TuDong;
-                Luu(() => { Tam.Tt.TienVatLieu = moi; g.TuDong = true; }, () => { Tam.Tt.TienVatLieu = cu; g.TuDong = tuDongCu; });
+                bool tayCu = Tam.Tt.GiaTay;
+                Luu(() => { Tam.Tt.TienVatLieu = moi; Tam.Tt.GiaTay = false; }, () => { Tam.Tt.TienVatLieu = cu; Tam.Tt.GiaTay = tayCu; });
                 Bao(null);
             }
         }
@@ -222,52 +220,30 @@ namespace CsvTool.ViewModels
                 if (Tam == null) return;
                 string v = (value ?? "").Trim(), cu = Tam.Tt.GiaBaoGia;
                 if (v == cu || BiKhoa()) return;
-                GiaTam g = _vm.GiaCua(Tam.N);
-                bool tuDongCu = g?.TuDong ?? false;
-                Luu(() => { Tam.Tt.GiaBaoGia = v; if (g != null) g.TuDong = false; },
-                    () => { Tam.Tt.GiaBaoGia = cu; if (g != null) g.TuDong = tuDongCu; });
+                bool tayCu = Tam.Tt.GiaTay;
+                Luu(() => { Tam.Tt.GiaBaoGia = v; Tam.Tt.GiaTay = true; }, () => { Tam.Tt.GiaBaoGia = cu; Tam.Tt.GiaTay = tayCu; });
                 Bao(null);
             }
         }
 
-        // ── Tính giá: thông tin riêng lưu ở data\<đơn>-gia.json ──
+        // ── Tính giá ──
         /// <summary>Lý do chưa tính được giá; hiện ở danh sách cảnh báo, không chặn Xuất CSV.</summary>
         public string CanhBaoGia { get; set; }
-        public bool LaGiaTay => Tam != null && !string.IsNullOrEmpty(Tam.Tt.GiaBaoGia) && _vm.XemGia(Tam.N)?.TuDong != true;
+        public bool LaGiaTay => Tam != null && !string.IsNullOrEmpty(Tam.Tt.GiaBaoGia) && Tam.Tt.GiaTay;
         public string NhanGia => LaGiaTay ? "Giá sửa tay" : "Giá tiền";
         public string[] DsLoaiPitchi => TinhGia.DsLoaiPitchi;
         public string LoaiPitchi
         {
-            get => Tam == null ? null : _vm.XemGia(Tam.N)?.LoaiPitchi ?? "Pitchi";
-            // ComboBox đẩy null khi thẻ bị dựng lại: không được coi là người dùng chọn
-            set { if (value != null && value != LoaiPitchi) SuaGia(g => g.LoaiPitchi = value); }
+            get => Tam == null ? null : CsvXuat.LoaiPitchiCua(Tam.Tt.LoaiGiaCong);
+            // ComboBox đẩy null khi thẻ bị dựng lại: không được coi là người dùng chọn. Loại pitchi ghi vào mã m(...)
+            set { if (Tam != null && value != null && value != LoaiPitchi) LoaiGiaCong = CsvXuat.DatLoaiPitchi(Tam.Tt.LoaiGiaCong, value); }
         }
         public string[] DsLoaiCuon => TinhGia.DsLoaiCuon;
         public string LoaiCuonGia
         {
-            get
-            {
-                if (Tam == null) return null;
-                double d = TinhGia.DonGiaCuonCua(Tam, _vm.XemGia(Tam.N));
-                return d == TinhGia.GiaCuonCaHinh ? "Cả hình" : d == TinhGia.GiaCuonNuaHinh ? "Nửa hình" : d > 0 ? null : "Không";
-            }
-            set
-            {
-                if (value == null || value == LoaiCuonGia) return;
-                double d = value == "Cả hình" ? TinhGia.GiaCuonCaHinh : value == "Nửa hình" ? TinhGia.GiaCuonNuaHinh : -1;
-                SuaGia(g => g.DonGiaCuon = d);
-            }
-        }
-        private void SuaGia(System.Action<GiaTam> doi)
-        {
-            if (Tam != null && BiKhoa()) return;
-            GiaTam g = Tam == null ? null : _vm.GiaCua(Tam.N);
-            if (g == null) { _vm.BaoLoi("Chưa đọc được dữ liệu giá của đơn, quét lại."); Bao(null); return; }
-            doi(g);
-            _vm.TinhLaiNeuCo();
-            _vm.DanhGiaLai();
-            if (_vm.LuuData()) _vm.SauThayDoi();
-            Bao(null);
+            get => Tam == null ? null : TinhGia.DsLoaiCuon[int.Parse(CsvXuat.LoaiCuon(Tam.Tt.LoaiGiaCong))];
+            // chọn tay = sửa r1 / r2 trong mã gia công; sửa mã gia công thì ô này đổi theo
+            set { if (Tam != null && value != null && value != LoaiCuonGia) LoaiGiaCong = CsvXuat.DatCuon(Tam.Tt.LoaiGiaCong, value); }
         }
 
         public void BaoGia() { Bao(nameof(GiaTien)); Bao(nameof(LaGiaTay)); Bao(nameof(NhanGia)); Bao(nameof(CheDoChon)); Bao(nameof(TienVl)); Bao(nameof(LaVlTay)); Bao(nameof(ChoSuaTienVl)); Bao(nameof(GhiChuGia)); Bao(nameof(CoGhiChuGia)); }

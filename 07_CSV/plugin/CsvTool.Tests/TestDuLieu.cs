@@ -20,16 +20,46 @@ namespace CsvTool.Tests
 
             Kiem("TachO: o co nhay giu dau phay", string.Join("|", CsvXuat.TachO("A,\"m, k\",\"x\"\"y\",")), "A|m, k|x\"y|");
 
-            // khứ hồi: Dong35 → DocData → Dong35 giữ nguyên từng ký tự
+            // khứ hồi: Dong34 → DocData → Dong34 giữ nguyên từng ký tự
             var t = PhanTichKhung.DocFnameDim(KhungMau(), "1-XY", 8).Tam;
-            t.Tt = new ThongTinTam { LoNho = 4, LoLon = 1, Tappu = 2, LoaiGiaCong = "m", CheDoTinh = "0", UuDai = "5.5" };
+            t.Tt = new ThongTinTam { LoNho = 4, LoLon = 1, Tappu = 2, LoaiGiaCong = "m, m(non), r1", CheDoTinh = "0", GiaTay = true };
             t.Tt.DuongBe.Add((200, 1));
             t.Tt.GiaBaoGia = "12,000"; t.Tt.DuongBe.Add((150, 2));
-            string dong = CsvXuat.Dong35(t);
-            var doc = CsvXuat.DocData("﻿" + CsvXuat.TieuDe35 + "\r\n" + dong + "\r\n");
+            string dong = CsvXuat.Dong34(t);
+            var doc = CsvXuat.DocData("﻿" + CsvXuat.TieuDe34 + "\r\n" + dong + "\r\n");
             Kiem("DocData: 1 tam theo N", string.Join(",", doc.Keys), "A-1");
             t.Tt = doc["A-1"];
-            Kiem("DocData: khu hoi Dong35 giong tung ky tu", CsvXuat.Dong35(t), dong);
+            Kiem("DocData: khu hoi Dong34 giong tung ky tu, giu gia tay + loai pitchi", CsvXuat.Dong34(t) + "|" + t.Tt.GiaTay, dong + "|True");
+            Kiem("DocData: file moi khong phai data cu", CsvXuat.LaDataCu(CsvXuat.TieuDe34 + "\r\n" + dong), false);
+
+            // file data cũ (lisp 35 cột) + -gia.json cũ → 34 cột: giá tay, loại pitchi (lisp ghi "m"), cuộn chọn tay
+            string cu35 = "﻿" + CsvXuat.TieuDe35 + "\r\n" +
+                "B-1,SS400,6,500,300,2,0,0,0,0,3,800,m,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,900,,5\r\n" +          // chỉ pitchi, giá tự động
+                "B-2,SS400,6,500,300,1,0,0,0,0,0,0,\"m, t\",0,0,1,700,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1500,,\r\n" +   // giá tay, cuộn chọn nửa hình
+                "B-3,SS400,6,500,300,1,0,0,0,0,2,500,\"m, r2\",2,0,1,300,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,800,,\r\n";  // bẻ + pitchi, chọn Không cuộn
+            var json = new GiaDon();
+            json.Lay("B-1").TuDong = true; json.Lay("B-1").LoaiPitchi = "KakumaruLech";
+            json.Lay("B-2").DonGiaCuon = 6000;
+            json.Lay("B-3").TuDong = true; json.Lay("B-3").DonGiaCuon = -1;
+            Kiem("LaDataCu: file lisp 35 cot", CsvXuat.LaDataCu(cu35), true);
+            var moi = CsvXuat.ChuyenDataCu(cu35, json);
+            Kiem("ChuyenDataCu: tieu de 34 + 3 dong 34 cot", moi[0] + "|" + string.Join(";", moi.Skip(1).Select(x => CsvXuat.TachO(x).Count)), CsvXuat.TieuDe34 + "|34;34;34");
+            var sau = CsvXuat.DocData(string.Join("\r\n", moi));
+            Kiem("ChuyenDataCu: chi pitchi -> m(kakumarulech), bo m; gia tu dong",
+                 sau["B-1"].LoaiGiaCong + "|" + sau["B-1"].GiaTay + "|" + sau["B-1"].PitchiSoLan, "m(kakumarulech)|False|3");
+            Kiem("ChuyenDataCu: gia tay, cuon chon nua hinh -> r1, giu be",
+                 sau["B-2"].LoaiGiaCong + "|" + sau["B-2"].GiaTay + "|" + sau["B-2"].DuongBe.Count, "m, t, r1|True|1");
+            Kiem("ChuyenDataCu: be + pitchi chua chon loai -> m, m(pitchi); chon Khong cuon -> bo r2",
+                 sau["B-3"].LoaiGiaCong + "|" + sau["B-3"].GiaTay, "m, m(pitchi)|False");
+            Kiem("DocData file cu kem json = sau khi chuyen", CsvXuat.Dong34(new TamXuat { N = "B-2", M = "SS400", T = "6", X = "500", Y = "300", Q = "1", Tt = CsvXuat.DocData(cu35, json)["B-2"] }), moi[2]);
+            Kiem("Ma gia cong: dat loai pitchi / cuon / doc lai",
+                 CsvXuat.DatLoaiPitchi("m, t", "Non") + "|" + CsvXuat.DatLoaiPitchi("m(non), t", "Kakumaru") + "|" + CsvXuat.DatCuon("m, r1, t", "Cả hình") + "|" +
+                 CsvXuat.DatCuon("m, r2", "Không") + "|" + CsvXuat.LoaiPitchiCua("m, m(nonlech)") + "|" + CsvXuat.LoaiPitchiCua("t"),
+                 "m, m(non), t|m(kakumaru), t|m, t, r2|m|NonLech|Pitchi");
+            Kiem("MaMage: m(...) -> m", CsvXuat.MaMage("m(kakumaru)") + "|" + CsvXuat.MaMage("m, m(non)") + "|" + CsvXuat.MaMage("m(non), t"), "m|m|*");
+            Kiem("KiemTra: m(kakumaru) khong phai vat, m(non) thieu pitchi",
+                 PhanTichKhung.KiemTra(new ThongTinTam { LoaiGiaCong = "m(kakumaru)", PitchiSoLan = 2, PitchiDai = 100 }) + "|" + PhanTichKhung.KiemTra(new ThongTinTam { LoaiGiaCong = "m(non)" }),
+                 "|" + PhanTichKhung.LoiThieuPitchi);
             Kiem("DocData: bo dong thieu cot / rong", CsvXuat.DocData("A,B,C\r\n\r\n").Count, 0);
 
             var cu = new Dictionary<string, ThongTinTam> { ["A-1"] = doc["A-1"] };

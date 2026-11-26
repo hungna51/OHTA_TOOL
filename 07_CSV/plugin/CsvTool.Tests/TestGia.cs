@@ -71,28 +71,30 @@ namespace CsvTool.Tests
 
             TamXuat TamGia(string n, string gia = "") => new TamXuat { N = n, M = "SS400", T = "6.0", Q = "3", X = "575", Y = "1219", Tt = new ThongTinTam { GiaBaoGia = gia, CheDoTinh = "0" } };
             var tu = TamGia("A-1");
-            var tay = TamGia("A-2", "12,000");
+            var tay = TamGia("A-2", "12,000"); tay.Tt.GiaTay = true;
             var khongGia = TamGia("A-3"); khongGia.M = "SPCC";
             var cuon = TamGia("A-4"); cuon.Tt.LoaiGiaCong = "R1";
             var don = new GiaDon { CongTy = "TH" };
             var cb = TinhGia.ApDung(new[] { tu, tay, khongGia, cuon }, don, b);
-            Kiem("ApDung: tam thuong co gia, danh dau tu dong", tu.Tt.GiaBaoGia != "" && don.Tam["A-1"].TuDong, true);
-            Kiem("ApDung: gia da co la gia tay, khong de", tay.Tt.GiaBaoGia + "|" + don.Tam.ContainsKey("A-2"), "12,000|True");
+            Kiem("ApDung: tam thuong co gia, danh dau tu dong", tu.Tt.GiaBaoGia != "" && !tu.Tt.GiaTay, true);
+            Kiem("ApDung: gia tay khong de", tay.Tt.GiaBaoGia + "|" + tay.Tt.GiaTay, "12,000|True");
             Kiem("ApDung: khong co vat lieu -> canh bao", cb["A-3"], "Chưa có giá: SPCC dày 6.");
             Kiem("Cuon: r1 tu tinh nua hinh, gia cao hon tam khong cuon",
-                 cb.ContainsKey("A-4") + "|" + TinhGia.DonGiaCuonCua(cuon, don.Tam["A-4"]) + "|" + (double.Parse(cuon.Tt.GiaBaoGia) > double.Parse(tu.Tt.GiaBaoGia)), "False|6000|True");
+                 cb.ContainsKey("A-4") + "|" + TinhGia.DonGiaCuonCua(cuon) + "|" + (double.Parse(cuon.Tt.GiaBaoGia) > double.Parse(tu.Tt.GiaBaoGia)), "False|6000|True");
             var cuonOng = TamGia("A-5"); cuonOng.Tt.LoaiGiaCong = "m, r2";
-            Kiem("Cuon: r2 = ca hinh", TinhGia.DonGiaCuonCua(cuonOng, null), 12000.0);
-            Kiem("Cuon: chon tren the uu tien hon r1/r2", TinhGia.DonGiaCuonCua(cuonOng, new GiaTam { DonGiaCuon = 6000 }), 6000.0);
-            Kiem("Cuon: chon Khong thi khong tinh", TinhGia.DonGiaCuonCua(cuonOng, new GiaTam { DonGiaCuon = -1 }), 0.0);
-            Kiem("Cuon: khong co r -> khong tinh", TinhGia.DonGiaCuonCua(TamGia("A-6"), null), 0.0);
+            Kiem("Cuon: r2 = ca hinh", TinhGia.DonGiaCuonCua(cuonOng), 12000.0);
+            cuonOng.Tt.LoaiGiaCong = CsvXuat.DatCuon(cuonOng.Tt.LoaiGiaCong, "Nửa hình");
+            Kiem("Cuon: chon tay nua hinh -> r1 trong ma gia cong", cuonOng.Tt.LoaiGiaCong + "|" + TinhGia.DonGiaCuonCua(cuonOng), "m, r1|6000");
+            cuonOng.Tt.LoaiGiaCong = CsvXuat.DatCuon(cuonOng.Tt.LoaiGiaCong, "Không");
+            Kiem("Cuon: chon Khong thi khong tinh", TinhGia.DonGiaCuonCua(cuonOng), 0.0);
+            Kiem("Cuon: khong co r -> khong tinh", TinhGia.DonGiaCuonCua(TamGia("A-6")), 0.0);
             string giaCu = tu.Tt.GiaBaoGia;
             tu.X = "100";
             TinhGia.ApDung(new[] { tu }, don, b);
             Kiem("ApDung: doi so do -> gia tu dong tinh lai", tu.Tt.GiaBaoGia != giaCu, true);
             tu.M = "SPCC";
             TinhGia.ApDung(new[] { tu }, don, b);
-            Kiem("ApDung: het gia -> xoa gia tu dong cu", tu.Tt.GiaBaoGia + "|" + don.Tam["A-1"].TuDong, "|False");
+            Kiem("ApDung: het gia -> xoa gia tu dong cu", tu.Tt.GiaBaoGia + "|" + tu.Tt.GiaTay, "|False");
 
             var tong = TinhGia.TongTien(new[] { tay, TamGia("B", "100"), TamGia("C") });
             Kiem("TongTien: don gia x Q, bo tam chua co gia", tong.Tong + "|" + tong.CoGia, "36300|2");
@@ -101,7 +103,7 @@ namespace CsvTool.Tests
             TamXuat TamKg(string n) => new TamXuat { N = n, M = "SS400", T = "6.0", Q = "3", X = "575", Y = "1219", Tt = new ThongTinTam { CheDoTinh = "0" } };
             var kDon = TamKg("K1"); var kGc = TamKg("K2"); kGc.Tt.Tappu = 2;
             var kSus = TamKg("K3"); kSus.M = "SUS304"; kSus.T = "3"; var kThieu = TamKg("K4"); kThieu.M = "SPCC";
-            var kTay = TamKg("K5"); kTay.Tt.GiaBaoGia = "5000";
+            var kTay = TamKg("K5"); kTay.Tt.GiaBaoGia = "5000"; kTay.Tt.GiaTay = true;
             string R(double x) => x.ToString("0.00", CultureInfo.InvariantCulture);
             var cTh = TinhGia.TongKg(new[] { kDon, kGc, kThieu }, new GiaDon { CongTy = "TH" }, b);
             Kiem("TongKg: cong ty thuong, (X+10), tach don/gia cong, dem tam chua co KG",
@@ -110,7 +112,7 @@ namespace CsvTool.Tests
             Kiem("TongKg: dac biet, (X+6) theo kg, SUS + gia tay tinh thuong",
                  R(cDb.KgDbDon) + "|" + cDb.DonGiaKgDon + "|" + R(cDb.KgDbGiaCong) + "|" + cDb.DonGiaKgGiaCong + "|" + cDb.TamThuong + "|" + R(cDb.KgDon),
                  "100.57|260|100.57|330|2|253.47");
-            Kiem("TongKg: tien theo kg = gia 1 tam x Q", cDb.TienDbDon, TinhGia.Tinh(TinhGia.TaoDauVao(kDon, null, "DB1").V, b).Kq.Gia1Tam * 3);
+            Kiem("TongKg: tien theo kg = gia 1 tam x Q", cDb.TienDbDon, TinhGia.Tinh(TinhGia.TaoDauVao(kDon, "DB1").V, b).Kq.Gia1Tam * 3);
             Kiem("Dong10: cot don gia, boc nhay khi co phay", CsvXuat.Dong10(tay, "9").EndsWith(",,\"12,000\""), true);
 
             Kiem("ChuanDoDay: so nguyen -> 1 so le", PhanTichKhung.ChuanDoDay("6"), "6.0");
@@ -147,11 +149,11 @@ namespace CsvTool.Tests
                  "Nón|Nón lệch|Kakumaru lệch|Pitchi");
 
             var dSua = new GiaDon();
-            dSua.Lay("S").CheDoRieng = true; dSua.Lay("S").DonGiaCuon = 12000;
+            dSua.Lay("S").CheDoRieng = true;
             var ttCu = new ThongTinTam { CheDoTinh = "1", DuongBe = new List<(int, int)> { (700, 2) } };
             var ttMoi = new ThongTinTam { CheDoTinh = "0", DuongBe = new List<(int, int)> { (900, 1) } };
             dSua.GiuSuaTay("S", ttMoi, ttCu);
-            Kiem("GiuSuaTay: giu che do rieng, be va o cuon theo ban ve", ttMoi.CheDoTinh + "|" + ttMoi.DuongBe[0].Item1 + "|" + dSua.Tam["S"].DonGiaCuon, "1|900|0");
+            Kiem("GiuSuaTay: giu che do rieng, be theo ban ve", ttMoi.CheDoTinh + "|" + ttMoi.DuongBe[0].Item1, "1|900");
             var ttKhac = new ThongTinTam { CheDoTinh = "0", DuongBe = new List<(int, int)> { (900, 1) } };
             dSua.GiuSuaTay("KHAC", ttKhac, ttCu);
             Kiem("GiuSuaTay: tam khong sua lay theo ban ve", ttKhac.CheDoTinh + "|" + ttKhac.DuongBe[0].Item1, "0|900");
@@ -203,7 +205,7 @@ namespace CsvTool.Tests
             Kiem("VL tay: khong co trong database van thieu", GiaVlTay("ZAM", "3.0", "0", "TH", "500"), "thieu");
             Kiem("VL tay: de trong tinh nhu thuong", GiaVlTay("SS400", "6.0", "0", "TH", "") != "1820", true);
             var dHien = new GiaDon { CongTy = "TH" };
-            var tHien = new TamXuat { N = "H", M = "SS400", T = "6.0", Q = "1", X = "100", Y = "100", Tt = new ThongTinTam { CheDoTinh = "0", GiaBaoGia = "9999" } };
+            var tHien = new TamXuat { N = "H", M = "SS400", T = "6.0", Q = "1", X = "100", Y = "100", Tt = new ThongTinTam { CheDoTinh = "0", GiaBaoGia = "9999", GiaTay = true } };
             TinhGia.ApDung(new[] { tHien }, dHien, b);
             Kiem("VL tay: tam gia tay van co tien VL de hien, khong doi gia", dHien.Tam["H"].TienVlHienTai > 0 && tHien.Tt.GiaBaoGia == "9999", true);
 
@@ -284,7 +286,7 @@ namespace CsvTool.Tests
             Kiem("Cuon: goc be ban kinh nho khong phai cuon", PhanTichHinh.LoaiCuonTuHinh(gocBe, Math.PI / 2 * 6 + 61, 75, 6, canhBe), null);
             var tamCuon = new TamXuat { N = "C", M = "SS400", T = "3.2", Q = "1", X = "1141.97", Y = "265", Tt = new ThongTinTam { LoaiGiaCong = "m" } };
             PhanTichKhung.ThemCuonTuHinh(tamCuon, MatCat(365, 3.2, 180));
-            Kiem("Cuon: them r1 vao gia cong, gia cuon nua hinh", tamCuon.Tt.LoaiGiaCong + "|" + TinhGia.DonGiaCuonCua(tamCuon, null), "m, r1|6000");
+            Kiem("Cuon: them r1 vao gia cong, gia cuon nua hinh", tamCuon.Tt.LoaiGiaCong + "|" + TinhGia.DonGiaCuonCua(tamCuon), "m, r1|6000");
             PhanTichKhung.ThemCuonTuHinh(tamCuon, MatCat(365, 3.2, 180));
             Kiem("Cuon: khong them trung", tamCuon.Tt.LoaiGiaCong, "m, r1");
             var kCuon = new KhungTho { Handle = 0x77, Text = KhungMau(text: new[] { Fn("N=A-1\\PM=SS400\\PT=3.2\\PQ=2") }).Text, Dim = KhungMau().Dim };
@@ -359,10 +361,15 @@ namespace CsvTool.Tests
                 d.Lay("A-1").TuDong = true; d.Lay("A-1").DonGiaCuon = 6000; d.Lay("A-1").LoaiPitchi = "Non"; d.Lay("A-2").CheDoRieng = true;
                 d.GhiFile(f);
                 var r = GiaDon.DocFile(f);
-                Kiem("GiaDon: khu hoi", r.CongTy + "|" + r.Tam["A-1"].TuDong + "|" + r.Tam["A-1"].DonGiaCuon + "|" + r.Tam["A-1"].LoaiPitchi + "|" + r.Tam["A-2"].CheDoRieng, "株式会社 Á|True|6000|Non|True");
-                r.DoiTen("A-1", "A-9");
-                Kiem("GiaDon: doi ten giu thong tin", r.Tam.ContainsKey("A-1") + "|" + r.Tam["A-9"].DonGiaCuon, "False|6000");
+                Kiem("GiaDon: doc duoc 3 truong json cu", r.CongTy + "|" + r.Tam["A-1"].TuDong + "|" + r.Tam["A-1"].DonGiaCuon + "|" + r.Tam["A-1"].LoaiPitchi + "|" + r.Tam["A-2"].CheDoRieng, "株式会社 Á|True|6000|Non|True");
+                r.XoaThongTinCu();
+                r.GhiFile(f);
+                string jsonMoi = File.ReadAllText(f);
+                Kiem("GiaDon: XoaThongTinCu -> file khong con 3 truong cu", jsonMoi.Contains("TuDong") || jsonMoi.Contains("LoaiPitchi") || jsonMoi.Contains("DonGiaCuon"), false);
+                r.DoiTen("A-2", "A-9");
+                Kiem("GiaDon: doi ten giu thong tin", r.Tam.ContainsKey("A-2") + "|" + r.Tam["A-9"].CheDoRieng, "False|True");
                 r.DoiTen("A-9", "A-2");
+                r.DoiTen("A-1", "A-2");
                 Kiem("GiaDon: ten moi trung -> khong de tam kia", r.Tam["A-2"].CheDoRieng, true);
                 Kiem("TepDangMo: file ranh", CsvXuat.TepDangMo(f, f + ".chua-co"), null);
                 using (new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.Read))

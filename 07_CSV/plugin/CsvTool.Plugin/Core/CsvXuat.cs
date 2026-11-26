@@ -10,11 +10,27 @@ namespace CsvTool.Core
     /// <summary>Thứ tự dòng CSV (= csvmode của lisp).</summary>
     public enum KieuSapXep { TraiSangPhai = 1, TrenXuongDuoi = 2, ChuCai = 3 }
 
-    /// <summary>Ráp dòng, đọc / ghi data CSV (35 cột) và file cuối &lt;đơn&gt;.csv (10 cột).</summary>
+    /// <summary>Ráp dòng, đọc / ghi data CSV (34 cột, chung với web price-calc) và file cuối &lt;đơn&gt;.csv (10 cột).</summary>
     public static class CsvXuat
     {
         public const string TieuDe10 = "エクスポート用,数量,材質,板厚,noと安全,曲げ,X,Y,,単価";
 
+        /// <summary>
+        /// File data chung với web price-calc. Loại pitchi và cuộn ghi trong cột Loai gia cong (m(non), r1, r2…),
+        /// cột cuối Gia tay = 1 khi Gia bao gia là giá sửa tay.
+        /// </summary>
+        public const string TieuDe34 =
+            "Ten tam,Vat lieu,Do day,X (mm),Y (mm),So luong," +
+            "Lo nho,Lo lon,Lo Tappu,Lo Sara," +
+            "Pitchi - So lan,Pitchi - Chieu dai (mm)," +
+            "Loai gia cong,Vat (mm)," +
+            "Be1 - So duong,Be1 - Dai (mm),Be2 - So duong,Be2 - Dai (mm)," +
+            "Be3 - So duong,Be3 - Dai (mm),Be4 - So duong,Be4 - Dai (mm)," +
+            "Be5 - So duong,Be5 - Dai (mm),Be6 - So duong,Be6 - Dai (mm)," +
+            "Be7 - So duong,Be7 - Dai (mm),Be8 - So duong,Be8 - Dai (mm)," +
+            "Che do tinh,Gia bao gia,Tien vat lieu(nhap san),Gia tay";
+
+        /// <summary>Data cũ (lisp, tới 11/2026): còn cột Loai cuon và Uu dai(%). Chỉ để nhận và chuyển file cũ.</summary>
         public const string TieuDe35 =
             "Ten tam,Vat lieu,Do day,X (mm),Y (mm),So luong," +
             "Lo nho,Lo lon,Lo Tappu,Lo Sara," +
@@ -42,7 +58,7 @@ namespace CsvTool.Core
             foreach (string p in (loaiGiaCong ?? "").Split(','))
             {
                 string x = p.Trim().ToLowerInvariant();
-                string m = x == "m" || x == "m(pitchi)" ? "m" : x == "r1" || x == "r2" ? "r" :
+                string m = x == "m" || x.StartsWith("m(") ? "m" : x == "r1" || x == "r2" ? "r" :
                            x == "k" || x == "s" || x == "t" ? x : null;
                 if (m != null && !ma.Contains(m)) ma.Add(m);
             }
@@ -56,17 +72,56 @@ namespace CsvTool.Core
             return u.Contains("R2") ? "2" : u.Contains("R1") ? "1" : "0";
         }
 
-        public static string Dong35(TamXuat t)
+        // ── Mã gia công (cột Loai gia cong): "m, m(non), r1, t, s, k" ──
+
+        /// <summary>Tên trong mã m(...), cùng thứ tự TinhGia.DsLoaiPitchi.</summary>
+        public static readonly string[] MaPitchi = { "pitchi", "non", "nonlech", "kakumaru", "kakumarulech" };
+
+        public static List<string> TachMa(string gc) =>
+            (gc ?? "").Split(',').Select(x => x.Trim()).Where(x => x != "").Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        private static bool LaMaPitchi(string x) => x.StartsWith("m(", StringComparison.OrdinalIgnoreCase);
+
+        public static bool CoPitchi(string gc) => TachMa(gc).Any(LaMaPitchi);
+
+        /// <summary>m(non) → "Non" (tên trong TinhGia.DsLoaiPitchi); không có hoặc lạ → "Pitchi".</summary>
+        public static string LoaiPitchiCua(string gc)
         {
-            var tt = t.Tt;
+            string ma = TachMa(gc).FirstOrDefault(LaMaPitchi);
+            int i = ma == null ? -1 : Array.IndexOf(MaPitchi, ma.Substring(2).TrimEnd(')').Trim().ToLowerInvariant());
+            return TinhGia.DsLoaiPitchi[Math.Max(i, 0)];
+        }
+
+        /// <summary>Đặt loại pitchi: thay mã m(...) đang có, chưa có thì thêm sau "m".</summary>
+        public static string DatLoaiPitchi(string gc, string loai)
+        {
+            string ma = "m(" + MaPitchi[Math.Max(Array.IndexOf(TinhGia.DsLoaiPitchi, loai), 0)] + ")";
+            var ds = TachMa(gc);
+            int i = ds.FindIndex(LaMaPitchi);
+            if (i >= 0) ds[i] = ma;
+            else ds.Insert(ds.FindIndex(x => x.Equals("m", StringComparison.OrdinalIgnoreCase)) + 1, ma);
+            return string.Join(", ", ds);
+        }
+
+        /// <summary>Cuộn chọn tay: "Không" bỏ r1 / r2, "Nửa hình" → r1, "Cả hình" → r2.</summary>
+        public static string DatCuon(string gc, string cuon)
+        {
+            var ds = TachMa(gc).Where(x => !x.Equals("r1", StringComparison.OrdinalIgnoreCase) && !x.Equals("r2", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (cuon == TinhGia.DsLoaiCuon[1]) ds.Add("r1");
+            else if (cuon == TinhGia.DsLoaiCuon[2]) ds.Add("r2");
+            return string.Join(", ", ds);
+        }
+
+        public static string Dong34(TamXuat t) =>
+            string.Join(",", O(t.N), O(t.M), O(t.T), t.X, t.Y, O(t.Q)) + "," + DuoiDong(t.Tt);   // X, Y ghi thẳng như dimcsv
+
+        private static string DuoiDong(ThongTinTam tt)
+        {
             var sb = new StringBuilder();
-            sb.Append(O(t.N)).Append(',').Append(O(t.M)).Append(',').Append(O(t.T))
-              .Append(',').Append(t.X).Append(',').Append(t.Y)          // dimcsv ghi thẳng, không qua csv-field
-              .Append(',').Append(O(t.Q))
-              .Append(',').Append(O(tt.LoNho)).Append(',').Append(O(tt.LoLon))
+            sb.Append(O(tt.LoNho)).Append(',').Append(O(tt.LoLon))
               .Append(',').Append(O(tt.Tappu)).Append(',').Append(O(tt.Sara))
               .Append(',').Append(O(tt.PitchiSoLan)).Append(',').Append(O(tt.PitchiDai))
-              .Append(',').Append(O(PhanTichKhung.ChuanHoaGiaCong(tt.LoaiGiaCong))).Append(',').Append(LoaiCuon(tt.LoaiGiaCong))
+              .Append(',').Append(O(string.Join(", ", TachMa(tt.LoaiGiaCong))))
               .Append(',').Append(O(tt.Vat));
             for (int i = 0; i < 8; i++)
             {
@@ -75,7 +130,7 @@ namespace CsvTool.Core
                   .Append(',').Append(co ? O(tt.DuongBe[i].Dai) : "0");
             }
             sb.Append(',').Append(O(tt.CheDoTinh)).Append(',').Append(O(tt.GiaBaoGia))
-              .Append(',').Append(O(tt.TienVatLieu)).Append(',').Append(O(tt.UuDai));
+              .Append(',').Append(O(tt.TienVatLieu)).Append(',').Append(tt.GiaTay ? "1" : "0");
             return sb.ToString();
         }
 
@@ -112,6 +167,7 @@ namespace CsvTool.Core
         public static string DuongData(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, "data", maDon + "-data.csv");
         public static string DuongGia(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, "data", maDon + "-gia.json");
         public static string DuongGiaVl(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, "data", maDon + "-giavl.csv");
+        public static string DuongDataCu(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, "data", maDon + "-data.cu.csv");
         public static string DuongDataTruocQuet(string thuMucDwg, string maDon) => Path.Combine(thuMucDwg, "data", maDon + "-data.truoc-quet.csv");
 
         /// <summary>File đầu tiên đang bị chương trình khác giữ (Excel...); không có → null. File chưa tồn tại không tính.</summary>
@@ -135,7 +191,7 @@ namespace CsvTool.Core
             GhiCacFile(thuMucDwg, (DuongCuoi(thuMucDwg, maDon), NoiDungCuoi(maDon, dsDaSapXep)),
                                   (DuongData(thuMucDwg, maDon), NoiDungData(dsDaSapXep)));
 
-        /// <summary>Nút Quét / sửa ô: chỉ ghi data\&lt;đơn&gt;-data.csv (35 cột).</summary>
+        /// <summary>Nút Quét / sửa ô: chỉ ghi data\&lt;đơn&gt;-data.csv (34 cột).</summary>
         public static void GhiData(string thuMucDwg, string maDon, IReadOnlyList<TamXuat> dsDaSapXep) =>
             GhiCacFile(thuMucDwg, (DuongData(thuMucDwg, maDon), NoiDungData(dsDaSapXep)));
 
@@ -146,7 +202,11 @@ namespace CsvTool.Core
         private static IEnumerable<string> NoiDungCuoi(string maDon, IEnumerable<TamXuat> ds) =>
             new[] { TieuDe10 }.Concat(ds.Select(t => Dong10(t, maDon)));
 
-        private static IEnumerable<string> NoiDungData(IEnumerable<TamXuat> ds) => new[] { TieuDe35 }.Concat(ds.Select(Dong35));
+        private static IEnumerable<string> NoiDungData(IEnumerable<TamXuat> ds) => new[] { TieuDe34 }.Concat(ds.Select(Dong34));
+
+        /// <summary>Ghi lại data\&lt;đơn&gt;-data.csv đã chuyển sang dạng 34 cột (xem ChuyenDataCu).</summary>
+        public static void GhiDataDaChuyen(string thuMucDwg, string maDon, IEnumerable<string> dong) =>
+            GhiCacFile(thuMucDwg, (DuongData(thuMucDwg, maDon), dong));
 
         private static void GhiCacFile(string thuMucDwg, params (string File, IEnumerable<string> Dong)[] tep)
         {
@@ -169,31 +229,72 @@ namespace CsvTool.Core
         }
 
         /// <summary>
-        /// Đọc data\&lt;đơn&gt;-data.csv → thông tin tấm theo tên N (ngược của Dong35). Dòng thiếu cột bị bỏ;
-        /// đường bẻ "0,0" là ô trống của lisp nên bỏ qua.
+        /// Đọc data\&lt;đơn&gt;-data.csv → thông tin tấm theo tên N (ngược của Dong34). Đọc được cả dạng cũ 35 cột;
+        /// dòng cũ lấy cờ giá tay, loại pitchi, cuộn chọn tay từ -gia.json cũ (don). Dòng thiếu cột bị bỏ.
         /// </summary>
-        public static Dictionary<string, ThongTinTam> DocData(string noiDung)
+        public static Dictionary<string, ThongTinTam> DocData(string noiDung, GiaDon don = null)
         {
             var kq = new Dictionary<string, ThongTinTam>();
+            foreach (var (dau, tt) in DocDong(noiDung, don)) kq[dau[0]] = tt;
+            return kq;
+        }
+
+        /// <summary>Có dòng nào còn dạng 35 cột cũ (còn Loai cuon, Uu dai) không.</summary>
+        public static bool LaDataCu(string noiDung) => Dong(noiDung).Any(o => o.Count >= 35);
+
+        /// <summary>Chuyển nội dung data cũ sang 34 cột (dòng đã ở dạng mới giữ nguyên nghĩa).</summary>
+        public static List<string> ChuyenDataCu(string noiDung, GiaDon don) =>
+            new[] { TieuDe34 }.Concat(DocDong(noiDung, don).Select(r => string.Join(",", r.Dau.Select(O)) + "," + DuoiDong(r.Tt))).ToList();
+
+        private static IEnumerable<List<string>> Dong(string noiDung)
+        {
             foreach (string dong in (noiDung ?? "").TrimStart('\uFEFF').Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
             {
-                if (dong == TieuDe35 || dong.Trim() == "") continue;
+                if (dong == TieuDe34 || dong == TieuDe35 || dong.Trim() == "") continue;
                 List<string> o = TachO(dong);
-                if (o.Count < 35 || o[0] == "") continue;
+                if (o.Count >= 34 && o[0] != "") yield return o;
+            }
+        }
+
+        // đường bẻ "0,0" là ô trống của lisp nên bỏ qua
+        private static IEnumerable<(List<string> Dau, ThongTinTam Tt)> DocDong(string noiDung, GiaDon don)
+        {
+            foreach (List<string> o in Dong(noiDung))
+            {
+                bool cu = o.Count >= 35;
+                int d = cu ? 1 : 0;   // dạng cũ còn cột Loai cuon sau Loai gia cong
                 int I(int i) => ThongTinTamParser.Atoi(o[i]);
                 var tt = new ThongTinTam
                 {
                     LoNho = I(6), LoLon = I(7), Tappu = I(8), Sara = I(9), PitchiSoLan = I(10), PitchiDai = I(11),
-                    LoaiGiaCong = o[12], Vat = I(14), CheDoTinh = o[31], GiaBaoGia = o[32], TienVatLieu = o[33], UuDai = o[34],
+                    LoaiGiaCong = o[12], Vat = I(13 + d), CheDoTinh = o[30 + d], GiaBaoGia = o[31 + d], TienVatLieu = o[32 + d],
+                    GiaTay = !cu && o[33] == "1",
                 };
                 for (int b = 0; b < 8; b++)
                 {
-                    int soLuong = I(15 + 2 * b), dai = I(16 + 2 * b);
+                    int soLuong = I(14 + d + 2 * b), dai = I(15 + d + 2 * b);
                     if (soLuong != 0 || dai != 0) tt.DuongBe.Add((dai, soLuong));
                 }
-                kq[o[0]] = tt;
+                if (cu) ApDungGiaCu(tt, don != null && don.Tam.TryGetValue(o[0], out GiaTam g) ? g : null);
+                yield return (o.Take(6).ToList(), tt);
             }
-            return kq;
+        }
+
+        /// <summary>
+        /// Dòng data cũ + -gia.json cũ: giá tay = có giá mà json không đánh dấu tự động; lisp ghi m(pitchi) thành "m"
+        /// nên có số lần pitchi thì dựng lại mã m(...) theo loại đã chọn ("m" chỉ còn khi có đường bẻ); cuộn chọn tay → r1 / r2.
+        /// </summary>
+        private static void ApDungGiaCu(ThongTinTam tt, GiaTam g)
+        {
+            tt.GiaTay = !string.IsNullOrEmpty(tt.GiaBaoGia) && g?.TuDong != true;
+            if (tt.PitchiSoLan > 0 || CoPitchi(tt.LoaiGiaCong))
+            {
+                tt.LoaiGiaCong = DatLoaiPitchi(tt.LoaiGiaCong, string.IsNullOrEmpty(g?.LoaiPitchi) ? LoaiPitchiCua(tt.LoaiGiaCong) : g.LoaiPitchi);
+                if (tt.DuongBe.Count == 0)
+                    tt.LoaiGiaCong = string.Join(", ", TachMa(tt.LoaiGiaCong).Where(x => !x.Equals("m", StringComparison.OrdinalIgnoreCase)));
+            }
+            if (g != null && g.DonGiaCuon != 0)
+                tt.LoaiGiaCong = DatCuon(tt.LoaiGiaCong, g.DonGiaCuon >= TinhGia.GiaCuonCaHinh ? TinhGia.DsLoaiCuon[2] : g.DonGiaCuon > 0 ? TinhGia.DsLoaiCuon[1] : TinhGia.DsLoaiCuon[0]);
         }
 
         /// <summary>Tách 1 dòng CSV, ô có nháy kép (do O() bọc) giữ nguyên dấu phẩy bên trong.</summary>

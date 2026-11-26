@@ -50,15 +50,15 @@ namespace CsvTool.Tests
                 {
                     LoNho = 4, LoLon = 1, Tappu = 2, Sara = 0, PitchiSoLan = 0, PitchiDai = 0, Vat = 150,
                     LoaiGiaCong = "m, t", DuongBe = new List<(int, int)> { (150, 2), (80, 1) },
-                    CheDoTinh = "0", GiaBaoGia = "", TienVatLieu = "", UuDai = "",
+                    CheDoTinh = "0", GiaBaoGia = "", TienVatLieu = "",
                 },
             };
-            Kiem("Dong35 vi du luat 05",
-                 CsvXuat.Dong35(abc),
-                 "ABC-01,SPCC,1.6,300,200,2,4,1,2,0,0,0,\"m, t\",0,150,2,150,1,80,0,0,0,0,0,0,0,0,0,0,0,0,0,,,");
-            Kiem("TieuDe35 du 35 cot", CsvXuat.TieuDe35.Split(',').Length, 35);
+            Kiem("Dong34: bo cot cuon + uu dai, them gia tay",
+                 CsvXuat.Dong34(abc),
+                 "ABC-01,SPCC,1.6,300,200,2,4,1,2,0,0,0,\"m, t\",150,2,150,1,80,0,0,0,0,0,0,0,0,0,0,0,0,0,,,0");
+            Kiem("TieuDe34 du 34 cot", CsvXuat.TieuDe34.Split(',').Length, 34);
             var nhieuBe = abc.Tt.DuongBe; abc.Tt.DuongBe = Enumerable.Range(1, 9).Select(i => (i * 10, 1)).ToList();
-            Kiem("Dong35 qua 8 duong be -> 35 cot", CsvXuat.Dong35(abc).Split(',').Length, 36); // +1 vì "m, t" có dấu phẩy trong nháy
+            Kiem("Dong34 qua 8 duong be -> 34 cot", CsvXuat.Dong34(abc).Split(',').Length, 35); // +1 vì "m, t" có dấu phẩy trong nháy
             abc.Tt.DuongBe = nhieuBe;
 
             var ds = new[] { Tam("A-10", 30, 5), Tam("A-2", 10, 50), Tam("A-1", 20, 20) };
@@ -82,7 +82,7 @@ namespace CsvTool.Tests
                 string noi = Encoding.UTF8.GetString(b, 3, b.Length - 3);
                 Kiem("GhiHaiFile_Dung: noi dung + CRLF", noi,
                      CsvXuat.TieuDe10 + "\r\n131102-1,2,SUS304 No.1,3,131102-,s,1500,1000,,\r\n131102-2,2,SUS304 No.1,3,131102-,s,1500,1000,,\r\n");
-                Kiem("GhiHaiFile_Dung: data dong 1 la tieu de 35", File.ReadAllLines(f35)[0], CsvXuat.TieuDe35);
+                Kiem("GhiHaiFile_Dung: data dong 1 la tieu de 34", File.ReadAllLines(f35)[0], CsvXuat.TieuDe34);
 
                 string cu = File.ReadAllText(f10);
                 using (new FileStream(f35, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
