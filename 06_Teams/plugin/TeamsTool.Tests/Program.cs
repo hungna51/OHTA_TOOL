@@ -212,6 +212,62 @@ namespace TeamsTool.Tests
                  string.Join(",", doiPt) + "|" + tPt.T + "|" + tPt.KichThuoc + "|" + System.Text.RegularExpressions.Regex.Replace(tPt.LoJson, @"\s", "").Contains("\"rong\":18,\"dai\":30,\"goc\":90")
                  + "|" + string.Join(",", tPt.KhongChac.OrderBy(x => x)) + "|" + string.Join(",", PhongPhongTo.NghiVanDaRo(ndPt)),
                  "kich_thuoc,td_x,lo|9|140 x 600|True|kich_thuoc,lo|2");
+            // 25/11: mẫu chung da_giac — ô dinh (đỉnh viền [x, y] / [x, y, R]) + dim khách xiên / góc theo điểm (diem)
+            var tDg = new TamAi { Tep = "d.png", KichThuoc = "110 x 160", TdX = "110", TdY = "160", KieuTd = "phang", LoJson = "[]" };
+            var ndDg = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse("{\"bien_dang\":\"da_giac\",\"dinh\":[[0,0],[10,0],[110,150],[110,160],[0,160,0]],"
+                + "\"dim_khach\":[{\"loai\":\"xien\",\"gia_tri\":180.28,\"tu\":0,\"den\":0,\"tai\":0,\"diem\":[[10,0],[110,150]]}],\"khong_chac\":[\"dinh\"],\"lo\":[],\"ke_gaki\":[]}");
+            var doiDg = PhongPhongTo.ApDung(tDg, ndDg);
+            Kiem("da_giac: ap dinh + khong_chac dinh", string.Join(",", doiDg) + "|" + string.Join(",", tDg.KhongChac), "bien_dang,dinh,dim_khach|dinh");
+            var tDg2 = PhongDocBanVe.Doc(PhongDocBanVe.Ghi(new ChiTiet { Tam = { tDg } })).Tam[0];
+            Kiem("da_giac: luu chi_tiet giu dinh", System.Text.RegularExpressions.Regex.Replace(tDg2.DinhJson, @"\s", ""), "[[0,0],[10,0],[110,150],[110,160],[0,160,0]]");
+            var tkDg = PhongTrienKhai.TuTam(tDg2); tkDg.XPhang = 110; tkDg.YPhang = 160;
+            string viecDg = System.Text.RegularExpressions.Regex.Replace(PhongTrienKhai.ViecVe("D", new List<(TamAi, TamTrienKhai)> { (tDg2, tkDg) }, "m", "r", new[] { "t" }), @"\s", "");
+            Kiem("da_giac: viec ve gui dinh + diem dim xien", viecDg.Contains("\"dinh\":[[0,0],[10,0]") + "|" + viecDg.Contains("\"diem\":[[10,0],[110,150]]") + "|" + viecDg.Contains("\"bien_dang\":\"da_giac\""), "True|True|True");
+            string schDg = System.Text.RegularExpressions.Regex.Replace(OhtaTool.Plugin.Core.JsonLite.Serialize(PhongPhongTo.Schema()), @"\s", "");
+            string sch1 = System.Text.RegularExpressions.Regex.Replace(OhtaTool.Plugin.Core.JsonLite.Serialize(PhongDocBanVe.Schema()), @"\s", "");
+            Kiem("schema: buoc 2 co dinh + diem, buoc 1 co diem", schDg.Contains("\"dinh\":") + "|" + schDg.Contains("\"diem\":") + "|" + sch1.Contains("\"diem\":"), "True|True|True");
+            // 25/11: ケガキ tam giác [x, y, cạnh, hướng] + スリット [x1, y1, x2, y2] → lưu → viec.json
+            var tSl = new TamAi { Tep = "s.png", KichThuoc = "242.6 x 242.6", TdX = "242.6", TdY = "242.6", KieuTd = "phang", LoJson = "[]" };
+            var ndSl = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse("{\"ke_gaki\":[[121.3,216.8,30,270,24.869],[50,50]],\"slit\":[[121.3,0,121.3,45.45]],\"duong_tam\":[[10,25,60,75]],\"lo\":[]}");
+            var doiSl = PhongPhongTo.ApDung(tSl, ndSl);
+            var tSl2 = PhongDocBanVe.Doc(PhongDocBanVe.Ghi(new ChiTiet { Tam = { tSl } })).Tam[0];
+            var tkSl = PhongTrienKhai.TuTam(tSl2); tkSl.XPhang = 242.6; tkSl.YPhang = 242.6;
+            string viecSl = System.Text.RegularExpressions.Regex.Replace(PhongTrienKhai.ViecVe("S", new List<(TamAi, TamTrienKhai)> { (tSl2, tkSl) }, "m", "r", new[] { "t" }), @"\s", "");
+            Kiem("slit + ke gaki tam giac: ap, luu, viec ve", string.Join(",", doiSl) + "|" + viecSl.Contains("\"ke_gaki\":[[121.3,216.8,30,270,24.87],[50,50]]") + "|" + viecSl.Contains("\"slit\":[[121.3,0,121.3,45.45]]") + "|" + viecSl.Contains("\"duong_tam\":[[10,25,60,75]]"),
+                 "ke_gaki,slit,duong_tam|True|True|True");
+            Kiem("ke gaki tam giac: chu <-> json", PhongGocKhoet.KeGakiChu(PhongGocKhoet.KeGakiJson("1,2; 3,4,30,90; 5,6,30,270,24.9", out string _)) + "|" + (PhongGocKhoet.KeGakiJson("1,2,3,4,5,6", out string _) == null), "1,2; 3,4,30,90; 5,6,30,270,24.9|True");
+            var tCh = new TamAi { Tep = "c.png", LoJson = "[]" };
+            PhongPhongTo.ApDung(tCh, (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse("{\"dinh\":\"[[0,0],[10,0],[10,5]]\",\"slit\":\"[[0,1,2,1]]\",\"ke_gaki\":\"[]\",\"duong_tam\":\"hong\",\"lo\":[]}"));
+            Kiem("4 o hinh hoc dang chuoi JSON (schema gon) -> mang", System.Text.RegularExpressions.Regex.Replace(tCh.DinhJson + "|" + tCh.SlitJson + "|" + tCh.DuongTamJson, @"\s", ""), "[[0,0],[10,0],[10,5]]|[[0,1,2,1]]|[]");
+            // 05_AI/rules/01-schema-ai.md: mảng-số-lồng làm grammar structured output phình (API 400 "compiled grammar is too large", 25/11) — đo: 6 lỗi, 4 qua
+            int soCap = System.Text.RegularExpressions.Regex.Matches(schDg, System.Text.RegularExpressions.Regex.Escape("{\"type\":\"array\",\"items\":{\"type\":\"array\",\"items\":{\"type\":\"number\"}}}")).Count;
+            Kiem("schema buoc 2: ngan sach grammar (mang so long <= 4, o moi -> chuoi)", soCap >= 1 && soCap <= 4, true);
+            Kiem("schema buoc 2 co slit + duong_tam", schDg.Contains("\"slit\":") && schDg.Contains("\"duong_tam\":"), true);
+            Kiem("prompt: net chua ro khong bo + tam phang uu tien da_giac", PhongPhongTo.LoiDan.Contains("NÉT CHƯA RÕ") && PhongPhongTo.LoiDan.Contains("MẪU CHO TẤM PHẲNG"), true);
+            // 25/11: chua_chac — giá trị AI tự suy (khách không ghi số) → lưu, gửi viec.json (bỏ mục ô người đã sửa = đã xác nhận)
+            var tCc = new TamAi { Tep = "c.png", KichThuoc = "455 x 370", TdX = "455", TdY = "370", KieuTd = "phang", LoJson = "[]" };
+            var ndCc = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse("{\"khoet\":\"□240x240 R10 @ 240,185\",\"lo\":[],\"ke_gaki\":[],\"dim_khach\":[],"
+                + "\"chua_chac\":[{\"o\":\"khoet.r\",\"so\":1,\"noi_dung\":\"R10 bo góc khoét: khách không ghi\"},{\"o\":\"lo\",\"so\":1,\"noi_dung\":\"vị trí y lỗ Ø50 lấy giữa\"}]}");
+            var doiCc = PhongPhongTo.ApDung(tCc, ndCc);
+            var tCc2 = PhongDocBanVe.Doc(PhongDocBanVe.Ghi(new ChiTiet { Tam = { tCc } })).Tam[0];
+            Kiem("chua chac: ap + luu", doiCc.Contains("chua_chac") + "|" + tCc2.ChuaChacJson.Contains("khoet.r") + "|" + string.Join(" / ", PhongPhongTo.CanXacNhan(tCc2)),
+                 "True|True|R10 bo góc khoét: khách không ghi / vị trí y lỗ Ø50 lấy giữa");
+            tCc2.DaSua.Add("khoet");
+            var tkCc = PhongTrienKhai.TuTam(tCc2); tkCc.XPhang = 455; tkCc.YPhang = 370;
+            string viecCc = System.Text.RegularExpressions.Regex.Replace(PhongTrienKhai.ViecVe("D", new List<(TamAi, TamTrienKhai)> { (tCc2, tkCc) }, "m", "r", new[] { "t" }), @"\s", "");
+            Kiem("chua chac: viec bo muc o nguoi da sua", viecCc.Contains("\"o\":\"lo\"") + "|" + viecCc.Contains("khoet.r") + "|" + string.Join(" / ", PhongPhongTo.CanXacNhan(tCc2)),
+                 "True|False|vị trí y lỗ Ø50 lấy giữa");
+            Kiem("schema buoc 2: co chua_chac", System.Text.RegularExpressions.Regex.Replace(OhtaTool.Plugin.Core.JsonLite.Serialize(PhongPhongTo.Schema()), @"\s", "").Contains("\"chua_chac\":"), true);
+            // 25/11: ghi chú người dùng gửi kèm ảnh (thắng hình) + mâu thuẫn ghi chú ↔ hình
+            var tGc = new TamAi { Tep = "g.png", KichThuoc = "300 x 200", GhiChuNguoi = "Bo R5 tất cả góc khoét" };
+            Kiem("ghi chu nguoi: vao dau vao AI", PhongPhongTo.DauVao(tGc, new List<(string, string)>(), new List<VanDe>()).Contains("Bo R5 tất cả góc khoét"), true);
+            Kiem("ghi chu nguoi: khong co thi khong in muc", PhongPhongTo.DauVao(new TamAi(), new List<(string, string)>(), new List<VanDe>()).Contains("GHI CHÚ CỦA NGƯỜI DÙNG"), false);
+            var ndGc = (OhtaTool.Plugin.Core.JsonObject)OhtaTool.Plugin.Core.JsonLite.Parse("{\"lo\":[],\"ke_gaki\":[],\"dim_khach\":[],\"mau_thuan\":[\"Ghi chú R5, hình như R10 — đã vẽ R5\"]}");
+            var doiGc = PhongPhongTo.ApDung(tGc, ndGc);
+            var tGc2 = PhongDocBanVe.Doc(PhongDocBanVe.Ghi(new ChiTiet { Tam = { tGc } })).Tam[0];
+            Kiem("ghi chu nguoi + mau thuan: ap + luu", doiGc.Contains("mau_thuan") + "|" + tGc2.GhiChuNguoi + "|" + string.Join(" / ", PhongPhongTo.MauThuan(tGc2)),
+                 "True|Bo R5 tất cả góc khoét|Ghi chú R5, hình như R10 — đã vẽ R5");
+            Kiem("schema buoc 2: co mau_thuan", System.Text.RegularExpressions.Regex.Replace(OhtaTool.Plugin.Core.JsonLite.Serialize(PhongPhongTo.Schema()), @"\s", "").Contains("\"mau_thuan\":"), true);
             Kiem("phong to: body co anh png", PhongPhongTo.Body("claude-opus-5-5", "q", "QUJD", "dv").Contains("\"media_type\":\"image/png\"")
                  || System.Text.RegularExpressions.Regex.Replace(PhongPhongTo.Body("claude-opus-5-5", "q", "QUJD", "dv"), @"\s", "").Contains("\"media_type\":\"image/png\""), true);
             // 18/11: luồng suy nghĩ — body streaming + ghép SSE thành phản hồi thường (đọc được bằng bộ đọc cũ)

@@ -1,7 +1,12 @@
-"""Mẫu biên dạng: dải dài, đầu trái khoét cung lõm, đầu phải bo cung lồi (Admin duyệt 12/11, vẽ theo bản chuẩn xưởng)."""
+"""Mẫu biên dạng: dải dài, đầu trái khoét cung lõm, đầu phải bo cung lồi (Admin duyệt 12/11, vẽ theo bản chuẩn xưởng).
+
+25/11: đã thay bằng mẫu chung da_giac — ẩn khỏi danh sách AI chọn (AN), giữ để đơn cũ ghi dai_lom_loi vẫn vẽ lại được.
+"""
 
 import math
 from moi_truong import LE_DIM
+
+AN = True  # thay bằng da_giac 25/11
 
 MO_TA = (
     "Tấm phẳng dải dài có hai cạnh dài song song, một đầu khoét cung lõm vào trong "

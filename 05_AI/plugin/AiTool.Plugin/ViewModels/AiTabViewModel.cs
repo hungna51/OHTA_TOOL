@@ -3,45 +3,28 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using AiTool.CadServices;
 using AiTool.Core;
 using AiTool.Services;
-using WinReg = Microsoft.Win32;
 #if ZWCAD
 using ZwSoft.ZwCAD.ApplicationServices;
-using ZwSoft.ZwCAD.DatabaseServices;
 using CadApplication = ZwSoft.ZwCAD.ApplicationServices.Application;
 #else
 using Autodesk.AutoCAD.ApplicationServices;
-using Autodesk.AutoCAD.DatabaseServices;
 using CadApplication = Autodesk.AutoCAD.ApplicationServices.Application;
 #endif
 
 namespace AiTool.ViewModels
 {
-    /// <summary>Một dòng cảnh báo hiện trên tab.</summary>
-    public sealed class DongCanhBao
-    {
-        public int SoThuTu { get; set; }
-        public bool Do { get; set; }
-        public string Icon => Do ? "🔴" : "🟡";
-        public string TieuDe { get; set; }
-        public string LyDo { get; set; }
-        public string GoiY { get; set; }
-        public bool CoGoiY => !string.IsNullOrWhiteSpace(GoiY);
-    }
-
     public sealed class Lenh : ICommand
     {
         private readonly Action _a;
@@ -51,17 +34,24 @@ namespace AiTool.ViewModels
         public void Execute(object p) => _a();
     }
 
+    /// <summary>Một dòng trong danh sách lần thử (ảnh nhỏ + giờ + mẫu / kích thước).</summary>
+    public sealed class DongLanThu
+    {
+        public LanThu L { get; set; }
+        public ImageSource AnhNho { get; set; }
+        public string Gio => L.Gio;
+        public string MoTa => L.MoTa;
+    }
+
     /// <summary>
-    /// Tab AI. Nút bấm gửi lệnh CAD (OHTAAI / OHTAAIVUNG / OHTAAIZOOM) để việc đọc bản vẽ chạy
-    /// trong ngữ cảnh lệnh; lệnh quét xong gọi BatDauKiemTra, phần gọi mạng chạy nền, cập nhật
-    /// giao diện qua Dispatcher. Không đoạn nào ở đây ghi vào bản vẽ.
+    /// Tab "Tạo dữ liệu DXF từ ảnh" (thay tab AI cũ): dán ảnh / chọn tệp MỘT hình → OhtaTeams.exe --thu-nhanh-* (AI đọc + chọn mẫu
+    /// ve_dxf, vẽ chỉ hình + dim) → xem ảnh, chèn DXF vào bản vẽ đang mở. Lần thử dùng chung với cửa sổ Thử nhanh của OhtaTeams.
     /// </summary>
     public sealed class AiTabViewModel : INotifyPropertyChanged
     {
         public static AiTabViewModel HienTai { get; private set; }
 
-        private const string KhoaReg = @"Software\OFT_Lisp\OhtaTool\AI";
-        private const string LayerMacDinh = "Khung_IN";
+        private static readonly string[] DuoiNhan = { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".pdf", ".dxf" };
         private readonly Dispatcher _ui;
         private CancellationTokenSource _huy;
 
@@ -71,52 +61,30 @@ namespace AiTool.ViewModels
             TieuDe = tieuDe;
             MoTa = moTa;
             MauNhan = string.IsNullOrWhiteSpace(mauNhan) ? "#5B3FD1" : mauNhan;
-            ThuMucModule = thuMucModule;
+            Exe = DuongDan.Exe(thuMucModule);
 
-            try { DuLieuTinh.DocHuongDan(ThuMucModule, HuongDanMacDinh()); } // chưa có file thì tạo từ bản mặc định
-            catch (Exception) { }
-            try { CauHinhKev.DamBaoFileMacDinh(ThuMucModule); }
-            catch (Exception) { }
-
-            CauHinhKev chInit = CauHinhKev.DocTuThuMuc(ThuMucModule);
-            _cheDo = DocReg("che_do");
-            if (_cheDo == "Hybrid (Kev + Claude)") _cheDo = KiemTraRunner.CheDoHybrid;   // tên cũ trước khi có Ling
-            else if (_cheDo == "Chỉ Claude") _cheDo = KiemTraRunner.CheDoChiClaude;
-            if (!KiemTraRunner.DanhSachCheDo.Contains(_cheDo))
-            {
-                _cheDo = DuLieuTinh.DocKey(ThuMucModule) != null
-                    ? KiemTraRunner.CheDoHybrid
-                    : KiemTraRunner.CheDoChiKev;
-            }
-            _kevUrl = KevHttp.ChonUrlHieuLuc(DocReg("kev_url"), chInit.MayChuLan);
-            string danNhanReg = DocReg("dan_nhan");
-            _danNhanGocKhung = danNhanReg == null || danNhanReg == "1";
-
-            _model = DocReg("model");
-            if (!DanhSachModel.Contains(_model)) _model = BangGia.Model[0];
-            _layerKhung = DocReg("layer_khung") ?? LayerMacDinh;
-            LamMoiLayer();
-
-            KiemTraCmd = new Lenh(() => GuiLenh("OHTAAI "));
-            ChonVungCmd = new Lenh(() => GuiLenh("OHTAAIVUNG "));
-            XuatMoTaCmd = new Lenh(() => GuiLenh("OHTAAIMOTA "));
-            DungCmd = new Lenh(() => _huy?.Cancel());
-            CaiDatCmd = new Lenh(MoCaiDat);
-            MoNhatKyCmd = new Lenh(MoNhatKy);
-
-            string lm = DocReg("ling_model");
-            _lingModel = string.IsNullOrWhiteSpace(lm) ? LingHttp.ModelMacDinh : lm;
-            Chat = new ChatViewModel(ThuMucModule, () => _lingModel,
-                () => CadApplication.DocumentManager.MdiActiveDocument?.Database.Filename,
-                () => GuiLenh("OHTAAICHATKHUNG "));
-            MoChatCmd = new Lenh(() => { Chat.VaoManHinh(); DangChat = true; });
-            QuayLaiCmd = new Lenh(() => DangChat = false);
+            DanCmd = new Lenh(Dan);
+            ChonTepCmd = new Lenh(ChonTep);
+            HuyCmd = new Lenh(() => _huy?.Cancel());
+            ChenCmd = new Lenh(() => GuiLenh("OHTADXFCHEN "));
+            VeLaiCmd = new Lenh(() => ChayLan("--thu-nhanh-ve", "Đang vẽ lại (không gọi AI)…"));
+            DocLaiCmd = new Lenh(DocLai);
+            GuiCmd = new Lenh(Gui);
+            HuyNhapCmd = new Lenh(() => { _choTep = _choDocLai = null; DangNhap = false; Bao = "Đã huỷ — chưa gửi AI."; });
+            _batGhiChu = DocReg("ghi_chu_bo_sung") == "1";
+            VietMauCmd = new Lenh(() => ChayLan("--thu-nhanh-viet-mau", "AI đang viết mẫu vẽ cho hình này (1–2 phút)…"));
+            SuaCmd = new Lenh(() => { if (Chon?.ChiTietJson != null) Mo("notepad.exe", "\"" + Chon.ChiTietJson + "\""); });
+            ThuMucCmd = new Lenh(() => { if (Chon != null) Mo("explorer.exe", "\"" + Chon.ThuMuc + "\""); });
+            XoaCmd = new Lenh(Xoa);
+            ThuNhanhCmd = new Lenh(() => MoExe("--thu-nhanh"));
             HienTai = this;
+            NapDs();
         }
 
         public string TieuDe { get; }
         public string MoTa { get; }
         public string MauNhan { get; }
+        public string Exe { get; }
 
         public Brush AccentBrush
         {
@@ -127,414 +95,296 @@ namespace AiTool.ViewModels
             }
         }
 
-        /// <summary>Bánh răng của nút cài đặt (cùng ảnh các tab khác), tô theo màu tab bằng OpacityMask.</summary>
-        public ImageSource SettingsLogo => _settingsLogo ?? (_settingsLogo = NapLogo());
-        private static ImageSource _settingsLogo;
+        /// <summary>Bánh răng của nút ⚙ (cùng ảnh các tab khác), tô theo màu tab bằng OpacityMask.</summary>
+        public ImageSource SettingsLogo => _logo ?? (_logo = NapResource("AiTool.Assets.settings_logo.png"));
+        private static ImageSource _logo;
 
-        private static ImageSource NapLogo()
+        public ICommand DanCmd { get; }
+        public ICommand ChonTepCmd { get; }
+        public ICommand HuyCmd { get; }
+        public ICommand ChenCmd { get; }
+        public ICommand VeLaiCmd { get; }
+        public ICommand DocLaiCmd { get; }
+        public ICommand GuiCmd { get; }
+        public ICommand HuyNhapCmd { get; }
+        public ICommand VietMauCmd { get; }
+        public ICommand SuaCmd { get; }
+        public ICommand ThuMucCmd { get; }
+        public ICommand XoaCmd { get; }
+        public ICommand ThuNhanhCmd { get; }
+
+        public ObservableCollection<DongLanThu> DanhSach { get; } = new ObservableCollection<DongLanThu>();
+
+        private DongLanThu _dongChon;
+        public DongLanThu DongChon
         {
-            try
-            {
-                using (Stream s = typeof(AiTabViewModel).Assembly.GetManifestResourceStream("AiTool.Assets.settings_logo.png"))
-                {
-                    if (s == null) return null;
-                    var bmp = new System.Windows.Media.Imaging.BitmapImage();
-                    bmp.BeginInit();
-                    bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-                    bmp.StreamSource = s;
-                    bmp.EndInit();
-                    bmp.Freeze();
-                    return bmp;
-                }
-            }
-            catch (Exception) { return null; }
+            get => _dongChon;
+            set { if (Dat(ref _dongChon, value)) HienChon(); }
         }
 
-        /// <summary>Trạng thái key hiện dưới tiêu đề nút cài đặt / trên tab.</summary>
-        public string TrangThaiKey
-        {
-            get
-            {
-                string k = KeyHienHanh;
-                return k == null ? "Chưa có API key " + (LaLing ? "Ling" : "Claude") + " — bấm ⚙ để nhập (hoặc chọn Chỉ Kev)" : "API key: " + DuLieuTinh.AnKey(k);
-            }
-        }
-        public bool ChuaCoKey => _cheDo == KiemTraRunner.CheDoChiClaude && KeyHienHanh == null;
+        private LanThu Chon => _dongChon?.L;
 
-        /// <summary>Ô Model đang chọn Ling → phần kiểm tra gửi Ling thay Claude.</summary>
-        public bool LaLing => _model == LingDich.MucModelLing;
-        private string KeyHienHanh => DuLieuTinh.DocKey(ThuMucModule, LaLing ? DuLieuTinh.FileKeyLing : DuLieuTinh.FileKeyClaude);
-        private string TenAi => LaLing ? _lingModel : "Claude";
-        public string ThuMucModule { get; }
-        public string[] DanhSachCheDo => KiemTraRunner.DanhSachCheDo;
-        public string[] DanhSachModel => BangGia.Model.Concat(new[] { LingDich.MucModelLing }).ToArray();
-        public ObservableCollection<string> DanhSachLayer { get; } = new ObservableCollection<string>();
-        public ObservableCollection<string> Loi { get; } = new ObservableCollection<string>();
-        public ObservableCollection<DongCanhBao> CanhBaoHien { get; } = new ObservableCollection<DongCanhBao>();
-        private List<DongCanhBao> _tatCa = new List<DongCanhBao>();
-
-        /// <summary>Khung của lần quét gần nhất (để OHTAAIZOOM tìm theo số thứ tự).</summary>
-        public List<KhungDuLieu> KhungLanCuoi { get; private set; } = new List<KhungDuLieu>();
-
-        public ICommand KiemTraCmd { get; }
-        public ICommand ChonVungCmd { get; }
-        public ICommand XuatMoTaCmd { get; }
-        public ICommand DungCmd { get; }
-        public ICommand CaiDatCmd { get; }
-        public ICommand MoNhatKyCmd { get; }
-        public ICommand MoChatCmd { get; }
-        public ICommand QuayLaiCmd { get; }
-
-        /// <summary>Màn hình 💬 Chat (thay chỗ màn hình kiểm tra khi DangChat).</summary>
-        public ChatViewModel Chat { get; }
-
-        private bool _dangChat;
-        public bool DangChat { get => _dangChat; private set { if (Dat(ref _dangChat, value)) OnChanged(nameof(KhongChat)); } }
-        public bool KhongChat => !_dangChat;
-
-        private string _lingModel;
-
-        private string _cheDo;
-        public string CheDo
-        {
-            get => _cheDo;
-            set
-            {
-                if (Dat(ref _cheDo, value))
-                {
-                    GhiReg("che_do", value);
-                    OnChanged(nameof(ChuaCoKey));
-                    OnChanged(nameof(CanClaudeModel));
-                }
-            }
-        }
-        public bool CanClaudeModel => _cheDo != KiemTraRunner.CheDoChiKev;
-
-        private string _kevUrl;
-        public string KevUrl
-        {
-            get => _kevUrl;
-            set { if (Dat(ref _kevUrl, value)) GhiReg("kev_url", value); }
-        }
-
-        private bool _danNhanGocKhung;
-        public bool DanNhanGocKhung
-        {
-            get => _danNhanGocKhung;
-            set { if (Dat(ref _danNhanGocKhung, value)) GhiReg("dan_nhan", value ? "1" : "0"); }
-        }
-
-        private string _thongKePhanLoai = "";
-        public string ThongKePhanLoai
-        {
-            get => _thongKePhanLoai;
-            private set { if (Dat(ref _thongKePhanLoai, value)) OnChanged(nameof(CoThongKePhanLoai)); }
-        }
-        public bool CoThongKePhanLoai => !string.IsNullOrEmpty(_thongKePhanLoai);
-
-        private string _layerKhung;
-        public string LayerKhung
-        {
-            get => _layerKhung;
-            set { if (Dat(ref _layerKhung, value)) GhiReg("layer_khung", value); }
-        }
-
-        private string _model;
-        public string Model
-        {
-            get => _model;
-            set
-            {
-                if (!Dat(ref _model, value)) return;
-                GhiReg("model", value);
-                OnChanged(nameof(ChuaCoKey));
-                OnChanged(nameof(TrangThaiKey));
-            }
-        }
-
-        private bool _chiHienDo;
-        public bool ChiHienDo
-        {
-            get => _chiHienDo;
-            set { if (Dat(ref _chiHienDo, value)) LocCanhBao(); }
-        }
+        /// <summary>DXF của lần thử đang chọn — lệnh OHTADXFCHEN đọc.</summary>
+        public string DxfDangChon => Chon != null && Chon.CoDxf ? Chon.Dxf : null;
 
         private bool _dangChay;
-        public bool DangChay { get => _dangChay; private set { if (Dat(ref _dangChay, value)) OnChanged(nameof(KhongChay)); } }
+        public bool DangChay { get => _dangChay; private set { if (Dat(ref _dangChay, value)) { OnChanged(nameof(KhongChay)); OnChanged(nameof(CoTheSua)); OnChanged(nameof(CoDxf)); } } }
         public bool KhongChay => !_dangChay;
+        public bool CoChon => Chon != null;
+        public bool CoTheSua => CoChon && !_dangChay;
+        /// <summary>Hình chưa có mẫu biên dạng → nút ✨ AI viết mẫu (mẫu thử của lần thử này; thêm vào thư viện ở ⚙ Thử nhanh).</summary>
+        public bool CanMau => Chon != null && Chon.CanMau;
+        public bool CoDxf => DxfDangChon != null && !_dangChay;
 
-        private string _tienDo = "";
-        public string TienDo { get => _tienDo; private set => Dat(ref _tienDo, value); }
+        private string _bao = "Dán ảnh chụp MỘT hình (Ctrl+V) hoặc chọn tệp ảnh / PDF / DXF.";
+        public string Bao { get => _bao; private set => Dat(ref _bao, value); }
 
-        private string _tong = "Chưa kiểm tra.";
-        public string Tong { get => _tong; private set => Dat(ref _tong, value); }
+        // ----- Lần thử đang chọn -----
+        public string TieuDeChon => Chon == null ? "" : Chon.Gio + " · " + Chon.MoTa;
+        public string ChiTietChon => Chon?.ChiTiet ?? "";
+        public ImageSource AnhGoc => Chon?.Anh == null ? null : NapAnh(Chon.Anh, 0);
+        public ImageSource AnhVe => Chon?.Xem == null ? null : NapAnh(Chon.Xem, 0);
+        public string LoiChon => Chon?.Loi;
+        public bool CoLoi => !string.IsNullOrEmpty(Chon?.Loi);
+        public string CanhBaoChon => Chon == null ? "" : string.Join("\n", Chon.CanhBao.Select(s => "⚠ " + s));
+        public bool CoCanhBao => Chon != null && Chon.CanhBao.Count > 0;
+        public string XacNhanChon => Chon == null ? "" : "Cần xác nhận (AI tự suy — nét VÀNG trong DXF):\n" + string.Join("\n", Chon.CanXacNhan.Select(s => "• " + s));
+        public bool CoXacNhan => Chon != null && Chon.CanXacNhan.Count > 0;
+        public string GhiChuChon => Chon == null || Chon.GhiChuNguoi.Length == 0 ? "" : "📝 Thông tin bổ sung đã gửi AI: " + Chon.GhiChuNguoi;
+        public bool CoGhiChu => GhiChuChon.Length > 0;
+        public string MauThuanChon => Chon == null ? "" : string.Join("\n", Chon.MauThuan.Select(s => "⚠ Ghi chú khác hình: " + s));
+        public bool CoMauThuan => Chon != null && Chon.MauThuan.Count > 0;
 
-        private string _fileNhatKy;
-        public bool CoNhatKy => !string.IsNullOrEmpty(_fileNhatKy);
+        // ----- Thông tin bổ sung (25/11): bật → dán ảnh / Đọc lại chưa gửi ngay, hiện khung nhập -----
+        private bool _batGhiChu;
+        public bool BatGhiChu { get => _batGhiChu; set { if (Dat(ref _batGhiChu, value)) GhiReg("ghi_chu_bo_sung", value ? "1" : "0"); } }
 
+        private bool _dangNhap;
+        public bool DangNhap { get => _dangNhap; private set => Dat(ref _dangNhap, value); }
 
-        /// <summary>Đọc lại danh sách layer của bản vẽ đang mở (gọi khi mở ô chọn layer).</summary>
-        public void LamMoiLayer()
+        private string _ghiChuNhap = "";
+        public string GhiChuNhap { get => _ghiChuNhap; set => Dat(ref _ghiChuNhap, value ?? ""); }
+
+        private ImageSource _anhCho;
+        public ImageSource AnhCho { get => _anhCho; private set => Dat(ref _anhCho, value); }
+
+        private string _choTep, _choDocLai; // đang chờ gửi: tệp mới / thư mục lần thử đọc lại
+
+        private void HienChon()
         {
-            var ds = new List<string>();
-            try
-            {
-                Document doc = CadApplication.DocumentManager.MdiActiveDocument;
-                if (doc != null)
-                {
-                    using (doc.LockDocument())
-                    using (Transaction tr = doc.Database.TransactionManager.StartTransaction())
-                    {
-                        var lt = (LayerTable)tr.GetObject(doc.Database.LayerTableId, OpenMode.ForRead);
-                        foreach (ObjectId id in lt)
-                            ds.Add(((LayerTableRecord)tr.GetObject(id, OpenMode.ForRead)).Name);
-                        tr.Commit();
-                    }
-                }
-            }
-            catch (Exception) { }
-            if (!ds.Contains(_layerKhung, StringComparer.OrdinalIgnoreCase)) ds.Add(_layerKhung);
-            string giu = _layerKhung;
-            DanhSachLayer.Clear();
-            foreach (string l in ds.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)) DanhSachLayer.Add(l);
-            _layerKhung = giu;
-            OnChanged(nameof(LayerKhung));
+            foreach (string p in new[] { nameof(CoChon), nameof(CoTheSua), nameof(CoDxf), nameof(TieuDeChon), nameof(ChiTietChon), nameof(AnhGoc),
+                                         nameof(AnhVe), nameof(LoiChon), nameof(CoLoi), nameof(CanhBaoChon), nameof(CoCanhBao), nameof(CanMau), nameof(XacNhanChon), nameof(CoXacNhan),
+                                         nameof(GhiChuChon), nameof(CoGhiChu), nameof(MauThuanChon), nameof(CoMauThuan) })
+                OnChanged(p);
         }
 
-        /// <summary>Lệnh OHTAAI / OHTAAIVUNG gọi sau khi quét (luồng CAD).</summary>
-        public void BatDauKiemTra(List<KhungDuLieu> khung)
+        // ----- Nhận ảnh -----
+
+        /// <summary>Ctrl+V / nút Dán: ảnh trong bộ nhớ tạm, hoặc tệp đã copy trong Explorer.</summary>
+        public void Dan()
         {
-            if (DangChay) { CanhBaoDongLenh("[AI] Dang kiem tra, bam Dung truoc."); return; }
-            KhungLanCuoi = khung ?? new List<KhungDuLieu>();
-            Loi.Clear();
-            ThongKePhanLoai = "";
-            _tatCa = new List<DongCanhBao>();
-            LocCanhBao();
-
-            string cheDo = CheDo;
-            string key = KeyHienHanh;
-            string kevUrl = KevUrl;
-            string loiTruoc = KiemTraRunner.LoiTruocKhiChay(cheDo, key, kevUrl, KhungLanCuoi.Count, LayerKhung);
-            if (loiTruoc != null)
+            try
             {
-                Loi.Add(loiTruoc);
-                Tong = "Chưa kiểm tra.";
-                return;
+                if (Clipboard.ContainsFileDropList() && Clipboard.GetFileDropList().Count > 0) { Nhan(Clipboard.GetFileDropList()[0]); return; }
+                BitmapSource anh = Clipboard.GetImage();
+                if (anh == null) { Bao = "Bộ nhớ tạm không có ảnh — chụp vùng bản vẽ (Win+Shift+S) rồi dán lại."; return; }
+                string f = Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "dxf_tu_anh_dan.png");
+                Directory.CreateDirectory(Path.GetDirectoryName(f));
+                using (var fs = File.Create(f)) { var en = new PngBitmapEncoder(); en.Frames.Add(BitmapFrame.Create(anh)); en.Save(fs); }
+                Nhan(f);
             }
+            catch (Exception ex) { Bao = "Không dán được: " + ex.Message; }
+        }
 
-            string model = Model, thuMuc = ThuMucModule;
-            string vatLieu = "";
-            try { vatLieu = DuLieuTinh.KhoiVatLieuTrenMay(thuMuc); }
-            catch (Exception ex) { Loi.Add("Không đọc được bảng vật liệu: " + ex.Message); return; }
+        private void ChonTep()
+        {
+            var d = new Microsoft.Win32.OpenFileDialog { Filter = "Bản vẽ (ảnh, PDF, DXF)|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff;*.pdf;*.dxf|Mọi tệp|*.*" };
+            if (d.ShowDialog() == true) Nhan(d.FileName);
+        }
 
+        /// <summary>Tệp mới → OhtaTeams tạo lần thử, AI đọc + chọn mẫu, vẽ.</summary>
+        public void Nhan(string f)
+        {
+            if (!DuoiNhan.Contains(Path.GetExtension(f).ToLowerInvariant())) { Bao = "Chỉ nhận ảnh, PDF hoặc DXF: " + Path.GetFileName(f); return; }
+            if (!BatGhiChu) { Chay("Đang gửi " + Path.GetFileName(f) + "…", "--thu-nhanh-moi", f); return; }
+            _choTep = f; _choDocLai = null;
+            GhiChuNhap = "";
+            AnhCho = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff" }.Contains(Path.GetExtension(f).ToLowerInvariant()) ? NapAnh(f, 0) : null;
+            DangNhap = true;
+            Bao = "Nhập thông tin bổ sung cho AI (tuỳ chọn) rồi bấm ▶ Gửi AI (Ctrl+Enter).";
+        }
+
+        /// <summary>🤖 Đọc lại: bật thông tin bổ sung → khung nhập điền sẵn ghi chú cũ; tắt → đọc lại luôn với ghi chú đã lưu.</summary>
+        private void DocLai()
+        {
+            if (Chon == null || DangChay) return;
+            if (!BatGhiChu) { ChayLan("--thu-nhanh-doc-lai", "AI đang đọc lại hình…"); return; }
+            _choDocLai = Chon.ThuMuc; _choTep = null;
+            GhiChuNhap = Chon.GhiChuNguoi;
+            AnhCho = Chon.Anh == null ? null : NapAnh(Chon.Anh, 0);
+            DangNhap = true;
+            Bao = "Sửa thông tin bổ sung rồi bấm ▶ Gửi AI để AI đọc lại.";
+        }
+
+        /// <summary>▶ Gửi AI: ghi chú ra tệp tạm (nhiều dòng, khỏi lo ký tự đặc biệt trên dòng lệnh) → --ghi-chu-tep.</summary>
+        private void Gui()
+        {
+            if (!DangNhap || DangChay) return;
+            string tep = Path.Combine(Path.GetTempPath(), "OHTA_TOOL", "dxf_tu_anh_ghi_chu.txt");
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(tep));
+                File.WriteAllText(tep, GhiChuNhap ?? "", new System.Text.UTF8Encoding(false));
+            }
+            catch (Exception ex) { Bao = "Không ghi được ghi chú: " + ex.Message; return; }
+            DangNhap = false;
+            if (_choTep != null) Chay("Đang gửi " + Path.GetFileName(_choTep) + " kèm thông tin bổ sung…", "--thu-nhanh-moi", _choTep, "--ghi-chu-tep", tep);
+            else if (_choDocLai != null) Chay("AI đang đọc lại hình kèm thông tin bổ sung…", "--thu-nhanh-doc-lai", _choDocLai, "--ghi-chu-tep", tep);
+            _choTep = _choDocLai = null;
+        }
+
+        private void ChayLan(string lenh, string bao)
+        {
+            if (Chon != null) Chay(bao, lenh, Chon.ThuMuc);
+        }
+
+        /// <summary>Chạy exe nền; dòng tiến độ lên ô báo, #KQ → nạp lại danh sách và chọn lần thử đó.</summary>
+        private void Chay(string bao, string lenh, string thamSo, params string[] them)
+        {
+            if (DangChay) return;
             DangChay = true;
+            Bao = bao;
             _huy = new CancellationTokenSource();
-            CancellationToken ct = _huy.Token;
-            List<KhungDuLieu> ds = KhungLanCuoi;
-            TienDo = "Đang phân tích " + ds.Count + " khung (" + cheDo + ")…";
-            var tienDo = new BaoTienDo(_ui, p => TienDo = "Bước " + p.xong + "/" + p.tong);
-
-            IGuiYeuCau guiKev = cheDo != KiemTraRunner.CheDoChiClaude
-                ? new KevHttp(kevUrl, thuMuc)
-                : null;
-            IGuiYeuCau guiClaude = (cheDo == KiemTraRunner.CheDoChiKev || string.IsNullOrWhiteSpace(key)) ? null
-                : LaLing ? new LingHttp.GuiKiemTra(key, _lingModel)
-                : (IGuiYeuCau)new ClaudeHttp(key, YeuCauApi.CoFallback(model));
-            string tenAi = TenAi;
-
-            Task.Run(async () =>
+            string thuMuc = null, loi = null;
+            LanThu kq = null;
+            ChayExe.Chay(Exe, DuongDan.ThamSo(new[] { lenh, thamSo }.Concat(them).ToArray()), dong =>
             {
-                if (cheDo != KiemTraRunner.CheDoChiClaude)
-                    await KevHttp.DongBoLuatTuMayChu(kevUrl, thuMuc, ct).ConfigureAwait(false);
-                CauHinhKev cauHinhKev = CauHinhKev.DocTuThuMuc(thuMuc);
-                string loiDan = "";
-                if (guiClaude != null)
+                var (loai, chu) = DongExe.Doc(dong);
+                switch (loai)
                 {
-                    try
-                    {
-                        loiDan = DuLieuTinh.DocHuongDan(thuMuc, HuongDanMacDinh())
-                               + CauHinhKev.DocKhoiDongBoChoClaude(thuMuc);
-                    }
-                    catch (Exception) { }
+                    case LoaiDong.TienDo: _ui.BeginInvoke(new Action(() => Bao = chu)); break;
+                    case LoaiDong.ThuMuc: thuMuc = chu; break;
+                    case LoaiDong.KetQua: kq = LanThu.TuJson(chu).FirstOrDefault(); break;
+                    case LoaiDong.Loi: loi = chu; break;
                 }
-                return await KiemTraRunner.ChayTheoCheDo(cheDo, ds, model, loiDan, vatLieu, guiKev, guiClaude, tienDo, ct, cauHinhKev).ConfigureAwait(false);
-            }).ContinueWith(t => _ui.BeginInvoke(new Action(() => XongKiemTra(t, cheDo, model, thuMuc, tenAi))));
+            }, _huy.Token).ContinueWith(t => _ui.BeginInvoke(new Action(() =>
+            {
+                DangChay = false;
+                string chonLai = kq?.ThuMuc ?? thuMuc ?? thamSo;
+                NapDs(chonLai, kq); // kq vừa chạy có lỗi vẽ cụ thể (vd thiếu thông số mẫu) mà danh sách không biết
+                if (t.IsCanceled) Bao = "Đã huỷ.";
+                else if (t.IsFaulted) Bao = "Lỗi: " + t.Exception?.GetBaseException().Message;
+                else if (loi != null) Bao = "✖ " + loi;
+                else if (kq == null) Bao = "OhtaTeams không trả kết quả (exe cũ? chạy build_ohta.ps1).";
+                else Bao = kq.CoDxf ? "Đã vẽ — bấm 📥 Chèn vào bản vẽ rồi chọn điểm đặt góc dưới trái. F-name tự thêm."
+                         : "Chưa vẽ được hình — xem dòng đỏ, ✎ Sửa thông số rồi 🔁 Vẽ lại.";
+            })));
         }
 
-        private void XongKiemTra(Task<KetQuaKiemTra> t, string cheDo, string model, string thuMuc, string tenAi)
+        /// <summary>Nạp danh sách lần thử (--thu-nhanh-ds), chọn lại thư mục chonLai (null = giữ lần đang chọn, không có thì lần mới nhất).</summary>
+        public void NapDs(string chonLai = null, LanThu moi = null)
         {
-            DangChay = false;
-            TienDo = "";
-            // Đọc t.Result khi task bị huỷ / lỗi sẽ ném trong callback Dispatcher -> có thể kéo sập CAD
-            if (t.Status != TaskStatus.RanToCompletion || t.Result == null)
+            string giu = chonLai ?? Chon?.ThuMuc;
+            List<LanThu> ds = null;
+            string loi = null;
+            ChayExe.Chay(Exe, "--thu-nhanh-ds", dong =>
             {
-                Loi.Add(t.IsCanceled ? "Đã dừng." : "Lỗi khi kiểm tra: " + (t.Exception?.GetBaseException().Message ?? "không rõ"));
-                return;
-            }
-            KetQuaKiemTra kq = t.Result;
-            foreach (string l in kq.LoiLo) Loi.Add(l);
-            _tatCa = kq.CanhBao.Select(x => new DongCanhBao
+                var (loai, chu) = DongExe.Doc(dong);
+                if (loai == LoaiDong.KetQua) ds = LanThu.TuJson(chu);
+                else if (loai == LoaiDong.Loi) loi = chu;
+            }, CancellationToken.None).ContinueWith(t => _ui.BeginInvoke(new Action(() =>
             {
-                SoThuTu = x.Khung.SoThuTu,
-                Do = x.CB.Do,
-                TieuDe = DongChu.TenKhung(x.Khung) + " · " + x.CB.LoaiLoi,
-                LyDo = x.CB.LyDo,
-                GoiY = x.CB.GoiY,
-            }).ToList();
-            LocCanhBao();
-
-            if (kq.NhanGiaCong != null && kq.NhanGiaCong.Count > 0)
-            {
-                string tomTat = string.Join(" · ", kq.NhanGiaCong.Values
-                    .GroupBy(v => v)
-                    .OrderByDescending(g => g.Count())
-                    .Select(g => g.Key + " (" + g.Count() + ")"));
-
-                if (DanNhanGocKhung)
-                {
-                    try
+                if (t.IsFaulted) { Bao = t.Exception?.GetBaseException().Message; return; }
+                if (loi != null) { Bao = "✖ " + loi; return; }
+                DanhSach.Clear();
+                foreach (LanThu l in ds ?? new List<LanThu>())
+                    DanhSach.Add(new DongLanThu
                     {
-                        int soGhi = DanNhanKhung.GhiNhan(CadApplication.DocumentManager.MdiActiveDocument, KhungLanCuoi, kq.NhanGiaCong);
-                        ThongKePhanLoai = "🏷 Phân loại " + kq.NhanGiaCong.Count + " tấm: " + tomTat
-                            + (soGhi > 0 ? " — đã dán " + soGhi + " nhãn góc trên-trái (layer " + KevApi.LayerNhan + ")" : "");
-                    }
-                    catch (Exception ex)
-                    {
-                        Loi.Add("Không dán được nhãn lên bản vẽ: " + ex.Message);
-                        ThongKePhanLoai = "🏷 Phân loại " + kq.NhanGiaCong.Count + " tấm: " + tomTat;
-                    }
-                }
-                else
-                {
-                    ThongKePhanLoai = "🏷 Phân loại " + kq.NhanGiaCong.Count + " tấm: " + tomTat;
-                }
-            }
-
-            int soDo = _tatCa.Count(c => c.Do);
-            if (cheDo == KiemTraRunner.CheDoChiKev)
-            {
-                Tong = string.Format(CultureInfo.InvariantCulture,
-                    "{0} cảnh báo ({1} 🔴) · {2} khung · Kev-0.8B ({3:0} ms · $0.0000)",
-                    _tatCa.Count, soDo, KhungLanCuoi.Count, kq.ThoiGianKevMs);
-            }
-            else if (cheDo == KiemTraRunner.CheDoHybrid)
-            {
-                Tong = string.Format(CultureInfo.InvariantCulture,
-                    "{0} cảnh báo ({1} 🔴) · {2} khung (Kev lọc {3} nghi vấn, {4:0} ms) · {5}",
-                    _tatCa.Count, soDo, KhungLanCuoi.Count, kq.SoKhungGuiClaude, kq.ThoiGianKevMs,
-                    model == LingDich.MucModelLing
-                        ? tenAi + " (token vào " + kq.TongSuDung.Vao + " / ra " + kq.TongSuDung.Ra + ")"
-                        : string.Format(CultureInfo.InvariantCulture, "Claude ≈ ${0:0.0000}", kq.TongTien));
-            }
-            else if (model == LingDich.MucModelLing)
-            {
-                Tong = string.Format(CultureInfo.InvariantCulture, "{0} cảnh báo ({1} 🔴) · {2} khung · {3} · token vào {4} / ra {5}",
-                    _tatCa.Count, soDo, KhungLanCuoi.Count, tenAi, kq.TongSuDung.Vao, kq.TongSuDung.Ra);
-            }
-            else
-            {
-                Tong = string.Format(CultureInfo.InvariantCulture,
-                    "{0} cảnh báo ({1} 🔴) · {2} khung · token vào {3} / ra {4} / cache đọc {5} · ≈ ${6:0.0000}",
-                    _tatCa.Count, soDo, KhungLanCuoi.Count, kq.TongSuDung.Vao + kq.TongSuDung.GhiCache, kq.TongSuDung.Ra,
-                    kq.TongSuDung.DocCache, kq.TongTien);
-            }
-            try
-            {
-                _fileNhatKy = NhatKy.Ghi(thuMuc, model == LingDich.MucModelLing ? tenAi : model, kq);
-                OnChanged(nameof(CoNhatKy));
-            }
-            catch (Exception ex) { Loi.Add("Không ghi được nhật ký: " + ex.Message); }
+                        L = moi != null && string.Equals(moi.ThuMuc, l.ThuMuc, StringComparison.OrdinalIgnoreCase) ? moi : l,
+                        AnhNho = l.Anh == null ? null : NapAnh(l.Anh, 60),
+                    });
+                DongChon = DanhSach.FirstOrDefault(d => string.Equals(d.L.ThuMuc, giu, StringComparison.OrdinalIgnoreCase)) ?? DanhSach.FirstOrDefault();
+                HienChon(); // cùng thư mục nhưng dữ liệu mới (vừa vẽ lại)
+            })));
         }
 
-        private void LocCanhBao()
+        private void Xoa()
         {
-            CanhBaoHien.Clear();
-            foreach (DongCanhBao c in _tatCa.Where(c => !ChiHienDo || c.Do)) CanhBaoHien.Add(c);
-        }
-
-        public void ZoomToi(DongCanhBao c)
-        {
-            if (c != null) GuiLenh("OHTAAIZOOM " + c.SoThuTu + " ");
+            if (Chon == null || DangChay) return;
+            if (MessageBox.Show("Xoá hẳn lần thử " + Chon.Gio + "? (ảnh, dữ liệu, DXF, mẫu thử chưa thêm vào thư viện)", "Tạo DXF từ ảnh",
+                                MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            try { Directory.Delete(Chon.ThuMuc, true); }
+            catch (Exception ex) { Bao = "Chưa xoá được (DXF đang mở trong CAD?): " + ex.Message; return; }
+            Bao = "Đã xoá lần thử.";
+            NapDs("");
         }
 
         private void GuiLenh(string lenh)
         {
             Document doc = CadApplication.DocumentManager.MdiActiveDocument;
-            if (doc == null) return;
-            if (DangChay && lenh != null && !lenh.StartsWith("OHTAAIZOOM", StringComparison.Ordinal)
-                && !lenh.StartsWith("OHTAAICHATKHUNG", StringComparison.Ordinal))
-            {
-                Loi.Add("Đang kiểm tra — bấm Dừng trước khi chạy lại.");
-                return;
-            }
+            if (doc == null) { Bao = "Chưa mở bản vẽ nào."; return; }
+            if (DxfDangChon == null) { Bao = "Lần thử này chưa có DXF."; return; }
             doc.SendStringToExecute("\x03\x03" + lenh, true, false, false);
         }
 
-        /// <summary>Nút ⚙: cửa sổ cài đặt (Kev URL + API key + file hướng dẫn AI). Đóng thì cập nhật trạng thái key.</summary>
-        private void MoCaiDat()
+        private void MoExe(string thamSo)
         {
-            try
-            {
-                var win = new Views.AiCaiDatWindow(ThuMucModule, HuongDanMacDinh(), AccentBrush, KevUrl, _lingModel);
-                if (CadApplication.ShowModalWindow(win) == true)
-                {
-                    if (!string.IsNullOrWhiteSpace(win.KevUrlDaLuu)) KevUrl = win.KevUrlDaLuu;
-                    _lingModel = win.LingModelDaLuu;
-                    GhiReg("ling_model", _lingModel);
-                }
-            }
-            catch (Exception ex)
-            {
-                Loi.Add("Không mở được cài đặt: " + ex.Message);
-            }
-            OnChanged(nameof(TrangThaiKey));
-            OnChanged(nameof(ChuaCoKey));
-            if (!ChuaCoKey)
-                for (int i = Loi.Count - 1; i >= 0; i--)
-                    if (Loi[i].StartsWith("Chưa có API key", StringComparison.Ordinal)) Loi.RemoveAt(i);
+            try { ChayExe.Mo(Exe, thamSo); }
+            catch (Exception ex) { Bao = ex.Message; }
         }
 
-        private void MoNhatKy()
+        private void Mo(string exe, string thamSo)
         {
-            if (string.IsNullOrEmpty(_fileNhatKy) || !File.Exists(_fileNhatKy)) return;
-            try { Process.Start("explorer.exe", "/select,\"" + _fileNhatKy + "\""); }
-            catch (Exception) { }
+            try { Process.Start(exe, thamSo); }
+            catch (Exception ex) { Bao = "Không mở được: " + ex.Message; }
         }
 
-        /// <summary>Bản mặc định của file hướng dẫn AI (nhúng trong DLL).</summary>
-        public static string HuongDanMacDinh()
-        {
-            using (Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("AiTool.Assets.huong_dan_ai_mac_dinh.md"))
-            {
-                if (s == null) return string.Empty;
-                using (var r = new StreamReader(s, System.Text.Encoding.UTF8)) return r.ReadToEnd();
-            }
-        }
-
-
-        private static void CanhBaoDongLenh(string s)
-        {
-            try { CadApplication.DocumentManager.MdiActiveDocument?.Editor.WriteMessage("\n" + s); } catch (Exception) { }
-        }
+        private const string KhoaReg = @"Software\OFT_Lisp\OhtaTool\AI";
 
         private static string DocReg(string ten)
         {
-            try
-            {
-                using (WinReg.RegistryKey k = WinReg.Registry.CurrentUser.OpenSubKey(KhoaReg))
-                    return k?.GetValue(ten) as string;
-            }
+            try { using (var k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(KhoaReg)) return k?.GetValue(ten) as string; }
             catch (Exception) { return null; }
         }
 
         private static void GhiReg(string ten, string gt)
         {
+            try { using (var k = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(KhoaReg)) k?.SetValue(ten, gt ?? ""); }
+            catch (Exception) { }
+        }
+
+        /// <summary>Ảnh nạp hẳn vào bộ nhớ (OnLoad) để không khoá tệp — xoá / vẽ lại được.</summary>
+        private static ImageSource NapAnh(string f, int cao)
+        {
+            if (!File.Exists(f)) return null;
             try
             {
-                using (WinReg.RegistryKey k = WinReg.Registry.CurrentUser.CreateSubKey(KhoaReg))
-                    k?.SetValue(ten, gt ?? string.Empty);
+                var b = new BitmapImage();
+                b.BeginInit();
+                b.CacheOption = BitmapCacheOption.OnLoad;
+                b.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+                if (cao > 0) b.DecodePixelHeight = cao;
+                b.UriSource = new Uri(f);
+                b.EndInit();
+                b.Freeze();
+                return b;
             }
-            catch (Exception) { }
+            catch (Exception) { return null; }
+        }
+
+        private static ImageSource NapResource(string ten)
+        {
+            try
+            {
+                using (Stream s = typeof(AiTabViewModel).Assembly.GetManifestResourceStream(ten))
+                {
+                    if (s == null) return null;
+                    var b = new BitmapImage();
+                    b.BeginInit(); b.CacheOption = BitmapCacheOption.OnLoad; b.StreamSource = s; b.EndInit(); b.Freeze();
+                    return b;
+                }
+            }
+            catch (Exception) { return null; }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -545,22 +395,6 @@ namespace AiTool.ViewModels
             f = v;
             OnChanged(p);
             return true;
-        }
-
-        /// <summary>IProgress đẩy về luồng giao diện qua Dispatcher (không phụ thuộc SynchronizationContext của CAD).</summary>
-        private sealed class BaoTienDo : IProgress<(int xong, int tong)>
-        {
-            private readonly Dispatcher _d;
-            private readonly Action<(int xong, int tong)> _a;
-            private int _max;
-            public BaoTienDo(Dispatcher d, Action<(int xong, int tong)> a) { _d = d; _a = a; }
-            public void Report((int xong, int tong) v)
-            {
-                // Các lô song song có thể báo lệch thứ tự -> chỉ hiện số lớn nhất
-                int moi = v.xong, cu;
-                do { cu = _max; if (moi <= cu) return; } while (Interlocked.CompareExchange(ref _max, moi, cu) != cu);
-                _d.BeginInvoke(new Action(() => _a(v)));
-            }
         }
     }
 }

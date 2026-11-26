@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
-    AITOOL.dll - tab AI kiem tra ban ve (OHTA_TOOL/05_AI, ADR 0006).
+    AITOOL.dll - tab "Tao du lieu DXF tu anh" (OHTA_TOOL/05_AI, ADR 0006) - goi OhtaTeams.exe (thu nhanh chay an), chen DXF vao ban ve.
     Bien dich kep giong _system/OhtaTool.Plugin: net48 = ZWCAD 2026 (define ZWCAD), net10.0-windows = AutoCAD 2027 (define AUTOCAD).
-    Build bang OHTA_TOOL\build_ohta.ps1 (tu do SDK, chep DLL ra 03_Guro\bin\ZwCAD | bin\AutoCAD).
+    Build bang OHTA_TOOL\build_ohta.ps1 (tu do SDK, chep DLL ra 05_AI\bin\ZwCAD | bin\AutoCAD).
   -->
   <PropertyGroup>
     <ZwCadSdkDir Condition="'$(ZwCadSdkDir)' == ''">C:\Program Files\ZWSOFT\ZWCAD 2026</ZwCadSdkDir>
@@ -68,25 +68,14 @@
     </Reference>
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
-    <Reference Include="System.Net.Http" />
-  </ItemGroup>
-
-  <!-- File huong dan AI mac dinh + logo nut cai dat (nut "Khoi phuc mac dinh"), nap qua ManifestResourceStream -->
+<!-- Logo nut cai dat, nap qua ManifestResourceStream -->
   <ItemGroup>
-    <EmbeddedResource Include="Assets\huong_dan_ai_mac_dinh.md" LogicalName="AiTool.Assets.huong_dan_ai_mac_dinh.md" />
     <EmbeddedResource Include="Assets\settings_logo.png" LogicalName="AiTool.Assets.settings_logo.png" />
   </ItemGroup>
 
-  <!-- Dung lai ma Fname bang LINK NGUON (khong tham chieu OHTATOOL.dll, ADR 0006) -->
+  <!-- Dung JsonLite cua OHTA bang LINK NGUON (khong tham chieu OHTATOOL.dll, ADR 0006) -->
   <ItemGroup>
     <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\JsonLite.cs" Link="Shared\JsonLite.cs" />
-    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\FnameCore.cs" Link="Shared\FnameCore.cs" />
-    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\FnameDataStore.cs" Link="Shared\FnameDataStore.cs" />
-    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\FnameLocalAdditions.cs" Link="Shared\FnameLocalAdditions.cs" />
-    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\TraVCore.cs" Link="Shared\TraVCore.cs" />
-    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\TraVThuCore.cs" Link="Shared\TraVThuCore.cs" />
-    <Compile Include="..\..\..\_system\OhtaTool.Plugin\Core\TamCore.cs" Link="Shared\TamCore.cs" />
   </ItemGroup>
 
   <!-- Xuat DLL ra 05_AI/bin/ZwCAD va 05_AI/bin/AutoCAD (build_ohta.ps1 tat buoc nay va tu chep) -->

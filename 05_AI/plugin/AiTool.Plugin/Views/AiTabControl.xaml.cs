@@ -1,8 +1,8 @@
 using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
 using AiTool.ViewModels;
 
 namespace AiTool.Views
@@ -16,37 +16,37 @@ namespace AiTool.Views
             InitializeComponent();
             _vm = vm;
             DataContext = vm;
-            NutKiemTra.Background = vm.AccentBrush;
-            NutGui.Background = vm.AccentBrush;
-            vm.Chat.CuonXuong += () => ChatCuon.ScrollToEnd();
+            NutDan.Background = NutChen.Background = NutGui.Background = vm.AccentBrush;
+            // khung thông tin bổ sung mở → đưa con trỏ vào ô nhập
+            vm.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(AiTabViewModel.DangNhap) && vm.DangNhap)
+                    Dispatcher.BeginInvoke(new Action(() => { OGhiChu.Focus(); OGhiChu.CaretIndex = OGhiChu.Text.Length; }), System.Windows.Threading.DispatcherPriority.Input);
+            };
+            // Ctrl+V trên tab (PaletteSet chuyển phím khi tab có focus) + kéo thả tệp
+            PreviewKeyDown += (s, e) =>
+            {
+                if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control && _vm.KhongChay && !(e.OriginalSource is TextBox)) { _vm.Dan(); e.Handled = true; }
+            };
+            MouseDown += (s, e) => Focus();
+            Drop += (s, e) => { if (_vm.KhongChay && e.Data.GetData(DataFormats.FileDrop) is string[] f && f.Length > 0) _vm.Nhan(f[0]); };
         }
-
-        /// <summary>Enter = gửi, Shift+Enter = xuống dòng.</summary>
-        private void CauHoiPhim(object sender, KeyEventArgs e)
-        {
-            if (e.Key != Key.Enter || (Keyboard.Modifiers & ModifierKeys.Shift) != 0) return;
-            e.Handled = true;
-            if (_vm.Chat.KhongGui) _vm.Chat.GuiCmd.Execute(null);
-        }
-
-        /// <summary>Bấm dòng "Chưa có API key" -> mở cài đặt.</summary>
-        private void MoCaiDat(object sender, MouseButtonEventArgs e) => _vm.CaiDatCmd.Execute(null);
 
         /// <summary>CuonHo của OHTATOOL gọi bằng phản chiếu để lăn chuột trên PaletteSet.</summary>
         public void ScrollByMouseWheel(int wheelDelta)
         {
-            ScrollViewer sv = _vm.DangChat ? ChatCuon : KhungCuon;
-            if (sv == null || wheelDelta == 0) return;
-            sv.ScrollToVerticalOffset(sv.VerticalOffset - wheelDelta / 120.0 * 48.0);
+            if (KhungCuon == null || wheelDelta == 0) return;
+            KhungCuon.ScrollToVerticalOffset(KhungCuon.VerticalOffset - wheelDelta / 120.0 * 48.0);
         }
 
-        /// <summary>Mở ô chọn layer -> đọc lại layer của bản vẽ đang mở.</summary>
-        private void LayerMo(object sender, EventArgs e) => _vm.LamMoiLayer();
+        private void MoAnhGoc(object sender, MouseButtonEventArgs e) => MoTep((_vm.DongChon?.L)?.Anh);
+        private void MoAnhVe(object sender, MouseButtonEventArgs e) => MoTep((_vm.DongChon?.L)?.Xem);
 
-        private void CanhBaoBam(object sender, MouseButtonEventArgs e)
+        private static void MoTep(string f)
         {
-            if ((sender as FrameworkElement)?.DataContext is DongCanhBao c)
-                _vm.ZoomToi(c);
+            if (string.IsNullOrEmpty(f)) return;
+            try { Process.Start(new ProcessStartInfo(f) { UseShellExecute = true }); }
+            catch (Exception) { }
         }
     }
 }

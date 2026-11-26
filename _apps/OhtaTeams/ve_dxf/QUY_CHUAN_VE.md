@@ -13,7 +13,12 @@
 - Tấm toàn cạnh thẳng được dùng polyline kín (`nen.vien`, `nen.chu_nhat`).
 - Đường bẻ: LINE `0-KAKOU`, nét DASHED (`nen.duong_be`).
 
+## Phần AI tự suy — tô VÀNG (25/11, `chua_chac.py`)
+- Khách không ghi số mà AI lấy theo hình (vd R bo góc khoét, vị trí lỗ không có dim) → AI ghi `chua_chac` [{o, so, noi_dung}] + nghi vấn 🟡 hỏi khách. `ve.py` tô nét vẽ từ mục đó màu **vàng (ACI 2)** — `o` = lo / khoet / goc / dinh / ke_gaki, `so` = thứ tự mục (0 = cả ô), hậu tố `.r` = chỉ cung bo R. Ô người dùng đã sửa (✎) = đã xác nhận → không tô. Ô khác (kich_thuoc…) chỉ ghi chú.
+
 ## Dim
+- **Chân dim chạm đối tượng (25/11, `chan_dim.py`)**: mỗi chân gióng phải đặt vào đúng đối tượng dim đo — đỉnh / mút đoạn viền hoặc đường bẻ, cạnh thẳng đứng / ngang trùng đường gióng, điểm cực của cung, tâm lỗ, tâm ケガキ — sai số **0.05 mm**, chọn điểm gần đường dim nhất. Không có đối tượng nào → **không vẽ** dim đó, báo "chân dim không chạm hình" (dòng cam) để người vẽ xem. Áp cho mọi dim `ve.py` vẽ: dim khách, chuỗi tự dựng, dim tổng X / Y.
+- **Chỉ dim như khách + dim tổng X / Y**: ngang, dọc, R, Ø, **xiên** (`dim_khach.loai = "xien"`, `diem` = 2 đầu cạnh — dim theo cạnh, đường dim ra phía ngoài hình) và **góc** (`"goc"`, `diem` = [điểm cạnh 1, đỉnh, điểm cạnh 2]). Điểm không nằm trên hình, hoặc số đo lệch số khách (> 0.5 mm / 0.5°) → không vẽ, báo thiếu.
 - **Vát / bo góc, khoét trong** (`goc_khoet.py`, chung mọi mẫu): vát = đoạn thẳng LINE `0-KAKOU`, bo = ARC thật, cùng layer viền; nhãn gom theo nhóm bằng leader `n-C10` / `n-R5` (không thêm dim R riêng — dim khách R trùng nhãn coi là đủ). Khoét = viền kín `0-KAKOU` (bo R mỗi góc nếu có); **không** thêm chuỗi dim riêng — chỉ dim như khách dim (`dim_khach`).
 - **Luôn đủ kích thước của khách**: mọi kích thước khách ghi trên bản vẽ còn đúng trên hình trải phẳng (`dim_khach`, AI đọc lúc đọc bản vẽ) phải có trên bản vẽ OHTA, cùng số. `ve.py` so với các dim đã vẽ: thiếu dim ngang / dọc → tự thêm một hàng dim (sau chuỗi dim, trước dim tổng); thiếu R → dim R chỉ khi bản vẽ có đúng cung R đó, không có thì báo **lệch** (không dim sai); còn lại (Ø lỗ, góc…) báo "còn thiếu dim của khách" để bổ sung trên CAD.
 - **Dim tổng** X (dưới cùng) và Y (bên phải): layer **`1-XY`**, kiểu `ISO-26` — `ve.py` tự thêm.
@@ -39,6 +44,17 @@
 ## Dấu khắc vạch ケガキ — layer `3-KEGAKI`
 - Mỗi dấu: chữ thập 10 mm (2 LINE) tại tâm dấu (`ke_gaki` của bảng tấm, toạ độ trên hình trải phẳng, gốc góc trái dưới).
 - Một leader `1-SUNPOU` từ dấu giữa chéo lên trên-phải (≈ +23, cao hơn mép trên 53), chữ **`n-ケガキ`**. Bản khách ghi `マーキング` / `罫書き` vẫn ghi `ケガキ`.
+
+- **Dấu tam giác / chữ V (25/11)**: `ke_gaki` mục `[x, y, đáy, hướng, cao]` — **mũi tại (x, y)** (chỗ khách dim tới), mũi chỉ `hướng` độ (0 phải, 90 lên; dấu quanh tâm tròn chỉ vào tâm), đáy rộng `đáy` lùi sau mũi một đoạn `cao` (0 = tam giác đều). Hai góc đáy nằm trên mép tấm → vẽ **chữ V 2 nét** (đáy là mép — như bản xưởng Desktop/test.dxf 25/11); không thì tam giác kín 3 nét. `[x, y]` vẫn là chữ thập 10 mm. Chân dim chạm được mũi, 2 góc đáy và giữa đáy.
+- **Tấm tròn** (mọi đỉnh `dinh` trên vòng tâm khung bao, mọi cạnh là cung bán kính đó): dim tổng là **Ø** (1-XY) thay cho X / Y.
+- **Tấm tròn / vành khăn** (mẫu `da_giac`): 2 đỉnh đối nhau, cả hai có R — Øn: `[[0, n/2, n/2], [n, n/2, n/2]]`; lỗ giữa ở `lo`.
+
+## Đường tâm khách dim từ đó (25/11, Drawing7)
+- `duong_tam`: mỗi mục `[x1, y1, x2, y2]` = đường tâm (CENTER, `1-SUNPOU`) khách lấy làm gốc dim — vd đường tâm xiên 45° qua tâm lỗ, dim góc 45° và dim khoảng cách tới cạnh cắt góc song song. Chân dim chạm được đường này.
+
+## スリット — layer `4-SHT` (25/11)
+- Nhãn leader `スリット` (nhiều nét: `n-スリット`) từ giữa nét đầu ra ngoài bên trái tấm.
+- `slit`: mỗi mục `[x1, y1, x2, y2]` = một nét cắt đơn (LINE `4-SHT`), vd vành tròn cắt đứt: từ mép trong tới mép ngoài theo bán kính. Chân dim chạm được hai mút. Khách không ghi vị trí → `chua_chac {o: "slit"}` → nét slit tô vàng.
 
 ## F-name — layer `2-F-NAME`
 - TEXT cao 24, kiểu chữ `Text` (MS PGothic), dòng cách 40; đặt **dưới tấm**, cách mép trái 100, dòng đầu dưới đường dim tổng X ≈ 98.
