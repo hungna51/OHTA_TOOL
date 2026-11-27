@@ -376,7 +376,7 @@
           (setvar "DIMSCALE" (/ R 18.75))
           ;ve hinh trai
           (command ".line" d1 d2 d3 d4 d1 "")
-          ;ve cung tròn
+          ;ve cung tron
 	  (command-s "_.Zoom" "Object" Ename "")
           (setvar "clayer" "1-SUNPOU")
           (command ".dimdiameter" ddi1 ddi2)
@@ -788,7 +788,7 @@
           (setvar "DIMSCALE" (/ R 18.75))
           ;ve hinh trai
           (command ".line" d1 d2 d3 d4 d1 "")
-          ;ve cung tròn
+          ;ve cung tron
           (setvar "clayer" "1-SUNPOU")
           (entmake 
             '((0 . "ARC")
@@ -1301,7 +1301,7 @@
           (setvar "DIMSCALE" (/ R 24))
           ;ve hinh trai
           (command ".line" d1 d2 d3 d4 d1 "")
-          ;ve cung tròn
+          ;ve cung tron
           (setvar "clayer" "1-SUNPOU")
           (command ".dimradius" ddi1 ddi2)
           (setq dimdiameter (entlast))
@@ -1690,7 +1690,7 @@
           (setvar "DIMSCALE" (/ R 18.75))
           ;ve hinh trai
           (command ".line" d1 d2 d3 d4 d1 "")
-          ;ve cung tròn
+          ;ve cung tron
           (setvar "clayer" "1-SUNPOU")
           (entmake 
             '((0 . "ARC")
