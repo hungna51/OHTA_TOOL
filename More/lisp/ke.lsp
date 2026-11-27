@@ -1,4 +1,4 @@
-﻿(defun C:kee(/ osm ss leng  n C Record tamocs tam A d1 d2 d3 d4 )
+(defun C:kee(/ osm ss leng  n C Record tamocs tam A d1 d2 d3 d4 )
   (vla-startundomark (vla-get-activedocument (vlax-get-acad-object)))
   (setq osm (getvar "osmode"))
   (setq oldlayer (getvar "CLAYER"))
