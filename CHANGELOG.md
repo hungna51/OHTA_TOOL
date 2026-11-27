@@ -2,7 +2,12 @@
 
 Mỗi bản phát hành có một mục `## vX.Y.Z` ở đầu file. `release_ohta.ps1` lấy nội dung mục đó làm ghi chú Release trên GitHub, và hộp thoại "Có bản mới" trên máy đội cũng hiện đúng nội dung này — viết ngắn, cho người dùng xưởng đọc.
 
-## Chưa phát hành
+## v1.4.5
+
+- Tab **Guro v1.7** — lệnh mới **`KT`**: kiểm tra nét cắt kín / hở và nét chưa ByLayer trong cửa sổ nổi riêng (không cần mở tab Guro): quét chọn, bấm lỗi để zoom tới (khoanh đỏ), chuyển nhanh về ByLayer.
+- Guro: chữ khắc nhận đủ hơn (chữ `C` đứng một mình, `C3` trong dãy `A3 B3 C3 D3`, mọi chữ trong hình); chữ trông như kích thước (`C3`, `R5`…) thì báo nghi vấn, mỗi tấm một dòng.
+- Guro: cặp `t9*本図 1本 / t9*逆図 1本` ghép đối xứng đúng (chữ 本 đếm không còn làm dòng 逆図 bị hiểu là 本図).
+- Guro trên AutoCAD: sửa lỗi "bad DXF group (7 . T)" ở bước xếp cụm.
 
 - **Tab CSV chạy hoàn toàn bằng C#**, bỏ lisp xuất CSV: quét chỉ đọc bản vẽ (không tạo text, không đổi màu khung, không tạo file -ERROR.dwg), một tấm lỗi không dừng cả lượt, mọi lỗi nằm trong danh sách trên tab, bấm để zoom tới đúng vị trí.
 - **Tab CSV (chỉ máy admin, thử nghiệm)**: thay lisp `xuat_csv` — nút **Quét theo vùng** / **Quét toàn bản vẽ** phân tích tấm và lưu thông tin vào `data\<đơn>-data.csv` (không còn để text thông tin trên bản vẽ; mỗi lần quét là một lần làm mới), **Xuất CSV** tạo file cuối `<đơn>.csv` (10 cột gửi nhà máy, có cột 曲げ) — còn tấm lỗi hoặc Excel đang mở file thì không ghi; khung chú thích / bảng mẫu tự bỏ qua. Chế độ tính chọn bằng 3 nút Thường / Gia công / VL khách ở cuối tab. **Danh sách tấm** dạng thẻ như bảng giấy (rút gọn: Q · M · T · X × Y · gia công · giá tiền; nút **Xem chi tiết** mở thêm lỗ · tapu & sara · pitchi · vát · đường bẻ), sửa thẳng F-name (N/Q/M/T), MText thông tin tấm và giá báo giá; bấm tấm lỗi thì zoom tới và khoanh vòng đỏ tạm. Gõ `CSV` để mở tab.
